@@ -1,0 +1,13 @@
+import dal
+
+pitch shift
+	pitch shift up
+	turn on/off
+	set shift(s)
+filter/sweep
+volume control
+get a period
+smooth frequency change
+keyboard input
+	qwerty imitation
+	use defined period
