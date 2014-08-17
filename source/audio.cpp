@@ -1,6 +1,7 @@
 #include "audio.hpp"
 
 #include "portaudio.h"
+#include "RtMidi.h"
 
 #include <iostream>
 #include <cstring>
@@ -13,6 +14,7 @@ static const unsigned LOG2_SAMPLES_PER_CALLBACK=6;
 static const unsigned SAMPLE_RATE=44100;
 
 static PaStream* paStream;
+static RtMidiIn* rtMidiIn = nullptr;
 
 #ifdef DEBUG_UNDERFLOWS
 	static unsigned underflows=0;
@@ -40,6 +42,15 @@ static int paStreamCallback(
 	}
 	//
 	return paContinue;
+}
+
+static void rtMidiCallback (double deltatime, std::vector<unsigned char>* message, void* userData)
+{
+	unsigned int nBytes = message->size();
+	for (unsigned int i = 0; i<nBytes; i++)
+		std::cout << "Byte " << i << " = " << (int)message->at(i) << ", ";
+	if (nBytes > 0)
+		std::cout << "stamp = " << deltatime << std::endl;
 }
 
 static void paError(const PaError& err){
@@ -105,6 +116,32 @@ void init(){
 		paError(err);
 		return;
 	}
+
+	try
+	{
+		rtMidiIn = new RtMidiIn();
+	} 
+	catch (RtMidiError& error) 
+	{
+		error.printMessage();
+		return;
+	}
+
+	unsigned int nPorts = rtMidiIn->getPortCount();
+	std::cout << "Midi in port count: " << nPorts << std::endl;
+	for (unsigned int i = 0; i < nPorts; i++)
+	{
+		std::string portname = rtMidiIn->getPortName(i);
+		std::cout << "Port " << i << ": " << portname << std::endl;	
+	}
+	
+	if (nPorts < 1)
+	{
+		return;
+	}
+	
+	rtMidiIn->openPort(0);
+	rtMidiIn->setCallback(rtMidiCallback);
 }
 
 void finish(){
@@ -118,6 +155,8 @@ void finish(){
 		std::cout<<"underflows: "<<underflows<<"\n";
 	#endif
 	Pa_Terminate();
+
+	delete rtMidiIn;
 }
 
 }//namespace dlal

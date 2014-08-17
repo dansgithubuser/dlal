@@ -58,6 +58,9 @@
     <ClCompile Include="..\..\source\audio.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\rtmidi\RtMidi.cpp">
+      <Filter>rtmidi</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="asio">
@@ -69,10 +72,16 @@
     <Filter Include="source">
       <UniqueIdentifier>{8d313518-5cb3-46d3-b8bc-65e7fdec790a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="rtmidi">
+      <UniqueIdentifier>{bbb75d49-eabc-443d-89a9-aa461eaabba5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\source\audio.hpp">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\rtmidi\RtMidi.h">
+      <Filter>rtmidi</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
