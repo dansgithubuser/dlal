@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\ASIOSDK2\common\asio.cpp">
+      <Filter>asio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ASIOSDK2\host\asiodrivers.cpp">
+      <Filter>asio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ASIOSDK2\host\pc\asiolist.cpp">
+      <Filter>asio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_ringbuffer.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_stream.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_trace.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_allocation.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_converters.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_cpuload.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_dither.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_front.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_process.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\hostapi\asio\pa_asio.cpp">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_win_util.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_win_waveformat.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_x86_plain_converters.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_win_hostapis.c">
+      <Filter>portaudio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\main.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\audio.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="asio">
+      <UniqueIdentifier>{f5e6e6a0-fdd0-49b4-85d0-62c471aea911}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="portaudio">
+      <UniqueIdentifier>{bd542f67-d599-4aff-a050-7a8b1f33fbcc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source">
+      <UniqueIdentifier>{8d313518-5cb3-46d3-b8bc-65e7fdec790a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\source\audio.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
