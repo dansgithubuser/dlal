@@ -61,6 +61,9 @@
     <ClCompile Include="..\..\rtmidi\RtMidi.cpp">
       <Filter>rtmidi</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\midi.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="asio">
@@ -82,6 +85,9 @@
     </ClInclude>
     <ClInclude Include="..\..\rtmidi\RtMidi.h">
       <Filter>rtmidi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\midi.hpp">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

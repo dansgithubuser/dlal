@@ -88,10 +88,12 @@
     <ClCompile Include="..\..\rtmidi\RtMidi.cpp" />
     <ClCompile Include="..\..\source\audio.cpp" />
     <ClCompile Include="..\..\source\main.cpp" />
+    <ClCompile Include="..\..\source\midi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\rtmidi\RtMidi.h" />
     <ClInclude Include="..\..\source\audio.hpp" />
+    <ClInclude Include="..\..\source\midi.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

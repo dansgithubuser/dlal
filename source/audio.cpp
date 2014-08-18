@@ -1,7 +1,6 @@
 #include "audio.hpp"
 
 #include "portaudio.h"
-#include "RtMidi.h"
 
 #include <iostream>
 #include <cstring>
@@ -10,11 +9,8 @@ typedef float Sample;
 
 static const PaSampleFormat PA_SAMPLE_FORMAT=paFloat32;
 
-static const unsigned LOG2_SAMPLES_PER_CALLBACK=6;
-static const unsigned SAMPLE_RATE=44100;
-
-static PaStream* paStream;
-static RtMidiIn* rtMidiIn = nullptr;
+static PaStream* fPaStream;
+static std::function<void(const float* input, float* output)> fCallback;
 
 #ifdef DEBUG_UNDERFLOWS
 	static unsigned underflows=0;
@@ -37,20 +33,9 @@ static int paStreamCallback(
 		return paContinue;
 	}
 	//normal processing
-	for(unsigned long i=0; i<samples; ++i){
-		((Sample*)output)[i]=((Sample*)input)[i];
-	}
+	//fCallback((const Sample*)input, (Sample*)output);
 	//
 	return paContinue;
-}
-
-static void rtMidiCallback (double deltatime, std::vector<unsigned char>* message, void* userData)
-{
-	unsigned int nBytes = message->size();
-	for (unsigned int i = 0; i<nBytes; i++)
-		std::cout << "Byte " << i << " = " << (int)message->at(i) << ", ";
-	if (nBytes > 0)
-		std::cout << "stamp = " << deltatime << std::endl;
 }
 
 static void paError(const PaError& err){
@@ -61,9 +46,14 @@ static void paError(const PaError& err){
 
 namespace dlal{
 
-void init(){
+void audioInit(
+	std::function<void(const float* input, float* output)> callback,
+	unsigned sampleRate,
+	unsigned log2SamplesPerCallback
+){
 	PaStreamParameters inputParameters, outputParameters;
 	PaError err;
+///	fCallback=callback;
 	//initialize
 	err=Pa_Initialize();
 	if(err!=paNoError){
@@ -95,11 +85,11 @@ void init(){
 	outputParameters.hostApiSpecificStreamInfo=NULL;
 	//open stream
 	err=Pa_OpenStream(
-		&paStream,
+		&fPaStream,
 		&inputParameters,
 		&outputParameters,
-		SAMPLE_RATE,
-		1<<LOG2_SAMPLES_PER_CALLBACK,
+		sampleRate,
+		1<<log2SamplesPerCallback,
 		paNoFlag,
 		paStreamCallback,
 		NULL
@@ -110,43 +100,17 @@ void init(){
 		return;
 	}
 	//start stream
-	err=Pa_StartStream(paStream);
+	err=Pa_StartStream(fPaStream);
 	if(err!=paNoError){
 		std::cerr<<"audio error: Pa_StartStream failed\n";
 		paError(err);
 		return;
 	}
-
-	try
-	{
-		rtMidiIn = new RtMidiIn();
-	} 
-	catch (RtMidiError& error) 
-	{
-		error.printMessage();
-		return;
-	}
-
-	unsigned int nPorts = rtMidiIn->getPortCount();
-	std::cout << "Midi in port count: " << nPorts << std::endl;
-	for (unsigned int i = 0; i < nPorts; i++)
-	{
-		std::string portname = rtMidiIn->getPortName(i);
-		std::cout << "Port " << i << ": " << portname << std::endl;	
-	}
-	
-	if (nPorts < 1)
-	{
-		return;
-	}
-	
-	rtMidiIn->openPort(0);
-	rtMidiIn->setCallback(rtMidiCallback);
 }
 
-void finish(){
+void audioFinish(){
 	PaError err;
-	err=Pa_CloseStream(paStream);
+	err=Pa_CloseStream(fPaStream);
 	if(err!=paNoError){
 		paError(err);
 		return;
@@ -155,8 +119,6 @@ void finish(){
 		std::cout<<"underflows: "<<underflows<<"\n";
 	#endif
 	Pa_Terminate();
-
-	delete rtMidiIn;
 }
 
 }//namespace dlal
