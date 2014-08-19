@@ -1,6 +1,6 @@
 #include "audio.hpp"
 
-#include "portaudio.h"
+#include <portaudio.h>
 
 #include <iostream>
 #include <cstring>
@@ -33,7 +33,7 @@ static int paStreamCallback(
 		return paContinue;
 	}
 	//normal processing
-	//fCallback((const Sample*)input, (Sample*)output);
+	fCallback((const Sample*)input, (Sample*)output);
 	//
 	return paContinue;
 }
@@ -53,7 +53,7 @@ void audioInit(
 ){
 	PaStreamParameters inputParameters, outputParameters;
 	PaError err;
-///	fCallback=callback;
+	fCallback=callback;
 	//initialize
 	err=Pa_Initialize();
 	if(err!=paNoError){

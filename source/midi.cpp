@@ -1,6 +1,6 @@
 #include "midi.hpp"
 
-#include "RtMidi.h"
+#include <RtMidi.h>
 
 static RtMidiIn* fRtMidiIn=nullptr;
 static std::function<void(std::vector<unsigned char>)> fCallback;

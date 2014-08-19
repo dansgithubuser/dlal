@@ -39,7 +39,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>..\..\rtmidi;..\..\portaudio\include;..\..\portaudio\src\common;..\..\portaudio\src\os\win;..\..\ASIOSDK2\common;..\..\ASIOSDK2\host;..\..\ASIOSDK2\host\pc;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\SFML\SFML-2.1-windows-vc11-32bits\include;..\..\rtmidi;..\..\portaudio\include;..\..\portaudio\src\common;..\..\portaudio\src\os\win;..\..\ASIOSDK2\common;..\..\ASIOSDK2\host;..\..\ASIOSDK2\host\pc;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -51,6 +51,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
     </Link>
+    <PreBuildEvent>
+      <Command>copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-graphics-d-2.dll $(TargetDir)
+copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-system-d-2.dll $(TargetDir)
+copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-window-d-2.dll $(TargetDir)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -66,6 +71,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
     </Link>
+    <PreBuildEvent>
+      <Command>copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-graphics-2.dll $(TargetDir)
+copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-system-2.dll $(TargetDir)
+copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-window-2.dll $(TargetDir)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ASIOSDK2\common\asio.cpp" />
@@ -87,13 +97,36 @@
     <ClCompile Include="..\..\portaudio\src\os\win\pa_x86_plain_converters.c" />
     <ClCompile Include="..\..\rtmidi\RtMidi.cpp" />
     <ClCompile Include="..\..\source\audio.cpp" />
+    <ClCompile Include="..\..\source\fm.cpp" />
     <ClCompile Include="..\..\source\main.cpp" />
     <ClCompile Include="..\..\source\midi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\rtmidi\RtMidi.h" />
     <ClInclude Include="..\..\source\audio.hpp" />
+    <ClInclude Include="..\..\source\fm.hpp" />
     <ClInclude Include="..\..\source\midi.hpp" />
+    <ClInclude Include="..\..\source\queue.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-graphics-d.lib">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-graphics.lib">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-system-d.lib">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-system.lib">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-window-d.lib">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-window.lib">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </Library>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

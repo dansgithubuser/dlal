@@ -64,6 +64,9 @@
     <ClCompile Include="..\..\source\midi.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\fm.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="asio">
@@ -78,6 +81,9 @@
     <Filter Include="rtmidi">
       <UniqueIdentifier>{bbb75d49-eabc-443d-89a9-aa461eaabba5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SFML">
+      <UniqueIdentifier>{a6a553ac-31a7-4548-86c1-d825aa89478b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\source\audio.hpp">
@@ -89,5 +95,31 @@
     <ClInclude Include="..\..\source\midi.hpp">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\source\fm.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\queue.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-graphics-d.lib">
+      <Filter>SFML</Filter>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-system.lib">
+      <Filter>SFML</Filter>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-system-d.lib">
+      <Filter>SFML</Filter>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-window.lib">
+      <Filter>SFML</Filter>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-window-d.lib">
+      <Filter>SFML</Filter>
+    </Library>
+    <Library Include="..\..\SFML\SFML-2.1-windows-vc11-32bits\lib\sfml-graphics.lib">
+      <Filter>SFML</Filter>
+    </Library>
   </ItemGroup>
 </Project>
