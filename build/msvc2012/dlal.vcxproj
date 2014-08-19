@@ -100,12 +100,14 @@ copy $(SolutionDir)..\..\SFML\SFML-2.1-windows-vc11-32bits\bin\sfml-window-2.dll
     <ClCompile Include="..\..\source\fm.cpp" />
     <ClCompile Include="..\..\source\main.cpp" />
     <ClCompile Include="..\..\source\midi.cpp" />
+    <ClCompile Include="..\..\source\processor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\rtmidi\RtMidi.h" />
     <ClInclude Include="..\..\source\audio.hpp" />
     <ClInclude Include="..\..\source\fm.hpp" />
     <ClInclude Include="..\..\source\midi.hpp" />
+    <ClInclude Include="..\..\source\processor.hpp" />
     <ClInclude Include="..\..\source\queue.hpp" />
   </ItemGroup>
   <ItemGroup>

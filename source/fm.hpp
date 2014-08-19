@@ -14,6 +14,7 @@ class Sonic{
 			float _frequencyMultiplier, _inputs[OSCILLATORS];
 			float _output;
 		};
+		Sonic();
 		Sonic(float* samples, unsigned sampleRate);
 		void processMidi(const std::vector<unsigned char>& message);
 		void evaluate(unsigned samplesToEvaluate);
@@ -37,8 +38,8 @@ class Sonic{
 			unsigned _age;
 			bool _done;
 		};
-		const unsigned _sampleRate;
-		float* const _samples;
+		unsigned _sampleRate;
+		float* _samples;
 		Note _notes[MIDI_NOTES];
 };
 

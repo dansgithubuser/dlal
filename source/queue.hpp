@@ -29,6 +29,10 @@ template <typename T> class Queue{
 			return true;
 		}
 
+		void setAll(const T& t){
+			for(unsigned i=0; i<_v.size(); ++i) _v[i]=t;
+		}
+
 	private:
 		std::vector<T> _v;
 		std::atomic<unsigned> _r, _w;

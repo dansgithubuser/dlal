@@ -20,6 +20,8 @@ Sonic::Oscillator::Oscillator():
 	for(unsigned i=0; i<OSCILLATORS; ++i) _inputs[i]=0.0f;
 }
 
+Sonic::Sonic(){}
+
 Sonic::Sonic(float* samples, unsigned sampleRate):
 	_samples(samples), _sampleRate(sampleRate)
 {

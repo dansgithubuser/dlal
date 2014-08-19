@@ -67,6 +67,9 @@
     <ClCompile Include="..\..\source\fm.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\processor.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="asio">
@@ -99,6 +102,9 @@
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\queue.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\processor.hpp">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
