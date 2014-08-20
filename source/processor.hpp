@@ -59,6 +59,7 @@ class Processor{
 		std::map<int, Sonic*> _channelToSonic;
 		std::map<std::string, Line> _lines;
 		std::vector<Line*> _activeLines;
+		std::vector<Line*> _nextLines;
 };
 
 }//namespace dlal

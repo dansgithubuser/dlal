@@ -76,6 +76,7 @@ void Processor::processText(const std::string& line){
 		event.message.push_back(0);
 		event.message.push_back(64);
 		float stride=1.0f;
+		float duty=0.99f;
 		int octave=5;
 		while(ss>>s){
 			if(s=="o"){
@@ -126,10 +127,12 @@ void Processor::processText(const std::string& line){
 					//note on line event
 					line.events.push_back(event);
 					//note off line event
-					event.beat+=stride;
+					event.beat+=stride*duty;
 					event.message[0]&=0x0f;
 					event.message[0]|=0x80;
 					line.events.push_back(event);
+					//next note start time
+					event.beat+=stride*(1-duty);
 				}
 			}
 			else _errorStream<<"Ignoring invalid token "<<s<<"."<<std::endl;
@@ -180,6 +183,9 @@ void Processor::output(float* samples){
 					_samplesPerBeat=_nextSamplesPerBeat;
 					_nextSamplesPerBeat=0;
 				}
+				//update lines
+				for(auto line: _nextLines) _activeLines.push_back(line);
+				_nextLines.clear();
 				//reset lines
 				for(auto line: _activeLines) line->i=0;
 			}
@@ -234,7 +240,7 @@ void Processor::processOp(const Op& op){
 			else _beatsPerLoop=op.beatsPerLoop;
 			break;
 		case Op::LINE:
-			_activeLines.push_back(op.line);
+			_nextLines.push_back(op.line);
 			break;
 		default: break;
 	}
