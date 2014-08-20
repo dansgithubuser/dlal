@@ -32,6 +32,7 @@ int main(int argc, char** argv){
 	printHelp();
 	while(true){
 		std::string s;
+		std::cout<<">";
 		std::getline(std::cin, s);
 		if(s=="Quit") break;
 		else if(s=="Help") printHelp();
