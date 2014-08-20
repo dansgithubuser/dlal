@@ -50,6 +50,7 @@ void Processor::processText(const std::string& line){
 		_queue.write()->type=Op::TEMPO;
 		_queue.write()->samplesPerBeat=_sampleRate*60/tempo;
 		_queue.nextWrite();
+		if(tempo>400) _errorStream<<"Tempo will be very high."<<std::endl;
 	}
 	else if(s=="length"){
 		unsigned beatsPerLoop;
@@ -57,6 +58,7 @@ void Processor::processText(const std::string& line){
 		_queue.write()->type=Op::LENGTH;
 		_queue.write()->beatsPerLoop=beatsPerLoop;
 		_queue.nextWrite();
+		if(beatsPerLoop>128) _errorStream<<"Length is very high."<<std::endl;
 	}
 	else if(s=="line"){
 		std::string name;
@@ -159,6 +161,29 @@ void Processor::processText(const std::string& line){
 		_queue.write()->line=&_lines[s];
 		_queue.nextWrite();
 	}
+	else if(s=="beat"){
+		float beat;
+		if(!(ss>>beat)){
+			_errorStream<<"Must specify beat."<<std::endl;
+			return;
+		}
+		if(beat<0.0f){
+			_errorStream<<"Beat must be greater than 0."<<std::endl;
+			return;
+		}
+		if(beat>=_beatsPerLoop){
+			_errorStream<<"Beat must be less than beats per loop."<<std::endl;
+			return;
+		}
+		_queue.write()->type=Op::BEAT;
+		_queue.write()->beat=beat;
+		_queue.nextWrite();
+	}
+	else if(s=="silence"){
+		_queue.write()->type=Op::SILENCE;
+		_queue.nextWrite();
+	}
+	while(ss>>s) _errorStream<<"Ignoring token "<<s<<std::endl;
 }
 
 void Processor::processMidi(const std::vector<unsigned char>& midi){
@@ -183,28 +208,8 @@ void Processor::output(float* samples){
 			++_beat;
 			if(_beat>=_beatsPerLoop){
 				_beat-=_beatsPerLoop;
-				//update length
-				if(_nextBeatsPerLoop){
-					_beatsPerLoop=_nextBeatsPerLoop;
-					_nextBeatsPerLoop=0;
-				}
-				//update tempo
-				if(_nextSamplesPerBeat){
-					_samplesPerBeat=_nextSamplesPerBeat;
-					_nextSamplesPerBeat=0;
-				}
-				//update lines
-				for(auto line: _nextLines) _activeLines.push_back(line);
-				_nextLines.clear();
-				for(auto i: _removeLines)
-					for(auto j=_activeLines.begin(); j!=_activeLines.end(); ++j)
-						if(i==*j){
-							_activeLines.erase(j);
-							break;
-						}
-				_removeLines.clear();
-				//reset lines
-				for(auto line: _activeLines) line->i=0;
+				processNexts();
+				for(auto line: _activeLines) line->i=0;//reset lines
 			}
 		}
 	}
@@ -262,8 +267,55 @@ void Processor::processOp(const Op& op){
 		case Op::REMOVE_LINE:
 			_removeLines.push_back(op.line);
 			break;
+		case Op::BEAT:
+			_beat=unsigned(op.beat);
+			_samplesAfterBeat=int((op.beat-_beat)*_samplesPerBeat);
+			for(auto line: _activeLines){
+				line->i=0;
+				while(line->events[line->i].beat<op.beat) ++line->i;
+			}
+			processNexts();
+			break;
+		case Op::SILENCE:{
+			std::vector<unsigned char> message;
+			message.push_back(0x80);
+			message.push_back(0);
+			message.push_back(127);
+			for(unsigned i=0; i<Sonic::MIDI_NOTES; ++i){
+				message[1]=i;
+				for(auto j: _channelToSonic){
+					message[0]&=0xf0;
+					message[0]|=j.first;
+					j.second->processMidi(message);
+				}
+			}
+			break;
+		}
 		default: break;
 	}
+}
+
+void Processor::processNexts(){
+	//update length
+	if(_nextBeatsPerLoop){
+		_beatsPerLoop=_nextBeatsPerLoop;
+		_nextBeatsPerLoop=0;
+	}
+	//update tempo
+	if(_nextSamplesPerBeat){
+		_samplesPerBeat=_nextSamplesPerBeat;
+		_nextSamplesPerBeat=0;
+	}
+	//update lines
+	for(auto line: _nextLines) _activeLines.push_back(line);
+	_nextLines.clear();
+	for(auto i: _removeLines)
+		for(auto j=_activeLines.begin(); j!=_activeLines.end(); ++j)
+			if(i==*j){
+				_activeLines.erase(j);
+				break;
+			}
+	_removeLines.clear();
 }
 
 }//namespace dlal

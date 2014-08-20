@@ -8,6 +8,7 @@ namespace dlal{
 class Sonic{
 	public:
 		static const unsigned OSCILLATORS=4;
+		static const unsigned MIDI_NOTES=128;
 		struct Oscillator{
 			Oscillator();
 			float _attack, _decay, _sustain, _release;
@@ -20,7 +21,6 @@ class Sonic{
 		void evaluate(unsigned samplesToEvaluate);
 		Oscillator oscillators[OSCILLATORS];
 	private:
-		static const unsigned MIDI_NOTES=128;
 		struct Runner{
 			enum Stage{ ATTACK, DECAY, SUSTAIN, RELEASE };
 			void reset(float step);

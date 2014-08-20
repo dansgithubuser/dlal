@@ -30,7 +30,7 @@ class Processor{
 			unsigned i;
 		};
 		struct Op{
-			enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE, REMOVE_LINE };
+			enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE, REMOVE_LINE, BEAT, SILENCE };
 			Type type;
 			std::vector<unsigned char> midi;//MIDI
 			std::vector<float> mic;//MIC
@@ -42,9 +42,11 @@ class Processor{
 				unsigned samplesPerBeat;//TEMPO
 				unsigned beatsPerLoop;//LENGTH
 				Line* line;//LINE, REMOVE_LINE
+				float beat;//BEAT
 			};
 		};
 		void processOp(const Op&);
+		void processNexts();
 		std::ostream& _errorStream;
 		const unsigned _sampleRate;
 		std::vector<float> _samples;
