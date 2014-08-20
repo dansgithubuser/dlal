@@ -14,18 +14,17 @@ Processor::Processor(unsigned sampleRate, unsigned size, std::ostream& errorStre
 	_samplesPerBeat(0),
 	_beatsPerLoop(0),
 	_nextSamplesPerBeat(0),
-	_nextBeatsPerLoop(0)
+	_nextBeatsPerLoop(0),
+	_reqdSamplesPerBeat(0),
+	_reqdBeatsPerLoop(0),
+	_currentRec(0),
+	_currentRecPair(0),
+	_switchRecPair(false),
+	_recSample(0)
 {
 	Op op;
 	op.mic.resize(size);
 	_queue.setAll(op);
-}
-
-void Processor::addSonic(const std::string& name, Sonic sonic, int channel){
-	_sonics[name]=sonic;
-	_queue.write()->type=Op::SONIC;
-	_queue.write()->sonic=&_sonics[name];
-	_queue.nextWrite();
 }
 
 void Processor::processText(const std::string& line){
@@ -47,18 +46,21 @@ void Processor::processText(const std::string& line){
 		else if(s=="tempo"){
 			unsigned tempo;
 			ss>>tempo;
+			_reqdSamplesPerBeat=_sampleRate*60/tempo;
 			_queue.write()->type=Op::TEMPO;
-			_queue.write()->samplesPerBeat=_sampleRate*60/tempo;
+			_queue.write()->samplesPerBeat=_reqdSamplesPerBeat;
 			_queue.nextWrite();
+			allocateNextRecPair(_reqdBeatsPerLoop*_reqdSamplesPerBeat);
 			if(tempo>400) _errorStream<<"Tempo will be very high."<<std::endl;
+			if(tempo<30) _errorStream<<"Tempo will be very low."<<std::endl;
 		}
 		else if(s=="length"){
-			unsigned beatsPerLoop;
-			ss>>beatsPerLoop;
+			ss>>_reqdBeatsPerLoop;
 			_queue.write()->type=Op::LENGTH;
-			_queue.write()->beatsPerLoop=beatsPerLoop;
+			_queue.write()->beatsPerLoop=_reqdBeatsPerLoop;
 			_queue.nextWrite();
-			if(beatsPerLoop>128) _errorStream<<"Length is very high."<<std::endl;
+			allocateNextRecPair(_reqdBeatsPerLoop*_reqdSamplesPerBeat);
+			if(_reqdBeatsPerLoop>128) _errorStream<<"Length will be very high."<<std::endl;
 		}
 		else if(s=="line"){
 			std::string name;
@@ -98,10 +100,11 @@ void Processor::processText(const std::string& line){
 					ss>>stride;
 				}
 				else if(s.size()==1){
-					if(s=="."){
+					if(s==","){
 						event.beat+=stride;
 						continue;
 					}
+					else if(s==".") break;
 					int note=-1;
 					switch(s[0]){
 						case 'z': note=0; break;
@@ -157,7 +160,7 @@ void Processor::processText(const std::string& line){
 				_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
 				return;
 			}
-			_queue.write()->type=Op::REMOVE_LINE;
+			_queue.write()->type=Op::UNLINE;
 			_queue.write()->line=&_lines[s];
 			_queue.nextWrite();
 		}
@@ -181,6 +184,34 @@ void Processor::processText(const std::string& line){
 		}
 		else if(s=="silence"){
 			_queue.write()->type=Op::SILENCE;
+			_queue.nextWrite();
+		}
+		else if(s=="record"){
+			if(!(ss>>s)) _errorStream<<"Must name record."<<std::endl;
+			_recs[s].clear();
+			_recs[s].reserve(_beatsPerLoop*_samplesPerBeat);
+			_queue.write()->type=Op::REC_MAKE;
+			_queue.write()->rec=&_recs[s];
+			_queue.nextWrite();
+		}
+		else if(s=="activateRecord"){
+			ss>>s;
+			if(!_recs.count(s)){
+				_errorStream<<"Record "<<s<<" does not exist."<<std::endl;
+				return;
+			}
+			_queue.write()->type=Op::REC;
+			_queue.write()->rec=&_recs[s];
+			_queue.nextWrite();
+		}
+		else if(s=="deactivateRecord"){
+			ss>>s;
+			if(!_recs.count(s)){
+				_errorStream<<"Record "<<s<<" does not exist."<<std::endl;
+				return;
+			}
+			_queue.write()->type=Op::UNREC;
+			_queue.write()->rec=&_recs[s];
 			_queue.nextWrite();
 		}
 		else _errorStream<<"Unknown command "<<s<<std::endl;
@@ -214,7 +245,17 @@ void Processor::output(float* samples){
 			if(_beat>=_beatsPerLoop){
 				_beat-=_beatsPerLoop;
 				processNexts();
-				for(auto line: _activeLines) line->i=0;//reset lines
+				//lines
+				for(auto line: _activeLines) line->i=0;
+				//recordings
+				_currentRec=(_currentRec+1)%2;
+				if(_switchRecPair){
+					_currentRecPair=(_currentRecPair+1)%2;
+					_switchRecPair=false;
+				}
+				Rec& rec=_recPairs[_currentRecPair][_currentRec];
+				rec.clear();
+				_recSample=0;
 			}
 		}
 	}
@@ -238,11 +279,50 @@ void Processor::output(float* samples){
 	}
 	//process sonics
 	for(auto i: _channelToSonic) i.second->evaluate(_samples.size());
+	//process recordings
+	for(auto rec: _activeRecs){
+		unsigned recSample=_recSample;
+		for(unsigned i=0; i<_samples.size(); ++i){
+			if(recSample>=rec->size) break;
+			_samples[i]+=(*rec).samples[recSample];
+			++recSample;
+		}
+	}
+	_recSample+=_samples.size();
 	//copy from working buffer to output buffer
 	for(unsigned i=0; i<_samples.size(); ++i) samples[i]=_samples[i];
 }
 
 Processor::Line::Line(): i(0) {}
+
+Processor::Rec::Rec(): samples(NULL), size(0), capacity(0) {}
+
+Processor::Rec::Rec(Rec& other){
+	samples=other.samples;
+	other.samples=NULL;
+	size=other.size;
+	capacity=other.capacity;
+}
+
+Processor::Rec::~Rec(){
+	delete samples;
+}
+
+void Processor::Rec::reserve(unsigned newCapacity){
+	delete samples;
+	samples=new float[newCapacity];
+	capacity=newCapacity;
+}
+
+bool Processor::Rec::push_back(float f){
+	if(size>=capacity) return false;
+	samples[size++]=f;
+	return true;
+}
+
+void Processor::Rec::clear(){
+	size=0;
+}
 
 void Processor::processOp(const Op& op){
 	switch(op.type){
@@ -252,9 +332,14 @@ void Processor::processOp(const Op& op){
 			_channelToSonic[channel]->processMidi(op.midi);
 			break;
 		}
-		case Op::MIC:
-			for(unsigned i=0; i<_samples.size(); ++i) _samples[i]+=op.mic[i];
+		case Op::MIC:{
+			Rec& rec=_recPairs[_currentRecPair][_currentRec];
+			if(!rec.capacity) break;
+			if(rec.size+op.mic.size()>rec.capacity)
+				_errorStream<<"Dropping samples in mic op"<<std::endl;
+			for(unsigned i=0; i<op.mic.size(); ++i) rec.push_back(op.mic[i]);
 			break;
+		}
 		case Op::SONIC:
 			_channelToSonic[op.channel]=op.sonic;
 			break;
@@ -269,7 +354,7 @@ void Processor::processOp(const Op& op){
 		case Op::LINE:
 			_nextLines.push_back(op.line);
 			break;
-		case Op::REMOVE_LINE:
+		case Op::UNLINE:
 			_removeLines.push_back(op.line);
 			break;
 		case Op::BEAT:
@@ -296,6 +381,25 @@ void Processor::processOp(const Op& op){
 			}
 			break;
 		}
+		case Op::REC_MAKE:{
+			Rec& rec=_recPairs[_currentRecPair][(_currentRec+1)%2];
+			if(rec.size==0){
+				_errorStream<<"Nothing recorded.\n";
+				break;
+			}
+			for(unsigned i=0; i<rec.size; ++i)
+				op.rec->push_back(rec.samples[i]);
+			break;
+		}
+		case Op::REC:
+			_nextRecs.push_back(op.rec);
+			break;
+		case Op::UNREC:
+			_removeRecs.push_back(op.rec);
+			break;
+		case Op::REC_SWITCH:
+			_switchRecPair=true;
+			break;
 		default: break;
 	}
 }
@@ -321,6 +425,29 @@ void Processor::processNexts(){
 				break;
 			}
 	_removeLines.clear();
+	//update records
+	for(auto rec: _nextRecs) _activeRecs.push_back(rec);
+	_nextRecs.clear();
+	for(auto i: _removeRecs)
+		for(auto j=_activeRecs.begin(); j!=_activeRecs.end(); ++j)
+			if(i==*j){
+				_activeRecs.erase(j);
+				break;
+			}
+	_removeRecs.clear();
+}
+
+void Processor::allocateNextRecPair(unsigned size){
+	if(size==0) return;
+	const unsigned maxSize=_sampleRate*120;
+	if(size>maxSize){
+		size=maxSize;
+		_errorStream<<"Not allocating entire record buffer because it would be very large."<<std::endl;
+	}
+	_recPairs[(_currentRecPair+1)%2][0].reserve(size);
+	_recPairs[(_currentRecPair+1)%2][1].reserve(size);
+	_queue.write()->type=Op::REC_SWITCH;
+	_queue.nextWrite();
 }
 
 }//namespace dlal
