@@ -149,6 +149,16 @@ void Processor::processText(const std::string& line){
 		_queue.write()->line=&_lines[s];
 		_queue.nextWrite();
 	}
+	else if(s=="deactivateLine"){
+		ss>>s;
+		if(!_lines.count(s)){
+			_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
+			return;
+		}
+		_queue.write()->type=Op::REMOVE_LINE;
+		_queue.write()->line=&_lines[s];
+		_queue.nextWrite();
+	}
 }
 
 void Processor::processMidi(const std::vector<unsigned char>& midi){
@@ -186,6 +196,13 @@ void Processor::output(float* samples){
 				//update lines
 				for(auto line: _nextLines) _activeLines.push_back(line);
 				_nextLines.clear();
+				for(auto i: _removeLines)
+					for(auto j=_activeLines.begin(); j!=_activeLines.end(); ++j)
+						if(i==*j){
+							_activeLines.erase(j);
+							break;
+						}
+				_removeLines.clear();
 				//reset lines
 				for(auto line: _activeLines) line->i=0;
 			}
@@ -241,6 +258,9 @@ void Processor::processOp(const Op& op){
 			break;
 		case Op::LINE:
 			_nextLines.push_back(op.line);
+			break;
+		case Op::REMOVE_LINE:
+			_removeLines.push_back(op.line);
 			break;
 		default: break;
 	}

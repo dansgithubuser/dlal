@@ -30,7 +30,7 @@ class Processor{
 			unsigned i;
 		};
 		struct Op{
-			enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE };
+			enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE, REMOVE_LINE };
 			Type type;
 			std::vector<unsigned char> midi;//MIDI
 			std::vector<float> mic;//MIC
@@ -41,7 +41,7 @@ class Processor{
 				};
 				unsigned samplesPerBeat;//TEMPO
 				unsigned beatsPerLoop;//LENGTH
-				Line* line;//LINE
+				Line* line;//LINE, REMOVE_LINE
 			};
 		};
 		void processOp(const Op&);
@@ -60,6 +60,7 @@ class Processor{
 		std::map<std::string, Line> _lines;
 		std::vector<Line*> _activeLines;
 		std::vector<Line*> _nextLines;
+		std::vector<Line*> _removeLines;
 };
 
 }//namespace dlal
