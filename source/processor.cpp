@@ -1,6 +1,8 @@
 #include "processor.hpp"
 
 #include <sstream>
+#include <thread>
+#include <chrono>
 
 namespace dlal{
 
@@ -34,14 +36,91 @@ void Processor::processText(const std::string& line){
 		if(s=="sonic"){
 			std::string name;
 			int channel;
-			if(!(ss>>name)||!(ss>>channel))
+			if(!(ss>>name)||!(ss>>channel)){
 				_errorStream<<"Must specify name and channel of sonic."<<std::endl;
+				continue;
+			}
 			Sonic sonic(_samples.data(), _sampleRate);
 			_sonics[name]=sonic;
 			_queue.write()->type=Op::SONIC;
 			_queue.write()->sonic=&_sonics[name];
 			_queue.write()->channel=channel;
 			_queue.nextWrite();
+		}
+		else if(s=="sonicConnect"){
+			if(!(ss>>s)){
+				_errorStream<<"Must specify name of sonic."<<std::endl;
+				continue;
+			}
+			if(!_sonics.count(s)){
+				_errorStream<<"Sonic "<<s<<" does not exist."<<std::endl;
+				continue;
+			}
+			unsigned i, j;
+			if(!(ss>>i)){
+				_errorStream<<"Must specify source oscillator."<<std::endl;
+				continue;
+			}
+			if(!(ss>>j)){
+				_errorStream<<"Must specify destination oscillator."<<std::endl;
+				continue;
+			}
+			if(i>=Sonic::OSCILLATORS||j>=Sonic::OSCILLATORS){
+				_errorStream<<"Oscillator must be between 0 and "<<Sonic::OSCILLATORS<<"."<<std::endl;
+				continue;
+			}
+			float amount;
+			if(!(ss>>amount)){
+				_errorStream<<"Must specify modulation amount."<<std::endl;
+				continue;
+			}
+			if(amount<0.0f||amount>1.0f){
+				_errorStream<<"Amount must be between 0 and 1."<<std::endl;
+				continue;
+			}
+			_sonics[s].oscillators[j]._inputs[i]=amount;
+		}
+		else if(s=="sonicAdsr"){
+			if(!(ss>>s)){
+				_errorStream<<"Must specify name of sonic."<<std::endl;
+				continue;
+			}
+			if(!_sonics.count(s)){
+				_errorStream<<"Sonic "<<s<<" does not exist."<<std::endl;
+				continue;
+			}
+			unsigned i;
+			if(!(ss>>i)){
+				_errorStream<<"Must specify source oscillator."<<std::endl;
+				continue;
+			}
+			if(i>=Sonic::OSCILLATORS){
+				_errorStream<<"Oscillator must be between 0 and "<<Sonic::OSCILLATORS<<"."<<std::endl;
+				continue;
+			}
+			float att, dec, sus, rel;
+			if(!(ss>>att)||!(ss>>dec)||!(ss>>sus)||!(ss>>rel)){
+				_errorStream<<"Must specify attack, decay, sustain, and release."<<std::endl;
+				continue;
+			}
+			if(att<0||dec<0||dec>1||sus<0||rel<0){
+				_errorStream<<"Attack, decay, sustain, and release must be positive. Decay must be less than 1."<<std::endl;
+				continue;
+			}
+			_sonics[s].oscillators[i]._attack=att;
+			_sonics[s].oscillators[i]._decay=dec;
+			_sonics[s].oscillators[i]._sustain=sus;
+			_sonics[s].oscillators[i]._release=rel;
+		}
+		else if(s=="wait"){
+			float duration;
+			ss>>duration;
+			if(duration<0||duration>1){
+				_errorStream<<"Duration must be between 0 and 1."<<std::endl;
+				continue;
+			}
+			std::cout<<"Waiting."<<std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(int(1000*duration)));
 		}
 		else if(s=="tempo"){
 			unsigned tempo;
@@ -67,11 +146,11 @@ void Processor::processText(const std::string& line){
 			int channel;
 			if(!(ss>>name)||!(ss>>channel)){
 				_errorStream<<"Must specify name and channel of line."<<std::endl;
-				return;
+				continue;
 			}
 			if(channel<0||channel>=16){
 				_errorStream<<"Channel must be between 0 and 15."<<std::endl;
-				return;
+				continue;
 			}
 			Line line;
 			Line::Event event;
@@ -148,7 +227,7 @@ void Processor::processText(const std::string& line){
 			ss>>s;
 			if(!_lines.count(s)){
 				_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
-				return;
+				continue;
 			}
 			_queue.write()->type=Op::LINE;
 			_queue.write()->line=&_lines[s];
@@ -158,7 +237,7 @@ void Processor::processText(const std::string& line){
 			ss>>s;
 			if(!_lines.count(s)){
 				_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
-				return;
+				continue;
 			}
 			_queue.write()->type=Op::UNLINE;
 			_queue.write()->line=&_lines[s];
@@ -168,15 +247,15 @@ void Processor::processText(const std::string& line){
 			float beat;
 			if(!(ss>>beat)){
 				_errorStream<<"Must specify beat."<<std::endl;
-				return;
+				continue;
 			}
 			if(beat<0.0f){
 				_errorStream<<"Beat must be greater than 0."<<std::endl;
-				return;
+				continue;
 			}
 			if(beat>=_beatsPerLoop){
 				_errorStream<<"Beat must be less than beats per loop."<<std::endl;
-				return;
+				continue;
 			}
 			_queue.write()->type=Op::BEAT;
 			_queue.write()->beat=beat;
@@ -198,7 +277,7 @@ void Processor::processText(const std::string& line){
 			ss>>s;
 			if(!_recs.count(s)){
 				_errorStream<<"Record "<<s<<" does not exist."<<std::endl;
-				return;
+				continue;
 			}
 			_queue.write()->type=Op::REC;
 			_queue.write()->rec=&_recs[s];
@@ -208,7 +287,7 @@ void Processor::processText(const std::string& line){
 			ss>>s;
 			if(!_recs.count(s)){
 				_errorStream<<"Record "<<s<<" does not exist."<<std::endl;
-				return;
+				continue;
 			}
 			_queue.write()->type=Op::UNREC;
 			_queue.write()->rec=&_recs[s];
