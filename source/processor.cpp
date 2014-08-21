@@ -162,7 +162,43 @@ void Processor::processText(const std::string& line){
 			float duty=0.99f;
 			int octave=5;
 			while(ss>>s){
-				if(s=="o"){
+				if(s=="l"){
+					if(!(ss>>s)){
+						_errorStream<<"Must specify line name."<<std::endl;
+						continue;
+					}
+					if(!_lines.count(s)){
+						_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
+						continue;
+					}
+					unsigned n;
+					if(!(ss>>n)){
+						_errorStream<<"Must specify multiplicity of line."<<std::endl;
+						continue;
+					}
+					if(n>128){
+						_errorStream<<"Multiplicity must be less than 128."<<std::endl;
+						continue;
+					}
+					float lineStride;
+					if(!(ss>>lineStride)){
+						_errorStream<<"Must specify line stride."<<std::endl;
+						continue;
+					}
+					if(lineStride<_lines[s].events.back().beat||lineStride>128){
+						_errorStream<<"Line stride must be between line length and 128."<<std::endl;
+						continue;
+					}
+					for(unsigned i=0; i<n; ++i){
+						for(unsigned j=0; j<_lines[s].events.size(); ++j){
+							Line::Event e=_lines[s].events[j];
+							e.beat+=event.beat;
+							line.events.push_back(e);
+						}
+						event.beat+=lineStride;
+					}
+				}
+				else if(s=="o"){
 					int o;
 					ss>>o;
 					octave+=o;
