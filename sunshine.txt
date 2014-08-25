@@ -1,0 +1,17 @@
+tempo 100
+length 24
+sonic drum 0
+sonicConnect drum 0 1 1
+sonicConnect drum 1 0 1
+sonicAdsr drum 0 0.01 0.01 0 0.01
+sonicAdsr drum 1 0.01 0.01 0 0.01
+line drumseg 0 , x , x
+line drumline 0 l drumseg 6 4
+wait 0.6 ; wait 0.6 ; wait 0.6 ; wait 0.6 ; wait 0.6 ; wait 0.6 ; wait 0.6 ; wait 0.6 ; activateLine drumline ; beat 0
+record bassline ; activateRecord bassline
+
+record v1 ; activateRecord v1
+record v2 ; activateRecord v2
+record v3 ; activateRecord v3
+
+record tpt ; activateRecord tpt

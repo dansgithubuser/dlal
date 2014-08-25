@@ -1,0 +1,5 @@
+sonic drum 0
+line drumseg 0 z x z ,
+activateLine drumseg
+tempo 100
+length 4

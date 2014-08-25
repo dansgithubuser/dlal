@@ -18,6 +18,7 @@ class Processor{
 		void processMidi(const std::vector<unsigned char>& midi);
 		void processMic(const float* samples);
 		void output(float*);
+		unsigned beat();
 	private:
 		struct Line{
 			Line();
@@ -72,6 +73,7 @@ class Processor{
 		unsigned _nextBeatsPerLoop;
 		unsigned _reqdSamplesPerBeat;
 		unsigned _reqdBeatsPerLoop;
+		std::atomic<unsigned> _lastBeat;
 		//sonics
 		std::map<std::string, Sonic> _sonics;
 		std::map<int, Sonic*> _channelToSonic;

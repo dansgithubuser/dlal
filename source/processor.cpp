@@ -19,6 +19,7 @@ Processor::Processor(unsigned sampleRate, unsigned size, std::ostream& errorStre
 	_nextBeatsPerLoop(0),
 	_reqdSamplesPerBeat(0),
 	_reqdBeatsPerLoop(0),
+	_lastBeat(0),
 	_currentRec(0),
 	_currentRecPair(0),
 	_switchRecPair(false),
@@ -360,18 +361,9 @@ void Processor::output(float* samples){
 			if(_beat>=_beatsPerLoop){
 				_beat-=_beatsPerLoop;
 				processNexts();
-				//lines
 				for(auto line: _activeLines) line->i=0;
-				//recordings
-				_currentRec=(_currentRec+1)%2;
-				if(_switchRecPair){
-					_currentRecPair=(_currentRecPair+1)%2;
-					_switchRecPair=false;
-				}
-				Rec& rec=_recPairs[_currentRecPair][_currentRec];
-				rec.clear();
-				_recSample=0;
 			}
+			_lastBeat=_beat+1;
 		}
 	}
 	//lines
@@ -406,6 +398,12 @@ void Processor::output(float* samples){
 	_recSample+=_samples.size();
 	//copy from working buffer to output buffer
 	for(unsigned i=0; i<_samples.size(); ++i) samples[i]=_samples[i];
+}
+
+unsigned Processor::beat(){
+	unsigned result=_lastBeat;
+	_lastBeat=0;
+	return result;
 }
 
 Processor::Line::Line(): i(0) {}
@@ -507,7 +505,7 @@ void Processor::processOp(const Op& op){
 			break;
 		}
 		case Op::REC:
-			_nextRecs.push_back(op.rec);
+			_activeRecs.push_back(op.rec);
 			break;
 		case Op::UNREC:
 			_removeRecs.push_back(op.rec);
@@ -530,7 +528,7 @@ void Processor::processNexts(){
 		_samplesPerBeat=_nextSamplesPerBeat;
 		_nextSamplesPerBeat=0;
 	}
-	//update lines
+	//update active lines
 	for(auto line: _nextLines) _activeLines.push_back(line);
 	_nextLines.clear();
 	for(auto i: _removeLines)
@@ -540,7 +538,7 @@ void Processor::processNexts(){
 				break;
 			}
 	_removeLines.clear();
-	//update records
+	//update active records
 	for(auto rec: _nextRecs) _activeRecs.push_back(rec);
 	_nextRecs.clear();
 	for(auto i: _removeRecs)
@@ -550,6 +548,15 @@ void Processor::processNexts(){
 				break;
 			}
 	_removeRecs.clear();
+	//records
+	_currentRec=(_currentRec+1)%2;
+	if(_switchRecPair){
+		_currentRecPair=(_currentRecPair+1)%2;
+		_switchRecPair=false;
+	}
+	Rec& rec=_recPairs[_currentRecPair][_currentRec];
+	rec.clear();
+	_recSample=0;
 }
 
 void Processor::allocateNextRecPair(unsigned size){
