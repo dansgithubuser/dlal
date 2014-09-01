@@ -1,5 +1,7 @@
 shouldn't drop mic samples, should spill over into next buffer
 split up input and output streams
+remove deallocations from callback?
+	ops contain vectors, vectors delete memory at the end of their lifecycle
 from booklet:
 	live qwerty keyboard input
 	game controller input

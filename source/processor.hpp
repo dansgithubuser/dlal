@@ -14,9 +14,11 @@ namespace dlal{
 class Processor{
 	public:
 		Processor(unsigned sampleRate, unsigned size, std::ostream& errorStream);
+		bool lockless();
 		void processText(const std::string&);
 		void processMidi(const std::vector<unsigned char>& midi);
 		void processMic(const float* samples);
+		void processMicNow(const float* samples);
 		void output(float*);
 		unsigned beat();
 	private:
@@ -42,6 +44,15 @@ class Processor{
 		};
 		struct Op{
 			enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE, UNLINE, BEAT, SILENCE, REC_MAKE, REC, UNREC, REC_SWITCH };
+			Op();
+			Op(Type);
+			Op(Type, unsigned);
+			Op(Type, Line*);
+			Op(Type, Rec*);
+			Op(Sonic*, unsigned channel);
+			Op(float beat);
+			Op(const std::vector<unsigned char>& midi);
+			Op(const std::vector<float>& mic);
 			Type type;
 			std::vector<unsigned char> midi;//MIDI
 			std::vector<float> mic;//MIC
@@ -64,6 +75,8 @@ class Processor{
 		const unsigned _sampleRate;
 		std::vector<float> _samples;
 		dlal::Queue<Op> _queue;
+		//mic
+		const float* _mic;
 		//looping
 		unsigned _beat;
 		unsigned _samplesAfterBeat;

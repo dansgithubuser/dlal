@@ -10,7 +10,7 @@ Processor::Processor(unsigned sampleRate, unsigned size, std::ostream& errorStre
 	_errorStream(errorStream),
 	_sampleRate(sampleRate),
 	_samples(size, 0.0f),
-	_queue(128),
+	_queue(8),
 	_beat(0),
 	_samplesAfterBeat(0),
 	_samplesPerBeat(0),
@@ -28,6 +28,7 @@ Processor::Processor(unsigned sampleRate, unsigned size, std::ostream& errorStre
 	Op op;
 	op.mic.resize(size);
 	_queue.setAll(op);
+	if(!_queue.lockless()) errorStream<<"Warning: queue is not lockless.\n";
 }
 
 void Processor::processText(const std::string& line){
@@ -43,10 +44,7 @@ void Processor::processText(const std::string& line){
 			}
 			Sonic sonic(_samples.data(), _sampleRate);
 			_sonics[name]=sonic;
-			_queue.write()->type=Op::SONIC;
-			_queue.write()->sonic=&_sonics[name];
-			_queue.write()->channel=channel;
-			_queue.nextWrite();
+			_queue.write(Op(&_sonics[name], channel));
 		}
 		else if(s=="sonicConnect"){
 			if(!(ss>>s)){
@@ -127,18 +125,14 @@ void Processor::processText(const std::string& line){
 			unsigned tempo;
 			ss>>tempo;
 			_reqdSamplesPerBeat=_sampleRate*60/tempo;
-			_queue.write()->type=Op::TEMPO;
-			_queue.write()->samplesPerBeat=_reqdSamplesPerBeat;
-			_queue.nextWrite();
+			_queue.write(Op(Op::TEMPO, _reqdSamplesPerBeat));
 			allocateNextRecPair(_reqdBeatsPerLoop*_reqdSamplesPerBeat);
 			if(tempo>400) _errorStream<<"Tempo will be very high."<<std::endl;
 			if(tempo<30) _errorStream<<"Tempo will be very low."<<std::endl;
 		}
 		else if(s=="length"){
 			ss>>_reqdBeatsPerLoop;
-			_queue.write()->type=Op::LENGTH;
-			_queue.write()->beatsPerLoop=_reqdBeatsPerLoop;
-			_queue.nextWrite();
+			_queue.write(Op(Op::LENGTH, _reqdBeatsPerLoop));
 			allocateNextRecPair(_reqdBeatsPerLoop*_reqdSamplesPerBeat);
 			if(_reqdBeatsPerLoop>128) _errorStream<<"Length will be very high."<<std::endl;
 		}
@@ -266,9 +260,7 @@ void Processor::processText(const std::string& line){
 				_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
 				continue;
 			}
-			_queue.write()->type=Op::LINE;
-			_queue.write()->line=&_lines[s];
-			_queue.nextWrite();
+			_queue.write(Op(Op::LINE, &_lines[s]));
 		}
 		else if(s=="deactivateLine"){
 			ss>>s;
@@ -276,9 +268,7 @@ void Processor::processText(const std::string& line){
 				_errorStream<<"Line "<<s<<" does not exist."<<std::endl;
 				continue;
 			}
-			_queue.write()->type=Op::UNLINE;
-			_queue.write()->line=&_lines[s];
-			_queue.nextWrite();
+			_queue.write(Op(Op::UNLINE, &_lines[s]));
 		}
 		else if(s=="beat"){
 			float beat;
@@ -294,21 +284,16 @@ void Processor::processText(const std::string& line){
 				_errorStream<<"Beat must be less than beats per loop."<<std::endl;
 				continue;
 			}
-			_queue.write()->type=Op::BEAT;
-			_queue.write()->beat=beat;
-			_queue.nextWrite();
+			_queue.write(Op(beat));
 		}
 		else if(s=="silence"){
-			_queue.write()->type=Op::SILENCE;
-			_queue.nextWrite();
+			_queue.write(Op(Op::SILENCE));
 		}
 		else if(s=="record"){
 			if(!(ss>>s)) _errorStream<<"Must name record."<<std::endl;
 			_recs[s].clear();
 			_recs[s].reserve(_beatsPerLoop*_samplesPerBeat);
-			_queue.write()->type=Op::REC_MAKE;
-			_queue.write()->rec=&_recs[s];
-			_queue.nextWrite();
+			_queue.write(Op(Op::REC_MAKE, &_recs[s]));
 		}
 		else if(s=="activateRecord"){
 			ss>>s;
@@ -316,9 +301,7 @@ void Processor::processText(const std::string& line){
 				_errorStream<<"Record "<<s<<" does not exist."<<std::endl;
 				continue;
 			}
-			_queue.write()->type=Op::REC;
-			_queue.write()->rec=&_recs[s];
-			_queue.nextWrite();
+			_queue.write(Op(Op::REC, &_recs[s]));
 		}
 		else if(s=="deactivateRecord"){
 			ss>>s;
@@ -326,9 +309,7 @@ void Processor::processText(const std::string& line){
 				_errorStream<<"Record "<<s<<" does not exist."<<std::endl;
 				continue;
 			}
-			_queue.write()->type=Op::UNREC;
-			_queue.write()->rec=&_recs[s];
-			_queue.nextWrite();
+			_queue.write(Op(Op::UNREC, &_recs[s]));
 		}
 		else _errorStream<<"Unknown command "<<s<<std::endl;
 		while(ss>>s){
@@ -339,16 +320,17 @@ void Processor::processText(const std::string& line){
 }
 
 void Processor::processMidi(const std::vector<unsigned char>& midi){
-	_queue.write()->type=Op::MIDI;
-	_queue.write()->midi=midi;
-	_queue.nextWrite();
+	_queue.write(Op(midi));
 }
 
 void Processor::processMic(const float* samples){
-	_queue.write()->type=Op::MIC;
-	_queue.write()->mic.resize(_samples.size());
-	for(unsigned i=0; i<_samples.size(); ++i) _queue.write()->mic[i]=samples[i];
-	_queue.nextWrite();
+	std::vector<float> v(_samples.size());
+	for(unsigned i=0; i<_samples.size(); ++i) v[i]=samples[i];
+	_queue.write(Op(v));
+}
+
+void Processor::processMicNow(const float* samples){
+	_mic=samples;
 }
 
 void Processor::output(float* samples){
@@ -380,9 +362,16 @@ void Processor::output(float* samples){
 	//reset sample
 	for(unsigned i=0; i<_samples.size(); ++i) _samples[i]=0.0f;
 	//process ops
-	while(_queue.read()){
-		processOp(*_queue.read());
+	while(_queue.getRead()){
+		processOp(*_queue.getRead());
 		_queue.nextRead();
+	}
+	//process mic
+	Rec& rec=_recPairs[_currentRecPair][_currentRec];
+	if(rec.capacity){
+		if(rec.size+_samples.size()>rec.capacity)
+			_errorStream<<"Dropping samples in mic op"<<std::endl;
+		for(unsigned i=0; i<_samples.size(); ++i) rec.push_back(_mic[i]);
 	}
 	//process sonics
 	for(auto i: _channelToSonic) i.second->evaluate(_samples.size());
@@ -437,6 +426,34 @@ void Processor::Rec::clear(){
 	size=0;
 }
 
+Processor::Op::Op(){}
+
+Processor::Op::Op(Type t): type(t) {}
+
+Processor::Op::Op(Type t, unsigned x): type(t) {
+	switch(type){
+		case TEMPO: samplesPerBeat=x;
+		case LENGTH: beatsPerLoop=x;
+		default: break;
+	}
+}
+
+Processor::Op::Op(Type t, Line* l): type(t), line(l) {}
+
+Processor::Op::Op(Type t, Rec* r): type(t), rec(r) {}
+
+Processor::Op::Op(Sonic* sonic, unsigned channel):
+	type(SONIC), sonic(sonic), channel(channel)
+{}
+
+Processor::Op::Op(float beat): type(BEAT), beat(beat) {}
+
+Processor::Op::Op(const std::vector<unsigned char>& midi):
+	type(MIDI), midi(midi)
+{}
+
+Processor::Op::Op(const std::vector<float>& mic): type(MIC), mic(mic) {}
+
 void Processor::processOp(const Op& op){
 	switch(op.type){
 		case Op::MIDI:{
@@ -446,11 +463,7 @@ void Processor::processOp(const Op& op){
 			break;
 		}
 		case Op::MIC:{
-			Rec& rec=_recPairs[_currentRecPair][_currentRec];
-			if(!rec.capacity) break;
-			if(rec.size+op.mic.size()>rec.capacity)
-				_errorStream<<"Dropping samples in mic op"<<std::endl;
-			for(unsigned i=0; i<op.mic.size(); ++i) rec.push_back(op.mic[i]);
+			_mic=op.mic.data();
 			break;
 		}
 		case Op::SONIC:
@@ -568,8 +581,7 @@ void Processor::allocateNextRecPair(unsigned size){
 	}
 	_recPairs[(_currentRecPair+1)%2][0].reserve(size);
 	_recPairs[(_currentRecPair+1)%2][1].reserve(size);
-	_queue.write()->type=Op::REC_SWITCH;
-	_queue.nextWrite();
+	_queue.write(Op(Op::REC_SWITCH));
 }
 
 }//namespace dlal
