@@ -1,3 +1,10 @@
 shouldn't drop mic samples, should spill over into next buffer
 split up input and output streams
-check booklet for more todos
+from booklet:
+	live qwerty keyboard input
+	game controller input
+	binding
+	scripting
+	performance log = entire mic input + timed commands
+	pitch shift
+	create instrument out of recorded audio
