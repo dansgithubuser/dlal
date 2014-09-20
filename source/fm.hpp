@@ -37,10 +37,12 @@ class Sonic{
 			float _volume;
 			unsigned _age;
 			bool _done;
+			float _previousOutput;
 		};
 		unsigned _sampleRate;
 		float* _samples;
 		Note _notes[MIDI_NOTES];
+		float _lowness;
 };
 
 }//namespace dlal

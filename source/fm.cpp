@@ -23,7 +23,7 @@ Sonic::Oscillator::Oscillator():
 Sonic::Sonic(){}
 
 Sonic::Sonic(float* samples, unsigned sampleRate):
-	_samples(samples), _sampleRate(sampleRate)
+	_samples(samples), _sampleRate(sampleRate), _lowness(0.0f)
 {
 	oscillators[0]._output=1.0f;
 	for(unsigned i=0; i<MIDI_NOTES; ++i)
@@ -39,6 +39,9 @@ void Sonic::processMidi(const std::vector<unsigned char>& message){
 		case 0x90:
 			if(message[2]==0) _notes[message[1]].stop();
 			else _notes[message[1]].start(message[2]/127.0f, oscillators);
+			break;
+		case 0xB0:
+			_lowness=1.0f-1.0f/pow(128.0f, message[2]/64.0f);
 			break;
 		default: break;
 	}
@@ -88,7 +91,10 @@ void Sonic::evaluate(unsigned samplesToEvaluate){
 					modulatedPhase+=_notes[i]._runners[l]._output*oscillators[k]._inputs[l];
 				_notes[i]._runners[k]._output=wave(modulatedPhase)*_notes[i]._runners[k]._volume;
 				//add contribution to current sample
-				_samples[j]+=_notes[i]._runners[k]._output*oscillators[k]._output*_notes[i]._volume;
+				float unfiltered=_notes[i]._runners[k]._output*oscillators[k]._output*_notes[i]._volume;
+				float filtered=(1-_lowness)*unfiltered+_lowness*_notes[i]._previousOutput;
+				_samples[j]+=filtered;
+				_notes[i]._previousOutput=filtered;
 			}//for(unsigned k=0; k<OSCILLATORS; ++k)
 		}//for(unsigned j=0; j<samplesToEvaluate; ++j)
 	}//for(unsigned i=0; i<MIDI_NOTES; ++i)
@@ -102,7 +108,7 @@ void Sonic::Runner::reset(float step){
 	_output=0.0f;
 }
 
-Sonic::Note::Note(): _done(true) {}
+Sonic::Note::Note(): _done(true), _previousOutput(0.0f) {}
 
 void Sonic::Note::set(unsigned i, unsigned sampleRate){
 	_step=440.0f*pow(2.0f, (int(i)-69)/12.0f)/sampleRate;
