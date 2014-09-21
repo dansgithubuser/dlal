@@ -516,10 +516,6 @@ void Processor::processOp(const Op& op){
 		}
 		case Op::REC_MAKE:{
 			Rec& rec=_recPairs[_currentRecPair][(_currentRec+1)%2];
-			if(rec.size==0){
-				_errorStream<<"Nothing recorded.\n";
-				break;
-			}
 			for(unsigned i=0; i<rec.size; ++i)
 				op.rec->push_back(rec.samples[i]);
 			break;
@@ -582,10 +578,6 @@ void Processor::processNexts(){
 void Processor::allocateNextRecPair(unsigned size){
 	if(size==0) return;
 	const unsigned maxSize=_sampleRate*120;
-	if(size>maxSize){
-		size=maxSize;
-		_errorStream<<"Not allocating entire record buffer because it would be very large."<<std::endl;
-	}
 	_recPairs[(_currentRecPair+1)%2][0].reserve(size);
 	_recPairs[(_currentRecPair+1)%2][1].reserve(size);
 	_queue.write(Op(Op::REC_SWITCH));

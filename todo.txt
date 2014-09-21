@@ -1,5 +1,4 @@
 buggy:
-	split up input and output text streams
 	why is sfml window laggy
 	remove deallocations from callback?
 		ops contain vectors, vectors delete memory at the end of their lifecycle
