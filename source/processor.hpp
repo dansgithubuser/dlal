@@ -17,8 +17,7 @@ class Processor{
 		bool lockless();
 		void processText(const std::string&);
 		void processMidi(const std::vector<unsigned char>& midi);
-		void processMic(const float* samples);
-		void processMicNow(const float* samples);
+		void processMic(const float* samples, unsigned size, unsigned micIndex);
 		void output(float*);
 		unsigned beat();
 	private:
@@ -36,6 +35,8 @@ class Processor{
 				Rec();
 				Rec(Rec&);
 				~Rec();
+				float& operator[](unsigned i);
+				const float& operator[](unsigned i) const;
 				void reserve(unsigned);
 				bool push_back(float);
 				void clear();
@@ -52,11 +53,12 @@ class Processor{
 			Op(Sonic*, unsigned channel);
 			Op(float beat);
 			Op(const std::vector<unsigned char>& midi);
-			Op(const std::vector<float>& mic);
+			Op(const float* samples, unsigned size, unsigned micIndex);
 			Type type;
 			std::vector<unsigned char> midi;//MIDI
 			std::vector<float> mic;//MIC
 			union{
+				unsigned micIndex;//MIC
 				struct{
 					Sonic* sonic;//SONIC
 					unsigned channel;//SONIC
@@ -76,7 +78,7 @@ class Processor{
 		std::vector<float> _samples;
 		dlal::Queue<Op> _queue;
 		//mic
-		const float* _mic;
+		std::vector<std::vector<float>> _mic;
 		//looping
 		unsigned _beat;
 		unsigned _samplesAfterBeat;

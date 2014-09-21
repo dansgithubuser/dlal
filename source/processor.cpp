@@ -28,6 +28,8 @@ Processor::Processor(unsigned sampleRate, unsigned size, std::ostream& errorStre
 	Op op;
 	op.mic.resize(size);
 	_queue.setAll(op);
+	_mic.resize(1);
+	_mic[0].resize(size);
 	if(!_queue.lockless()) errorStream<<"Warning: queue is not lockless.\n";
 }
 
@@ -323,14 +325,8 @@ void Processor::processMidi(const std::vector<unsigned char>& midi){
 	_queue.write(Op(midi));
 }
 
-void Processor::processMic(const float* samples){
-	std::vector<float> v(_samples.size());
-	for(unsigned i=0; i<_samples.size(); ++i) v[i]=samples[i];
-	_queue.write(Op(v));
-}
-
-void Processor::processMicNow(const float* samples){
-	_mic=samples;
+void Processor::processMic(const float* samples, unsigned size, unsigned micIndex){
+	_queue.write(Op(samples, size, micIndex));
 }
 
 void Processor::output(float* samples){
@@ -369,9 +365,11 @@ void Processor::output(float* samples){
 	//process mic
 	Rec& rec=_recPairs[_currentRecPair][_currentRec];
 	if(rec.capacity){
-		if(rec.size+_samples.size()>rec.capacity)
-			_errorStream<<"Dropping samples in mic op"<<std::endl;
-		for(unsigned i=0; i<_samples.size(); ++i) rec.push_back(_mic[i]);
+		unsigned max=std::min(_samples.size(), rec.capacity-rec.size);
+		for(unsigned i=0; i<_mic.size(); ++i) rec.push_back(0.0f);
+		for(unsigned i=0; i<_mic.size(); ++i)
+			for(unsigned j=0; j<max; ++j)
+				rec[j]+=_mic[i][j];
 	}
 	//process sonics
 	for(auto i: _channelToSonic) i.second->evaluate(_samples.size());
@@ -409,6 +407,9 @@ Processor::Rec::Rec(Rec& other){
 Processor::Rec::~Rec(){
 	delete samples;
 }
+
+float& Processor::Rec::operator[](unsigned i){ return samples[i]; }
+const float& Processor::Rec::operator[](unsigned i) const{ return samples[i]; }
 
 void Processor::Rec::reserve(unsigned newCapacity){
 	delete samples;
@@ -452,7 +453,12 @@ Processor::Op::Op(const std::vector<unsigned char>& midi):
 	type(MIDI), midi(midi)
 {}
 
-Processor::Op::Op(const std::vector<float>& mic): type(MIC), mic(mic) {}
+Processor::Op::Op(const float* samples, unsigned size, unsigned micIndex):
+	type(MIC), micIndex(micIndex)
+{
+	mic.resize(size);
+	for(unsigned i=0; i<size; ++i) mic[i]=samples[i];
+}
 
 void Processor::processOp(const Op& op){
 	switch(op.type){
@@ -463,7 +469,8 @@ void Processor::processOp(const Op& op){
 			break;
 		}
 		case Op::MIC:{
-			_mic=op.mic.data();
+			if(_mic.size()<=op.micIndex) _mic.resize(op.micIndex+1);
+			_mic[op.micIndex]=op.mic;
 			break;
 		}
 		case Op::SONIC:

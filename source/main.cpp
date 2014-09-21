@@ -24,7 +24,7 @@ int main(int argc, char** argv){
 	dlal::Processor processor(SAMPLE_RATE, SAMPLES_PER_CALLBACK, std::cout);
 	dlal::audioInit(
 		[&](const float* input, float* output){
-			processor.processMicNow(input);
+			processor.processMic(input, 1<<LOG2_SAMPLES_PER_CALLBACK, 0);
 			processor.output(output);
 		},
 		SAMPLE_RATE,
