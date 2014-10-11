@@ -26,7 +26,7 @@ Processor::Processor(unsigned sampleRate, unsigned size, std::ostream& errorStre
 	_recSample(0)
 {
 	Op op;
-	op.mic.resize(size);
+	op._mic.resize(size);
 	_queue.setAll(op);
 	_mic.resize(1);
 	_mic[0].resize(size);
@@ -326,7 +326,13 @@ void Processor::processMidi(const std::vector<unsigned char>& midi){
 }
 
 void Processor::processMic(const float* samples, unsigned size, unsigned micIndex){
-	_queue.write(Op(samples, size, micIndex));
+	_queue.lock();
+	Op* op;
+	if(op=_queue.getWrite()){
+		op->set(samples, size, micIndex);
+		_queue.nextWrite();
+	}
+	_queue.unlock();
 }
 
 void Processor::output(float* samples){
@@ -349,8 +355,9 @@ void Processor::output(float* samples){
 	for(auto line: _activeLines){
 		while(line->i<line->events.size()&&beat>=line->events[line->i].beat){
 			Op op;
-			op.type=Op::MIDI;
-			op.midi=line->events[line->i].message;
+			op._type=Op::MIDI;
+			for(unsigned j=0; j<line->events[line->i].message.size(); ++j)
+				op._midi[j]=line->events[line->i].message[j];
 			processOp(op);
 			++line->i;
 		}
@@ -429,73 +436,84 @@ void Processor::Rec::clear(){
 
 Processor::Op::Op(){}
 
-Processor::Op::Op(Type t): type(t) {}
+Processor::Op::Op(Type t): _type(t) {}
 
-Processor::Op::Op(Type t, unsigned x): type(t) {
-	switch(type){
-		case TEMPO: samplesPerBeat=x;
-		case LENGTH: beatsPerLoop=x;
+Processor::Op::Op(Type t, unsigned x): _type(t) {
+	switch(_type){
+		case TEMPO: _samplesPerBeat=x;
+		case LENGTH: _beatsPerLoop=x;
 		default: break;
 	}
 }
 
-Processor::Op::Op(Type t, Line* l): type(t), line(l) {}
+Processor::Op::Op(Type t, Line* l): _type(t), _line(l) {}
 
-Processor::Op::Op(Type t, Rec* r): type(t), rec(r) {}
+Processor::Op::Op(Type t, Rec* r): _type(t), _rec(r) {}
 
 Processor::Op::Op(Sonic* sonic, unsigned channel):
-	type(SONIC), sonic(sonic), channel(channel)
+	_type(SONIC), _sonic(sonic), _channel(channel)
 {}
 
-Processor::Op::Op(float beat): type(BEAT), beat(beat) {}
+Processor::Op::Op(float beat): _type(BEAT), _beat(beat) {}
 
 Processor::Op::Op(const std::vector<unsigned char>& midi):
-	type(MIDI), midi(midi)
-{}
+	_type(MIDI), _midiSize(0)
+{
+	if(midi.size()>sizeof(_midi)) return;
+	for(unsigned i=0; i<midi.size(); ++i) _midi[i]=midi[i];
+	_midiSize=midi.size();
+}
 
 Processor::Op::Op(const float* samples, unsigned size, unsigned micIndex):
-	type(MIC), micIndex(micIndex)
+	_type(MIC), _micIndex(micIndex)
 {
-	mic.resize(size);
-	for(unsigned i=0; i<size; ++i) mic[i]=samples[i];
+	_mic.resize(size);
+	for(unsigned i=0; i<size; ++i) _mic[i]=samples[i];
+}
+
+void Processor::Op::set(const float* samples, unsigned size, unsigned micIndex){
+	_type=MIC;
+	_micIndex=micIndex;
+	_mic.resize(size);
+	for(unsigned i=0; i<size; ++i) _mic[i]=samples[i];
 }
 
 void Processor::processOp(const Op& op){
-	switch(op.type){
+	switch(op._type){
 		case Op::MIDI:{
-			unsigned channel=op.midi[0]&0x0f;
+			unsigned channel=op._midi[0]&0x0f;
 			if(!_channelToSonic.count(channel)) break;
-			_channelToSonic[channel]->processMidi(op.midi);
+			_channelToSonic[channel]->processMidi(op._midi, op._midiSize);
 			break;
 		}
 		case Op::MIC:{
-			if(_mic.size()<=op.micIndex) _mic.resize(op.micIndex+1);
-			_mic[op.micIndex]=op.mic;
+			if(_mic.size()<=op._micIndex) _mic.resize(op._micIndex+1);
+			_mic[op._micIndex]=op._mic;
 			break;
 		}
 		case Op::SONIC:
-			_channelToSonic[op.channel]=op.sonic;
+			_channelToSonic[op._channel]=op._sonic;
 			break;
 		case Op::TEMPO:
-			if(_samplesPerBeat) _nextSamplesPerBeat=op.samplesPerBeat;
-			else _samplesPerBeat=op.samplesPerBeat;
+			if(_samplesPerBeat) _nextSamplesPerBeat=op._samplesPerBeat;
+			else _samplesPerBeat=op._samplesPerBeat;
 			break;
 		case Op::LENGTH:
-			if(_beatsPerLoop) _nextBeatsPerLoop=op.beatsPerLoop;
-			else _beatsPerLoop=op.beatsPerLoop;
+			if(_beatsPerLoop) _nextBeatsPerLoop=op._beatsPerLoop;
+			else _beatsPerLoop=op._beatsPerLoop;
 			break;
 		case Op::LINE:
-			_nextLines.push_back(op.line);
+			_nextLines.push_back(op._line);
 			break;
 		case Op::UNLINE:
-			_removeLines.push_back(op.line);
+			_removeLines.push_back(op._line);
 			break;
 		case Op::BEAT:
-			_beat=unsigned(op.beat);
-			_samplesAfterBeat=int((op.beat-_beat)*_samplesPerBeat);
+			_beat=unsigned(op._beat);
+			_samplesAfterBeat=int((op._beat-_beat)*_samplesPerBeat);
 			for(auto line: _activeLines){
 				line->i=0;
-				while(line->events[line->i].beat<op.beat) ++line->i;
+				while(line->events[line->i].beat<op._beat) ++line->i;
 			}
 			processNexts();
 			break;
@@ -509,7 +527,7 @@ void Processor::processOp(const Op& op){
 				for(auto j: _channelToSonic){
 					message[0]&=0xf0;
 					message[0]|=j.first;
-					j.second->processMidi(message);
+					j.second->processMidi(message.data(), message.size());
 				}
 			}
 			break;
@@ -517,14 +535,14 @@ void Processor::processOp(const Op& op){
 		case Op::REC_MAKE:{
 			Rec& rec=_recPairs[_currentRecPair][(_currentRec+1)%2];
 			for(unsigned i=0; i<rec.size; ++i)
-				op.rec->push_back(rec.samples[i]);
+				op._rec->push_back(rec.samples[i]);
 			break;
 		}
 		case Op::REC:
-			_activeRecs.push_back(op.rec);
+			_activeRecs.push_back(op._rec);
 			break;
 		case Op::UNREC:
-			_removeRecs.push_back(op.rec);
+			_removeRecs.push_back(op._rec);
 			break;
 		case Op::REC_SWITCH:
 			_switchRecPair=true;

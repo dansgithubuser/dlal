@@ -43,32 +43,35 @@ class Processor{
 				float* samples;
 				unsigned size, capacity;
 		};
-		struct Op{
-			enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE, UNLINE, BEAT, SILENCE, REC_MAKE, REC, UNREC, REC_SWITCH };
-			Op();
-			Op(Type);
-			Op(Type, unsigned);
-			Op(Type, Line*);
-			Op(Type, Rec*);
-			Op(Sonic*, unsigned channel);
-			Op(float beat);
-			Op(const std::vector<unsigned char>& midi);
-			Op(const float* samples, unsigned size, unsigned micIndex);
-			Type type;
-			std::vector<unsigned char> midi;//MIDI
-			std::vector<float> mic;//MIC
-			union{
-				unsigned micIndex;//MIC
-				struct{
-					Sonic* sonic;//SONIC
-					unsigned channel;//SONIC
+		class Op{
+			public:
+				enum Type{ MIDI, MIC, SONIC, TEMPO, LENGTH, LINE, UNLINE, BEAT, SILENCE, REC_MAKE, REC, UNREC, REC_SWITCH };
+				Op();
+				Op(Type);
+				Op(Type, unsigned);
+				Op(Type, Line*);
+				Op(Type, Rec*);
+				Op(Sonic*, unsigned channel);
+				Op(float beat);
+				Op(const std::vector<unsigned char>& midi);
+				Op(const float* samples, unsigned size, unsigned micIndex);
+				void set(const float* samples, unsigned size, unsigned micIndex);
+				Type _type;
+				unsigned char _midi[32];//MIDI
+				unsigned char _midiSize;//MIDI
+				std::vector<float> _mic;//MIC
+				union{
+					unsigned _micIndex;//MIC
+					struct{
+						Sonic* _sonic;//SONIC
+						unsigned _channel;//SONIC
+					};
+					unsigned _samplesPerBeat;//TEMPO
+					unsigned _beatsPerLoop;//LENGTH
+					Line* _line;//LINE, UNLINE
+					float _beat;//BEAT
+					Rec* _rec;//REC_MAKE, REC, UNREC
 				};
-				unsigned samplesPerBeat;//TEMPO
-				unsigned beatsPerLoop;//LENGTH
-				Line* line;//LINE, UNLINE
-				float beat;//BEAT
-				Rec* rec;//REC_MAKE, REC, UNREC
-			};
 		};
 		void processOp(const Op&);
 		void processNexts();

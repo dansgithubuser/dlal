@@ -17,7 +17,7 @@ class Sonic{
 		};
 		Sonic();
 		Sonic(float* samples, unsigned sampleRate);
-		void processMidi(const std::vector<unsigned char>& message);
+		void processMidi(const unsigned char* message, unsigned char size);
 		void evaluate(unsigned samplesToEvaluate);
 		Oscillator oscillators[OSCILLATORS];
 	private:

@@ -39,6 +39,21 @@ template <typename T> class Queue{
 			return true;
 		}
 
+		void lock(){ _mutex.lock(); }
+		void unlock(){ _mutex.unlock(); }
+		
+		T* getWrite(){//must be locked
+			unsigned w=_w.load(std::memory_order_consume);
+			unsigned r=_r.load(std::memory_order_consume);
+			if((w+1&_mask)==r) return NULL;
+			return &_v[w];
+		}
+
+		void nextWrite(){//must be locked
+			unsigned w=_w.load(std::memory_order_consume);
+			_w.store(w+1&_mask, std::memory_order_release);
+		}
+
 		void setAll(const T& t){
 			for(unsigned i=0; i<_v.size(); ++i) _v[i]=t;
 		}

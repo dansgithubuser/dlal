@@ -30,17 +30,21 @@ Sonic::Sonic(float* samples, unsigned sampleRate):
 		_notes[i].set(i, sampleRate);
 }
 
-void Sonic::processMidi(const std::vector<unsigned char>& message){
+void Sonic::processMidi(const unsigned char* message, unsigned char size){
+	if(size<1) return;
 	unsigned char command=message[0]&0xf0;
 	switch(command){
 		case 0x80:
+			if(size<2) return;
 			_notes[message[1]].stop();
 			break;
 		case 0x90:
+			if(size<3) return;
 			if(message[2]==0) _notes[message[1]].stop();
 			else _notes[message[1]].start(message[2]/127.0f, oscillators);
 			break;
 		case 0xB0:
+			if(size<3) return;
 			_lowness=1.0f-1.0f/pow(128.0f, message[2]/64.0f);
 			break;
 		default: break;
