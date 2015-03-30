@@ -15,6 +15,7 @@ static int paStreamCallback(
 	}
 	else ++audio->_underflows;
 	audio->_output=(float*)output;
+	for(auto i=0; i<samples; ++i) audio->_output[i]=0.0f;
 	audio->_system->evaluate(samples);
 	return paContinue;
 }
@@ -62,12 +63,7 @@ std::string* Audio::readText(){ return &_text; }
 
 void Audio::sendText(const std::string& text){ process(text); }
 
-void Audio::start(std::stringstream& ss){
-	//parameters
-	ss>>_sampleRate;
-	unsigned log2SamplesPerCallback;
-	ss>>log2SamplesPerCallback;
-	//
+void Audio::start(){
 	PaError err;
 	//initialize
 	err=Pa_Initialize();
@@ -105,7 +101,7 @@ void Audio::start(std::stringstream& ss){
 		&inputParameters,
 		&outputParameters,
 		_sampleRate,
-		1<<log2SamplesPerCallback,
+		1<<_log2SamplesPerCallback,
 		paNoFlag,
 		paStreamCallback,
 		this
@@ -136,7 +132,11 @@ void Audio::process(const std::string& text){
 	std::stringstream ss(text);
 	std::string s;
 	ss>>s;
-	if(s=="start") start(ss);
+	if(s=="set"){
+		ss>>_sampleRate;
+		ss>>_log2SamplesPerCallback;
+	}
+	else if(s=="start") start();
 	else if(s=="finish") finish();
 	else if(s=="test"){
 		_testPhase=0.0f;

@@ -22,9 +22,10 @@ class Audio: public Component{
 		float* _output;
 	private:
 		static const PaSampleFormat PA_SAMPLE_FORMAT=paFloat32;
-		void start(std::stringstream&);
+		void start();
 		void finish();
 		void process(const std::string& text);
+		unsigned _log2SamplesPerCallback;
 		PaStream* _paStream;
 		std::string _text;
 		std::vector<Component*> _inputs;
