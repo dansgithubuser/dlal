@@ -16,6 +16,15 @@ make
 cp *.so ../../../../skeleton/build/
 cd $p
 
+p=`pwd`
+cd ../../components/midi/build
+mkdir lib
+cd lib
+cmake -D BUILD_SHARED_LIBS=ON ..
+make
+cp *.so ../../../../skeleton/build/
+cd $p
+
 cmake -D BUILD_SHARED_LIBS=ON .
 make
 

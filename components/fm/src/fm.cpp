@@ -20,8 +20,8 @@ void Sonic::addInput(Component* input){ _input=input; }
 void Sonic::addOutput(Component* output){ _output=output; }
 
 void Sonic::evaluate(unsigned samples){
-	#warning code should be uncommented eventually
-	//for(auto i: *_input->readMidi()) processMidi(i);
+	MidiMessages& messages=*_input->readMidi();
+	for(unsigned i=0; i<messages.size(); ++i) processMidi(messages[i]);
 	_samples=_output->readAudio();
 	for(unsigned i=0; i<NOTES; ++i){
 		if(_notes[i]._done) continue;
@@ -46,9 +46,9 @@ void Sonic::sendText(const std::string& text){
 	}
 	else if(s=="test"){
 		MidiMessage message;
-		message.push_back(0x90);
-		message.push_back(0x3c);
-		message.push_back(0x7f);
+		message._bytes[0]=0x90;
+		message._bytes[1]=0x3c;
+		message._bytes[2]=0x7f;
 		processMidi(message);
 	}
 }
@@ -133,17 +133,16 @@ float Sonic::Note::update(unsigned i, const Oscillator* oscillators){
 }
 
 void Sonic::processMidi(const MidiMessage& message){
-	if(message.size()<1) return;
-	uint8_t command=message[0]&0xf0;
+	uint8_t command=message._bytes[0]&0xf0;
 	switch(command){
 		case 0x80:
-			if(message.size()<2) return;
-			_notes[message[1]].stop();
+			_notes[message._bytes[1]].stop();
 			break;
 		case 0x90:
-			if(message.size()<3) return;
-			if(message[2]==0) _notes[message[1]].stop();
-			else _notes[message[1]].start(message[2]/127.0f, _oscillators);
+			if(message._bytes[2]==0)
+				_notes[message._bytes[1]].stop();
+			else
+				_notes[message._bytes[1]].start(message._bytes[2]/127.0f, _oscillators);
 			break;
 		default: break;
 	}
