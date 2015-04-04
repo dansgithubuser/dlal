@@ -43,7 +43,7 @@ void Midi::sendText(const std::string& text){
 	std::stringstream ss(text);
 	std::string s;
 	ss>>s;
-	if(s=="test"){
+	if(s=="midi"){
 		MidiMessage message;
 		unsigned byte, i=0;
 		while(ss>>std::hex>>byte&&i<MidiMessage::SIZE){
