@@ -1,14 +1,28 @@
 dlal
 ====
 
-Dan's Live Audio Lab
+Dan's Live Audio Lab...
+- allows a musician to augment their instrument while playing it
+- uses C++ for audio processing and Python for audio system description
+- is cross platform
 
-Nothing much yet, but here are some goals:
--cross platform
--low latency
--mono output
--microphone input
--MIDI input
--console input that allows for a single musician to control their instrument and the lab
--looping
--pitch shift
+Some specific features...
+- low latency audio
+- FM synthesis modeled after the Sega Genesis YM2612 chip
+- MIDI input
+- SFML input
+
+todo
+----
+- friendlier error handling
+- mic
+- components
+  - liner
+  - buffer
+  - low pass
+  - pitch shift
+- record to file
+  - system
+  - midi
+  - mic
+  - sfml
