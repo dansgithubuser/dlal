@@ -14,7 +14,6 @@ Some specific features...
 
 todo
 ----
-- friendlier error handling
 - mic
 - components
   - liner

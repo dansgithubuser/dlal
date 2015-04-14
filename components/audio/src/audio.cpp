@@ -23,14 +23,26 @@ static int paStreamCallback(
 static std::string paError(const PaError& err){
 	Pa_Terminate();
 	std::stringstream ss;
-	ss<<"PortAudio error number: "<<err<<"\n";
-	ss<<"PortAudio error message: "<<Pa_GetErrorText(err)<<"\n";
+	ss<<"PortAudio error number: "<<err;
+	ss<<"PortAudio error message: "<<Pa_GetErrorText(err);
 	return ss.str();
 }
 
 namespace dlal{
 
-Audio::Audio(): _underflows(0), _test(false) {}
+Audio::Audio():
+	_output((float*)1),
+	_sampleRate(0),
+	_underflows(0),
+	_started(false),
+	_test(false)
+{}
+
+bool Audio::ready(){
+	if(_sampleRate) return true;
+	_text="must set sample rate and log2 samples per callback";
+	return false;
+}
 
 void Audio::addInput(Component* component){
 	std::stringstream ss;
@@ -61,6 +73,8 @@ float* Audio::readAudio(){ return _output; }
 
 std::string* Audio::readText(){ return &_text; }
 
+void Audio::clearText(){ _text.clear(); }
+
 void Audio::sendText(const std::string& text){ process(text); }
 
 void Audio::start(){
@@ -68,14 +82,14 @@ void Audio::start(){
 	//initialize
 	err=Pa_Initialize();
 	if(err!=paNoError){
-		_text="Pa_Initialize failed\n"+paError(err);
+		_text="Pa_Initialize failed: "+paError(err);
 		return;
 	}
 	//input
 	PaStreamParameters inputParameters;
 	inputParameters.device=Pa_GetDefaultInputDevice();
 	if(inputParameters.device==paNoDevice){
-		_text="no default input device\n"+paError(err);
+		_text="no default input device: "+paError(err);
 		return;
 	}
 	inputParameters.channelCount=1;
@@ -87,7 +101,7 @@ void Audio::start(){
 	PaStreamParameters outputParameters;
 	outputParameters.device=Pa_GetDefaultOutputDevice();
 	if(outputParameters.device==paNoDevice){
-		_text="no default output device\n"+paError(err);
+		_text="no default output device: "+paError(err);
 		return;
 	}
 	outputParameters.channelCount=1;
@@ -107,15 +121,16 @@ void Audio::start(){
 		this
 	);
 	if(err!=paNoError){
-		_text="Pa_OpenStream failed\n"+paError(err);
+		_text="Pa_OpenStream failed: "+paError(err);
 		return;
 	}
 	//start stream
 	err=Pa_StartStream(_paStream);
 	if(err!=paNoError){
-		_text="Pa_StartStream failed\n"+paError(err);
+		_text="Pa_StartStream failed: "+paError(err);
 		return;
 	}
+	_started=true;
 }
 
 void Audio::finish(){
@@ -126,6 +141,7 @@ void Audio::finish(){
 		return;
 	}
 	Pa_Terminate();
+	_started=false;
 }
 
 void Audio::process(const std::string& text){
@@ -136,13 +152,31 @@ void Audio::process(const std::string& text){
 		ss>>_sampleRate;
 		ss>>_log2SamplesPerCallback;
 	}
-	else if(s=="start") start();
-	else if(s=="finish") finish();
+	else if(s=="start"){
+		if(!_system){
+			_text="must add before starting";
+			return;
+		}
+		if(_started){
+			_text="already started";
+			return;
+		}
+		start();
+	}
+	else if(s=="finish"){
+		if(!_started){
+			_text="not started";
+			return;
+		}
+		finish();
+	}
 	else if(s=="test"){
 		_testPhase=0.0f;
 		_test=true;
 	}
-	else _text="unrecognized command\n";
+	else _text="unrecognized command";
 }
+
+std::string Audio::commands(){ return "set start finish test"; }
 
 }//namespace dlal

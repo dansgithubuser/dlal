@@ -13,11 +13,14 @@ class Audio: public Component{
 	public:
 		typedef float Sample;
 		Audio();
-		virtual void addInput(Component*);
-		virtual void evaluate(unsigned samples);
-		virtual float* readAudio();
-		virtual std::string* readText();
-		virtual void sendText(const std::string&);
+		bool ready();
+		void addInput(Component*);
+		void evaluate(unsigned samples);
+		float* readAudio();
+		std::string* readText();
+		void clearText();
+		void sendText(const std::string&);
+		std::string commands();
 		unsigned _sampleRate, _underflows;
 		float* _output;
 	private:
@@ -29,6 +32,7 @@ class Audio: public Component{
 		PaStream* _paStream;
 		std::string _text;
 		std::vector<Component*> _inputs;
+		bool _started;
 		bool _test;
 		float _testPhase;
 };

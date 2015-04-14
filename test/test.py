@@ -1,0 +1,20 @@
+import dlal
+
+audio=dlal.Component('audio')
+fm1=dlal.Component('fm')
+fm2=dlal.Component('fm')
+midi=dlal.Component('midi')
+sfml=dlal.Component('sfml')
+print audio.command('set 22050 6')
+print fm1.connect(audio)
+print fm2.connect(audio)
+print midi.connect(fm1)
+print sfml.connect(fm2)
+print sfml.add()
+print midi.add()
+print audio.add()
+print fm1.add()
+print fm2.add()
+print audio.command('start')
+
+raw_input()

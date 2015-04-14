@@ -39,6 +39,8 @@ MidiMessages* Midi::readMidi(){ return &_messages; }
 
 std::string* Midi::readText(){ return &_text; }
 
+void Midi::clearText(){ _text.clear(); }
+
 void Midi::sendText(const std::string& text){
 	std::stringstream ss(text);
 	std::string s;
@@ -53,6 +55,8 @@ void Midi::sendText(const std::string& text){
 		queue(message);
 	}
 }
+
+std::string Midi::commands(){ return "midi"; }
 
 void Midi::queue(const MidiMessage& message){
 	_queue.write(message);

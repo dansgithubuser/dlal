@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <string>
-#include <map>
 #include <vector>
 
 extern "C"{
@@ -13,9 +12,10 @@ extern "C"{
 
 	//implemented by skeleton
 	void* dlalBuildSystem();
-  const char* dlalAddComponent(void* system, void* component, const char* name);
-  const char* dlalConnectComponents(void* system, const char* nameInput, const char* nameOutput);
-  const char* dlalCommandComponent(void* system, const char* name, const char* command);
+  const char* dlalQueryComponent(void* component);
+  const char* dlalCommandComponent(void* component, const char* command);
+  const char* dlalAddComponent(void* system, void* component);
+  const char* dlalConnectComponents(void* input, void* output);
 }
 
 namespace dlal{
@@ -24,12 +24,10 @@ class Component;
 
 class System{
 	public:
-		std::string addComponent(Component& component, const std::string& name);
-		std::string connectComponents(const std::string& nameInput, const std::string& nameOutput);
-		std::string commandComponent(const std::string& name, const std::string& command);
+		void addComponent(Component& component);
 		void evaluate(unsigned samples);
 	private:
-		std::map<std::string, Component*> _components;
+		std::vector<Component*> _components;
 };
 
 struct MidiMessage{
@@ -55,14 +53,18 @@ class MidiMessages{
 
 class Component{
 	public:
+    Component(): _system(NULL) {}
     virtual ~Component(){}
+    virtual bool ready(){ return true; }
 		virtual void addInput(Component*){}
     virtual void addOutput(Component*){}
 		virtual void evaluate(unsigned samples){}
 		virtual float* readAudio(){ return nullptr; }
 		virtual MidiMessages* readMidi(){ return nullptr; }
 		virtual std::string* readText(){ return nullptr; }
+    virtual void clearText(){}
 		virtual void sendText(const std::string&){}
+    virtual std::string commands(){ return ""; }
 		System* _system;
 };
 

@@ -5,55 +5,55 @@
 
 void* dlalBuildSystem(){ return new dlal::System; }
 
-const char* dlalAddComponent(void* system, void* component, const char* name){
+const char* dlalQueryComponent(void* component){
+	dlal::Component& c=*(dlal::Component*)component;
+	return c.commands().c_str();
+}
+
+const char* dlalCommandComponent(void* component, const char* command){
+	dlal::Component& c=*(dlal::Component*)component;
+	c.clearText();
+	c.sendText(command);
+	std::string* text=c.readText();
+	if(text) return text->c_str();
+	return "";
+}
+
+const char* dlalAddComponent(void* system, void* component){
 	dlal::System& s=*(dlal::System*)system;
 	dlal::Component& c=*(dlal::Component*)component;
-	std::string n(name);
-	return s.addComponent(c, n).c_str();
+	c.clearText();
+	if(c.ready()) s.addComponent(c);
+	std::string* text=c.readText();
+	if(text) return text->c_str();
+	return "";
 }
 
-const char* dlalConnectComponents(void* system, const char* nameInput, const char* nameOutput){
-	dlal::System& s=*(dlal::System*)system;
-	std::string ni(nameInput);
-	std::string no(nameOutput);
-	return s.connectComponents(ni, no).c_str();
-}
-
-const char* dlalCommandComponent(void* system, const char* name, const char* command){
-	dlal::System& s=*(dlal::System*)system;
-	std::string n(name);
-	std::string c(command);
-	return s.commandComponent(n, c).c_str();
+const char* dlalConnectComponents(void* input, void* output){
+	dlal::Component& i=*(dlal::Component*)input;
+	dlal::Component& o=*(dlal::Component*)output;
+	i.clearText();
+	o.clearText();
+	i.addOutput(&o);
+	o.addInput(&i);
+	auto si=i.readText();
+	auto so=o.readText();
+	static std::string result;
+	if(si&&si->size()) result+="input: "+*si+"\n";
+	if(so&&so->size()) result+="output: "+*so+"\n";
+	return result.c_str();
 }
 
 namespace dlal{
 
 //=====System=====//
-std::string System::addComponent(Component& component, const std::string& name){
-	if(_components.count(name)) return "component name is already used";
-	_components[name]=&component;
-	_components[name]->_system=this;
-	return "";
-}
-
-std::string System::connectComponents(const std::string& nameInput, const std::string& nameOutput){
-	if(!_components.count(nameInput)) return "couldn't find input component";
-	if(!_components.count(nameOutput)) return "couldn't find output component";
-	_components[nameOutput]->addInput(_components[nameInput]);
-	_components[nameInput]->addOutput(_components[nameOutput]);
-	return "";
-}
-
-std::string System::commandComponent(const std::string& name, const std::string& command){
-	if(!_components.count(name)) return "couldn't find component";
-	_components[name]->sendText(command.c_str());
-	const std::string* result=_components[name]->readText();
-	if(result) return *result;
-	return "";
+void System::addComponent(Component& component){
+	component._system=this;
+	_components.push_back(&component);
 }
 
 void System::evaluate(unsigned samples){
-	for(auto i:_components) i.second->evaluate(samples);
+	for(auto i:_components) i->evaluate(samples);
 }
 
 //=====MidiMessage=====//

@@ -13,11 +13,26 @@ static float wave(float phase){
 
 namespace dlal{
 
-Sonic::Sonic(){ _oscillators[0]._output=1.0f; }
+Sonic::Sonic():
+	_input(nullptr), _output(nullptr), _ready(false)
+{ _oscillators[0]._output=1.0f; }
 
-void Sonic::addInput(Component* input){ _input=input; }
+bool Sonic::ready(){
+	if(!_ready) _text="sample rate not set";
+	else if(!_input) _text="input not set";
+	else if(!_output) _text="output not set";
+	return _text.size()==0;
+}
 
-void Sonic::addOutput(Component* output){ _output=output; }
+void Sonic::addInput(Component* input){
+	if(!input->readMidi()){ _text="input must provide midi"; return; }
+	_input=input;
+}
+
+void Sonic::addOutput(Component* output){
+	if(!output->readAudio()){ _text="output must receive audio"; return; }
+	_output=output;
+}
 
 void Sonic::evaluate(unsigned samples){
 	MidiMessages& messages=*_input->readMidi();
@@ -35,6 +50,8 @@ void Sonic::evaluate(unsigned samples){
 
 std::string* Sonic::readText(){ return &_text; }
 
+void Sonic::clearText(){ _text.clear(); }
+
 void Sonic::sendText(const std::string& text){
 	std::stringstream ss(text);
 	std::string s;
@@ -43,6 +60,7 @@ void Sonic::sendText(const std::string& text){
 		unsigned sampleRate;
 		ss>>sampleRate;
 		for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
+		_ready=true;
 	}
 	else if(s=="test"){
 		MidiMessage message;
@@ -52,6 +70,8 @@ void Sonic::sendText(const std::string& text){
 		processMidi(message);
 	}
 }
+
+std::string Sonic::commands(){ return "sampleRate test"; }
 
 Sonic::Oscillator::Oscillator():
 	_attack(0.01f), _decay(0.01f), _sustain(0.5f), _release(0.01f),

@@ -15,7 +15,9 @@ class Midi: public Component{
     void evaluate(unsigned samples);
     MidiMessages* readMidi();
     std::string* readText();
+    void clearText();
     void sendText(const std::string&);
+    std::string commands();
     void queue(const MidiMessage&);
   private:
     RtMidiIn* _rtMidiIn;
