@@ -14,6 +14,7 @@ class Audio: public Component{
 		Audio();
 		bool ready();
 		void addInput(Component*);
+		void addOutput(Component*);
 		void evaluate(unsigned samples);
 		float* readAudio();
 		std::string* readText();
@@ -22,6 +23,7 @@ class Audio: public Component{
 		std::string commands();
 		unsigned _sampleRate, _underflows;
 		float* _output;
+		Component* _micReceiver;
 	private:
 		static const PaSampleFormat PA_SAMPLE_FORMAT=paFloat32;
 		void start();

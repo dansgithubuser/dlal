@@ -15,4 +15,5 @@ add_components(
   fm
   midi
   sfml
+  buffer
 )

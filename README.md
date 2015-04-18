@@ -11,17 +11,17 @@ Some specific features...
 - FM synthesis modeled after the Sega Genesis YM2612 chip
 - MIDI input
 - SFML input
+- mic input
 
 todo
 ----
-- mic
-- components
-  - liner
-  - buffer
-  - low pass
-  - pitch shift
+- split midi messages out of skeleton
+- liner component
+- low pass component
 - record to file
   - system
   - midi
   - mic
   - sfml
+- diodefilter component
+- pitch shift component

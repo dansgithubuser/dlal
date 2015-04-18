@@ -14,8 +14,13 @@ static int paStreamCallback(
 ){
 	dlal::Audio* audio=(dlal::Audio*)userData;
 	if(input){
+		const float* inputF=(const float*)input;
+		std::copy(inputF, inputF+samples, audio->_micReceiver->readAudio());
 	}
-	else ++audio->_underflows;
+	else{
+		std::fill_n(audio->_micReceiver->readAudio(), samples, 0.0f);
+		++audio->_underflows;
+	}
 	audio->_output=(float*)output;
 	std::fill_n(audio->_output, samples, 0.0f);
 	audio->_system->evaluate(samples);
@@ -33,7 +38,8 @@ static std::string paError(const PaError& err){
 namespace dlal{
 
 Audio::Audio():
-	_output((float*)1),
+	_output((float*)1),//so that readAudio doesn't return nullptr inappropriately
+	_micReceiver(nullptr),
 	_sampleRate(0),
 	_underflows(0),
 	_started(false)
@@ -49,7 +55,17 @@ bool Audio::ready(){
 }
 
 void Audio::addInput(Component* component){
+	if(!component->readAudio())
+		{ _text="error: input must provide audio"; return; }
+	if(std::count(_inputs.begin(), _inputs.end(), component))
+		{ _text="error: input already added"; return; }
 	_inputs.push_back(component);
+}
+
+void Audio::addOutput(Component* component){
+	if(!component->readAudio())
+		{ _text="error: output must receive audio"; return; }
+	_micReceiver=component;
 }
 
 void Audio::evaluate(unsigned samples){
@@ -64,12 +80,8 @@ void Audio::evaluate(unsigned samples){
 		}
 	#endif
 	for(unsigned i=0; i<samples; ++i) _output[i]=0.0f;
-	for(unsigned j=0; j<_inputs.size(); ++j){
-		const float* audio=_inputs[j]->readAudio();
-		if(audio) for(unsigned i=0; i<samples; ++i) _output[i]+=audio[i];
-		const std::string* text=_inputs[j]->readText();
-		if(text) process(*text);
-	}
+	for(unsigned j=0; j<_inputs.size(); ++j)
+		for(unsigned i=0; i<samples; ++i) _output[i]+=_inputs[j]->readAudio()[i];
 }
 
 float* Audio::readAudio(){ return _output; }
