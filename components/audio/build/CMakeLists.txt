@@ -30,6 +30,10 @@ if(ASIO)
 	add_definitions(-DPA_USE_ASIO=1)
 endif()
 
+if(TEST)
+	add_definitions(-DTEST_AUDIO)
+endif()
+
 #=====source=====#
 set(src "../src/audio.cpp" "../../../skeleton/src/skeleton.cpp")
 if(TEST)
@@ -88,4 +92,3 @@ endif()
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	set(CMAKE_CXX_FLAGS "-std=c++11")
 endif()
-

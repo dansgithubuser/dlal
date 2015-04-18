@@ -32,8 +32,10 @@ class Audio: public Component{
 		std::string _text;
 		std::vector<Component*> _inputs;
 		bool _started;
-		bool _test;
-		float _testPhase;
+		#ifdef TEST_AUDIO
+			bool _test;
+			float _testPhase;
+		#endif
 };
 
 }//namespace dlal

@@ -36,8 +36,10 @@ Audio::Audio():
 	_output((float*)1),
 	_sampleRate(0),
 	_underflows(0),
-	_started(false),
-	_test(false)
+	_started(false)
+	#ifdef TEST_AUDIO
+		,_test(false)
+	#endif
 {}
 
 bool Audio::ready(){
@@ -54,14 +56,16 @@ void Audio::addInput(Component* component){
 }
 
 void Audio::evaluate(unsigned samples){
-	if(_test){
-		for(unsigned i=0; i<samples; ++i){
-			_output[i]=_testPhase;
-			_testPhase+=2*440.0f/_sampleRate;
-			if(_testPhase>=1.0f) _testPhase-=2.0f;
+	#ifdef TEST_AUDIO
+		if(_test){
+			for(unsigned i=0; i<samples; ++i){
+				_output[i]=_testPhase;
+				_testPhase+=2*440.0f/_sampleRate;
+				if(_testPhase>=1.0f) _testPhase-=2.0f;
+			}
+			return;
 		}
-		return;
-	}
+	#endif
 	for(unsigned i=0; i<samples; ++i) _output[i]=0.0f;
 	for(unsigned j=0; j<_inputs.size(); ++j){
 		const float* audio=_inputs[j]->readAudio();
@@ -172,13 +176,22 @@ void Audio::process(const std::string& text){
 		}
 		finish();
 	}
-	else if(s=="test"){
-		_testPhase=0.0f;
-		_test=true;
-	}
+	#ifdef TEST_AUDIO
+		else if(s=="test"){
+			_testPhase=0.0f;
+			_test=true;
+		}
+	#endif
 	else _text="unrecognized command";
 }
 
-std::string Audio::commands(){ return "set start finish test"; }
+std::string Audio::commands(){
+	return
+		"set start finish"
+		#ifdef TEST_AUDIO
+			" test"
+		#endif
+	;
+}
 
 }//namespace dlal
