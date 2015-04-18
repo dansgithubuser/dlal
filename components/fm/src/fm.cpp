@@ -18,19 +18,19 @@ Sonic::Sonic():
 { _oscillators[0]._output=1.0f; }
 
 bool Sonic::ready(){
-	if(!_ready) _text="sample rate not set";
-	else if(!_input) _text="input not set";
-	else if(!_output) _text="output not set";
+	if(!_ready) _text="error: sample rate not set";
+	else if(!_input) _text="error: input not set";
+	else if(!_output) _text="error: output not set";
 	return _text.size()==0;
 }
 
 void Sonic::addInput(Component* input){
-	if(!input->readMidi()){ _text="input must provide midi"; return; }
+	if(!input->readMidi()){ _text="error: input must provide midi"; return; }
 	_input=input;
 }
 
 void Sonic::addOutput(Component* output){
-	if(!output->readAudio()){ _text="output must receive audio"; return; }
+	if(!output->readAudio()){ _text="error: output must receive audio"; return; }
 	_output=output;
 }
 

@@ -44,7 +44,7 @@ Audio::Audio():
 
 bool Audio::ready(){
 	if(_sampleRate) return true;
-	_text="must set sample rate and log2 samples per callback";
+	_text="error: must set sample rate and log2 samples per callback";
 	return false;
 }
 
@@ -88,14 +88,14 @@ void Audio::start(){
 	//initialize
 	err=Pa_Initialize();
 	if(err!=paNoError){
-		_text="Pa_Initialize failed: "+paError(err);
+		_text="error: Pa_Initialize failed: "+paError(err);
 		return;
 	}
 	//input
 	PaStreamParameters inputParameters;
 	inputParameters.device=Pa_GetDefaultInputDevice();
 	if(inputParameters.device==paNoDevice){
-		_text="no default input device: "+paError(err);
+		_text="error: no default input device: "+paError(err);
 		return;
 	}
 	inputParameters.channelCount=1;
@@ -107,7 +107,7 @@ void Audio::start(){
 	PaStreamParameters outputParameters;
 	outputParameters.device=Pa_GetDefaultOutputDevice();
 	if(outputParameters.device==paNoDevice){
-		_text="no default output device: "+paError(err);
+		_text="error: no default output device: "+paError(err);
 		return;
 	}
 	outputParameters.channelCount=1;
@@ -127,13 +127,13 @@ void Audio::start(){
 		this
 	);
 	if(err!=paNoError){
-		_text="Pa_OpenStream failed: "+paError(err);
+		_text="error: Pa_OpenStream failed: "+paError(err);
 		return;
 	}
 	//start stream
 	err=Pa_StartStream(_paStream);
 	if(err!=paNoError){
-		_text="Pa_StartStream failed: "+paError(err);
+		_text="error: Pa_StartStream failed: "+paError(err);
 		return;
 	}
 	_started=true;
@@ -143,7 +143,7 @@ void Audio::finish(){
 	PaError err;
 	err=Pa_CloseStream(_paStream);
 	if(err!=paNoError){
-		_text=paError(err);
+		_text="error: "+paError(err);
 		return;
 	}
 	Pa_Terminate();
@@ -160,18 +160,18 @@ void Audio::process(const std::string& text){
 	}
 	else if(s=="start"){
 		if(!_system){
-			_text="must add before starting";
+			_text="error: must add before starting";
 			return;
 		}
 		if(_started){
-			_text="already started";
+			_text="error: already started";
 			return;
 		}
 		start();
 	}
 	else if(s=="finish"){
 		if(!_started){
-			_text="not started";
+			_text="error: not started";
 			return;
 		}
 		finish();
@@ -182,7 +182,7 @@ void Audio::process(const std::string& text){
 			_test=true;
 		}
 	#endif
-	else _text="unrecognized command";
+	else _text="error: unrecognized command";
 }
 
 std::string Audio::commands(){

@@ -16,11 +16,11 @@ Midi::Midi(): _queue(7) {
 		_rtMidiIn=new RtMidiIn();
 	}
 	catch(RtMidiError& error){
-		_text=error.getMessage();
+		_text="error: "+error.getMessage();
 		return;
 	}
 	if(_rtMidiIn->getPortCount()<1){
-		_text="no midi input ports";
+		_text="error: no midi input ports";
 		return;
 	}
 	_rtMidiIn->openPort(0);
