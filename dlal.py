@@ -17,6 +17,10 @@ system=skeleton.dlalBuildSystem()
 
 component_libraries={}
 
+def report(error):
+    if not error: return
+    raise RuntimeError(error)
+
 class Component:
     def __init__(self, component):
         if component not in component_libraries:
@@ -24,13 +28,13 @@ class Component:
         self.component=component_libraries[component].dlalBuildComponent()
 
     def query(self):
-        return skeleton.dlalQueryComponent(self.component)
+        report(skeleton.dlalQueryComponent(self.component))
 
     def command(self, text):
-        return skeleton.dlalCommandComponent(self.component, text)
+        report(skeleton.dlalCommandComponent(self.component, text))
 
     def add(self):
-        return skeleton.dlalAddComponent(system, self.component)
+        report(skeleton.dlalAddComponent(system, self.component))
 
     def connect(self, output):
-        return skeleton.dlalConnectComponents(self.component, output.component)
+        report(skeleton.dlalConnectComponents(self.component, output.component))
