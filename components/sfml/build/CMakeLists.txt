@@ -17,7 +17,7 @@ include_directories(
 set(
 	src
 	"../src/sfml.cpp"
-	"../../../skeleton/src/skeleton.cpp"
+	"../../../skeleton/src/midiMessages.cpp"
 )
 
 if(${TEST})

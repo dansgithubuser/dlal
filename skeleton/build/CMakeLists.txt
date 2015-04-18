@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12.2 FATAL_ERROR)
 
-file(GLOB src "../src/skeleton.cpp")
+file(GLOB src "../src/skeleton.cpp" "../src/midiMessages.cpp")
 
 add_library(Skeleton ${src})
 

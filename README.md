@@ -15,7 +15,8 @@ Some specific features...
 
 todo
 ----
-- split midi messages out of skeleton
+- multiplier component
+- get windows working
 - liner component
 - low pass component
 - record to file
