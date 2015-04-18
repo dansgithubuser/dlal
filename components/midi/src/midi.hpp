@@ -16,7 +16,7 @@ class Midi: public Component{
     MidiMessages* readMidi();
     std::string* readText();
     void clearText();
-    void sendText(const std::string&);
+    bool sendText(const std::string&);
     std::string commands();
     void queue(const MidiMessage&);
   private:

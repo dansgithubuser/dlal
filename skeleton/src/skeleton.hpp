@@ -63,7 +63,7 @@ class Component{
 		virtual MidiMessages* readMidi(){ return nullptr; }
 		virtual std::string* readText(){ return nullptr; }
     virtual void clearText(){}
-		virtual void sendText(const std::string&){}
+		virtual bool sendText(const std::string&){ return false; }
     virtual std::string commands(){ return ""; }
 		System* _system;
 };

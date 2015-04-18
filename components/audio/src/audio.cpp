@@ -49,9 +49,6 @@ bool Audio::ready(){
 }
 
 void Audio::addInput(Component* component){
-	std::stringstream ss;
-	ss<<"sampleRate "<<_sampleRate;
-	component->sendText(ss.str());
 	_inputs.push_back(component);
 }
 
@@ -81,7 +78,7 @@ std::string* Audio::readText(){ return &_text; }
 
 void Audio::clearText(){ _text.clear(); }
 
-void Audio::sendText(const std::string& text){ process(text); }
+bool Audio::sendText(const std::string& text){ return process(text); }
 
 void Audio::start(){
 	PaError err;
@@ -150,7 +147,7 @@ void Audio::finish(){
 	_started=false;
 }
 
-void Audio::process(const std::string& text){
+bool Audio::process(const std::string& text){
 	std::stringstream ss(text);
 	std::string s;
 	ss>>s;
@@ -159,30 +156,25 @@ void Audio::process(const std::string& text){
 		ss>>_log2SamplesPerCallback;
 	}
 	else if(s=="start"){
-		if(!_system){
-			_text="error: must add before starting";
-			return;
-		}
-		if(_started){
-			_text="error: already started";
-			return;
-		}
+		if(!_system){ _text="error: must add before starting"; return true; }
+		if(_started){ _text="error: already started"; return true; }
 		start();
 	}
 	else if(s=="finish"){
-		if(!_started){
-			_text="error: not started";
-			return;
-		}
+		if(!_started){ _text="error: not started"; return true; }
 		finish();
 	}
+	else if(s=="sampleRate"){
+		if(!_sampleRate){ _text="error: sample rate not set when requested"; return true; }
+		std::stringstream ss;
+		ss<<_sampleRate;
+		_text=ss.str();
+	}
 	#ifdef TEST_AUDIO
-		else if(s=="test"){
-			_testPhase=0.0f;
-			_test=true;
-		}
+		else if(s=="test"){ _testPhase=0.0f; _test=true; }
 	#endif
-	else _text="error: unrecognized command";
+	else return false;
+	return true;
 }
 
 std::string Audio::commands(){

@@ -14,7 +14,7 @@ class Sonic: public Component{
 		void evaluate(unsigned samples);
 		std::string* readText();
 		void clearText();
-		void sendText(const std::string&);
+		bool sendText(const std::string&);
 		std::string commands();
 	private:
 		static const unsigned NOTES=128;

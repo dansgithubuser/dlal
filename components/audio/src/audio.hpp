@@ -18,7 +18,7 @@ class Audio: public Component{
 		float* readAudio();
 		std::string* readText();
 		void clearText();
-		void sendText(const std::string&);
+		bool sendText(const std::string&);
 		std::string commands();
 		unsigned _sampleRate, _underflows;
 		float* _output;
@@ -26,7 +26,7 @@ class Audio: public Component{
 		static const PaSampleFormat PA_SAMPLE_FORMAT=paFloat32;
 		void start();
 		void finish();
-		void process(const std::string& text);
+		bool process(const std::string& text);
 		unsigned _log2SamplesPerCallback;
 		PaStream* _paStream;
 		std::string _text;

@@ -31,6 +31,14 @@ void Sonic::addInput(Component* input){
 
 void Sonic::addOutput(Component* output){
 	if(!output->readAudio()){ _text="error: output must receive audio"; return; }
+	if(!output->sendText("sampleRate")||!output->readText()){
+		_text="error: output must provide sample rate"; return;
+	}
+	std::stringstream ss(*output->readText());
+	unsigned sampleRate;
+	ss>>sampleRate;
+	for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
+	_ready=true;
 	_output=output;
 }
 
@@ -52,26 +60,22 @@ std::string* Sonic::readText(){ return &_text; }
 
 void Sonic::clearText(){ _text.clear(); }
 
-void Sonic::sendText(const std::string& text){
+bool Sonic::sendText(const std::string& text){
 	std::stringstream ss(text);
 	std::string s;
 	ss>>s;
-	if(s=="sampleRate"){
-		unsigned sampleRate;
-		ss>>sampleRate;
-		for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
-		_ready=true;
-	}
-	else if(s=="test"){
+	if(s=="test"){
 		MidiMessage message;
 		message._bytes[0]=0x90;
 		message._bytes[1]=0x3c;
 		message._bytes[2]=0x7f;
 		processMidi(message);
 	}
+	else return false;
+	return true;
 }
 
-std::string Sonic::commands(){ return "sampleRate test"; }
+std::string Sonic::commands(){ return "test"; }
 
 Sonic::Oscillator::Oscillator():
 	_attack(0.01f), _decay(0.01f), _sustain(0.5f), _release(0.01f),
