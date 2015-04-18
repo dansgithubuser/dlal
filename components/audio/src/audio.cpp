@@ -1,5 +1,7 @@
 #include "audio.hpp"
 
+#include <algorithm>
+
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Audio; }
 
 static int paStreamCallback(
@@ -15,7 +17,7 @@ static int paStreamCallback(
 	}
 	else ++audio->_underflows;
 	audio->_output=(float*)output;
-	for(auto i=0; i<samples; ++i) audio->_output[i]=0.0f;
+	std::fill_n(audio->_output, samples, 0.0f);
 	audio->_system->evaluate(samples);
 	return paContinue;
 }

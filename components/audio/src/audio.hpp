@@ -11,7 +11,6 @@ namespace dlal{
 
 class Audio: public Component{
 	public:
-		typedef float Sample;
 		Audio();
 		bool ready();
 		void addInput(Component*);
