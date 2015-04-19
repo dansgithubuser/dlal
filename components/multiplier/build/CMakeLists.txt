@@ -7,7 +7,7 @@ include_directories(
 )
 
 #=====source=====#
-set(src "../src/multiplier.cpp")
+set(src "../src/multiplier.cpp" "../../../skeleton/src/skeleton.cpp")
 
 #=====products=====#
 add_library(Multiplier ${src})

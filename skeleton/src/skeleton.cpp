@@ -2,63 +2,53 @@
 
 void* dlalBuildSystem(){ return new dlal::System; }
 
-const char* dlalQueryComponent(void* component){
+const char* dlalReadComponent(void* component){
 	dlal::Component& c=*(dlal::Component*)component;
-	return c.commands().c_str();
+	std::string* s=c.readText();
+	if(s) return s->c_str();
+	else return "";
 }
 
 const char* dlalCommandComponent(void* component, const char* command){
 	dlal::Component& c=*(dlal::Component*)component;
-	c.clearText();
-	if(!c.sendText(command)) return "error: unrecognized command";
-	std::string* text=c.readText();
-	if(text) return text->c_str();
-	return "";
+	static std::string result;
+	result=c.sendText(command);
+	return result.c_str();
 }
 
 const char* dlalAddComponent(void* system, void* component){
 	dlal::System& s=*(dlal::System*)system;
 	dlal::Component& c=*(dlal::Component*)component;
-	c.clearText();
-	if(c.ready()) s.addComponent(c);
-	std::string* text=c.readText();
-	if(text) return text->c_str();
+	if(!c.ready()) return "error: not ready";
+	s.addComponent(c);
 	return "";
 }
 
-static std::string getConnectResult(
-	dlal::Component& i, dlal::Component& o
-){
+static bool connect(dlal::Component& i, dlal::Component& o, bool forward){
+	if(forward)
+		i.addOutput(&o);
+	else
+		o.addInput(&i);
 	auto si=i.readText();
 	auto so=o.readText();
-	std::string result;
-	if(si&&si->compare(0, 5, "error")==0) result+="input: "+*si+"\n";
-	if(so&&so->compare(0, 5, "error")==0) result+="output: "+*so+"\n";
-	return result;
+	if(si&&dlal::isError(*si)) return false;
+	if(so&&dlal::isError(*so)) return false;
+	return true;
 }
 
 const char* dlalConnectComponents(void* input, void* output){
 	dlal::Component& i=*(dlal::Component*)input;
 	dlal::Component& o=*(dlal::Component*)output;
-	i.clearText(); o.clearText();
-	i.addOutput(&o);
-	static std::string result;
-	result=getConnectResult(i, o);
-	if(result.size()){
-		result="error when connecting forward:\n"+result;
-		return result.c_str();
-	}
-	o.addInput(&i);
-	i.clearText(); o.clearText();
-	result=getConnectResult(i, o);
-	if(result.size()){
-		result="error when connecting backward:\n"+result;
-		return result.c_str();
-	}
+	if(!connect(i, o, true))
+		return "error when connecting forward";
+	if(!connect(i, o, false))
+		return "error when connecting backward";
 	return "";
 }
 
 namespace dlal{
+
+bool isError(const std::string& s){ return s.compare(0, 7, "error: ")==0; }
 
 //=====System=====//
 void System::addComponent(Component& component){
@@ -68,6 +58,31 @@ void System::addComponent(Component& component){
 
 void System::evaluate(unsigned samples){
 	for(auto i:_components) i->evaluate(samples);
+}
+
+//=====Component=====//
+std::string Component::sendText(const std::string& text){
+	std::stringstream ss(text);
+	std::string s;
+	ss>>s;
+	if(!_commands.count(s)){
+		std::string result;
+		if(s!="help") result+="error: ";
+		result+="recognized commands are:\n";
+		result+="help\n";
+		for(auto i:_commands) result+=i.first+" "+i.second.parameters+"\n";
+		return result;
+	}
+	_commands[s].command(ss);
+	return "";
+}
+
+void Component::registerCommand(
+	const std::string& name,
+	const std::string& parameters,
+	Command command
+){
+	_commands[name]={command, parameters};
 }
 
 }//namespace dlal

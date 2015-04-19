@@ -11,6 +11,7 @@ include_directories(
 set(
 	src
 	"../src/midi.cpp"
+	"../../../skeleton/src/skeleton.cpp"
 	"../../../skeleton/src/midiMessages.cpp"
 	"../deps/rtmidi/RtMidi.cpp"
 )

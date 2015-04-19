@@ -15,6 +15,7 @@ Some specific features...
 
 todo
 ----
+- switch component
 - get windows working
 - liner component
 - low pass component

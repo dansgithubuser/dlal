@@ -13,9 +13,6 @@ class Sonic: public Component{
 		void addOutput(Component*);
 		void evaluate(unsigned samples);
 		std::string* readText();
-		void clearText();
-		bool sendText(const std::string&);
-		std::string commands();
 	private:
 		static const unsigned NOTES=128;
 		static const unsigned OSCILLATORS=4;

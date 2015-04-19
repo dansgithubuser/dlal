@@ -7,7 +7,7 @@ include_directories(
 )
 
 #=====source=====#
-set(src "../src/buffer.cpp")
+set(src "../src/buffer.cpp" "../../../skeleton/src/skeleton.cpp")
 
 #=====products=====#
 add_library(Buffer ${src})

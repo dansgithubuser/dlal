@@ -5,6 +5,9 @@
 
 #include <string>
 #include <vector>
+#include <functional>
+#include <map>
+#include <sstream>
 
 extern "C"{
 	//each component implements this
@@ -13,13 +16,15 @@ extern "C"{
 
 	//implemented by skeleton
 	void* dlalBuildSystem();
-	const char* dlalQueryComponent(void* component);
+	const char* dlalReadComponent(void* component);
 	const char* dlalCommandComponent(void* component, const char* command);
 	const char* dlalAddComponent(void* system, void* component);
 	const char* dlalConnectComponents(void* input, void* output);
 }
 
 namespace dlal{
+
+bool isError(const std::string&);
 
 class Component;
 
@@ -42,10 +47,21 @@ class Component{
 		virtual float* readAudio(){ return nullptr; }
 		virtual MidiMessages* readMidi(){ return nullptr; }
 		virtual std::string* readText(){ return nullptr; }
-		virtual void clearText(){}
-		virtual bool sendText(const std::string&){ return false; }
-		virtual std::string commands(){ return ""; }
+		std::string sendText(const std::string&);
 		System* _system;
+	protected:
+		typedef std::function<void(std::stringstream&)> Command;
+		struct CommandWithParameters{
+			Command command;
+			std::string parameters;
+		};
+		void registerCommand(
+			const std::string& name,
+			const std::string& parameters,
+			Command
+		);
+	private:
+		std::map<std::string, CommandWithParameters> _commands;
 };
 
 }//namespace dlal

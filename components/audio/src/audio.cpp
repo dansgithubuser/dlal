@@ -46,17 +46,50 @@ Audio::Audio():
 	#ifdef TEST_AUDIO
 		,_test(false)
 	#endif
-{}
+{
+	registerCommand("set", "sampleRate log2SamplesPerCallback",
+		[&](std::stringstream& ss){
+			ss>>_sampleRate;
+			ss>>_log2SamplesPerCallback;
+			_text="";
+		}
+	);
+	registerCommand("start", "", [&](std::stringstream& ss){
+		if(!_system){ _text="error: must add before starting"; return; }
+		if(_started){ _text="error: already started"; return; }
+		start();
+	});
+	registerCommand("finish", "", [&](std::stringstream& ss){
+		if(!_started){ _text="error: not started"; return; }
+		finish();
+	});
+	registerCommand("sampleRate", "", [&](std::stringstream& ss){
+		if(!_sampleRate)
+			{ _text="error: sample rate not set when requested"; return; }
+		std::stringstream sampleRateSs;
+		sampleRateSs<<_sampleRate;
+		_text=sampleRateSs.str();
+	});
+	#ifdef TEST_AUDIO
+		registerCommand("test", "", [&](std::stringstream& ss){
+			_testPhase=0.0f;
+			_test=true;
+			_text="";
+		});
+	#endif
+}
 
 bool Audio::ready(){
-	if(_sampleRate) return true;
-	_text="error: must set sample rate and log2 samples per callback";
-	return false;
+	if(!_sampleRate){
+		_text="error: must set sample rate and log2 samples per callback";
+		return false;
+	}
+	_text="";
+	return true;
 }
 
 void Audio::addInput(Component* component){
-	if(!component->readAudio())
-		{ _text="error: input must provide audio"; return; }
+	_text="";
 	if(std::count(_inputs.begin(), _inputs.end(), component)) return;
 	_inputs.push_back(component);
 }
@@ -64,6 +97,7 @@ void Audio::addInput(Component* component){
 void Audio::addOutput(Component* component){
 	if(!component->readAudio())
 		{ _text="error: output must receive audio"; return; }
+	_text="";
 	_micReceiver=component;
 }
 
@@ -79,17 +113,16 @@ void Audio::evaluate(unsigned samples){
 		}
 	#endif
 	for(unsigned i=0; i<samples; ++i) _output[i]=0.0f;
-	for(unsigned j=0; j<_inputs.size(); ++j)
-		for(unsigned i=0; i<samples; ++i) _output[i]+=_inputs[j]->readAudio()[i];
+	for(unsigned j=0; j<_inputs.size(); ++j){
+		float* audio=_inputs[j]->readAudio();
+		if(!audio) continue;
+		for(unsigned i=0; i<samples; ++i) _output[i]+=audio[i];
+	}
 }
 
 float* Audio::readAudio(){ return _output; }
 
 std::string* Audio::readText(){ return &_text; }
-
-void Audio::clearText(){ _text.clear(); }
-
-bool Audio::sendText(const std::string& text){ return process(text); }
 
 void Audio::start(){
 	PaError err;
@@ -145,6 +178,7 @@ void Audio::start(){
 		return;
 	}
 	_started=true;
+	_text="";
 }
 
 void Audio::finish(){
@@ -156,45 +190,7 @@ void Audio::finish(){
 	}
 	Pa_Terminate();
 	_started=false;
-}
-
-bool Audio::process(const std::string& text){
-	std::stringstream ss(text);
-	std::string s;
-	ss>>s;
-	if(s=="set"){
-		ss>>_sampleRate;
-		ss>>_log2SamplesPerCallback;
-	}
-	else if(s=="start"){
-		if(!_system){ _text="error: must add before starting"; return true; }
-		if(_started){ _text="error: already started"; return true; }
-		start();
-	}
-	else if(s=="finish"){
-		if(!_started){ _text="error: not started"; return true; }
-		finish();
-	}
-	else if(s=="sampleRate"){
-		if(!_sampleRate){ _text="error: sample rate not set when requested"; return true; }
-		std::stringstream ss;
-		ss<<_sampleRate;
-		_text=ss.str();
-	}
-	#ifdef TEST_AUDIO
-		else if(s=="test"){ _testPhase=0.0f; _test=true; }
-	#endif
-	else return false;
-	return true;
-}
-
-std::string Audio::commands(){
-	return
-		"set start finish"
-		#ifdef TEST_AUDIO
-			" test"
-		#endif
-	;
+	_text="";
 }
 
 }//namespace dlal

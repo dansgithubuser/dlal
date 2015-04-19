@@ -1,7 +1,6 @@
 #include "fm.hpp"
 
 #include <cmath>
-#include <sstream>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sonic; }
 
@@ -15,9 +14,20 @@ namespace dlal{
 
 Sonic::Sonic():
 	_input(nullptr), _output(nullptr), _ready(false)
-{ _oscillators[0]._output=1.0f; }
+{
+	_oscillators[0]._output=1.0f;
+	registerCommand("test", "", [&](std::stringstream& ss){
+		MidiMessage message;
+		message._bytes[0]=0x90;
+		message._bytes[1]=0x3c;
+		message._bytes[2]=0x7f;
+		processMidi(message);
+		_text="";
+	});
+}
 
 bool Sonic::ready(){
+	_text="";
 	if(!_ready) _text="error: sample rate not set";
 	else if(!_input) _text="error: input not set";
 	else if(!_output) _text="error: output not set";
@@ -26,12 +36,13 @@ bool Sonic::ready(){
 
 void Sonic::addInput(Component* input){
 	if(!input->readMidi()){ _text="error: input must provide midi"; return; }
+	_text="";
 	_input=input;
 }
 
 void Sonic::addOutput(Component* output){
 	if(!output->readAudio()){ _text="error: output must receive audio"; return; }
-	if(!output->sendText("sampleRate")||!output->readText()){
+	if(isError(output->sendText("sampleRate"))||!output->readText()){
 		_text="error: output must provide sample rate"; return;
 	}
 	std::stringstream ss(*output->readText());
@@ -40,6 +51,7 @@ void Sonic::addOutput(Component* output){
 	for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
 	_ready=true;
 	_output=output;
+	_text="";
 }
 
 void Sonic::evaluate(unsigned samples){
@@ -57,25 +69,6 @@ void Sonic::evaluate(unsigned samples){
 }
 
 std::string* Sonic::readText(){ return &_text; }
-
-void Sonic::clearText(){ _text.clear(); }
-
-bool Sonic::sendText(const std::string& text){
-	std::stringstream ss(text);
-	std::string s;
-	ss>>s;
-	if(s=="test"){
-		MidiMessage message;
-		message._bytes[0]=0x90;
-		message._bytes[1]=0x3c;
-		message._bytes[2]=0x7f;
-		processMidi(message);
-	}
-	else return false;
-	return true;
-}
-
-std::string Sonic::commands(){ return "test"; }
 
 Sonic::Oscillator::Oscillator():
 	_attack(0.01f), _decay(0.01f), _sustain(0.5f), _release(0.01f),

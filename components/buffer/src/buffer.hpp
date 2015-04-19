@@ -12,9 +12,6 @@ class Buffer: public Component{
 		void evaluate(unsigned samples);
 		float* readAudio();
 		std::string* readText();
-		void clearText();
-		bool sendText(const std::string&);
-		std::string commands();
 	private:
 		std::vector<float> _audio;
 		unsigned _i;

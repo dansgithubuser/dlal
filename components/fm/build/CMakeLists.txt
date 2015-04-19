@@ -7,7 +7,12 @@ include_directories(
 )
 
 #=====source=====#
-set(src "../src/fm.cpp" "../../../skeleton/src/midiMessages.cpp")
+set(
+	src
+	"../src/fm.cpp"
+	"../../../skeleton/src/skeleton.cpp"
+	"../../../skeleton/src/midiMessages.cpp"
+)
 
 #=====products=====#
 add_library(Fm ${src})

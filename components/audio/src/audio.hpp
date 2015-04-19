@@ -5,8 +5,6 @@
 
 #include <portaudio.h>
 
-#include <sstream>
-
 namespace dlal{
 
 class Audio: public Component{
@@ -18,9 +16,6 @@ class Audio: public Component{
 		void evaluate(unsigned samples);
 		float* readAudio();
 		std::string* readText();
-		void clearText();
-		bool sendText(const std::string&);
-		std::string commands();
 		unsigned _sampleRate, _underflows;
 		float* _output;
 		Component* _micReceiver;

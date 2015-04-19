@@ -12,9 +12,6 @@ class Multiplier: public Component{
 		void addOutput(Component*);
 		void evaluate(unsigned samples);
 		std::string* readText();
-		void clearText();
-		bool sendText(const std::string&);
-		std::string commands();
 	private:
 		Component* _input;
 		Component* _output;
