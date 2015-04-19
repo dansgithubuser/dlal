@@ -10,6 +10,7 @@ namespace dlal{
 class Audio: public Component{
 	public:
 		Audio();
+		~Audio();
 		bool ready();
 		void addInput(Component*);
 		void addOutput(Component*);

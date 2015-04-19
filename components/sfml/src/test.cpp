@@ -6,11 +6,12 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
 
 int main(){
 	dlal::Sfml sfml;
 	std::atomic<bool> quit(false);
-	std::srand(std::time(NULL));
+	std::srand((unsigned)std::time(NULL));
 	std::thread thread([&](){
 		while(!quit){
 			sfml.evaluate(0);
@@ -20,7 +21,7 @@ int main(){
 					std::cout<<std::hex<<(unsigned)messages[i]._bytes[j]<<" ";
 				std::cout<<"\n";
 			}
-			sf::sleep(sf::milliseconds(rand()%50));
+			std::this_thread::sleep_for(std::chrono::milliseconds(rand()%50));
 		}
 	});
 	std::string s;

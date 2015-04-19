@@ -1,5 +1,7 @@
 #include "sfml.hpp"
 
+#include <SFML/Graphics.hpp>
+
 #include <chrono>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sfml; }
@@ -47,16 +49,14 @@ static void processKey(
 
 namespace dlal{
 
-Sfml::Sfml():
-	_queue(7),
-	_window(sf::VideoMode(640, 480), "dlal sfml")
-{
-	_window.setKeyRepeatEnabled(false);
+Sfml::Sfml(): _queue(7) {
 	_quit=false;
 	_thread=std::thread([&](){
+		sf::RenderWindow window(sf::VideoMode(640, 480), "dlal sfml");
+		window.setKeyRepeatEnabled(false);
 		while(!_quit){
 			sf::Event event;
-			while(_window.pollEvent(event)){
+			while(window.pollEvent(event)){
 				switch(event.type){
 					case sf::Event::KeyPressed:
 						processKey(_queue, true , event.key.code); break;
@@ -64,18 +64,18 @@ Sfml::Sfml():
 						processKey(_queue, false, event.key.code); break;
 					default: break;
 				}
-				_window.clear();
-				_window.display();
+				window.clear();
+				window.display();
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
+		window.close();
 	});
 }
 
 Sfml::~Sfml(){
 	_quit=true;
 	_thread.join();
-	_window.close();
 }
 
 void Sfml::evaluate(unsigned samples){

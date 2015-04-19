@@ -4,9 +4,6 @@
 #include <skeleton.hpp>
 #include <queue.hpp>
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Network.hpp>
-
 #include <thread>
 #include <atomic>
 
@@ -21,7 +18,6 @@ class Sfml: public Component{
 	private:
 		Queue<MidiMessage> _queue;
 		MidiMessages _messages;
-		sf::RenderWindow _window;
 		std::thread _thread;
 		std::atomic<bool> _quit;
 };

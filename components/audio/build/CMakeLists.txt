@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 2.8.12.2 FATAL_ERROR)
 
-option(ASIO "ON to use ASIO, OFF otherwise")
 option(TEST "ON to test, OFF otherwise")
+
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	set(ASIO ON)
+else()
+	set(ASIO OFF)
+endif()
 
 #=====include=====#
 include_directories(
@@ -32,6 +37,10 @@ endif()
 
 if(TEST)
 	add_definitions(-DTEST_AUDIO)
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 #=====source=====#

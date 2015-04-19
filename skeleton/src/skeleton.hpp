@@ -9,17 +9,25 @@
 #include <map>
 #include <sstream>
 
+#ifdef _MSC_VER
+	#define DLAL __declspec(dllexport)
+#else
+	#define DLAL
+#endif
+
 extern "C"{
 	//each component implements this
 	//return a new instance casted to dlal::Component*
-	void* dlalBuildComponent();
+	DLAL void* dlalBuildComponent();
 
 	//implemented by skeleton
-	void* dlalBuildSystem();
-	const char* dlalReadComponent(void* component);
-	const char* dlalCommandComponent(void* component, const char* command);
-	const char* dlalAddComponent(void* system, void* component);
-	const char* dlalConnectComponents(void* input, void* output);
+	DLAL void dlalDemolishComponent(void* component);
+	DLAL void* dlalBuildSystem();
+	DLAL void dlalDemolishSystem(void* system);
+	DLAL const char* dlalReadComponent(void* component);
+	DLAL const char* dlalCommandComponent(void* component, const char* command);
+	DLAL const char* dlalAddComponent(void* system, void* component);
+	DLAL const char* dlalConnectComponents(void* input, void* output);
 }
 
 namespace dlal{

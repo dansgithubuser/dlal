@@ -1,6 +1,14 @@
 #include "skeleton.hpp"
 
+void dlalDemolishComponent(void* component){
+	delete (dlal::Component*)component;
+}
+
 void* dlalBuildSystem(){ return new dlal::System; }
+
+void dlalDemolishSystem(void* system){
+	delete (dlal::System*)system;
+}
 
 const char* dlalReadComponent(void* component){
 	dlal::Component& c=*(dlal::Component*)component;

@@ -10,6 +10,8 @@ include_directories(
 #=====definitions=====#
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	add_definitions(-D__LINUX_ALSA__)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	add_definitions(-D__WINDOWS_MM__)
 endif()
 
 #=====source=====#
@@ -27,6 +29,8 @@ add_library(Midi ${src})
 #=====link=====#
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	target_link_libraries(Midi asound pthread)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	target_link_libraries(Midi winmm)
 endif()
 
 #=====c++ standard=====#

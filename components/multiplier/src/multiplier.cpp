@@ -12,12 +12,13 @@ Multiplier::Multiplier(): _output(nullptr), _multiplier(1.0f) {
 }
 
 bool Multiplier::ready(){
+	if(!_output){ _text="error: output not set"; return false; }
 	_text="";
-	return _output;
+	return true;
 }
 
 void Multiplier::addOutput(Component* output){
-	if(!output->readAudio()){ _text="output must have audio"; return; }
+	if(!output->readAudio()){ _text="error: output must have audio"; return; }
 	_text="";
 	_output=output;
 }

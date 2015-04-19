@@ -13,13 +13,15 @@ static int paStreamCallback(
 	void* userData
 ){
 	dlal::Audio* audio=(dlal::Audio*)userData;
-	if(input){
-		const float* inputF=(const float*)input;
-		std::copy(inputF, inputF+samples, audio->_micReceiver->readAudio());
-	}
-	else{
-		std::fill_n(audio->_micReceiver->readAudio(), samples, 0.0f);
-		++audio->_underflows;
+	if(audio->_micReceiver){
+		if(input){
+			const float* inputF=(const float*)input;
+			std::copy(inputF, inputF+samples, audio->_micReceiver->readAudio());
+		}
+		else{
+			std::fill_n(audio->_micReceiver->readAudio(), samples, 0.0f);
+			++audio->_underflows;
+		}
 	}
 	audio->_output=(float*)output;
 	std::fill_n(audio->_output, samples, 0.0f);
@@ -78,6 +80,8 @@ Audio::Audio():
 		});
 	#endif
 }
+
+Audio::~Audio(){ finish(); }
 
 bool Audio::ready(){
 	if(!_sampleRate){
