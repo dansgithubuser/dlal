@@ -10,7 +10,7 @@ class Sonic: public Component{
 		Sonic();
 		bool ready();
 		void addInput(Component*);
-    void addOutput(Component*);
+		void addOutput(Component*);
 		void evaluate(unsigned samples);
 		std::string* readText();
 		void clearText();

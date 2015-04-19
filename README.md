@@ -19,9 +19,9 @@ todo
 - liner component
 - low pass component
 - record to file
-  - system
-  - midi
-  - mic
-  - sfml
+	- system
+	- midi
+	- mic
+	- sfml
 - diodefilter component
 - pitch shift component

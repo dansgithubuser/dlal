@@ -1,8 +1,8 @@
 #helper
 function test {
-    if [ $? -ne 0 ]; then
-        exit
-    fi
+	if [ $? -ne 0 ]; then
+		exit
+	fi
 }
 
 #build

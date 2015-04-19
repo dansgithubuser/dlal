@@ -13,17 +13,17 @@
 namespace dlal{
 
 class Sfml: public Component{
-  public:
-    Sfml();
-    ~Sfml();
-    void evaluate(unsigned samples);
-    MidiMessages* readMidi();
-  private:
-    Queue<MidiMessage> _queue;
-    MidiMessages _messages;
-    sf::RenderWindow _window;
-    std::thread _thread;
-    std::atomic<bool> _quit;
+	public:
+		Sfml();
+		~Sfml();
+		void evaluate(unsigned samples);
+		MidiMessages* readMidi();
+	private:
+		Queue<MidiMessage> _queue;
+		MidiMessages _messages;
+		sf::RenderWindow _window;
+		std::thread _thread;
+		std::atomic<bool> _quit;
 };
 
 }//namespace dlal

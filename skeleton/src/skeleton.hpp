@@ -9,14 +9,14 @@
 extern "C"{
 	//each component implements this
 	//return a new instance casted to dlal::Component*
-  void* dlalBuildComponent();
+	void* dlalBuildComponent();
 
 	//implemented by skeleton
 	void* dlalBuildSystem();
-  const char* dlalQueryComponent(void* component);
-  const char* dlalCommandComponent(void* component, const char* command);
-  const char* dlalAddComponent(void* system, void* component);
-  const char* dlalConnectComponents(void* input, void* output);
+	const char* dlalQueryComponent(void* component);
+	const char* dlalCommandComponent(void* component, const char* command);
+	const char* dlalAddComponent(void* system, void* component);
+	const char* dlalConnectComponents(void* input, void* output);
 }
 
 namespace dlal{
@@ -33,18 +33,18 @@ class System{
 
 class Component{
 	public:
-    Component(): _system(NULL) {}
-    virtual ~Component(){}
-    virtual bool ready(){ return true; }
+		Component(): _system(NULL) {}
+		virtual ~Component(){}
+		virtual bool ready(){ return true; }
 		virtual void addInput(Component*){}
-    virtual void addOutput(Component*){}
+		virtual void addOutput(Component*){}
 		virtual void evaluate(unsigned samples){}
 		virtual float* readAudio(){ return nullptr; }
 		virtual MidiMessages* readMidi(){ return nullptr; }
 		virtual std::string* readText(){ return nullptr; }
-    virtual void clearText(){}
+		virtual void clearText(){}
 		virtual bool sendText(const std::string&){ return false; }
-    virtual std::string commands(){ return ""; }
+		virtual std::string commands(){ return ""; }
 		System* _system;
 };
 

@@ -9,21 +9,21 @@
 namespace dlal{
 
 class Midi: public Component{
-  public:
-    Midi();
-    ~Midi();
-    void evaluate(unsigned samples);
-    MidiMessages* readMidi();
-    std::string* readText();
-    void clearText();
-    bool sendText(const std::string&);
-    std::string commands();
-    void queue(const MidiMessage&);
-  private:
-    RtMidiIn* _rtMidiIn;
-    Queue<MidiMessage> _queue;
-    MidiMessages _messages;
-    std::string _text;
+	public:
+		Midi();
+		~Midi();
+		void evaluate(unsigned samples);
+		MidiMessages* readMidi();
+		std::string* readText();
+		void clearText();
+		bool sendText(const std::string&);
+		std::string commands();
+		void queue(const MidiMessage&);
+	private:
+		RtMidiIn* _rtMidiIn;
+		Queue<MidiMessage> _queue;
+		MidiMessages _messages;
+		std::string _text;
 };
 
 }//namespace dlal

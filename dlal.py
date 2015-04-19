@@ -18,23 +18,23 @@ system=skeleton.dlalBuildSystem()
 component_libraries={}
 
 def report(text):
-    if text.startswith('error'): raise RuntimeError(text)
-    return text
+	if text.startswith('error'): raise RuntimeError(text)
+	return text
 
 class Component:
-    def __init__(self, component):
-        if component not in component_libraries:
-            component_libraries[component]=load(component)
-        self.component=component_libraries[component].dlalBuildComponent()
+	def __init__(self, component):
+		if component not in component_libraries:
+			component_libraries[component]=load(component)
+		self.component=component_libraries[component].dlalBuildComponent()
 
-    def query(self):
-        return report(skeleton.dlalQueryComponent(self.component))
+	def query(self):
+		return report(skeleton.dlalQueryComponent(self.component))
 
-    def command(self, text):
-        return report(skeleton.dlalCommandComponent(self.component, text))
+	def command(self, text):
+		return report(skeleton.dlalCommandComponent(self.component, text))
 
-    def add(self):
-        return report(skeleton.dlalAddComponent(system, self.component))
+	def add(self):
+		return report(skeleton.dlalAddComponent(system, self.component))
 
-    def connect(self, output):
-        return report(skeleton.dlalConnectComponents(self.component, output.component))
+	def connect(self, output):
+		return report(skeleton.dlalConnectComponents(self.component, output.component))

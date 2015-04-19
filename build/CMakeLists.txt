@@ -7,6 +7,6 @@ add_subdirectory(../skeleton/build skeleton)
 file(GLOB components ../components/*)
 
 foreach(component ${components})
-  string(REGEX MATCH [^/\\]*$ bin "${component}")
-  add_subdirectory("${component}/build" "${bin}")
+	string(REGEX MATCH [^/\\]*$ bin "${component}")
+	add_subdirectory("${component}/build" "${bin}")
 endforeach()

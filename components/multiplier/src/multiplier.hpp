@@ -14,7 +14,7 @@ class Multiplier: public Component{
 		std::string* readText();
 		void clearText();
 		bool sendText(const std::string&);
-    std::string commands();
+		std::string commands();
 	private:
 		Component* _input;
 		Component* _output;
