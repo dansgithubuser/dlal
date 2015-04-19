@@ -57,8 +57,7 @@ bool Audio::ready(){
 void Audio::addInput(Component* component){
 	if(!component->readAudio())
 		{ _text="error: input must provide audio"; return; }
-	if(std::count(_inputs.begin(), _inputs.end(), component))
-		{ _text="error: input already added"; return; }
+	if(std::count(_inputs.begin(), _inputs.end(), component)) return;
 	_inputs.push_back(component);
 }
 
