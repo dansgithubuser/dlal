@@ -19,20 +19,26 @@ Midi::Midi(): _queue(7) {
 		}
 		queue(message);
 	});
-	try{
-		_rtMidiIn=new RtMidiIn();
-	}
-	catch(RtMidiError& error){
-		_text="error: "+error.getMessage();
-		return;
-	}
-	if(_rtMidiIn->getPortCount()<1){
-		_text="error: no midi input ports";
-		return;
-	}
+	registerCommand("ports", "", [&](std::stringstream& ss){
+		_text="";
+		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i)
+			_text+=_rtMidiIn->getPortName(i)+"\n";
+	});
+	registerCommand("open", "port", [&](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i)
+			if(_rtMidiIn->getPortName(i).find(s)!=std::string::npos){
+				_rtMidiIn->openPort(i);
+				_text="";
+				return;
+			}
+		_text="error: couldn't find requested port";
+	});
+	try{ _rtMidiIn=new RtMidiIn(); }
+	catch(RtMidiError& error){ _text="error: "+error.getMessage(); return; }
+	_rtMidiIn->setCallback(rtMidiCallback, this);
 	_text="";
-	_rtMidiIn->openPort(0);
-	_rtMidiIn->setCallback(rtMidiCallback);
 }
 
 Midi::~Midi(){ delete _rtMidiIn; }

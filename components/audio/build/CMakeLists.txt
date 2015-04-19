@@ -5,9 +5,9 @@ option(TEST "ON to test, OFF otherwise")
 
 #=====include=====#
 include_directories(
-		"../deps/portaudio/include"
-		"../../../skeleton/src"
-		"../src"
+	"../deps/portaudio/include"
+	"../../../skeleton/src"
+	"../src"
 )
 
 if(ASIO)

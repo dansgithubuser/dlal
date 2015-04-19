@@ -7,6 +7,11 @@ include_directories(
 		"../deps/rtmidi"
 )
 
+#=====definitions=====#
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+	add_definitions(-D__LINUX_ALSA__)
+endif()
+
 #=====source=====#
 set(
 	src
@@ -18,6 +23,11 @@ set(
 
 #=====products=====#
 add_library(Midi ${src})
+
+#=====link=====#
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+	target_link_libraries(Midi asound pthread)
+endif()
 
 #=====c++ standard=====#
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
