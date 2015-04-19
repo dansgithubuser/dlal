@@ -4,16 +4,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_subdirectory(../skeleton/build skeleton)
 
-function(add_components)
-  foreach(component ${ARGV})
-    add_subdirectory("../components/${component}/build" ${component})
-  endforeach()
-endfunction()
+file(GLOB components ../components/*)
 
-add_components(
-  audio
-  fm
-  midi
-  sfml
-  buffer
-)
+foreach(component ${components})
+  string(REGEX MATCH [^/\\]*$ bin "${component}")
+  add_subdirectory("${component}/build" "${bin}")
+endforeach()
