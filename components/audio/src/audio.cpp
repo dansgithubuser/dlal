@@ -32,7 +32,7 @@ static int paStreamCallback(
 static std::string paError(const PaError& err){
 	Pa_Terminate();
 	std::stringstream ss;
-	ss<<"PortAudio error number: "<<err;
+	ss<<"PortAudio error number: "<<err<<"\n";
 	ss<<"PortAudio error message: "<<Pa_GetErrorText(err);
 	return ss.str();
 }
@@ -40,7 +40,7 @@ static std::string paError(const PaError& err){
 namespace dlal{
 
 Audio::Audio():
-	_output((float*)1),//so that readAudio doesn't return nullptr inappropriately
+	_output((float*)1),//so readAudio isn't null when connecting
 	_micReceiver(nullptr),
 	_sampleRate(0),
 	_underflows(0),
@@ -53,56 +53,48 @@ Audio::Audio():
 		[&](std::stringstream& ss){
 			ss>>_sampleRate;
 			ss>>_log2SamplesPerCallback;
-			_text="";
+			return "";
 		}
 	);
-	registerCommand("start", "", [&](std::stringstream& ss){
-		if(!_system){ _text="error: must add before starting"; return; }
-		if(_started){ _text="error: already started"; return; }
-		start();
+	registerCommand("start", "", [&](std::stringstream& ss)->std::string{
+		if(!_system) return "error: must add before starting";
+		if(_started) return "error: already started";
+		return start();
 	});
-	registerCommand("finish", "", [&](std::stringstream& ss){
-		if(!_started){ _text="error: not started"; return; }
-		finish();
+	registerCommand("finish", "", [&](std::stringstream& ss)->std::string{
+		if(!_started) return "error: not started";
+		return finish();
 	});
-	registerCommand("sampleRate", "", [&](std::stringstream& ss){
-		if(!_sampleRate)
-			{ _text="error: sample rate not set when requested"; return; }
-		std::stringstream sampleRateSs;
-		sampleRateSs<<_sampleRate;
-		_text=sampleRateSs.str();
+	registerCommand("sampleRate", "", [&](std::stringstream& ss)->std::string{
+		if(!_sampleRate) return "error: sample rate not set when requested";
+		return std::to_string(_sampleRate);
 	});
 	#ifdef TEST_AUDIO
 		registerCommand("test", "", [&](std::stringstream& ss){
 			_testPhase=0.0f;
 			_test=true;
-			_text="";
+			return "";
 		});
 	#endif
 }
 
-Audio::~Audio(){ finish(); }
-
-bool Audio::ready(){
-	if(!_sampleRate){
-		_text="error: must set sample rate and log2 samples per callback";
-		return false;
-	}
-	_text="";
-	return true;
-}
-
-void Audio::addInput(Component* component){
-	_text="";
-	if(std::count(_inputs.begin(), _inputs.end(), component)) return;
+std::string Audio::addInput(Component* component){
+	if(std::count(_inputs.begin(), _inputs.end(), component))
+		return "input already added";
 	_inputs.push_back(component);
+	return "";
 }
 
-void Audio::addOutput(Component* component){
-	if(!component->readAudio())
-		{ _text="error: output must receive audio"; return; }
-	_text="";
+std::string Audio::addOutput(Component* component){
+	if(!component->readAudio()) return "error: output must receive audio";
 	_micReceiver=component;
+	return "";
+}
+
+std::string Audio::readyToEvaluate(){
+	if(!_sampleRate)
+		return "error: must set sample rate and log2 samples per callback";
+	return "";
 }
 
 void Audio::evaluate(unsigned samples){
@@ -126,23 +118,16 @@ void Audio::evaluate(unsigned samples){
 
 float* Audio::readAudio(){ return _output; }
 
-std::string* Audio::readText(){ return &_text; }
-
-void Audio::start(){
+std::string Audio::start(){
 	PaError err;
 	//initialize
 	err=Pa_Initialize();
-	if(err!=paNoError){
-		_text="error: Pa_Initialize failed: "+paError(err);
-		return;
-	}
+	if(err!=paNoError) return "error: Pa_Initialize failed: "+paError(err);
 	//input
 	PaStreamParameters inputParameters;
 	inputParameters.device=Pa_GetDefaultInputDevice();
-	if(inputParameters.device==paNoDevice){
-		_text="error: no default input device: "+paError(err);
-		return;
-	}
+	if(inputParameters.device==paNoDevice)
+		return "error: no default input device: "+paError(err);
 	inputParameters.channelCount=1;
 	inputParameters.sampleFormat=PA_SAMPLE_FORMAT;
 	inputParameters.suggestedLatency=
@@ -151,10 +136,8 @@ void Audio::start(){
 	//output
 	PaStreamParameters outputParameters;
 	outputParameters.device=Pa_GetDefaultOutputDevice();
-	if(outputParameters.device==paNoDevice){
-		_text="error: no default output device: "+paError(err);
-		return;
-	}
+	if(outputParameters.device==paNoDevice)
+		return "error: no default output device: "+paError(err);
 	outputParameters.channelCount=1;
 	outputParameters.sampleFormat=PA_SAMPLE_FORMAT;
 	outputParameters.suggestedLatency=
@@ -171,30 +154,21 @@ void Audio::start(){
 		paStreamCallback,
 		this
 	);
-	if(err!=paNoError){
-		_text="error: Pa_OpenStream failed: "+paError(err);
-		return;
-	}
+	if(err!=paNoError) return "error: Pa_OpenStream failed: "+paError(err);
 	//start stream
 	err=Pa_StartStream(_paStream);
-	if(err!=paNoError){
-		_text="error: Pa_StartStream failed: "+paError(err);
-		return;
-	}
+	if(err!=paNoError) return "error: Pa_StartStream failed: "+paError(err);
 	_started=true;
-	_text="";
+	return "";
 }
 
-void Audio::finish(){
+std::string Audio::finish(){
 	PaError err;
 	err=Pa_CloseStream(_paStream);
-	if(err!=paNoError){
-		_text="error: "+paError(err);
-		return;
-	}
+	if(err!=paNoError) return "error: "+paError(err);
 	Pa_Terminate();
 	_started=false;
-	_text="";
+	return "";
 }
 
 }//namespace dlal

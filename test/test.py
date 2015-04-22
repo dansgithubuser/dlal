@@ -12,7 +12,8 @@ audio.command('set 22050 6')
 buf.command('resize 64')
 mul.command('set 64.0')
 print midi.command('ports')
-midi.command('open KeyRig')
+try: midi.command('open KeyRig')
+except RuntimeError as e: print e.message
 fm1.connect(audio)
 fm2.connect(audio)
 midi.connect(fm1)
@@ -31,4 +32,4 @@ audio.command('start')
 
 raw_input()
 
-del audio
+audio.command('finish')

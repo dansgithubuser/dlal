@@ -7,26 +7,23 @@ namespace dlal{
 Multiplier::Multiplier(): _output(nullptr), _multiplier(1.0f) {
 	registerCommand("set", "multiplier", [&](std::stringstream& ss){
 		ss>>_multiplier;
-		_text="";
+		return "";
 	});
 }
 
-bool Multiplier::ready(){
-	if(!_output){ _text="error: output not set"; return false; }
-	_text="";
-	return true;
+std::string Multiplier::addOutput(Component* output){
+	if(!output->readAudio()) return "error: output must have audio";
+	_output=output;
+	return "";
 }
 
-void Multiplier::addOutput(Component* output){
-	if(!output->readAudio()){ _text="error: output must have audio"; return; }
-	_text="";
-	_output=output;
+std::string Multiplier::readyToEvaluate(){
+	if(!_output) return "error: output not set";
+	return "";
 }
 
 void Multiplier::evaluate(unsigned samples){
 	for(unsigned i=0; i<samples; ++i) _output->readAudio()[i]*=_multiplier;
 }
-
-std::string* Multiplier::readText(){ return &_text; }
 
 }//namespace dlal

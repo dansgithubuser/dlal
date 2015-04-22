@@ -9,7 +9,7 @@ static void rtMidiCallback(double delta, std::vector<unsigned char>* message, vo
 
 namespace dlal{
 
-Midi::Midi(): _queue(7) {
+Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 	registerCommand("midi", "byte[1]..byte[n]", [&](std::stringstream& ss){
 		MidiMessage message;
 		unsigned byte, i=0;
@@ -18,30 +18,34 @@ Midi::Midi(): _queue(7) {
 			++i;
 		}
 		queue(message);
+		return "";
 	});
 	registerCommand("ports", "", [&](std::stringstream& ss){
-		_text="";
-		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i)
-			_text+=_rtMidiIn->getPortName(i)+"\n";
-	});
-	registerCommand("open", "port", [&](std::stringstream& ss){
 		std::string s;
+		s=allocate();
+		if(s.size()) return s;
+		s="";
+		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i)
+			s+=_rtMidiIn->getPortName(i)+"\n";
+		return s;
+	});
+	registerCommand("open", "port", [&](std::stringstream& ss)->std::string{
+		std::string s;
+		s=allocate();
+		if(s.size()) return s;
+		_rtMidiIn->setCallback(rtMidiCallback, this);
+		s="";
 		ss>>s;
 		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i)
 			if(_rtMidiIn->getPortName(i).find(s)!=std::string::npos){
 				_rtMidiIn->openPort(i);
-				_text="";
-				return;
+				return "";
 			}
-		_text="error: couldn't find requested port";
+		return "error: couldn't find requested port";
 	});
-	try{ _rtMidiIn=new RtMidiIn(); }
-	catch(RtMidiError& error){ _text="error: "+error.getMessage(); return; }
-	_rtMidiIn->setCallback(rtMidiCallback, this);
-	_text="";
 }
 
-Midi::~Midi(){ delete _rtMidiIn; }
+Midi::~Midi(){ if(_rtMidiIn) delete _rtMidiIn; }
 
 void Midi::evaluate(unsigned samples){
 	_messages.clear();
@@ -51,10 +55,18 @@ void Midi::evaluate(unsigned samples){
 
 MidiMessages* Midi::readMidi(){ return &_messages; }
 
-std::string* Midi::readText(){ return &_text; }
-
 void Midi::queue(const MidiMessage& message){
 	_queue.write(message);
+}
+
+std::string Midi::allocate(){
+	if(_rtMidiIn) return "";
+	try{ _rtMidiIn=new RtMidiIn(); }
+	catch(RtMidiError& error){
+		_rtMidiIn=nullptr;
+		return "error: "+error.getMessage();
+	}
+	return "";
 }
 
 }//namespace dlal

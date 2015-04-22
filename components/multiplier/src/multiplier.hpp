@@ -8,15 +8,13 @@ namespace dlal{
 class Multiplier: public Component{
 	public:
 		Multiplier();
-		bool ready();
-		void addOutput(Component*);
+		std::string addOutput(Component*);
+		std::string readyToEvaluate();
 		void evaluate(unsigned samples);
-		std::string* readText();
 	private:
 		Component* _input;
 		Component* _output;
 		float _multiplier;
-		std::string _text;
 };
 
 }//namespace dlal

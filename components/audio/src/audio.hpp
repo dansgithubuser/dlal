@@ -10,24 +10,20 @@ namespace dlal{
 class Audio: public Component{
 	public:
 		Audio();
-		~Audio();
-		bool ready();
-		void addInput(Component*);
-		void addOutput(Component*);
+		std::string addInput(Component*);
+		std::string addOutput(Component*);
+		std::string readyToEvaluate();
 		void evaluate(unsigned samples);
 		float* readAudio();
-		std::string* readText();
-		unsigned _sampleRate, _underflows;
+		unsigned _underflows;
 		float* _output;
 		Component* _micReceiver;
 	private:
 		static const PaSampleFormat PA_SAMPLE_FORMAT=paFloat32;
-		void start();
-		void finish();
-		bool process(const std::string& text);
-		unsigned _log2SamplesPerCallback;
+		std::string start();
+		std::string finish();
+		unsigned _sampleRate, _log2SamplesPerCallback;
 		PaStream* _paStream;
-		std::string _text;
 		std::vector<Component*> _inputs;
 		bool _started;
 		#ifdef TEST_AUDIO

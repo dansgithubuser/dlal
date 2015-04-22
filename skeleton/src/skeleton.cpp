@@ -10,58 +10,51 @@ void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
 }
 
-const char* dlalReadComponent(void* component){
-	dlal::Component& c=*(dlal::Component*)component;
-	std::string* s=c.readText();
-	if(s) return s->c_str();
-	else return "";
-}
-
 const char* dlalCommandComponent(void* component, const char* command){
-	dlal::Component& c=*(dlal::Component*)component;
 	static std::string result;
-	result=c.sendText(command);
+	result=((dlal::Component*)component)->sendCommand(command);
 	return result.c_str();
-}
-
-const char* dlalAddComponent(void* system, void* component){
-	dlal::System& s=*(dlal::System*)system;
-	dlal::Component& c=*(dlal::Component*)component;
-	if(!c.ready()) return "error: not ready";
-	s.addComponent(c);
-	return "";
-}
-
-static bool connect(dlal::Component& i, dlal::Component& o, bool forward){
-	if(forward)
-		i.addOutput(&o);
-	else
-		o.addInput(&i);
-	auto si=i.readText();
-	auto so=o.readText();
-	if(si&&dlal::isError(*si)) return false;
-	if(so&&dlal::isError(*so)) return false;
-	return true;
 }
 
 const char* dlalConnectComponents(void* input, void* output){
 	dlal::Component& i=*(dlal::Component*)input;
 	dlal::Component& o=*(dlal::Component*)output;
-	if(!connect(i, o, true))
-		return "error when connecting forward";
-	if(!connect(i, o, false))
-		return "error when connecting backward";
-	return "";
+	static std::string result;
+	std::string resultForward;
+	resultForward=i.addOutput(&o);
+	if(dlal::isError(resultForward)){
+		result="error when connecting forward\n"+resultForward;
+		return result.c_str();
+	}
+	std::string resultBackward;
+	resultBackward=o.addInput(&i);
+	if(dlal::isError(resultBackward)){
+		result="error when connecting backward\n"+resultBackward;
+		return result.c_str();
+	}
+	result="";
+	if(resultForward.size()) result+="forward: "+resultForward+"\n";
+	if(resultForward.size()) result+="backward: "+resultBackward+"\n";
+	return result.c_str();
+}
+
+const char* dlalAddComponent(void* system, void* component){
+	static std::string result;
+	result=((dlal::System*)system)->addComponent(*(dlal::Component*)component);
+	return result.c_str();
 }
 
 namespace dlal{
 
-bool isError(const std::string& s){ return s.compare(0, 7, "error: ")==0; }
+bool isError(const std::string& s){ return s.compare(0, 5, "error")==0; }
 
 //=====System=====//
-void System::addComponent(Component& component){
+std::string System::addComponent(Component& component){
+	std::string result=component.readyToEvaluate();
+	if(isError(result)) return result;
 	component._system=this;
 	_components.push_back(&component);
+	return "";
 }
 
 void System::evaluate(unsigned samples){
@@ -69,8 +62,8 @@ void System::evaluate(unsigned samples){
 }
 
 //=====Component=====//
-std::string Component::sendText(const std::string& text){
-	std::stringstream ss(text);
+std::string Component::sendCommand(const std::string& command){
+	std::stringstream ss(command);
 	std::string s;
 	ss>>s;
 	if(!_commands.count(s)){
@@ -81,8 +74,7 @@ std::string Component::sendText(const std::string& text){
 		for(auto i:_commands) result+=i.first+" "+i.second.parameters+"\n";
 		return result;
 	}
-	_commands[s].command(ss);
-	return "";
+	return _commands[s].command(ss);
 }
 
 void Component::registerCommand(

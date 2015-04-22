@@ -14,13 +14,12 @@ class Midi: public Component{
 		~Midi();
 		void evaluate(unsigned samples);
 		MidiMessages* readMidi();
-		std::string* readText();
 		void queue(const MidiMessage&);
 	private:
+		std::string allocate();
 		RtMidiIn* _rtMidiIn;
 		Queue<MidiMessage> _queue;
 		MidiMessages _messages;
-		std::string _text;
 };
 
 }//namespace dlal

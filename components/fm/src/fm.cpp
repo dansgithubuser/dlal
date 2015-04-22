@@ -22,36 +22,32 @@ Sonic::Sonic():
 		message._bytes[1]=0x3c;
 		message._bytes[2]=0x7f;
 		processMidi(message);
-		_text="";
+		return "";
 	});
 }
 
-bool Sonic::ready(){
-	_text="";
-	if(!_ready) _text="error: sample rate not set";
-	else if(!_input) _text="error: input not set";
-	else if(!_output) _text="error: output not set";
-	return _text.size()==0;
-}
-
-void Sonic::addInput(Component* input){
-	if(!input->readMidi()){ _text="error: input must provide midi"; return; }
-	_text="";
+std::string Sonic::addInput(Component* input){
+	if(!input->readMidi()) return "error: input must provide midi";
 	_input=input;
+	return "";
 }
 
-void Sonic::addOutput(Component* output){
-	if(!output->readAudio()){ _text="error: output must receive audio"; return; }
-	if(isError(output->sendText("sampleRate"))||!output->readText()){
-		_text="error: output must provide sample rate"; return;
-	}
-	std::stringstream ss(*output->readText());
-	unsigned sampleRate;
-	ss>>sampleRate;
+std::string Sonic::addOutput(Component* output){
+	if(!output->readAudio()) return "error: output must receive audio";
+	std::string s=output->sendCommand("sampleRate");
+	if(isError(s)) return "error: output must provide sample rate";
+	unsigned sampleRate=(unsigned)std::stoul(s);
 	for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
 	_ready=true;
 	_output=output;
-	_text="";
+	return "";
+}
+
+std::string Sonic::readyToEvaluate(){
+	if(!_ready) return "error: sample rate not set";
+	if(!_input) return "error: input not set";
+	if(!_output) return "error: output not set";
+	return "";
 }
 
 void Sonic::evaluate(unsigned samples){
@@ -67,8 +63,6 @@ void Sonic::evaluate(unsigned samples){
 		}
 	}
 }
-
-std::string* Sonic::readText(){ return &_text; }
 
 Sonic::Oscillator::Oscillator():
 	_attack(0.01f), _decay(0.01f), _sustain(0.5f), _release(0.01f),

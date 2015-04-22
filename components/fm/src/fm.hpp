@@ -8,11 +8,10 @@ namespace dlal{
 class Sonic: public Component{
 	public:
 		Sonic();
-		bool ready();
-		void addInput(Component*);
-		void addOutput(Component*);
+		std::string addInput(Component*);
+		std::string addOutput(Component*);
+		std::string readyToEvaluate();
 		void evaluate(unsigned samples);
-		std::string* readText();
 	private:
 		static const unsigned NOTES=128;
 		static const unsigned OSCILLATORS=4;

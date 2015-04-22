@@ -24,21 +24,21 @@ extern "C"{
 	DLAL void dlalDemolishComponent(void* component);
 	DLAL void* dlalBuildSystem();
 	DLAL void dlalDemolishSystem(void* system);
-	DLAL const char* dlalReadComponent(void* component);
 	DLAL const char* dlalCommandComponent(void* component, const char* command);
-	DLAL const char* dlalAddComponent(void* system, void* component);
 	DLAL const char* dlalConnectComponents(void* input, void* output);
+	DLAL const char* dlalAddComponent(void* system, void* component);
 }
 
 namespace dlal{
 
+//returns true if parameter starts with "error"
 bool isError(const std::string&);
 
 class Component;
 
 class System{
 	public:
-		void addComponent(Component& component);
+		std::string addComponent(Component& component);
 		void evaluate(unsigned samples);
 	private:
 		std::vector<Component*> _components;
@@ -48,27 +48,36 @@ class Component{
 	public:
 		Component(): _system(NULL) {}
 		virtual ~Component(){}
-		virtual bool ready(){ return true; }
-		virtual void addInput(Component*){}
-		virtual void addOutput(Component*){}
+
+		//interface for configuration
+		//on success, return x such that isError(x) is false
+		//on failure, return x such that isError(x) is true
+		std::string sendCommand(const std::string&);//see registerCommand
+		virtual std::string addInput(Component*){ return ""; }
+		virtual std::string addOutput(Component*){ return ""; }
+		virtual std::string readyToEvaluate(){ return ""; }
+
+		//evaluation - audio/midi/command processing
 		virtual void evaluate(unsigned samples){}
+
+		//interface for evaluation
 		virtual float* readAudio(){ return nullptr; }
 		virtual MidiMessages* readMidi(){ return nullptr; }
 		virtual std::string* readText(){ return nullptr; }
-		std::string sendText(const std::string&);
+
 		System* _system;
 	protected:
-		typedef std::function<void(std::stringstream&)> Command;
-		struct CommandWithParameters{
-			Command command;
-			std::string parameters;
-		};
+		typedef std::function<std::string(std::stringstream&)> Command;
 		void registerCommand(
 			const std::string& name,
 			const std::string& parameters,
 			Command
 		);
 	private:
+		struct CommandWithParameters{
+			Command command;
+			std::string parameters;
+		};
 		std::map<std::string, CommandWithParameters> _commands;
 };
 
