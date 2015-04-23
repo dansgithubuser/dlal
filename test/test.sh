@@ -17,4 +17,4 @@ cd -
 
 #run
 export PYTHONPATH=`pwd`/..
-python test.py
+python -i test.py

@@ -1,35 +1,37 @@
-import dlal
+import dlal, atexit
 
 system=dlal.System()
+
 audio=dlal.Component('audio')
-fm1=dlal.Component('fm')
-fm2=dlal.Component('fm')
+fm=dlal.Component('fm')
 midi=dlal.Component('midi')
 sfml=dlal.Component('sfml')
 buf=dlal.Component('buffer')
 mul=dlal.Component('multiplier')
+switch=dlal.Component('switch')
+
 audio.command('set 22050 6')
 buf.command('resize 64')
 mul.command('set 64.0')
 print midi.command('ports')
 try: midi.command('open KeyRig')
 except RuntimeError as e: print e.message
-fm1.connect(audio)
-fm2.connect(audio)
-midi.connect(fm1)
-sfml.connect(fm2)
+
+midi.connect(switch)
+sfml.connect(switch)
+switch.connect(fm)
+fm.connect(audio)
 audio.connect(buf)
-buf.connect(audio)
 mul.connect(buf)
+buf.connect(audio)
+
 sfml.add(system)
 midi.add(system)
 mul.add(system)
 audio.add(system)
-fm1.add(system)
-fm2.add(system)
+fm.add(system)
 buf.add(system)
+switch.add(system)
+
 audio.command('start')
-
-raw_input()
-
-audio.command('finish')
+atexit.register(lambda: audio.command('finish'))

@@ -15,7 +15,8 @@ Some specific features...
 
 todo
 ----
-- switch component
+- command queuer
+- fm change parameters
 - liner component
 - low pass component
 - record to file
