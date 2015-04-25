@@ -20,13 +20,13 @@ const char* dlalConnectComponents(void* input, void* output){
 	dlal::Component& i=*(dlal::Component*)input;
 	dlal::Component& o=*(dlal::Component*)output;
 	static std::string result;
-	std::string resultForward;
+	static std::string resultForward;
 	resultForward=i.addOutput(&o);
 	if(dlal::isError(resultForward)){
 		result="error when connecting forward\n"+resultForward;
 		return result.c_str();
 	}
-	std::string resultBackward;
+	static std::string resultBackward;
 	resultBackward=o.addInput(&i);
 	if(dlal::isError(resultBackward)){
 		result="error when connecting backward\n"+resultBackward;

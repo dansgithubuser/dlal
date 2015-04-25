@@ -15,14 +15,17 @@ Some specific features...
 
 todo
 ----
-- command queuer
-- fm change parameters
+- keep connect split into add input and add output at all levels
+- get pa errors out of python shell
 - liner component
+
+- fm change parameters
 - low pass component
 - record to file
-	- system
+	- system + commands
 	- midi
 	- mic
 	- sfml
+
 - diodefilter component
 - pitch shift component
