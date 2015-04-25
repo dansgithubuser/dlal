@@ -27,6 +27,7 @@ fm.connect(audio)
 audio.connect(buf)
 mul.connect(buf)
 buf.connect(audio)
+com.connectOutput(fm)
 
 sfml.add(system)
 midi.add(system)

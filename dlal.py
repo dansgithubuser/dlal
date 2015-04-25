@@ -10,7 +10,8 @@ skeleton=load('skeleton')
 skeleton.dlalCommandComponent.restype=ctypes.c_char_p
 skeleton.dlalCommandComponent.argtype=[ctypes.c_void_p, ctypes.c_char_p]
 skeleton.dlalAddComponent.restype=ctypes.c_char_p
-skeleton.dlalConnectComponents.restype=ctypes.c_char_p
+skeleton.dlalConnectInput.restype=ctypes.c_char_p
+skeleton.dlalConnectOutput.restype=ctypes.c_char_p
 
 class System:
 	def __init__(self): self.system=skeleton.dlalBuildSystem()
@@ -36,9 +37,25 @@ class Component:
 			skeleton.dlalAddComponent(system.system, self.component)
 		)
 
-	def connect(self, output):
+	def connectInput(self, input):
 		return self.report(
-			skeleton.dlalConnectComponents(self.component, output.component)
+			skeleton.dlalConnectInput(self.component, input.component)
+		)
+
+	def connectOutput(self, output):
+		return self.report(
+			skeleton.dlalConnectOutput(self.component, output.component)
+		)
+
+	def connect(self, output):
+		return (
+			'forward: '+self.report(
+				skeleton.dlalConnectOutput(self.component, output.component)
+			)+'\n'
+			+
+			'backward: '+self.report(
+				skeleton.dlalConnectInput(output.component, self.component)
+			)+'\n'
 		)
 
 	def report(self, text):

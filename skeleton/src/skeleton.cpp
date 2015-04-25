@@ -16,25 +16,15 @@ const char* dlalCommandComponent(void* component, const char* command){
 	return result.c_str();
 }
 
-const char* dlalConnectComponents(void* input, void* output){
-	dlal::Component& i=*(dlal::Component*)input;
-	dlal::Component& o=*(dlal::Component*)output;
+const char* dlalConnectInput(void* component, void* input){
 	static std::string result;
-	static std::string resultForward;
-	resultForward=i.addOutput(&o);
-	if(dlal::isError(resultForward)){
-		result="error when connecting forward\n"+resultForward;
-		return result.c_str();
-	}
-	static std::string resultBackward;
-	resultBackward=o.addInput(&i);
-	if(dlal::isError(resultBackward)){
-		result="error when connecting backward\n"+resultBackward;
-		return result.c_str();
-	}
-	result="";
-	if(resultForward.size()) result+="forward: "+resultForward+"\n";
-	if(resultForward.size()) result+="backward: "+resultBackward+"\n";
+	result=((dlal::Component*)component)->addInput((dlal::Component*)input);
+	return result.c_str();
+}
+
+const char* dlalConnectOutput(void* component, void* output){
+	static std::string result;
+	result=((dlal::Component*)component)->addOutput((dlal::Component*)output);
 	return result.c_str();
 }
 

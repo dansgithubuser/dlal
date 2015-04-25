@@ -25,7 +25,8 @@ extern "C"{
 	DLAL void* dlalBuildSystem();
 	DLAL void dlalDemolishSystem(void* system);
 	DLAL const char* dlalCommandComponent(void* component, const char* command);
-	DLAL const char* dlalConnectComponents(void* input, void* output);
+	DLAL const char* dlalConnectInput(void* component, void* input);
+	DLAL const char* dlalConnectOutput(void* component, void* output);
 	DLAL const char* dlalAddComponent(void* system, void* component);
 }
 
@@ -53,9 +54,9 @@ class Component{
 		//on success, return x such that isError(x) is false
 		//on failure, return x such that isError(x) is true
 		std::string sendCommand(const std::string&);//see registerCommand
-		virtual std::string addInput(Component*){ return ""; }
-		virtual std::string addOutput(Component*){ return ""; }
-		virtual std::string readyToEvaluate(){ return ""; }
+		virtual std::string addInput(Component*){ return "unimplemented"; }
+		virtual std::string addOutput(Component*){ return "unimplemented"; }
+		virtual std::string readyToEvaluate(){ return "unimplemented"; }
 
 		//evaluation - audio/midi/command processing
 		virtual void evaluate(unsigned samples){}

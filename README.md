@@ -15,7 +15,6 @@ Some specific features...
 
 todo
 ----
-- keep connect split into add input and add output at all levels
 - get pa errors out of python shell
 - liner component
 
