@@ -15,7 +15,6 @@ Some specific features...
 
 todo
 ----
-- get pa errors out of python shell
 - liner component
 
 - fm change parameters

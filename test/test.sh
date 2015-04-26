@@ -17,4 +17,4 @@ cd -
 
 #run
 export PYTHONPATH=`pwd`/..
-python -i test.py
+python -i test.py 2> stderr.txt
