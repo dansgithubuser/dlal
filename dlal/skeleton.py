@@ -28,37 +28,37 @@ class Component:
 	def __del__(self): skeleton.dlalDemolishComponent(self.component)
 
 	def command(self, text):
-		return self.report(
+		return self._report(
 			skeleton.dlalCommandComponent(self.component, text)
 		)
 
 	def add(self, system):
-		return self.report(
+		return self._report(
 			skeleton.dlalAddComponent(system.system, self.component)
 		)
 
 	def connectInput(self, input):
-		return self.report(
+		return self._report(
 			skeleton.dlalConnectInput(self.component, input.component)
 		)
 
 	def connectOutput(self, output):
-		return self.report(
+		return self._report(
 			skeleton.dlalConnectOutput(self.component, output.component)
 		)
 
 	def connect(self, output):
 		return (
-			'forward: '+self.report(
+			'forward: '+self._report(
 				skeleton.dlalConnectOutput(self.component, output.component)
 			)+'\n'
 			+
-			'backward: '+self.report(
+			'backward: '+self._report(
 				skeleton.dlalConnectInput(output.component, self.component)
 			)+'\n'
 		)
 
-	def report(self, text):
+	def _report(self, text):
 		text=copy.deepcopy(text)
 		if text.startswith('error'): raise RuntimeError(text)
 		return text

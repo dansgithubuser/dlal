@@ -15,6 +15,8 @@ Some specific features...
 
 todo
 ----
+- double free corruption?
+
 - fm change parameters
 - low pass component
 - record to file
