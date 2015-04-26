@@ -16,10 +16,12 @@ struct MidiMessage{
 class MidiMessages{
 	public:
 		MidiMessages();
+		MidiMessages(const MidiMessage&);
 		MidiMessage& operator[](unsigned);
 		const MidiMessage& operator[](unsigned) const;
 		unsigned size() const;
 		bool push_back(const MidiMessage&);
+		bool push_back(const MidiMessages&);
 		void clear();
 	private:
 		static const unsigned SIZE=256;

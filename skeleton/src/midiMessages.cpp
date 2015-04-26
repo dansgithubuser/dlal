@@ -16,6 +16,10 @@ MidiMessage::MidiMessage(const std::vector<uint8_t>& bytes){
 //=====MidiMessages=====//
 MidiMessages::MidiMessages(): _size(0) {}
 
+MidiMessages::MidiMessages(const MidiMessage& message): _size(1) {
+	_messages[0]=message;
+}
+
 MidiMessage& MidiMessages::operator[](unsigned i){
 	return _messages[i];
 }
@@ -30,6 +34,15 @@ bool MidiMessages::push_back(const MidiMessage& message){
 	if(_size+1>SIZE) return false;
 	_messages[_size]=message;
 	++_size;
+	return true;
+}
+
+bool MidiMessages::push_back(const MidiMessages& messages){
+	if(_size+messages._size>SIZE) return false;
+	memcpy(
+		_messages+_size, messages._messages, sizeof(MidiMessage)*messages._size
+	);
+	_size+=messages._size;
 	return true;
 }
 

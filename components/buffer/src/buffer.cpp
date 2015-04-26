@@ -4,7 +4,7 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Buffer; }
 
 static void circularIncrement(unsigned& i, unsigned amount, unsigned size){
 	i+=amount;
-	if(i+amount>size) i=0;
+	if(i+amount>size) i-=size;
 }
 
 namespace dlal{

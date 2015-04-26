@@ -15,8 +15,6 @@ Some specific features...
 
 todo
 ----
-- liner component
-
 - fm change parameters
 - low pass component
 - record to file
