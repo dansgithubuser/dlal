@@ -1,7 +1,19 @@
 #include "skeleton.hpp"
 
+#include <cstring>
+#include <cstdlib>
+
+static dlal::Component* cast(void* p){ return (dlal::Component*)p; }
+
+static char* c_str(const std::string& s){
+	char* result=(char*)malloc(s.size()+1);
+	result[s.size()]='\0';
+	memcpy(result, s.c_str(), s.size());
+	return result;
+}
+
 void dlalDemolishComponent(void* component){
-	delete (dlal::Component*)component;
+	delete cast(component);
 }
 
 void* dlalBuildSystem(){ return new dlal::System; }
@@ -10,28 +22,20 @@ void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
 }
 
-const char* dlalCommandComponent(void* component, const char* command){
-	static std::string result;
-	result=((dlal::Component*)component)->sendCommand(command);
-	return result.c_str();
+char* dlalCommandComponent(void* component, const char* command){
+	return c_str(cast(component)->sendCommand(command));
 }
 
-const char* dlalConnectInput(void* component, void* input){
-	static std::string result;
-	result=((dlal::Component*)component)->addInput((dlal::Component*)input);
-	return result.c_str();
+char* dlalConnectInput(void* component, void* input){
+	return c_str(cast(component)->addInput(cast(input)));
 }
 
-const char* dlalConnectOutput(void* component, void* output){
-	static std::string result;
-	result=((dlal::Component*)component)->addOutput((dlal::Component*)output);
-	return result.c_str();
+char* dlalConnectOutput(void* component, void* output){
+	return c_str(cast(component)->addOutput(cast(output)));
 }
 
-const char* dlalAddComponent(void* system, void* component){
-	static std::string result;
-	result=((dlal::System*)system)->addComponent(*(dlal::Component*)component);
-	return result.c_str();
+char* dlalAddComponent(void* system, void* component){
+	return c_str(((dlal::System*)system)->addComponent(*cast(component)));
 }
 
 namespace dlal{

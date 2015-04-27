@@ -24,10 +24,10 @@ extern "C"{
 	DLAL void dlalDemolishComponent(void* component);
 	DLAL void* dlalBuildSystem();
 	DLAL void dlalDemolishSystem(void* system);
-	DLAL const char* dlalCommandComponent(void* component, const char* command);
-	DLAL const char* dlalConnectInput(void* component, void* input);
-	DLAL const char* dlalConnectOutput(void* component, void* output);
-	DLAL const char* dlalAddComponent(void* system, void* component);
+	DLAL char* dlalCommandComponent(void* component, const char* command);
+	DLAL char* dlalConnectInput(void* component, void* input);
+	DLAL char* dlalConnectOutput(void* component, void* output);
+	DLAL char* dlalAddComponent(void* system, void* component);
 }
 
 namespace dlal{

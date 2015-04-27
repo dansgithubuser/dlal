@@ -1,4 +1,4 @@
-import ctypes, copy, platform
+import ctypes, platform
 
 def upperfirst(s): return s[0].upper()+s[1:]
 
@@ -37,28 +37,16 @@ class Component:
 			skeleton.dlalAddComponent(system.system, self.component)
 		)
 
-	def connectInput(self, input):
+	def connect_input(self, input):
 		return self._report(
 			skeleton.dlalConnectInput(self.component, input.component)
 		)
 
-	def connectOutput(self, output):
+	def connect_output(self, output):
 		return self._report(
 			skeleton.dlalConnectOutput(self.component, output.component)
 		)
 
-	def connect(self, output):
-		return (
-			'forward: '+self._report(
-				skeleton.dlalConnectOutput(self.component, output.component)
-			)+'\n'
-			+
-			'backward: '+self._report(
-				skeleton.dlalConnectInput(output.component, self.component)
-			)+'\n'
-		)
-
 	def _report(self, text):
-		text=copy.deepcopy(text)
 		if text.startswith('error'): raise RuntimeError(text)
 		return text
