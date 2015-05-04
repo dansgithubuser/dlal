@@ -8,4 +8,6 @@ bin-stamp
 lib
 lib-stamp
 *.lo
+*.o
+.libs
 
