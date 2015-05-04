@@ -15,13 +15,14 @@ Some specific features...
 
 todo
 ----
-- fm change parameters
-- low pass component
+- output to file
+
 - record to file
 	- system + commands
 	- midi
 	- mic
 	- sfml
-
+- sampler
+- low pass component
 - diodefilter component
 - pitch shift component

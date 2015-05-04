@@ -16,6 +16,58 @@ Sonic::Sonic():
 	_input(nullptr), _output(nullptr), _ready(false)
 {
 	_oscillators[0]._output=1.0f;
+	registerCommand("a", "osc <attack (amplitude per sample)>", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		ss>>_oscillators[i]._attack;
+		return "";
+	});
+	registerCommand("d", "osc <decay (amplitude per sample)>", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		ss>>_oscillators[i]._decay;
+		return "";
+	});
+	registerCommand("s", "osc <sustain (amplitude)>", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		ss>>_oscillators[i]._sustain;
+		return "";
+	});
+	registerCommand("r", "osc <release (amplitude per second)>", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		ss>>_oscillators[i]._release;
+		return "";
+	});
+	registerCommand("m", "osc <frequency multiplier>", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		ss>>_oscillators[i]._frequencyMultiplier;
+		return "";
+	});
+	registerCommand("i", "osc input amplitude", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		unsigned j;
+		ss>>j;
+		if(j>=OSCILLATORS) return "error: input out of range";
+		ss>>_oscillators[i]._inputs[j];
+		return "";
+	});
+	registerCommand("o", "osc <output (amplitude)>", [&](std::stringstream& ss){
+		unsigned i;
+		ss>>i;
+		if(i>=OSCILLATORS) return "error: osc out of range";
+		ss>>_oscillators[i]._output;
+		return "";
+	});
 	registerCommand("test", "", [&](std::stringstream& ss){
 		MidiMessage message;
 		message._bytes[0]=0x90;

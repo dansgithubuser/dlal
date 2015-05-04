@@ -46,7 +46,6 @@ class Sonic: public Component{
 		Oscillator _oscillators[OSCILLATORS];
 		float* _samples;
 		Note _notes[NOTES];
-		std::string _text;
 		Component* _input;
 		Component* _output;
 		bool _ready;
