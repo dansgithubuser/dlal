@@ -19,7 +19,7 @@ cd ..\..
 
 :run
 cd build\test\Release
-python ..\..\..\test\test.py
+python -i ..\..\..\test\test.py
 
 :end
 cd %original_directory%
