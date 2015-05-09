@@ -19,6 +19,7 @@ Commander::Commander(): _queue(8), _period(0), _phase(0) {
 
 std::string Commander::addOutput(Component* output){
 	_outputs.push_back(output);
+	return "";
 }
 
 std::string Commander::readyToEvaluate(){

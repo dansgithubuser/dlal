@@ -21,7 +21,7 @@ std::string Switch::addInput(Component* input){
 }
 
 std::string Switch::readyToEvaluate(){
-	if(!_current) return "error: no inputs";
+	if(!_current.load()) return "error: no inputs";
 	return "";
 }
 
