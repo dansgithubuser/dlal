@@ -13,7 +13,7 @@ static float wave(float phase){
 namespace dlal{
 
 Sonic::Sonic():
-	_input(nullptr), _output(nullptr), _ready(false)
+	_input(nullptr), _output(nullptr), _sampleRateSet(false)
 {
 	_oscillators[0]._output=1.0f;
 	registerCommand("a", "osc <attack (amplitude per sample)>", [&](std::stringstream& ss){
@@ -68,6 +68,13 @@ Sonic::Sonic():
 		ss>>_oscillators[i]._output;
 		return "";
 	});
+	registerCommand("rate", "<samples per second>", [&](std::stringstream& ss){
+		unsigned sampleRate;
+		ss>>sampleRate;
+		for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
+		_sampleRateSet=true;
+		return "";
+	});
 	registerCommand("test", "", [&](std::stringstream& ss){
 		MidiMessage message;
 		message._bytes[0]=0x90;
@@ -86,17 +93,12 @@ std::string Sonic::addInput(Component* input){
 
 std::string Sonic::addOutput(Component* output){
 	if(!output->readAudio()) return "error: output must receive audio";
-	std::string s=output->sendCommand("sampleRate");
-	if(isError(s)) return "error: output must provide sample rate";
-	unsigned sampleRate=(unsigned)std::stoul(s);
-	for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
-	_ready=true;
 	_output=output;
 	return "";
 }
 
 std::string Sonic::readyToEvaluate(){
-	if(!_ready) return "error: sample rate not set";
+	if(!_sampleRateSet) return "error: sample rate not set";
 	if(!_input) return "error: input not set";
 	if(!_output) return "error: output not set";
 	return "";

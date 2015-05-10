@@ -48,7 +48,7 @@ class Sonic: public Component{
 		Note _notes[NOTES];
 		Component* _input;
 		Component* _output;
-		bool _ready;
+		bool _sampleRateSet;
 };
 
 }//namespace dlal

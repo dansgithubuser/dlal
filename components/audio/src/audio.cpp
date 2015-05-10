@@ -65,10 +65,6 @@ Audio::Audio():
 		if(!_started) return "error: not started";
 		return finish();
 	});
-	registerCommand("sampleRate", "", [&](std::stringstream& ss)->std::string{
-		if(!_sampleRate) return "error: sample rate not set when requested";
-		return std::to_string(_sampleRate);
-	});
 	#ifdef TEST_AUDIO
 		registerCommand("test", "", [&](std::stringstream& ss){
 			_testPhase=0.0f;
