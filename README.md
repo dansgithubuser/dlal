@@ -15,13 +15,8 @@ Some specific features...
 
 todo
 ----
+- looping
 - output to file
-
-- record to file
-	- system + commands
-	- midi
-	- mic
-	- sfml
 - sampler
 - low pass component
 - diodefilter component

@@ -23,6 +23,8 @@ class MidiMessages{
 		bool push_back(const MidiMessage&);
 		bool push_back(const MidiMessages&);
 		void clear();
+		void serialize(std::vector<uint8_t>&);
+		void deserialize(const std::vector<uint8_t>&);
 	private:
 		static const unsigned SIZE=256;
 		MidiMessage _messages[SIZE];

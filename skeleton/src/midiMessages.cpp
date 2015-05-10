@@ -48,4 +48,19 @@ bool MidiMessages::push_back(const MidiMessages& messages){
 
 void MidiMessages::clear(){ _size=0; }
 
+void MidiMessages::serialize(std::vector<uint8_t>& bytes){
+	bytes.push_back((uint8_t)_size);
+	for(unsigned i=0; i<_size; ++i)
+		for(unsigned j=0; j<MidiMessage::SIZE; ++j)
+			bytes.push_back(_messages[i]._bytes[j]);
+}
+
+void MidiMessages::deserialize(const std::vector<uint8_t>& bytes){
+	unsigned index=0;
+	_size=bytes[index++];
+	for(unsigned i=0; i<_size; ++i)
+		for(unsigned j=0; j<MidiMessage::SIZE; ++j)
+			_messages[i]._bytes[j]=bytes[index++];
+}
+
 }//namespace dlal
