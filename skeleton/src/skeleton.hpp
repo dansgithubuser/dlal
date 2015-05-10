@@ -54,9 +54,9 @@ class Component{
 		//on success, return x such that isError(x) is false
 		//on failure, return x such that isError(x) is true
 		std::string sendCommand(const std::string&);//see registerCommand
-		virtual std::string addInput(Component*){ return "unimplemented"; }
-		virtual std::string addOutput(Component*){ return "unimplemented"; }
-		virtual std::string readyToEvaluate(){ return "unimplemented"; }
+		virtual std::string addInput(Component*){ return "error: unimplemented"; }
+		virtual std::string addOutput(Component*){ return "error: unimplemented"; }
+		virtual std::string readyToEvaluate(){ return ""; }
 
 		//evaluation - audio/midi/command processing
 		virtual void evaluate(unsigned samples){}
