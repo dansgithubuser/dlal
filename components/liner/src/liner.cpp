@@ -4,7 +4,7 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Liner; }
 
 namespace dlal{
 
-Liner::Liner(): _sample(0), _index(0), _period(0) {
+Liner::Liner(): _midi(&_emptyMidi), _sample(0), _period(0) {
 	registerCommand("period", "<period in samples>", [&](std::stringstream& ss){
 		ss>>_period;
 		return "";
@@ -19,17 +19,16 @@ Liner::Liner(): _sample(0), _index(0), _period(0) {
 				message._bytes[i]=byte;
 				++i;
 			}
-			for(i=0; i<_line.size(); ++i){
-				if(_line[i]._sample>sample) break;
-				if(_line[i]._sample==sample){
-					_line[i]._midi.push_back(message);
-					return "";
-				}
-			}
-			_line.insert(_line.begin()+i, TimedMidi{ sample, message });
+			_line[sample].push_back(message);
 			return "";
 		}
 	);
+}
+
+std::string Liner::addInput(Component* input){
+	if(!input->readMidi()) return "error: input must provide midi!";
+	_inputs.push_back(input);
+	return "";
 }
 
 std::string Liner::readyToEvaluate(){
@@ -38,18 +37,19 @@ std::string Liner::readyToEvaluate(){
 }
 
 void Liner::evaluate(unsigned samples){
+	//record inputs
+	for(auto input: _inputs){
+		MidiMessages& midi=*input->readMidi();
+		if(midi.size()) _line[_sample].push_back(midi);
+	}
+	//set output
+	_midi=&_emptyMidi;
+	if(_line.count(_sample)) _midi=&_line[_sample];
+	//move forward
 	_sample+=samples;
-	if(_sample>_period){
-		_sample-=_period;
-		_index=0;
-	}
-	_midi.clear();
-	while(_line[_index]._sample<_sample){
-		_midi.push_back(_line[_index]._midi);
-		++_index;
-	}
+	_sample%=_period;
 }
 
-MidiMessages* Liner::readMidi(){ return &_midi; }
+MidiMessages* Liner::readMidi(){ return _midi; }
 
 }//namespace dlal
