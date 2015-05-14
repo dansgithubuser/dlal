@@ -5,7 +5,7 @@ set original_directory="%cd%"
 cd ..
 set PYTHONPATH=%cd%
 
-if "%1"=="r" goto:run
+if "%2"=="r" goto:run
 
 REM build
 mkdir build\built
@@ -19,7 +19,7 @@ cd ..\..
 
 :run
 cd build\built\Release
-python -i ..\..\..\built\test.py
+python -i "..\..\..\systems\%1.py"
 
 :end
 cd %original_directory%

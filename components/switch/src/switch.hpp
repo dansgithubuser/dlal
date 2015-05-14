@@ -12,13 +12,15 @@ class Switch: public Component{
 	public:
 		Switch();
 		std::string addInput(Component*);
-		std::string readyToEvaluate();
 		float* readAudio();
 		MidiMessages* readMidi();
 		std::string* readText();
 	private:
 		std::atomic<Component*> _current;
 		std::vector<Component*> _inputs;
+		std::vector<float> _emptyAudio;
+		MidiMessages _emptyMidi;
+		std::string _emptyText;
 };
 
 }//namespace dlal

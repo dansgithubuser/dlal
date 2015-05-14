@@ -7,7 +7,7 @@ include_directories(
 )
 
 #=====source=====#
-set(src "../src/switch.cpp" "../../../skeleton/src/skeleton.cpp")
+set(src "../src/switch.cpp" "../../../skeleton/src/skeleton.cpp" "../../../skeleton/src/midiMessages.cpp")
 
 #=====products=====#
 add_library(Switch ${src})

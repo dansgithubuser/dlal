@@ -12,21 +12,39 @@ Switch::Switch(): _current(nullptr) {
 		_current=_inputs[i];
 		return "";
 	});
+	registerCommand("unset", "", [&](std::stringstream& ss){
+		_current=nullptr;
+		return "";
+	});
+	registerCommand("samples", "<samples per callback>", [&](std::stringstream& ss){
+		unsigned samplesPerCallback;
+		ss>>samplesPerCallback;
+		_emptyAudio.resize(samplesPerCallback);
+		return "";
+	});
 }
 
 std::string Switch::addInput(Component* input){
 	_inputs.push_back(input);
-	_current=input;
 	return "";
 }
 
-std::string Switch::readyToEvaluate(){
-	if(!_current.load()) return "error: no inputs";
-	return "";
+float* Switch::readAudio(){
+	Component* current=_current.load();
+	if(current) return current->readAudio();
+	else return _emptyAudio.data();
 }
 
-float* Switch::readAudio(){ return _current.load()->readAudio(); }
-MidiMessages* Switch::readMidi(){ return _current.load()->readMidi(); }
-std::string* Switch::readText(){ return _current.load()->readText(); }
+MidiMessages* Switch::readMidi(){
+	Component* current=_current.load();
+	if(current) return current->readMidi();
+	else return &_emptyMidi;
+}
+
+std::string* Switch::readText(){
+	Component* current=_current.load();
+	if(current) return current->readText();
+	else return &_emptyText;
+}
 
 }//namespace dlal
