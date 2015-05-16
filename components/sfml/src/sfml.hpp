@@ -4,6 +4,8 @@
 #include <skeleton.hpp>
 #include <queue.hpp>
 
+#include <SFML/Graphics.hpp>
+
 #include <thread>
 #include <atomic>
 
@@ -16,6 +18,8 @@ class Sfml: public Component{
 		void evaluate(unsigned samples);
 		MidiMessages* readMidi();
 	private:
+		void processKey(bool on, sf::Keyboard::Key key);
+		int _octave;
 		Queue<MidiMessage> _queue;
 		MidiMessages _messages;
 		std::thread _thread;

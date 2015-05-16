@@ -5,6 +5,7 @@
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sonic; }
 
 static float wave(float phase){
+	phase-=floor(phase);
 	if(phase<0.25f) return 4*phase;
 	if(phase<0.75f) return 2-4*phase;
 	return -4+4*phase;
@@ -37,7 +38,7 @@ Sonic::Sonic():
 		ss>>_oscillators[i]._sustain;
 		return "";
 	});
-	registerCommand("r", "osc <release (amplitude per second)>", [&](std::stringstream& ss){
+	registerCommand("r", "osc <release (amplitude per sample)>", [&](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";

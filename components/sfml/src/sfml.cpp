@@ -1,14 +1,49 @@
 #include "sfml.hpp"
 
-#include <SFML/Graphics.hpp>
-
 #include <chrono>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sfml; }
 
-static void processKey(
-	dlal::Queue<dlal::MidiMessage>& queue, bool on, sf::Keyboard::Key key
-){
+namespace dlal{
+
+Sfml::Sfml(): _octave(0), _queue(7) {
+	_quit=false;
+	_thread=std::thread([&](){
+		sf::RenderWindow window(sf::VideoMode(640, 480), "dlal sfml");
+		window.setKeyRepeatEnabled(false);
+		while(!_quit){
+			sf::Event event;
+			while(window.pollEvent(event)){
+				switch(event.type){
+					case sf::Event::KeyPressed:
+						this->processKey(true , event.key.code); break;
+					case sf::Event::KeyReleased:
+						this->processKey(false, event.key.code); break;
+					default: break;
+				}
+				window.clear();
+				window.display();
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		window.close();
+	});
+}
+
+Sfml::~Sfml(){
+	_quit=true;
+	_thread.join();
+}
+
+void Sfml::evaluate(unsigned samples){
+	_messages.clear();
+	MidiMessage message;
+	while(_queue.read(message, true)) _messages.push_back(message);
+}
+
+MidiMessages* Sfml::readMidi(){ return &_messages; }
+
+void Sfml::processKey(bool on, sf::Keyboard::Key key){
 	uint8_t note;
 	switch(key){
 		case sf::Keyboard::Key::Z:     note=0x30; break;
@@ -38,52 +73,17 @@ static void processKey(
 		case sf::Keyboard::Key::Num8:  note=0x46; break;
 		case sf::Keyboard::Key::I:     note=0x47; break;
 		case sf::Keyboard::Key::O:     note=0x48; break;
+
+		case sf::Keyboard::Key::Up:   ++_octave; return;
+		case sf::Keyboard::Key::Down: --_octave; return;
+
 		default: return;
 	}
 	dlal::MidiMessage message;
 	message._bytes[0]=on?0x90:0x80;
-	message._bytes[1]=note;
+	message._bytes[1]=12*_octave+note;
 	message._bytes[2]=0x3f;
-	queue.write(message);
+	_queue.write(message);
 }
-
-namespace dlal{
-
-Sfml::Sfml(): _queue(7) {
-	_quit=false;
-	_thread=std::thread([&](){
-		sf::RenderWindow window(sf::VideoMode(640, 480), "dlal sfml");
-		window.setKeyRepeatEnabled(false);
-		while(!_quit){
-			sf::Event event;
-			while(window.pollEvent(event)){
-				switch(event.type){
-					case sf::Event::KeyPressed:
-						processKey(_queue, true , event.key.code); break;
-					case sf::Event::KeyReleased:
-						processKey(_queue, false, event.key.code); break;
-					default: break;
-				}
-				window.clear();
-				window.display();
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-		window.close();
-	});
-}
-
-Sfml::~Sfml(){
-	_quit=true;
-	_thread.join();
-}
-
-void Sfml::evaluate(unsigned samples){
-	_messages.clear();
-	MidiMessage message;
-	while(_queue.read(message, true)) _messages.push_back(message);
-}
-
-MidiMessages* Sfml::readMidi(){ return &_messages; }
 
 }//namespace dlal

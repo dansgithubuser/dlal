@@ -25,9 +25,11 @@ class Liner(Component):
 			else:
 				notes=[]
 				nextSample=sample+stride
-				for u in t:
-					if u=='.': nextSample+=stride
-					else: notes.append(12*octave+g_notes[u])
+				for j in range(len(t)):
+					if t[j]=='.':
+						if j!=0:
+							nextSample+=stride
+					else: notes.append(12*octave+g_notes[t[j]])
 				for note in notes:
 					def m(sample, command, note):
 						return 'midi {0} {1:x} {2:x} 40'.format(sample, command, note)

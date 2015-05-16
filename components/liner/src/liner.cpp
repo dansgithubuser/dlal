@@ -23,6 +23,10 @@ Liner::Liner(): _midi(&_emptyMidi), _sample(0), _period(0) {
 			return "";
 		}
 	);
+	registerCommand("clear", "", [&](std::stringstream& ss){
+		_line.clear();
+		return "";
+	});
 }
 
 std::string Liner::addInput(Component* input){

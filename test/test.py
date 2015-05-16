@@ -25,7 +25,7 @@ print midi.command('ports')
 try: midi.command('open KeyRig')
 except RuntimeError as e: print e.message
 com.command('period 102400')
-com.command('queue 0 set 0')
+com.command('queue 1 0 set 0')
 liner1.command('period 102400')
 liner1.line('S 3200  O 4  z. .. .... .. z. . d. .  g. .. .... .. g. .  d. .')
 liner2.command('period 102400')
