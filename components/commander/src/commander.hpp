@@ -13,7 +13,6 @@ class Commander: public Component{
 	public:
 		Commander();
 		std::string addOutput(Component*);
-		std::string readyToEvaluate();
 		void evaluate(unsigned samples);
 	private:
 		struct DequeuedCommand{

@@ -74,8 +74,8 @@ void Sfml::processKey(bool on, sf::Keyboard::Key key){
 		case sf::Keyboard::Key::I:     note=0x47; break;
 		case sf::Keyboard::Key::O:     note=0x48; break;
 
-		case sf::Keyboard::Key::Up:   ++_octave; return;
-		case sf::Keyboard::Key::Down: --_octave; return;
+		case sf::Keyboard::Key::Up:   if(on) ++_octave; return;
+		case sf::Keyboard::Key::Down: if(on) --_octave; return;
 
 		default: return;
 	}

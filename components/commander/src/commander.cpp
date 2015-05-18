@@ -23,11 +23,6 @@ std::string Commander::addOutput(Component* output){
 	return "";
 }
 
-std::string Commander::readyToEvaluate(){
-	if(!_period) return "error: period must be set";
-	return "";
-}
-
 void Commander::evaluate(unsigned samples){
 	//dequeue
 	std::string s;
