@@ -18,6 +18,11 @@ sfml.add(system)
 audio.add(system)
 fm.add(system)
 #start
-audio.command('start')
 atexit.register(lambda: audio.command('finish'))
 fm.show_controls()
+try:
+	vgm=fm.get_vgm('vgm', 485100)
+	fm.set_vgm(vgm, 1)
+except Exception as e: print e
+
+def go(): audio.command('start')
