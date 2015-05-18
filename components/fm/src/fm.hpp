@@ -16,9 +16,10 @@ class Sonic: public Component{
 		static const unsigned NOTES=128;
 		static const unsigned OSCILLATORS=4;
 		struct Runner{
-			enum Stage{ ATTACK, DECAY, SUSTAIN, RELEASE };
+			Runner();
 			void start();
 			void phase();
+			enum Stage{ ATTACK, DECAY, SUSTAIN, RELEASE };
 			Stage _stage;
 			float _phase, _step, _volume, _output;
 		};
