@@ -114,21 +114,22 @@ class Fm(Component):
 		self.i=[None]*oscillators
 		for j in range(oscillators):
 			self.i=tkinter.Label(text='i'+str(j)).grid(row=oscillators, column=column.next())
-		self.set_range()
-		for o in self.oscillators:
-			self.set_range(exponent=4, scale=o.a)
-			self.set_range(exponent=4, scale=o.d)
-			self.set_range(exponent=4, scale=o.r)
-			self.set_range(0, 16, 0.5, 1, o.m)
-			for i in o.i: self.set_range(0, 4, scale=i)
+		self.set_range(default=True)
 		self.set_default()
 
-	def set_range(self, start=0, end=1, resolution=0.00001, exponent=1.0, scale=None):
+	def set_range(self, start=0, end=1, resolution=0.00001, exponent=1.0, scale=None, default=False):
 		if scale: scales=[scale]
 		else: scales=[s for o in self.oscillators for s in o.scales()]
 		for s in scales:
 			s.config(from_=end, to=start, resolution=resolution)
 			for o in self.oscillators: o.set_exponent(s, exponent)
+		if default:
+			for o in self.oscillators:
+				self.set_range(exponent=4, scale=o.a)
+				self.set_range(exponent=4, scale=o.d)
+				self.set_range(exponent=4, scale=o.r)
+				self.set_range(0, 16, 0.5, 1, o.m)
+				for i in o.i   : self.set_range(0, 4, scale=i)
 
 	def set_default(self):
 		for o in self.oscillators:
