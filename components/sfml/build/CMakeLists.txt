@@ -56,7 +56,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 		"${sfmlDir}/bin/${sfmlSystem}-2.dll"
 		"${sfmlDir}/bin/${sfmlWindow}-2.dll"
 	)
-	file(COPY ${sfmlDlls} DESTINATION "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+	file(COPY ${sfmlDlls} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 endif()
 
 #=====linking=====#
@@ -77,5 +77,7 @@ target_link_libraries(
 
 #=====c++ standard=====#
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-	set(CMAKE_CXX_FLAGS "-std=c++11")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()

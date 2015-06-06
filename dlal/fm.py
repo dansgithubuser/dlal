@@ -1,27 +1,30 @@
 from .skeleton import *
-import Tkinter as tkinter
-import itertools, pprint
+
+try: import tkinter
+except ImportError: import Tkinter as tkinter
+
+import itertools, pprint, copy
 
 class Oscillator:
 	def __init__(self, i, oscillators, fm):
 		self.fm=fm
 		column=itertools.count()
-		self.label=tkinter.Label(text=str(i)).grid(row=i, column=column.next())
+		self.label=tkinter.Label(text=str(i)).grid(row=i, column=next(column))
 		self.a=tkinter.Scale(command=lambda x: fm.live_command('a {0:d} {1:f}'.format(i, self.a.get()**self.exponents[self.a])))
-		self.a.grid(row=i, column=column.next())
+		self.a.grid(row=i, column=next(column))
 		self.d=tkinter.Scale(command=lambda x: fm.live_command('d {0:d} {1:f}'.format(i, self.d.get()**self.exponents[self.d])))
-		self.d.grid(row=i, column=column.next())
+		self.d.grid(row=i, column=next(column))
 		self.s=tkinter.Scale(command=lambda x: fm.live_command('s {0:d} {1:f}'.format(i, self.s.get()**self.exponents[self.s])))
-		self.s.grid(row=i, column=column.next())
+		self.s.grid(row=i, column=next(column))
 		self.r=tkinter.Scale(command=lambda x: fm.live_command('r {0:d} {1:f}'.format(i, self.r.get()**self.exponents[self.r])))
-		self.r.grid(row=i, column=column.next())
+		self.r.grid(row=i, column=next(column))
 		self.m=tkinter.Scale(command=lambda x:(
 			fm.live_command('m {0:d} {1:f}'.format(i, self.m.get()**self.exponents[self.m])),
 			fm.live_command('rate {0:d}'.format(fm.sample_rate))
 		))
-		self.m.grid(row=i, column=column.next())
+		self.m.grid(row=i, column=next(column))
 		self.o=tkinter.Scale(command=lambda x: fm.live_command('o {0:d} {1:f}'.format(i, self.o.get()**self.exponents[self.o])))
-		self.o.grid(row=i, column=column.next())
+		self.o.grid(row=i, column=next(column))
 		self.i=[None]*oscillators
 		for j in range(oscillators):
 			def command(oscillator):
@@ -31,12 +34,12 @@ class Oscillator:
 					)
 				)
 			self.i[j]=tkinter.Scale(command=command(j))
-			self.i[j].grid(row=i, column=column.next())
+			self.i[j].grid(row=i, column=next(column))
 		self.exponents={}
 		for scale in self.scales(): self.exponents[scale]=1.0
 
 	def scales(self):
-		return filter(lambda x: isinstance(x, tkinter.Scale), vars(self).values())+self.i
+		return [x for x in vars(self).values() if isinstance(x, tkinter.Scale)]+self.i
 
 	def set_exponent(self, scale, exponent):
 		if scale in self.exponents: self.exponents[scale]=exponent
@@ -57,13 +60,13 @@ class VgmSetting:
 	def __sub__(self, other):
 		def dict_sub(a, b):
 			result={}
-			for key, value in a.iteritems():
+			for key, value in a.items():
 				if key in b.keys():
 					if a[key]!=b[key]:
 						result[key]={'+': a[key], '-': b[key]}
 				else:
 					result[key]={'+': a[key]}
-			for key, value in b.iteritems():
+			for key, value in b.items():
 				if key not in a.keys():
 					result[key]={'-': b[key]}
 			return result
@@ -82,15 +85,17 @@ class VgmSetting:
 		self.changed=True
 
 	def get(self, channel):
-		result={'channel': dict(self.commands.items()+self.channel_commands[channel].items())}
-		result['ops']=[]
-		for op_commands in self.op_commands[channel]: result['ops'].append(op_commands)
+		result={
+			'channel': copy.deepcopy(self.commands),
+			'ops': [x for x in self.op_commands[channel]]
+		}
+		result['channel'].update(self.channel_commands[channel])
 		return result
 
 class Fm(Component):
 	def __init__(self, sample_rate):
 		Component.__init__(self, 'fm')
-		self.command('rate {0:d}'.format(sample_rate))
+		self.command('rate {0}'.format(sample_rate))
 		self.commander=Component('commander')
 		self.commander.connect_output(self)
 		self.sample_rate=sample_rate
@@ -105,15 +110,15 @@ class Fm(Component):
 		oscillators=4
 		column=itertools.count(1)
 		self.oscillators=[Oscillator(i, oscillators, self) for i in range(oscillators)]
-		self.a=tkinter.Label(text='a').grid(row=oscillators, column=column.next())
-		self.d=tkinter.Label(text='d').grid(row=oscillators, column=column.next())
-		self.s=tkinter.Label(text='s').grid(row=oscillators, column=column.next())
-		self.r=tkinter.Label(text='r').grid(row=oscillators, column=column.next())
-		self.o=tkinter.Label(text='m').grid(row=oscillators, column=column.next())
-		self.o=tkinter.Label(text='o').grid(row=oscillators, column=column.next())
+		self.a=tkinter.Label(text='a').grid(row=oscillators, column=next(column))
+		self.d=tkinter.Label(text='d').grid(row=oscillators, column=next(column))
+		self.s=tkinter.Label(text='s').grid(row=oscillators, column=next(column))
+		self.r=tkinter.Label(text='r').grid(row=oscillators, column=next(column))
+		self.o=tkinter.Label(text='m').grid(row=oscillators, column=next(column))
+		self.o=tkinter.Label(text='o').grid(row=oscillators, column=next(column))
 		self.i=[None]*oscillators
 		for j in range(oscillators):
-			self.i=tkinter.Label(text='i'+str(j)).grid(row=oscillators, column=column.next())
+			self.i=tkinter.Label(text='i'+str(j)).grid(row=oscillators, column=next(column))
 		self.set_range(default=True)
 		self.set_default()
 
@@ -155,7 +160,12 @@ class Fm(Component):
 		def op_range(first_register, last_register):
 			return [x for y in range(first_register, last_register, 4) for x in range(y, y+3)]
 		def op_to_str(channel, op): return 'channel {0:d} op {1:d}'.format(channel, op)
-		with open(vgm_file_name, 'rb') as vgm_file: vgm=[ord(x) for x in vgm_file.read()]
+		with open(vgm_file_name, 'rb') as vgm_file:
+			vgm=[]
+			while True:
+				byte=vgm_file.read(1)
+				if not byte: break
+				vgm.append(ord(byte))
 		if vgm[0:4]!=[ord(x) for x in 'Vgm ']: raise Exception('vgm: wrong file identification')
 		if le(vgm[0x8:0xc])!=0x150: raise Exception('vgm: unhandled version')
 		if samples==None: samples=le(vgm[0x18:0x1c])
@@ -167,7 +177,7 @@ class Fm(Component):
 				if sample<start_samples: continue
 				port=boolean(vgm==0x53, 0, 1)
 				if vgm[i+1] in op_range(0x30, 0xa0):
-					op=(vgm[i+1]%16)/4
+					op=(vgm[i+1]%16)//4
 					channel=(vgm[i+1]-0x30)%4+boolean(port, 0, 3)
 				if vgm[i+1]==0x22:
 					fLut=[3.98, 5.56, 6.02, 6.37, 6.88, 9.63, 48.1, 72.2]
@@ -265,13 +275,13 @@ class Fm(Component):
 		]
 		#extract parameters
 		commands=vgm.get(channel)
-		for command, value in commands['channel'].iteritems():
+		for command, value in commands['channel'].items():
 			if command=='feedback':
 				if not value: feedback=0
 				else: feedback=2.0**(value-9)
 			elif command=='algorithm': algorithm=value
 		for i in range(len(commands['ops'])):
-			for command, value in commands['ops'][i].iteritems():
+			for command, value in commands['ops'][i].items():
 				if command=='multiply': self.oscillators[i].m.set(value)
 				elif command=='total level': total_level[i]=2**(-value/32.0)
 				elif command=='attack rate': self.oscillators[i].a.set(2**((value-1)/2.0)/(self.sample_rate*8));

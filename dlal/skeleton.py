@@ -28,6 +28,7 @@ class Component:
 	def __del__(self): skeleton.dlalDemolishComponent(self.component)
 
 	def command(self, text):
+		text=str.encode(text, 'utf-8')
 		return self._report(
 			skeleton.dlalCommandComponent(self.component, text)
 		)
@@ -48,5 +49,5 @@ class Component:
 		)
 
 	def _report(self, text):
-		if text.startswith('error'): raise RuntimeError(text)
+		if text.startswith(b'error'): raise RuntimeError(text)
 		return text

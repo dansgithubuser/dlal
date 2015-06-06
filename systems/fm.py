@@ -12,7 +12,7 @@ fm.connect_input(sfml)
 fm.connect_output(audio)
 #command
 log_2_samples_per_callback=6
-audio.command('set %d %d'%(sample_rate, log_2_samples_per_callback))
+audio.command('set {0} {1}'.format(sample_rate, log_2_samples_per_callback))
 #add
 sfml.add(system)
 audio.add(system)
@@ -23,6 +23,6 @@ fm.show_controls()
 try:
 	vgm=fm.get_vgm('vgm', 485100)
 	fm.set_vgm(vgm, 1)
-except Exception as e: print e
+except Exception as e: print(e)
 
 def go(): audio.command('start')

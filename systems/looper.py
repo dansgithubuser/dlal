@@ -36,15 +36,15 @@ class Looper:
 		line=[]
 		for i in range(bars*beats_per_bar*2):
 			halfbeat=i%2
-			beat=i/2%beats_per_bar
-			bar=i/2/beats_per_bar
+			beat=i//2%beats_per_bar
+			bar=i//2//beats_per_bar
 			line.append('.')
 			if halfbeat==0:
 				if beat in [0, 1]: line[-1]='z'
 			else:
 				if bar&(1<<beat): line[-1]='z'
 		line=' '.join(line)
-		self.liners[1].line('S %d %s'%(period/(bars*beats_per_bar*2), line))
+		self.liners[1].line('S %d %s'%(period//(bars*beats_per_bar*2), line))
 		self.play_switches[1].command('set 1')
 		self.fms[1].command('d 0 {0:f}'.format(4.0/sample_rate))
 		self.fms[1].command('s 0 0')
