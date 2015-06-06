@@ -26,7 +26,6 @@ file organization
 	- src: Source code.
 - build: Overall build description.
 - dlal: Python module that wraps skeleton.
-- test: Overall testing.
 - systems: Python scripts that describe some useful audio systems.
 
 todo
