@@ -1,6 +1,6 @@
 #include "page.hpp"
 
-#include <algorithm>
+#include <cstring>
 
 namespace dlal{
 
@@ -9,7 +9,7 @@ bool Page::fromAudio(float* audio, unsigned size, uint64_t evaluation){
 	_type=AUDIO;
 	_evaluation=evaluation;
 	_audio.resize(size);
-	std::copy(audio, audio+size, _audio.data());
+	std::memcpy(_audio.data(), audio, size*sizeof(*audio));
 	return true;
 }
 
