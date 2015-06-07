@@ -1,6 +1,7 @@
 #include "fm.hpp"
 
 #include <cmath>
+#include <fstream>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sonic; }
 
@@ -82,6 +83,29 @@ Sonic::Sonic():
 		message._bytes[1]=0x3c;
 		message._bytes[2]=0x7f;
 		processMidi(message);
+		return "";
+	});
+	registerCommand("save", "<file name>", [&](std::stringstream& ss){
+		std::string fileName;
+		ss>>fileName;
+		std::ofstream file(fileName.c_str());
+		for(unsigned i=0; i<OSCILLATORS; ++i){
+			file<<"a "<<i<<" "<<_oscillators[i]._attack<<"\n";
+			file<<"d "<<i<<" "<<_oscillators[i]._decay<<"\n";
+			file<<"s "<<i<<" "<<_oscillators[i]._sustain<<"\n";
+			file<<"r "<<i<<" "<<_oscillators[i]._release<<"\n";
+			file<<"m "<<i<<" "<<_oscillators[i]._frequencyMultiplier<<"\n";
+			for(unsigned j=0; j<OSCILLATORS; ++j)
+				file<<"i "<<i<<" "<<j<<" "<<_oscillators[i]._inputs[j]<<"\n";
+			file<<"o "<<i<<" "<<_oscillators[i]._output<<"\n";
+		}
+		return "";
+	});
+	registerCommand("load", "<file name>", [&](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		std::ifstream file(s.c_str());
+		while(std::getline(file, s)) sendCommand(s);
 		return "";
 	});
 }

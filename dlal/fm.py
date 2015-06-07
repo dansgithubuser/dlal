@@ -114,7 +114,7 @@ class Fm(Component):
 		self.d=tkinter.Label(text='d').grid(row=oscillators, column=next(column))
 		self.s=tkinter.Label(text='s').grid(row=oscillators, column=next(column))
 		self.r=tkinter.Label(text='r').grid(row=oscillators, column=next(column))
-		self.o=tkinter.Label(text='m').grid(row=oscillators, column=next(column))
+		self.m=tkinter.Label(text='m').grid(row=oscillators, column=next(column))
 		self.o=tkinter.Label(text='o').grid(row=oscillators, column=next(column))
 		self.i=[None]*oscillators
 		for j in range(oscillators):
