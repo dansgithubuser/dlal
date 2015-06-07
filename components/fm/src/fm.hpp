@@ -44,12 +44,13 @@ class Sonic: public Component{
 			bool _done;
 		};
 		void processMidi(const MidiMessage&);
+		void update();
 		Oscillator _oscillators[OSCILLATORS];
 		float* _samples;
 		Note _notes[NOTES];
 		Component* _input;
 		Component* _output;
-		bool _sampleRateSet;
+		unsigned _sampleRate;
 };
 
 }//namespace dlal

@@ -6,16 +6,13 @@
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sonic; }
 
 static float wave(float phase){
-	phase-=floor(phase);
-	if(phase<0.25f) return 4*phase;
-	if(phase<0.75f) return 2-4*phase;
-	return -4+4*phase;
+	return sin(phase*2*3.14159f);
 }
 
 namespace dlal{
 
 Sonic::Sonic():
-	_input(nullptr), _output(nullptr), _sampleRateSet(false)
+	_input(nullptr), _output(nullptr), _sampleRate(0)
 {
 	_oscillators[0]._output=1.0f;
 	registerCommand("a", "osc <attack (amplitude per sample)>", [&](std::stringstream& ss){
@@ -51,6 +48,7 @@ Sonic::Sonic():
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._frequencyMultiplier;
+		update();
 		return "";
 	});
 	registerCommand("i", "osc input amplitude", [&](std::stringstream& ss){
@@ -71,10 +69,8 @@ Sonic::Sonic():
 		return "";
 	});
 	registerCommand("rate", "<samples per second>", [&](std::stringstream& ss){
-		unsigned sampleRate;
-		ss>>sampleRate;
-		for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, sampleRate, _oscillators);
-		_sampleRateSet=true;
+		ss>>_sampleRate;
+		update();
 		return "";
 	});
 	registerCommand("test", "", [&](std::stringstream& ss){
@@ -102,11 +98,11 @@ Sonic::Sonic():
 		return "";
 	});
 	registerCommand("load", "<file name>", [&](std::stringstream& ss){
-		std::string s;
+		std::string s, result;
 		ss>>s;
 		std::ifstream file(s.c_str());
-		while(std::getline(file, s)) sendCommand(s);
-		return "";
+		while(std::getline(file, s)) result+=sendCommand(s);
+		return result;
 	});
 }
 
@@ -123,7 +119,7 @@ std::string Sonic::addOutput(Component* output){
 }
 
 std::string Sonic::readyToEvaluate(){
-	if(!_sampleRateSet) return "error: sample rate not set";
+	if(!_sampleRate) return "error: sample rate not set";
 	if(!_input) return "error: input not set";
 	if(!_output) return "error: output not set";
 	return "";
@@ -195,6 +191,7 @@ Sonic::Note::Note(): _done(true) {}
 void Sonic::Note::set(
 	unsigned i, unsigned sampleRate, const Oscillator* oscillators
 ){
+	if(sampleRate==0) return;
 	float step=440.0f*pow(2.0f, (int(i)-69)/12.0f)/sampleRate;
 	for(unsigned i=0; i<OSCILLATORS; ++i)
 		_runners[i]._step=step*oscillators[i]._frequencyMultiplier;
@@ -233,6 +230,10 @@ void Sonic::processMidi(const MidiMessage& message){
 			break;
 		default: break;
 	}
+}
+
+void Sonic::update(){
+	for(unsigned i=0; i<NOTES; ++i) _notes[i].set(i, _sampleRate, _oscillators);
 }
 
 }//namespace dlal

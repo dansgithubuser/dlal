@@ -18,10 +18,7 @@ class Oscillator:
 		self.s.grid(row=i, column=next(column))
 		self.r=tkinter.Scale(command=lambda x: fm.live_command('r {0:d} {1:f}'.format(i, self.r.get()**self.exponents[self.r])))
 		self.r.grid(row=i, column=next(column))
-		self.m=tkinter.Scale(command=lambda x:(
-			fm.live_command('m {0:d} {1:f}'.format(i, self.m.get()**self.exponents[self.m])),
-			fm.live_command('rate {0:d}'.format(fm.sample_rate))
-		))
+		self.m=tkinter.Scale(command=lambda x: fm.live_command('m {0:d} {1:f}'.format(i, self.m.get()**self.exponents[self.m])))
 		self.m.grid(row=i, column=next(column))
 		self.o=tkinter.Scale(command=lambda x: fm.live_command('o {0:d} {1:f}'.format(i, self.o.get()**self.exponents[self.o])))
 		self.o.grid(row=i, column=next(column))
@@ -122,19 +119,25 @@ class Fm(Component):
 		self.set_range(default=True)
 		self.set_default()
 
-	def set_range(self, start=0, end=1, resolution=0.00001, exponent=1.0, scale=None, default=False):
+	def set_range(self, start=None, end=None, resolution=None, exponent=None, scale=None, default=False):
+		if default:
+			start=0
+			end=1
+			resolution=0.000001
+			exponent=1.0
 		if scale: scales=[scale]
 		else: scales=[s for o in self.oscillators for s in o.scales()]
 		for s in scales:
 			s.config(from_=end, to=start, resolution=resolution)
-			for o in self.oscillators: o.set_exponent(s, exponent)
+			if exponent:
+				for o in self.oscillators: o.set_exponent(s, exponent)
 		if default:
 			for o in self.oscillators:
 				self.set_range(exponent=4, scale=o.a)
 				self.set_range(exponent=4, scale=o.d)
 				self.set_range(exponent=4, scale=o.r)
 				self.set_range(0, 16, 0.5, 1, o.m)
-				for i in o.i   : self.set_range(0, 4, scale=i)
+				for i in o.i: self.set_range(0, 4, scale=i)
 
 	def set_default(self):
 		for o in self.oscillators:
@@ -173,7 +176,9 @@ class Fm(Component):
 		if setting==None: setting=VgmSetting(sample)
 		i=0x34+le(vgm[0x34:0x38])
 		while i<len(vgm) and sample<=samples:
-			if vgm[i] in [0x52, 0x53]:
+			if vgm[i] in [0x4f, 0x50]: i+=2
+			elif vgm[i]==0x51: i+=3
+			elif vgm[i] in [0x52, 0x53]:
 				if sample<start_samples: continue
 				port=boolean(vgm==0x53, 0, 1)
 				if vgm[i+1] in op_range(0x30, 0xa0):
@@ -182,11 +187,12 @@ class Fm(Component):
 				if vgm[i+1]==0x22:
 					fLut=[3.98, 5.56, 6.02, 6.37, 6.88, 9.63, 48.1, 72.2]
 					setting.set('lfo', [boolean(bits(vgm[i+2], 3, 4)), fLut[bits(vgm[i+2], 0, 3)], 'Hz'])
-				elif vgm[i+1]==0x26: pass#timer B
+				elif vgm[i+1] in [0x24, 0x25, 0x26]: pass#timers
 				elif vgm[i+1]==0x27:
 					#ignore timer parts
 					setting.set('special', bits(vgm[i+2], 6, 7), boolean(port, 3, 6))
 				elif vgm[i+1]==0x28: pass#key on/off
+				elif vgm[i+1]==0x2a: pass#DAC
 				elif vgm[i+1]==0x2b:
 					setting.set('dac', boolean(bits(vgm[i+2], 7, 8)))
 				elif vgm[i+1] in op_range(0x30, 0x40):
@@ -233,21 +239,32 @@ class Fm(Component):
 					setting.set('lfo frequency modulation sensitivity', [fmsLut[bits(vgm[i+2], 0, 3)], 'cents'], channel)
 				else: raise Exception('vgm: unhandled register {0:x}'.format(vgm[i+1]))
 				i+=3
-			elif vgm[i]&0x70==0x70:
-				sample+=bits(vgm[i], 0, 4)
-				i+=1
+			elif vgm[i]==0x54: i+=3
 			elif vgm[i]==0x61:
 				sample+=le(vgm[i+1:i+2])
 				i+=3
+			elif vgm[i]==0x62:
+				sample+=735
+				i+=1
+			elif vgm[i]==0x63:
+				sample+=882
+				i+=1
 			elif vgm[i]==0x66: break
-			else: raise Exception('vgm: unhandled command {0:x}'.format(vgm[i]))
+			elif vgm[i]==0x67:
+				i+=3
+				i+=le(vgm[i:i+4])+4
+			elif vgm[i]&0xf0==0x70:
+				sample+=bits(vgm[i], 0, 4)
+				i+=1
+			elif vgm[i]&0xf0==0x80:
+				sample+=bits(vgm[i], 0, 4)
+				i+=1
+			elif vgm[i]==0xe0: i+=5
+			else: raise Exception('vgm: unhandled command 0x{0:x} at offset 0x{1:x}'.format(vgm[i], i))
 		return setting
 
 	def set_vgm(self, vgm, channel):
-		for o in self.oscillators:
-			self.set_range(exponent=1, scale=o.a)
-			self.set_range(exponent=1, scale=o.d)
-			self.set_range(exponent=1, scale=o.r)
+		self.set_range(exponent=1)
 		#defaults
 		feedback=0.0
 		algorithm=0
