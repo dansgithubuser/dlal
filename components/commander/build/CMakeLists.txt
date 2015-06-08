@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12.2 FATAL_ERROR)
+cmake_policy(SET CMP0042 NEW)
 
 #=====include=====#
 include_directories(
@@ -10,11 +11,11 @@ include_directories(
 set(src "../src/commander.cpp" "../../../skeleton/src/skeleton.cpp")
 
 #=====products=====#
-add_library(Commander ${src})
+set(output Commander)
+add_library(${output} MODULE ${src})
 
 #=====c++ standard=====#
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+set_property(TARGET ${output} PROPERTY CXX_STANDARD 11)
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()

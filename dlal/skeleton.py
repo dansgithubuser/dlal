@@ -7,11 +7,17 @@ def load(name):
 	return ctypes.CDLL(name)
 
 skeleton=load('skeleton')
+skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
+skeleton.dlalBuildSystem.restype=ctypes.c_void_p
+skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
 skeleton.dlalCommandComponent.restype=ctypes.c_char_p
-skeleton.dlalCommandComponent.argtype=[ctypes.c_void_p, ctypes.c_char_p]
-skeleton.dlalAddComponent.restype=ctypes.c_char_p
+skeleton.dlalCommandComponent.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
 skeleton.dlalConnectInput.restype=ctypes.c_char_p
+skeleton.dlalConnectInput.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
 skeleton.dlalConnectOutput.restype=ctypes.c_char_p
+skeleton.dlalConnectOutput.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+skeleton.dlalAddComponent.restype=ctypes.c_char_p
+skeleton.dlalAddComponent.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
 
 class System:
 	def __init__(self): self.system=skeleton.dlalBuildSystem()
@@ -23,6 +29,7 @@ class Component:
 	def __init__(self, component):
 		if component not in component_libraries:
 			component_libraries[component]=load(component)
+			component_libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
 		self.component=component_libraries[component].dlalBuildComponent()
 
 	def __del__(self): skeleton.dlalDemolishComponent(self.component)

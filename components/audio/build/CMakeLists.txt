@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12.2 FATAL_ERROR)
+cmake_policy(SET CMP0042 NEW)
 
 option(TEST "ON to test, OFF otherwise")
 
@@ -87,20 +88,21 @@ if(ASIO)
 endif()
 
 #=====products=====#
+set(output Audio)
 if(TEST)
-	add_executable(Audio ${src})
+	add_executable(${output} ${src})
 else()
-	add_library(Audio ${src})
+	add_library(${output} MODULE ${src})
 endif()
 
 #====linking=====#
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-	target_link_libraries(Audio portaudio)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|Darwin")
+	find_library(portaudio portaudio)
+	target_link_libraries(${output} ${portaudio})
 endif()
 
 #=====c++ standard=====#
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+set_property(TARGET ${output} PROPERTY CXX_STANDARD 11)
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()

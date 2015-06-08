@@ -39,4 +39,4 @@ if not args.s:
 
 #run
 os.chdir('build/built')
-subprocess.check_call('python -i ../../systems/'+args.system+'.py')
+subprocess.check_call(['python', '-i', '../../systems/'+args.system+'.py'])
