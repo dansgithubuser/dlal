@@ -75,6 +75,7 @@ if(ASIO)
 		set(
 			src_pa
 			${src_pa}
+			"../deps/portaudio/src/os/win/pa_win_coinitialize.c"
 			"../deps/portaudio/src/os/win/pa_win_hostapis.c"
 			"../deps/portaudio/src/os/win/pa_win_util.c"
 			"../deps/portaudio/src/os/win/pa_win_waveformat.c"

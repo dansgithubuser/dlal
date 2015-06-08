@@ -494,7 +494,7 @@ int PaQa_MeasureLatency( PaQaRecording *recording, PaQaTestTone *testTone, PaQaA
 	PaQa_EraseBuffer( buffer, cycleSize, testTone->samplesPerFrame );
 	PaQa_MixSine( &generator, buffer, cycleSize, testTone->samplesPerFrame );
 
-	threshold = cycleSize * 0.01;
+	threshold = cycleSize * 0.02;
 	analysisResult->latency = PaQa_FindFirstMatch( recording, buffer, cycleSize, threshold );	
 	QA_ASSERT_TRUE( "Could not find the start of the signal.", (analysisResult->latency >= 0) );
 	analysisResult->amplitudeRatio = PaQa_CompareAmplitudes( recording, analysisResult->latency, buffer, cycleSize );
@@ -514,9 +514,15 @@ void PaQa_FadeInRecording( PaQaRecording *recording, int startFrame, int count )
 	
     assert( startFrame >= 0 );
 	assert( count > 0 );
-
-	for( is=0; is<count; is++ )
+    
+    /* Zero out initial part of the recording. */
+	for( is=0; is<startFrame; is++ )
 	{
+        recording->buffer[ is ] = 0.0f;
+    }
+    /* Fade in where signal begins. */
+    for( is=0; is<count; is++ )
+    {
 		double c = cos( phase );
 		double w = c * c;
 		float x = recording->buffer[ is + startFrame ];
