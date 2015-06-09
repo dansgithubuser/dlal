@@ -10,6 +10,7 @@ namespace dlal{
 class Audio: public Component{
 	public:
 		Audio();
+		~Audio();
 		std::string addInput(Component*);
 		std::string addOutput(Component*);
 		std::string readyToEvaluate();

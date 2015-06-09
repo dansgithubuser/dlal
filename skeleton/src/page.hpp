@@ -14,8 +14,8 @@ struct Page{
 		bool fromAudio(float* audio, unsigned size, uint64_t evaluation);
 		bool fromMidi(MidiMessages* midi, uint64_t evaluation);
 		bool fromText(std::string* text, uint64_t evaluation);
-		void toFile(std::ofstream&);
-		void fromFile(std::ifstream&);
+		void toFile(std::ostream&);
+		void fromFile(std::istream&);
 		enum Type{ AUDIO, MIDI, TEXT };
 		Type _type;
 		uint64_t _evaluation;

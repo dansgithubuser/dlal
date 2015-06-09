@@ -29,7 +29,7 @@ bool Page::fromText(std::string* text, uint64_t evaluation){
 	return true;
 }
 
-void Page::toFile(std::ofstream& file){
+void Page::toFile(std::ostream& file){
 	file<<_type<<' ';
 	switch(_type){
 		case AUDIO:
@@ -51,7 +51,7 @@ void Page::toFile(std::ofstream& file){
 	}
 }
 
-void Page::fromFile(std::ifstream& file){
+void Page::fromFile(std::istream& file){
 	unsigned type;
 	file>>type;
 	_type=(Type)type;
@@ -64,6 +64,11 @@ void Page::fromFile(std::ifstream& file){
 			break;
 		case MIDI:{
 			std::vector<uint8_t> bytes(size);
+			for(unsigned i=0; i<size; ++i){
+				unsigned byte;
+				file>>byte;
+				bytes[i]=byte;
+			}
 			_midi.deserialize(bytes);
 			break;
 		}

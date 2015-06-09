@@ -4,13 +4,13 @@ sample_rate=44100
 
 #create
 system=dlal.System()
-sfml=dlal.Component('sfml')
+network=dlal.Component('network')
 fm=dlal.Fm(sample_rate)
 audio=dlal.Component('audio')
 midi=dlal.Component('midi')
 switch=dlal.Component('switch')
 #connect
-switch.connect_input(sfml)
+switch.connect_input(network)
 switch.connect_input(midi)
 fm.connect_input(switch)
 fm.connect_output(audio)
@@ -19,7 +19,7 @@ log_2_samples_per_callback=6
 audio.command('set {0} {1}'.format(sample_rate, log_2_samples_per_callback))
 switch.command('set 0')
 #add
-sfml.add(system)
+network.add(system)
 midi.add(system)
 audio.add(system)
 fm.add(system)
@@ -32,6 +32,8 @@ def go(port=''):
 	if port:
 		midi.command('open '+port)
 		switch.command('set 1')
+	else:
+		network.command('open 9089')
 
 print('available midi ports:\n', midi.command('ports'))
 print('use the go function to start audio processing')

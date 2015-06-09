@@ -62,19 +62,19 @@ class Looper:
 		for fm in self.fms: fm.add(self.system)
 		#start
 		self.audio.command('start')
-	
+
 	def __del__(self):
 		self.audio.command('finish')
-	
+
 	def _commander_index(self, index, output):
 		return index*self._commander_stride+output
-	
+
 	def play(self, start, stop=[], delay=0):
 		for i in stop:
 			self.commander.command('queue %d %d unset'%(delay, self._commander_index(i, self._commander_play_switch)))
 		for i in start:
 			self.commander.command('queue %d %d set 0'%(delay, self._commander_index(i, self._commander_play_switch)))
-	
+
 	def record(self, start, stop=[], delay=0):
 		for i in stop:
 			self.commander.command('queue %d %d unset'%(delay, self._commander_index(i, self._commander_record_switch)))

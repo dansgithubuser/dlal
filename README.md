@@ -30,8 +30,6 @@ file organization
 
 todo
 ----
-- replace sfml component with simple network component
-  - start library of network interfaces with a midi qwertyboard
 - sampler
 - low pass component
 - diodefilter component

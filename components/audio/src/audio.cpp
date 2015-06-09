@@ -74,6 +74,8 @@ Audio::Audio():
 	#endif
 }
 
+Audio::~Audio(){ if(_started) finish(); }
+
 std::string Audio::addInput(Component* component){
 	if(std::count(_inputs.begin(), _inputs.end(), component))
 		return "input already added";
