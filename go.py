@@ -37,6 +37,9 @@ if not args.s:
 	shell(preamble, 'cmake --build .')
 	os.chdir(file_path)
 
+#library path
+os.environ['LD_LIBRARY_PATH']=os.path.join(file_path, 'build', 'built')
+
 #run
 os.chdir('build/built')
 subprocess.check_call(['python', '-i', '../../systems/'+args.system+'.py'])
