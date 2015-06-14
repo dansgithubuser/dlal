@@ -81,27 +81,41 @@ Sonic::Sonic():
 		processMidi(message);
 		return "";
 	});
-	registerCommand("save", "<file name>", [&](std::stringstream& ss){
+	registerCommand("save", "<file name, or i to return contents of would-be file>", [&](std::stringstream& ss){
 		std::string fileName;
 		ss>>fileName;
-		std::ofstream file(fileName.c_str());
-		for(unsigned i=0; i<OSCILLATORS; ++i){
-			file<<"a "<<i<<" "<<_oscillators[i]._attack<<"\n";
-			file<<"d "<<i<<" "<<_oscillators[i]._decay<<"\n";
-			file<<"s "<<i<<" "<<_oscillators[i]._sustain<<"\n";
-			file<<"r "<<i<<" "<<_oscillators[i]._release<<"\n";
-			file<<"m "<<i<<" "<<_oscillators[i]._frequencyMultiplier<<"\n";
-			for(unsigned j=0; j<OSCILLATORS; ++j)
-				file<<"i "<<i<<" "<<j<<" "<<_oscillators[i]._inputs[j]<<"\n";
-			file<<"o "<<i<<" "<<_oscillators[i]._output<<"\n";
+		std::ofstream file;
+		std::stringstream internal;
+		std::ostream* stream=&internal;
+		if(fileName!="i"){
+			file.open(fileName.c_str());
+			if(!file.good()) return std::string("error: couldn't open file");
+			stream=&file;
 		}
-		return "";
+		for(unsigned i=0; i<OSCILLATORS; ++i){
+			*stream<<"a "<<i<<" "<<_oscillators[i]._attack<<"\n";
+			*stream<<"d "<<i<<" "<<_oscillators[i]._decay<<"\n";
+			*stream<<"s "<<i<<" "<<_oscillators[i]._sustain<<"\n";
+			*stream<<"r "<<i<<" "<<_oscillators[i]._release<<"\n";
+			*stream<<"m "<<i<<" "<<_oscillators[i]._frequencyMultiplier<<"\n";
+			for(unsigned j=0; j<OSCILLATORS; ++j)
+				*stream<<"i "<<i<<" "<<j<<" "<<_oscillators[i]._inputs[j]<<"\n";
+			*stream<<"o "<<i<<" "<<_oscillators[i]._output<<"\n";
+		}
+		return internal.str();
 	});
 	registerCommand("load", "<file name>", [&](std::stringstream& ss){
 		std::string s, result;
 		ss>>s;
 		std::ifstream file(s.c_str());
-		while(std::getline(file, s)) result+=sendCommand(s);
+		if(!file.good()) return std::string("error: couldn't open file");
+		bool error=false;
+		while(std::getline(file, s)){
+			s=sendCommand(s);
+			if(isError(s)) error=true;
+			result+=s+"\n";
+		}
+		if(error) result="error: a load command failed\n"+result;
 		return result;
 	});
 }

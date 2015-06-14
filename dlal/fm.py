@@ -117,7 +117,27 @@ class Fm(Component):
 		for j in range(oscillators):
 			self.i=tkinter.Label(text='i'+str(j)).grid(row=oscillators, column=next(column))
 		self.set_range(default=True)
-		self.set_default()
+		self.refresh_controls()
+
+	def refresh_controls(self):
+		settings=self.save('i').split('\n')
+		for setting in settings:
+			cmd=setting.strip().split()
+			osc=self.oscillators[int(cmd[1])]
+			if   cmd[0]=='a': osc.a.set(float(cmd[2])**(1.0/osc.exponents[osc.a]))
+			elif cmd[0]=='d': osc.d.set(float(cmd[2])**(1.0/osc.exponents[osc.d]))
+			elif cmd[0]=='s': osc.s.set(float(cmd[2])**(1.0/osc.exponents[osc.s]))
+			elif cmd[0]=='r': osc.r.set(float(cmd[2])**(1.0/osc.exponents[osc.r]))
+			elif cmd[0]=='m': osc.m.set(float(cmd[2])**(1.0/osc.exponents[osc.m]))
+			elif cmd[0]=='o': osc.o.set(float(cmd[2])**(1.0/osc.exponents[osc.o]))
+			elif cmd[0]=='i':
+				i=osc.i[int(cmd[2])]
+				i.set(float(cmd[3])**(1.0/osc.exponents[i]))
+
+	def load(self, file_name):
+		result=fm.command('load '+file_name)
+		self.refresh_controls()
+		return result
 
 	def set_range(self, start=None, end=None, resolution=None, exponent=None, scale=None, default=False):
 		if default:

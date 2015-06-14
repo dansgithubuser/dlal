@@ -16,8 +16,8 @@ fm.connect_input(switch)
 fm.connect_output(audio)
 #command
 log_2_samples_per_callback=6
-audio.command('set {0} {1}'.format(sample_rate, log_2_samples_per_callback))
-switch.command('set 0')
+audio.set(sample_rate, log_2_samples_per_callback)
+switch.set(0)
 #add
 network.add(system)
 midi.add(system)
@@ -27,13 +27,13 @@ fm.add(system)
 fm.show_controls()
 
 def go(port=''):
-	atexit.register(lambda: audio.command('finish'))
-	audio.command('start')
+	atexit.register(lambda: audio.finish())
+	audio.start()
 	if port:
-		midi.command('open '+port)
-		switch.command('set 1')
+		midi.open(port)
+		switch.set(1)
 	else:
-		network.command('open 9089')
+		network.open(9089)
 
-print('available midi ports:\n', midi.command('ports'))
+print('available midi ports:\n', midi.ports())
 print('use the go function to start audio processing')
