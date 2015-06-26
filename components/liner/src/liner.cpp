@@ -15,7 +15,7 @@ Liner::Liner(): _midi(&_emptyMidi), _sample(0), _period(0) {
 			ss>>sample;
 			MidiMessage message;
 			unsigned byte, i=0;
-			while(ss>>std::hex>>byte&&i<MidiMessage::SIZE){
+			while(ss>>byte&&i<MidiMessage::SIZE){
 				message._bytes[i]=byte;
 				++i;
 			}

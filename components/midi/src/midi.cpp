@@ -13,7 +13,7 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 	registerCommand("midi", "byte[1]..byte[n]", [&](std::stringstream& ss){
 		MidiMessage message;
 		unsigned byte, i=0;
-		while(ss>>std::hex>>byte&&i<MidiMessage::SIZE){
+		while(ss>>byte&&i<MidiMessage::SIZE){
 			message._bytes[i]=byte;
 			++i;
 		}

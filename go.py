@@ -5,6 +5,7 @@ import os, argparse, subprocess
 parser=argparse.ArgumentParser(description='run a system')
 parser.add_argument('-s', action='store_true', help='skip build, just run')
 parser.add_argument('-d', action='store_true', help='use debug configuration')
+parser.add_argument('-q', action='store_true', help='quit immediately after running system')
 parser.add_argument('system', help='which system to run')
 args=parser.parse_args()
 
@@ -42,4 +43,6 @@ os.environ['LD_LIBRARY_PATH']=os.path.join(file_path, 'build', 'built')
 
 #run
 os.chdir('build/built')
-subprocess.check_call(['python', '-i', '../../systems/'+args.system+'.py'])
+i=[]
+if args.q: q=['-i']
+subprocess.check_call(['python']+i+['../../systems/'+args.system+'.py'])
