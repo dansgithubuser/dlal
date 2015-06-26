@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+include(../../../build/CMakeCommon.txt)
 
 #=====constants=====#
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
@@ -68,8 +68,4 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 	target_link_libraries(${output} ws2_32)
 endif()
 
-#=====c++ standard=====#
-set_property(TARGET ${output} PROPERTY CXX_STANDARD 11)
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
-endif()
+cpp11WithExceptions()

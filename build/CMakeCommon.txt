@@ -1,0 +1,37 @@
+cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+cmake_policy(SET CMP0042 NEW)
+
+function(component_src)
+	#include
+	include_directories(
+			"../../../skeleton/src"
+			"../src"
+	)
+	#source
+	foreach(i ${ARGN})
+		set(additional ${additional} "../../../skeleton/src/${i}.cpp")
+	endforeach()
+	string(TOLOWER ${output} x)
+	set(src ${src} "../src/${x}.cpp" "../../../skeleton/src/skeleton.cpp" ${additional} PARENT_SCOPE)
+endfunction()
+
+function(cpp11WithExceptions)
+	set_property(TARGET ${output} PROPERTY CXX_STANDARD 11)
+	if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+	endif()
+endfunction()
+
+function(footer)
+	if(TEST)
+		add_executable(${output} ${src})
+	else()
+		add_library(${output} MODULE ${src})
+	endif()
+	cpp11WithExceptions()
+endfunction()
+
+function(standard_component output)
+	component_src(${ARGN})
+	footer()
+endfunction()

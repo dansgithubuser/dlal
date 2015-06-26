@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
-cmake_policy(SET CMP0042 NEW)
+include(../../../build/CMakeCommon.txt)
 
 option(TEST "ON to test, OFF otherwise")
 
@@ -9,12 +8,11 @@ else()
 	set(ASIO OFF)
 endif()
 
+set(output Audio)
+component_src()
+
 #=====include=====#
-include_directories(
-	"../deps/portaudio/include"
-	"../../../skeleton/src"
-	"../src"
-)
+include_directories("../deps/portaudio/include")
 
 if(ASIO)
 	include_directories(
@@ -45,7 +43,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 endif()
 
 #=====source=====#
-set(src "../src/audio.cpp" "../../../skeleton/src/skeleton.cpp")
 if(TEST)
 	set(src ${src} "../src/test.cpp")
 endif()
@@ -88,21 +85,10 @@ if(ASIO)
 endif()
 
 #=====products=====#
-set(output Audio)
-if(TEST)
-	add_executable(${output} ${src})
-else()
-	add_library(${output} MODULE ${src})
-endif()
+footer()
 
 #====linking=====#
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Darwin")
 	find_library(portaudio portaudio)
 	target_link_libraries(${output} ${portaudio})
-endif()
-
-#=====c++ standard=====#
-set_property(TARGET ${output} PROPERTY CXX_STANDARD 11)
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
 endif()
