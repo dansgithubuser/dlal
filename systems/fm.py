@@ -29,7 +29,7 @@ fm.show_controls()
 def go(port=''):
 	atexit.register(lambda: audio.finish())
 	audio.start()
-	if port:
+	if type(port)==str:
 		midi.open(port)
 		switch.set(1)
 	else:

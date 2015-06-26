@@ -24,7 +24,6 @@ static int paStreamCallback(
 		}
 	}
 	audio->_output=(float*)output;
-	std::fill_n(audio->_output, samples, 0.0f);
 	audio->_system->evaluate(samples);
 	return paContinue;
 }
@@ -106,7 +105,7 @@ void Audio::evaluate(unsigned samples){
 			return;
 		}
 	#endif
-	for(unsigned i=0; i<samples; ++i) _output[i]=0.0f;
+	std::fill_n(_output, samples, 0.0f);
 	for(unsigned j=0; j<_inputs.size(); ++j){
 		float* audio=_inputs[j]->readAudio();
 		if(!audio) continue;

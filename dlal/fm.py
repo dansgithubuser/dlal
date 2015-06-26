@@ -122,6 +122,7 @@ class Fm(Component):
 	def refresh_controls(self):
 		settings=self.save('i').split('\n')
 		for setting in settings:
+			if not setting: continue
 			cmd=setting.strip().split()
 			osc=self.oscillators[int(cmd[1])]
 			if   cmd[0]=='a': osc.a.set(float(cmd[2])**(1.0/osc.exponents[osc.a]))
