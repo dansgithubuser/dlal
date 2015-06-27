@@ -31,6 +31,7 @@ bool Page::fromText(std::string* text, uint64_t evaluation){
 
 void Page::toFile(std::ostream& file){
 	file<<_type<<' ';
+	file<<_evaluation<<' ';
 	switch(_type){
 		case AUDIO:
 			file<<_audio.size()<<' ';
@@ -55,6 +56,7 @@ void Page::fromFile(std::istream& file){
 	unsigned type;
 	file>>type;
 	_type=(Type)type;
+	file>>_evaluation;
 	unsigned size;
 	file>>size;
 	switch(_type){

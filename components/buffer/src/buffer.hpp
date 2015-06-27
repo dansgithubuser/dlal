@@ -14,6 +14,7 @@ class Buffer: public Component{
 	private:
 		std::vector<float> _audio;
 		unsigned _i;
+		bool _clearOnEvaluate;
 };
 
 }//namespace dlal

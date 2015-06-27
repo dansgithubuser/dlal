@@ -36,6 +36,7 @@ std::string Fileo::readyToEvaluate(){
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			while(_queue.read(page, true)) page.toFile(_file);
 		}
+		while(_queue.read(page, true)) page.toFile(_file);
 	});
 	return "";
 }

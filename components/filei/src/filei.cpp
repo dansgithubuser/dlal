@@ -20,7 +20,7 @@ Filei::Filei(): _evaluation(0), _index(0) {
 		}
 		return "";
 	});
-	registerCommand("samples", "<samples per callback>", [&](std::stringstream& ss){
+	registerCommand("resize", "<samples per callback>", [&](std::stringstream& ss){
 		unsigned samplesPerCallback;
 		ss>>samplesPerCallback;
 		_emptyAudio.resize(samplesPerCallback);

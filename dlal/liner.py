@@ -8,11 +8,13 @@ g_notes={
 }
 
 class Liner(Component):
-	def __init__(self):
+	def __init__(self, period_in_samples, samples_per_beat):
 		Component.__init__(self, 'liner')
+		self.period(period_in_samples)
+		self.samples_per_beat=samples_per_beat
 
 	def line(self, text):
-		stride=0
+		stride=self.samples_per_beat
 		octave=5
 		sample=0
 		text=text.split()
@@ -31,8 +33,6 @@ class Liner(Component):
 							nextSample+=stride
 					else: notes.append(12*octave+g_notes[t[j]])
 				for note in notes:
-					def m(sample, command, note):
-						return 'midi {0} {1:x} {2:x} 40'.format(sample, command, note)
-					self.command(m(sample    , 0x90, note))
-					self.command(m(nextSample, 0x80, note))
+					self.midi(sample    , 0x90, note, 0x40)
+					self.midi(nextSample, 0x80, note, 0x40)
 				sample=nextSample

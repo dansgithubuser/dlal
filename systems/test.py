@@ -1,7 +1,9 @@
 import glob, subprocess, os, sys
 
 #setup
-tests=glob.glob('../../tests/*')
+pattern='*'
+if len(sys.argv)>1: pattern=sys.argv[1]
+tests=glob.glob('../../tests/'+pattern)
 overall=0
 print('RUNNING TESTS')
 #loop over tests
@@ -20,9 +22,9 @@ for test in tests:
 	#compare result to expected
 	if len(raw)!=len(expected): r=1
 	else:
-		error=0
-		for i in range(len(raw)): error+=abs(raw[i]-expected[i])
-		if error>0.001: r=1
+		for i in range(len(raw)):
+			if abs(raw[i]-expected[i])>0.00001:
+				r=1
 	#report
 	overall|=r
 	print('-' if r else '+', os.path.split(test)[1])

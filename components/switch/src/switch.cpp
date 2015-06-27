@@ -16,7 +16,7 @@ Switch::Switch(): _current(nullptr) {
 		_current=nullptr;
 		return "";
 	});
-	registerCommand("samples", "<samples per callback>", [&](std::stringstream& ss){
+	registerCommand("resize", "<samples per callback>", [&](std::stringstream& ss){
 		unsigned samplesPerCallback;
 		ss>>samplesPerCallback;
 		_emptyAudio.resize(samplesPerCallback);
@@ -32,6 +32,7 @@ std::string Switch::addInput(Component* input){
 float* Switch::readAudio(){
 	Component* current=_current.load();
 	if(current) return current->readAudio();
+	else if(_emptyAudio.size()==0) return NULL;
 	else return _emptyAudio.data();
 }
 

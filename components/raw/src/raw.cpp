@@ -7,7 +7,7 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Raw; }
 namespace dlal{
 
 Raw::Raw(): _sampleRate(0), _output(1), _duration(10), _fileName("raw.txt") {
-	registerCommand("set", "sampleRate log2SamplesPerCallback",
+	registerCommand("set", "sampleRate <log2(samples per callback)>",
 		[&](std::stringstream& ss){
 			ss>>_sampleRate;
 			ss>>_log2SamplesPerCallback;

@@ -48,7 +48,7 @@ Audio::Audio():
 		,_test(false)
 	#endif
 {
-	registerCommand("set", "sampleRate log2SamplesPerCallback",
+	registerCommand("set", "sampleRate <log2(samples per callback)>",
 		[&](std::stringstream& ss){
 			ss>>_sampleRate;
 			ss>>_log2SamplesPerCallback;
