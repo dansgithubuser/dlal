@@ -23,7 +23,7 @@ static void onData(dyad_Event* e){
 		return;
 	}
 	std::stringstream ss;
-	for(unsigned i=4; i<e->size; ++i) ss<<(char)e->data[i];
+	for(int i=4; i<e->size; ++i) ss<<(char)e->data[i];
 	dlal::Page page;
 	page.fromFile(ss);
 	fStreamToNetwork[e->stream]->queue(page);

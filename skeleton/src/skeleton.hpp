@@ -32,17 +32,27 @@ extern "C"{
 
 namespace dlal{
 
+class Component;
+
+//cast to Component
+Component* toComponent(void*);
+
+//allocate c string with contents of c++ string
+char* toCStr(const std::string&);
+
 //returns true if parameter starts with "error"
 bool isError(const std::string&);
-
-class Component;
 
 class System{
 	public:
 		std::string addComponent(Component& component);
+		std::string queueAddComponent(Component& component);
+		std::string queueRemoveComponent(Component& component);
 		void evaluate(unsigned samples);
 	private:
 		std::vector<Component*> _components;
+		std::vector<Component*> _componentsToAdd;
+		std::vector<Component*> _componentsToRemove;
 };
 
 class Component{
@@ -55,7 +65,9 @@ class Component{
 		//on failure, return x such that isError(x) is true
 		std::string sendCommand(const std::string&);//see registerCommand
 		virtual std::string addInput(Component*){ return "error: unimplemented"; }
+		virtual std::string removeInput(Component*){ return "error: unimplemented"; }
 		virtual std::string addOutput(Component*){ return "error: unimplemented"; }
+		virtual std::string removeOutput(Component*){ return "error: unimplemented"; }
 		virtual std::string readyToEvaluate(){ return ""; }
 
 		//evaluation - audio/midi/command processing

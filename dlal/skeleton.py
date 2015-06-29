@@ -30,6 +30,7 @@ class Component:
 		if component not in component_libraries:
 			component_libraries[component]=load(component)
 			component_libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
+		self.library=component_libraries[component]
 		self.component=component_libraries[component].dlalBuildComponent()
 
 	def __del__(self): skeleton.dlalDemolishComponent(self.component)

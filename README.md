@@ -30,6 +30,10 @@ file organization
 
 todo
 ----
+- memory leak check
+- midi split instrument
+- fm pitch slide
+- vocoder
 - sampler
 - low pass component
 - diodefilter component

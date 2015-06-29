@@ -2,18 +2,10 @@
 
 #include <cstring>
 #include <cstdlib>
-
-static dlal::Component* cast(void* p){ return (dlal::Component*)p; }
-
-static char* c_str(const std::string& s){
-	char* result=(char*)malloc(s.size()+1);
-	result[s.size()]='\0';
-	memcpy(result, s.c_str(), s.size());
-	return result;
-}
+#include <algorithm>
 
 void dlalDemolishComponent(void* component){
-	delete cast(component);
+	delete dlal::toComponent(component);
 }
 
 void* dlalBuildSystem(){ return new dlal::System; }
@@ -23,22 +15,35 @@ void dlalDemolishSystem(void* system){
 }
 
 char* dlalCommandComponent(void* component, const char* command){
-	return c_str(cast(component)->sendCommand(command));
+	using namespace dlal;
+	return toCStr(toComponent(component)->sendCommand(command));
 }
 
 char* dlalConnectInput(void* component, void* input){
-	return c_str(cast(component)->addInput(cast(input)));
+	using namespace dlal;
+	return toCStr(toComponent(component)->addInput(toComponent(input)));
 }
 
 char* dlalConnectOutput(void* component, void* output){
-	return c_str(cast(component)->addOutput(cast(output)));
+	using namespace dlal;
+	return toCStr(toComponent(component)->addOutput(toComponent(output)));
 }
 
 char* dlalAddComponent(void* system, void* component){
-	return c_str(((dlal::System*)system)->addComponent(*cast(component)));
+	using namespace dlal;
+	return toCStr(((System*)system)->addComponent(*toComponent(component)));
 }
 
 namespace dlal{
+
+Component* toComponent(void* p){ return (dlal::Component*)p; }
+
+char* toCStr(const std::string& s){
+	char* result=(char*)malloc(s.size()+1);
+	result[s.size()]='\0';
+	memcpy(result, s.c_str(), s.size());
+	return result;
+}
 
 bool isError(const std::string& s){ return s.compare(0, 5, "error")==0; }
 
@@ -51,7 +56,33 @@ std::string System::addComponent(Component& component){
 	return "";
 }
 
+
+std::string System::queueAddComponent(Component& component){
+	std::string result=component.readyToEvaluate();
+	if(isError(result)) return result;
+	component._system=this;
+	_componentsToAdd.push_back(&component);
+	return "";
+}
+
+static bool in(Component* component, const std::vector<Component*>& components){
+	return std::find(components.begin(), components.end(), component)!=components.end();
+}
+
+std::string System::queueRemoveComponent(Component& component){
+	if(!in(&component, _components)) return "error: component was not added";
+	_componentsToRemove.push_back(&component);
+	return "";
+}
+
 void System::evaluate(unsigned samples){
+	std::remove_if(_components.begin(), _components.end(), [&](Component* i){
+		return in(i, _componentsToRemove);
+	});
+	for(auto i:_componentsToRemove) i->_system=NULL;
+	_componentsToRemove.clear();
+	_components.insert(_components.end(), _componentsToAdd.begin(), _componentsToAdd.end());
+	_componentsToAdd.clear();
 	for(auto i:_components) i->evaluate(samples);
 }
 

@@ -2,7 +2,66 @@
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Commander; }
 
+static dlal::Commander* toCommander(void* p){ return (dlal::Commander*)p; }
+
+char* dlalCommanderConnectInput(
+	void* commander, void* component, void* input, unsigned periodEdgesToWait
+){
+	using namespace dlal;
+	if(!toCommander(commander)->_queue.write(Commander::Directive(
+			toComponent(component),
+			toComponent(input),
+			Commander::Directive::CONNECT_INPUT,
+			periodEdgesToWait
+	))) return toCStr("error: queue full");
+	return toCStr("");
+}
+
+char* dlalCommanderConnectOutput(
+	void* commander, void* component, void* output, unsigned periodEdgesToWait
+){
+	using namespace dlal;
+	if(!toCommander(commander)->_queue.write(Commander::Directive(
+		toComponent(component),
+		toComponent(output),
+		Commander::Directive::CONNECT_OUTPUT,
+		periodEdgesToWait
+	))) return toCStr("error: queue full");
+	return toCStr("");
+}
+
+char* dlalCommanderAddComponent(
+	void* commander, void* component, unsigned periodEdgesToWait
+){
+	using namespace dlal;
+	if(!toCommander(commander)->_queue.write(
+		Commander::Directive(toComponent(component), periodEdgesToWait)
+	)) return toCStr("error: queue full");
+	return toCStr("");
+}
+
 namespace dlal{
+
+Commander::Directive::Directive(){}
+
+Commander::Directive::Directive(const std::string& command):
+	_type(COMMAND), _command(command)
+{
+	std::stringstream ss(_command);
+	ss>>_periodEdgesToWait;
+	ss>>_output;
+	ss.ignore(1);
+	_command.clear();
+	std::getline(ss, _command);
+}
+
+Commander::Directive::Directive(
+	Component* a, Component* b, Type t, unsigned periodEdgesToWait
+): _type(t), _a(a), _b(b), _periodEdgesToWait(periodEdgesToWait) {}
+
+Commander::Directive::Directive(
+	Component* component, unsigned periodEdgesToWait
+): _type(ADD), _a(component), _periodEdgesToWait(periodEdgesToWait) {}
 
 Commander::Commander(): _queue(8), _size(0), _period(0), _phase(0) {
 	_dequeued.resize(256);
@@ -10,12 +69,14 @@ Commander::Commander(): _queue(8), _size(0), _period(0), _phase(0) {
 		ss>>_period;
 		return "";
 	});
-	registerCommand("queue", "<period edges to wait> <output index> command", [&](std::stringstream& ss){
-		std::string s;
-		std::getline(ss, s);
-		if(!_queue.write(s)) return "error: queue full";
-		return "";
-	});
+	registerCommand("queue", "<period edges to wait> <output index> command",
+		[&](std::stringstream& ss){
+			std::string s;
+			std::getline(ss, s);
+			if(!_queue.write(Directive(s))) return "error: queue full";
+			return "";
+		}
+	);
 }
 
 std::string Commander::addOutput(Component* output){
@@ -25,10 +86,9 @@ std::string Commander::addOutput(Component* output){
 
 void Commander::evaluate(unsigned samples){
 	//dequeue
-	std::string s;
-	while(_queue.read(s, true)){
+	while(true){
 		if(_dequeued.size()<=_size) _dequeued.resize(_dequeued.size()*2);
-		_dequeued[_size].fromString(s);
+		if(!_queue.read(_dequeued[_size], true)) break;
 		if(!_dequeued[_size]._periodEdgesToWait) dispatch(_dequeued[_size]);
 		else ++_size;
 	}
@@ -49,18 +109,21 @@ void Commander::evaluate(unsigned samples){
 	}
 }
 
-Commander::DequeuedCommand::DequeuedCommand(){ _text.resize(256); }
-
-void Commander::DequeuedCommand::fromString(std::string s){
-	std::stringstream ss(s);
-	ss>>_periodEdgesToWait;
-	ss>>_output;
-	ss.ignore(1);
-	std::getline(ss, _text);
-}
-
-void Commander::dispatch(const DequeuedCommand& c){
-	_outputs[c._output]->sendCommand(c._text);
+void Commander::dispatch(const Directive& d){
+	switch(d._type){
+		case Directive::COMMAND:
+			_outputs[d._output]->sendCommand(d._command);
+			break;
+		case Directive::CONNECT_INPUT:
+			d._a->addInput(d._b);
+			break;
+		case Directive::CONNECT_OUTPUT:
+			d._a->addOutput(d._b);
+			break;
+		case Directive::ADD:
+			_system->queueAddComponent(*d._a);
+			break;
+	}
 }
 
 }//namespace dlal

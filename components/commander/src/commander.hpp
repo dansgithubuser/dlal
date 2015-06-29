@@ -7,24 +7,36 @@
 #include <atomic>
 #include <vector>
 
+extern "C"{
+	DLAL char* dlalCommanderConnectInput(void* commander, void* component, void* input, unsigned periodEdgesToWait);
+	DLAL char* dlalCommanderConnectOutput(void* commander, void* component, void* output, unsigned periodEdgesToWait);
+	DLAL char* dlalCommanderAddComponent(void* commander, void* component, unsigned periodEdgesToWait);
+}
+
 namespace dlal{
 
 class Commander: public Component{
 	public:
+		struct Directive{
+			enum Type{ COMMAND, CONNECT_INPUT, CONNECT_OUTPUT, ADD };
+			Directive();
+			Directive(const std::string& command);
+			Directive(Component* a, Component* b, Type, unsigned periodEdgesToWait);
+			Directive(Component*, unsigned periodEdgesToWait);
+			Type _type;
+			std::string _command;
+			Component* _a;
+			Component* _b;
+			unsigned _periodEdgesToWait;
+			unsigned _output;
+		};
 		Commander();
 		std::string addOutput(Component*);
 		void evaluate(unsigned samples);
+		Queue<Directive> _queue;
 	private:
-		struct DequeuedCommand{
-			DequeuedCommand();
-			void fromString(std::string);
-			unsigned _periodEdgesToWait;
-			unsigned _output;
-			std::string _text;
-		};
-		void dispatch(const DequeuedCommand&);
-		Queue<std::string> _queue;
-		std::vector<DequeuedCommand> _dequeued;
+		void dispatch(const Directive&);
+		std::vector<Directive> _dequeued;
 		unsigned _size;
 		std::vector<Component*> _outputs;
 		unsigned _period, _phase;
