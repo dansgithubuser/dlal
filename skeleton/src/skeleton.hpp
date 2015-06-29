@@ -32,6 +32,7 @@ extern "C"{
 
 namespace dlal{
 
+typedef void (*TextCallback)(char*);
 class Component;
 
 //cast to Component

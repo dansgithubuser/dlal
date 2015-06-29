@@ -11,6 +11,7 @@ extern "C"{
 	DLAL char* dlalCommanderConnectInput(void* commander, void* component, void* input, unsigned periodEdgesToWait);
 	DLAL char* dlalCommanderConnectOutput(void* commander, void* component, void* output, unsigned periodEdgesToWait);
 	DLAL char* dlalCommanderAddComponent(void* commander, void* component, unsigned periodEdgesToWait);
+	DLAL char* dlalCommanderSetCallback(void* commander, dlal::TextCallback callback);
 }
 
 namespace dlal{
@@ -34,6 +35,7 @@ class Commander: public Component{
 		std::string addOutput(Component*);
 		void evaluate(unsigned samples);
 		Queue<Directive> _queue;
+		TextCallback _callback;
 	private:
 		void dispatch(const Directive&);
 		std::vector<Directive> _dequeued;

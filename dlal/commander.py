@@ -3,12 +3,15 @@ from .skeleton import *
 class Commander(Component):
 	def __init__(self):
 		Component.__init__(self, 'commander')
+		self.callback_type=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 		self.library.dlalCommanderConnectInput.restype=ctypes.c_char_p
 		self.library.dlalCommanderConnectInput.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 		self.library.dlalCommanderConnectOutput.restype=ctypes.c_char_p
 		self.library.dlalCommanderConnectOutput.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 		self.library.dlalCommanderAddComponent.restype=ctypes.c_char_p
 		self.library.dlalCommanderAddComponent.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
+		self.library.dlalCommanderSetCallback.restype=ctypes.c_char_p
+		self.library.dlalCommanderSetCallback.argtypes=[ctypes.c_void_p, self.callback_type]
 
 	def queue_connect_input(self, component, input, periodEdgesToWait):
 		return self._report(
@@ -23,4 +26,10 @@ class Commander(Component):
 	def queue_add(self, component, periodEdgesToWait):
 		return self._report(
 			self.library.dlalCommanderAddComponent(self.component, component.component, periodEdgesToWait)
+		)
+
+	def set_callback(self, callback):
+		self.callback=self.callback_type(callback)
+		return self._report(
+			self.library.dlalCommanderSetCallback(self.component, self.callback)
 		)

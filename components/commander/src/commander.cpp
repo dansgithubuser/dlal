@@ -40,6 +40,12 @@ char* dlalCommanderAddComponent(
 	return toCStr("");
 }
 
+char* dlalCommanderSetCallback(void* commander, dlal::TextCallback callback){
+	using namespace dlal;
+	toCommander(commander)->_callback=callback;
+	return toCStr("");
+}
+
 namespace dlal{
 
 Commander::Directive::Directive(){}
@@ -63,7 +69,9 @@ Commander::Directive::Directive(
 	Component* component, unsigned periodEdgesToWait
 ): _type(ADD), _a(component), _periodEdgesToWait(periodEdgesToWait) {}
 
-Commander::Commander(): _queue(8), _size(0), _period(0), _phase(0) {
+Commander::Commander():
+	_queue(8), _callback(NULL), _size(0), _period(0), _phase(0)
+{
 	_dequeued.resize(256);
 	registerCommand("period", "<period in samples>", [&](std::stringstream& ss){
 		ss>>_period;
@@ -110,20 +118,22 @@ void Commander::evaluate(unsigned samples){
 }
 
 void Commander::dispatch(const Directive& d){
+	std::string result;
 	switch(d._type){
 		case Directive::COMMAND:
-			_outputs[d._output]->sendCommand(d._command);
+			result=_outputs[d._output]->sendCommand(d._command);
 			break;
 		case Directive::CONNECT_INPUT:
-			d._a->addInput(d._b);
+			result=d._a->addInput(d._b);
 			break;
 		case Directive::CONNECT_OUTPUT:
-			d._a->addOutput(d._b);
+			result=d._a->addOutput(d._b);
 			break;
 		case Directive::ADD:
-			_system->queueAddComponent(*d._a);
+			result=_system->queueAddComponent(*d._a);
 			break;
 	}
+	if(_callback) _callback(dlal::toCStr(result));
 }
 
 }//namespace dlal
