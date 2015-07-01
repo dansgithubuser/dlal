@@ -5,7 +5,7 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Liner; }
 namespace dlal{
 
 Liner::Liner(): _midi(&_emptyMidi), _sample(0), _period(0) {
-	registerCommand("period", "<period in samples>", [&](std::stringstream& ss){
+	registerCommand("resize", "<period in samples>", [&](std::stringstream& ss){
 		ss>>_period;
 		return "";
 	});
