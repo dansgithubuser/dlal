@@ -30,6 +30,7 @@ file organization
 
 todo
 ----
+- outputs should not know about inputs
 - memory leak check
 - midi split instrument
 - fm pitch slide
