@@ -30,7 +30,8 @@ file organization
 
 todo
 ----
-- outputs should not know about inputs
+- fm reset all amplitudes when note is done
+- better looper
 - memory leak check
 - midi split instrument
 - fm pitch slide

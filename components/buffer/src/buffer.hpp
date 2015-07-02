@@ -5,12 +5,12 @@
 
 namespace dlal{
 
-class Buffer: public Component{
+class Buffer: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Buffer();
-		std::string readyToEvaluate();
-		void evaluate(unsigned samples);
-		float* readAudio();
+		void evaluate();
+		float* audio();
+		bool hasAudio(){ return true; }
 	private:
 		std::vector<float> _audio;
 		unsigned _i;

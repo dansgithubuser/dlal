@@ -5,13 +5,14 @@
 
 namespace dlal{
 
-class Sonic: public Component{
+class Sonic:
+	public MultiOut, public SamplesPerEvaluationGetter, public SampleRateGetter
+{
 	public:
 		Sonic();
-		std::string addInput(Component*);
-		std::string addOutput(Component*);
-		std::string readyToEvaluate();
-		void evaluate(unsigned samples);
+		void evaluate();
+		void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
 	private:
 		static const unsigned NOTES=128;
 		static const unsigned OSCILLATORS=4;
@@ -43,14 +44,9 @@ class Sonic: public Component{
 			float _volume;
 			bool _done;
 		};
-		void processMidi(const MidiMessage&);
 		void update();
 		Oscillator _oscillators[OSCILLATORS];
-		float* _samples;
 		Note _notes[NOTES];
-		Component* _input;
-		Component* _output;
-		unsigned _sampleRate;
 };
 
 }//namespace dlal

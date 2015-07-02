@@ -2,25 +2,24 @@
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Midi; }
 
-static void rtMidiCallback(double delta, std::vector<unsigned char>* message, void* userData){
+static void rtMidiCallback(
+	double delta, std::vector<unsigned char>* message, void* userData
+){
 	dlal::Midi* midi=(dlal::Midi*)userData;
-	midi->queue(dlal::MidiMessage(*message));
+	midi->queue(*message);
 }
 
 namespace dlal{
 
 Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
-	registerCommand("midi", "byte[1]..byte[n]", [&](std::stringstream& ss){
-		MidiMessage message;
-		unsigned byte, i=0;
-		while(ss>>byte&&i<MidiMessage::SIZE){
-			message._bytes[i]=byte;
-			++i;
-		}
-		queue(message);
+	registerCommand("midi", "byte[1]..byte[n]", [this](std::stringstream& ss){
+		std::vector<uint8_t> midi;
+		unsigned byte;
+		while(ss>>byte) midi.push_back(byte);
+		queue(midi);
 		return "";
 	});
-	registerCommand("ports", "", [&](std::stringstream& ss){
+	registerCommand("ports", "", [this](std::stringstream& ss){
 		std::string s;
 		s=allocate();
 		if(s.size()) return s;
@@ -29,7 +28,7 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 			s+=_rtMidiIn->getPortName(i)+"\n";
 		return s;
 	});
-	registerCommand("open", "port", [&](std::stringstream& ss)->std::string{
+	registerCommand("open", "port", [this](std::stringstream& ss)->std::string{
 		std::string s;
 		s=allocate();
 		if(s.size()) return s;
@@ -47,16 +46,14 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 
 Midi::~Midi(){ if(_rtMidiIn) delete _rtMidiIn; }
 
-void Midi::evaluate(unsigned samples){
-	_messages.clear();
-	MidiMessage message;
-	while(_queue.read(message, true)) _messages.push_back(message);
+void Midi::evaluate(){
+	std::vector<uint8_t> midi;
+	while(_queue.read(midi, true))
+		for(auto output: _outputs) output->midi(midi.data(), midi.size());
 }
 
-MidiMessages* Midi::readMidi(){ return &_messages; }
-
-void Midi::queue(const MidiMessage& message){
-	_queue.write(message);
+void Midi::queue(const std::vector<uint8_t>& midi){
+	_queue.write(midi);
 }
 
 std::string Midi::allocate(){

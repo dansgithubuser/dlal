@@ -1,2 +1,2 @@
 include(../../../build/CMakeCommon.txt)
-standard_component(Fm midiMessages)
+standard_component(Fm)

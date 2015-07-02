@@ -5,7 +5,11 @@ set(output Network)
 include_directories("../../../skeleton/deps/dyad/src")
 
 set(src "../../../skeleton/deps/dyad/src/dyad.c" )
-component_src(midiMessages page)
+if(TEST)
+	set(src ${src} "../src/test.cpp")
+	add_definitions(-DTEST)
+endif()
+component_src(page)
 
 footer()
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")

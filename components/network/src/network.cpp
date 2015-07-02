@@ -24,9 +24,7 @@ static void onData(dyad_Event* e){
 	}
 	std::stringstream ss;
 	for(int i=4; i<e->size; ++i) ss<<(char)e->data[i];
-	dlal::Page page;
-	page.fromFile(ss);
-	fStreamToNetwork[e->stream]->queue(page);
+	fStreamToNetwork[e->stream]->queue(dlal::Page(ss));
 }
 
 static void onDestroyed(dyad_Event* e){
@@ -48,15 +46,15 @@ static void onPanic(const char* message){
 
 namespace dlal{
 
-Network::Network(): _queue(8), _audio(1, 0.0f), _inited(false) {
-	registerCommand("open", "port", [&](std::stringstream& ss)->std::string{
+Network::Network(): _queue(8), _inited(false) {
+	registerCommand("open", "port", [this](std::stringstream& ss)->std::string{
 		if(!_inited){
 			dyad_atPanic(onPanic);
 			dyad_init();
 			if(fMessage.size()) return fMessage;
 			dyad_setUpdateTimeout(0.001);
 			_quit=false;
-			_thread=std::thread([&](){
+			_thread=std::thread([this](){
 				while(!_quit){
 					_mutex.lock();
 					dyad_update();
@@ -77,13 +75,7 @@ Network::Network(): _queue(8), _audio(1, 0.0f), _inited(false) {
 		_mutex.unlock();
 		return "";
 	});
-	registerCommand("set", "<sample rate>", [&](std::stringstream& ss)->std::string{
-		unsigned sampleRate;
-		ss>>sampleRate;
-		_audio.resize(sampleRate);
-		return "";
-	});
-	registerCommand("check", "", [&](std::stringstream& ss)->std::string{
+	registerCommand("check", "", [this](std::stringstream& ss)->std::string{
 		return fMessage;
 	});
 }
@@ -96,24 +88,18 @@ Network::~Network(){
 	}
 }
 
-void Network::evaluate(unsigned samples){
-	std::fill(_audio.begin(), _audio.end(), 0.0f);
-	_midi.clear();
-	_text.clear();
+void Network::evaluate(){
 	Page page;
 	if(_queue.read(page, true)){
-		switch(page._type){
-			case dlal::Page::AUDIO: _audio=page._audio; break;
-			case dlal::Page::MIDI : _midi =page._midi ; break;
-			case dlal::Page::TEXT : _text =page._text ; break;
-			default: break;
-		}
+		#ifdef TEST
+			std::stringstream ss;
+			page.toFile(ss);
+			printf("%s\n", ss.str().c_str());
+		#else
+			page.dispatch(_samplesPerEvaluation, _outputs);
+		#endif
 	}
 }
-
-float* Network::readAudio(){ return _audio.data(); }
-MidiMessages* Network::readMidi(){ return &_midi; }
-std::string* Network::readText(){ return &_text; }
 
 void Network::queue(const Page& page){ _queue.write(page); }
 

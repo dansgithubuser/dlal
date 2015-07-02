@@ -12,30 +12,34 @@ static void circularIncrement(unsigned& i, unsigned amount, unsigned size){
 namespace dlal{
 
 Buffer::Buffer(): _i(0), _clearOnEvaluate(false) {
-	_audio.resize(1);//so readAudio doesn't crash if connecting before resizing
-	registerCommand("resize", "size", [&](std::stringstream& ss){
+	_checkAudio=true;
+	addJoinAction([this](System&){
+		if(_audio.size()<_samplesPerEvaluation)
+			return "error: size is less than samplesPerEvaluation";
+		if(_audio.size()%_samplesPerEvaluation)
+			return "error: size is not a multiple of samplesPerEvaluation";
+		return "";
+	});
+	registerCommand("resize", "size", [this](std::stringstream& ss){
 		unsigned size;
 		ss>>size;
-		_audio.resize(size);
+		_audio.resize(size, 0.0f);
 		circularIncrement(_i, 0, size);
 		return "";
 	});
-	registerCommand("clear_on_evaluate", "", [&](std::stringstream& ss){
+	registerCommand("clear_on_evaluate", "", [this](std::stringstream& ss){
 		_clearOnEvaluate=true;
 		return "";
 	});
 }
 
-std::string Buffer::readyToEvaluate(){
-	if(_audio.size()==1) return "error: must resize";
-	return "";
+void Buffer::evaluate(){
+	add(_audio.data()+_i, _samplesPerEvaluation, _outputs);
+	circularIncrement(_i, _samplesPerEvaluation, _audio.size());
+	if(_clearOnEvaluate)
+		std::fill_n(_audio.data()+_i, _samplesPerEvaluation, 0.0f);
 }
 
-void Buffer::evaluate(unsigned samples){
-	circularIncrement(_i, samples, _audio.size());
-	if(_clearOnEvaluate) std::fill_n(_audio.data()+_i, samples, 0.0f);
-}
-
-float* Buffer::readAudio(){ return _audio.data()+_i; }
+float* Buffer::audio(){ return _audio.data()+_i; }
 
 }//namespace dlal

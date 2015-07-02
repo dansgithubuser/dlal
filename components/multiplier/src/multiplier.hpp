@@ -5,15 +5,11 @@
 
 namespace dlal{
 
-class Multiplier: public Component{
+class Multiplier: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Multiplier();
-		std::string addOutput(Component*);
-		std::string readyToEvaluate();
-		void evaluate(unsigned samples);
+		void evaluate();
 	private:
-		Component* _input;
-		Component* _output;
 		float _multiplier;
 };
 

@@ -11,39 +11,39 @@ static float wave(float phase){
 
 namespace dlal{
 
-Sonic::Sonic():
-	_input(nullptr), _output(nullptr), _sampleRate(0)
-{
+Sonic::Sonic(){
 	_oscillators[0]._output=1.0f;
-	registerCommand("a", "osc <attack (amplitude per sample)>", [&](std::stringstream& ss){
+	_checkAudio=true;
+	addJoinAction([this](System&){ update(); return ""; });
+	registerCommand("a", "osc <attack (amplitude per sample)>", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._attack;
 		return "";
 	});
-	registerCommand("d", "osc <decay (amplitude per sample)>", [&](std::stringstream& ss){
+	registerCommand("d", "osc <decay (amplitude per sample)>", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._decay;
 		return "";
 	});
-	registerCommand("s", "osc <sustain (amplitude)>", [&](std::stringstream& ss){
+	registerCommand("s", "osc <sustain (amplitude)>", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._sustain;
 		return "";
 	});
-	registerCommand("r", "osc <release (amplitude per sample)>", [&](std::stringstream& ss){
+	registerCommand("r", "osc <release (amplitude per sample)>", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._release;
 		return "";
 	});
-	registerCommand("m", "osc <frequency multiplier>", [&](std::stringstream& ss){
+	registerCommand("m", "osc <frequency multiplier>", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
@@ -51,7 +51,7 @@ Sonic::Sonic():
 		update();
 		return "";
 	});
-	registerCommand("i", "osc input amplitude", [&](std::stringstream& ss){
+	registerCommand("i", "osc input amplitude", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
@@ -61,27 +61,19 @@ Sonic::Sonic():
 		ss>>_oscillators[i]._inputs[j];
 		return "";
 	});
-	registerCommand("o", "osc <output (amplitude)>", [&](std::stringstream& ss){
+	registerCommand("o", "osc <output (amplitude)>", [this](std::stringstream& ss){
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._output;
 		return "";
 	});
-	registerCommand("rate", "<samples per second>", [&](std::stringstream& ss){
-		ss>>_sampleRate;
-		update();
+	registerCommand("test", "", [this](std::stringstream& ss){
+		uint8_t m[3]={ 0x90, 0x3c, 0x7f };
+		midi(m, sizeof(m));
 		return "";
 	});
-	registerCommand("test", "", [&](std::stringstream& ss){
-		MidiMessage message;
-		message._bytes[0]=0x90;
-		message._bytes[1]=0x3c;
-		message._bytes[2]=0x7f;
-		processMidi(message);
-		return "";
-	});
-	registerCommand("save", "<file name, or i to return contents of would-be file>", [&](std::stringstream& ss){
+	registerCommand("save", "<file name, or i to return contents of would-be file>", [this](std::stringstream& ss){
 		std::string fileName;
 		ss>>fileName;
 		std::ofstream file;
@@ -104,14 +96,14 @@ Sonic::Sonic():
 		}
 		return internal.str();
 	});
-	registerCommand("load", "<file name>", [&](std::stringstream& ss){
+	registerCommand("load", "<file name>", [this](std::stringstream& ss){
 		std::string s, result;
 		ss>>s;
 		std::ifstream file(s.c_str());
 		if(!file.good()) return std::string("error: couldn't open file");
 		bool error=false;
 		while(std::getline(file, s)){
-			s=sendCommand(s);
+			s=command(s);
 			if(isError(s)) error=true;
 			result+=s+"\n";
 		}
@@ -120,36 +112,34 @@ Sonic::Sonic():
 	});
 }
 
-std::string Sonic::addInput(Component* input){
-	if(!input->readMidi()) return "error: input must provide midi";
-	_input=input;
-	return "";
-}
-
-std::string Sonic::addOutput(Component* output){
-	if(!output->readAudio()) return "error: output must receive audio";
-	_output=output;
-	return "";
-}
-
-std::string Sonic::readyToEvaluate(){
-	if(!_sampleRate) return "error: sample rate not set";
-	if(!_input) return "error: input not set";
-	if(!_output) return "error: output not set";
-	return "";
-}
-
-void Sonic::evaluate(unsigned samples){
-	MidiMessages& messages=*_input->readMidi();
-	for(unsigned i=0; i<messages.size(); ++i) processMidi(messages[i]);
-	_samples=_output->readAudio();
+void Sonic::evaluate(){
 	for(unsigned i=0; i<NOTES; ++i){
 		if(_notes[i]._done) continue;
-		for(unsigned j=0; j<samples; ++j){
+		for(unsigned j=0; j<_samplesPerEvaluation; ++j){
 			_notes[i]._done=true;
 			for(unsigned k=0; k<OSCILLATORS; ++k)
-				_samples[j]+=_notes[i].update(k, _oscillators);
+				for(auto output: _outputs)
+					output->audio()[j]+=_notes[i].update(k, _oscillators);
 		}
+	}
+}
+
+void Sonic::midi(const uint8_t* bytes, unsigned size){
+	if(!size) return;
+	uint8_t command=bytes[0]&0xf0;
+	switch(command){
+		case 0x80:
+			if(size<2) break;
+			_notes[bytes[1]].stop();
+			break;
+		case 0x90:
+			if(size<3) break;
+			if(bytes[2]==0)
+				_notes[bytes[1]].stop();
+			else
+				_notes[bytes[1]].start(bytes[2]/127.0f, _oscillators);
+			break;
+		default: break;
 	}
 }
 
@@ -228,22 +218,6 @@ float Sonic::Note::update(unsigned i, const Oscillator* oscillators){
 		modulatedPhase+=_runners[j]._output*oscillators[i]._inputs[j];
 	_runners[i]._output=wave(modulatedPhase)*_runners[i]._volume;
 	return _runners[i]._output*oscillators[i]._output*_volume;
-}
-
-void Sonic::processMidi(const MidiMessage& message){
-	uint8_t command=message._bytes[0]&0xf0;
-	switch(command){
-		case 0x80:
-			_notes[message._bytes[1]].stop();
-			break;
-		case 0x90:
-			if(message._bytes[2]==0)
-				_notes[message._bytes[1]].stop();
-			else
-				_notes[message._bytes[1]].start(message._bytes[2]/127.0f, _oscillators);
-			break;
-		default: break;
-	}
 }
 
 void Sonic::update(){

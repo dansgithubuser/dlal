@@ -1,8 +1,7 @@
 #ifndef DLAL_SKELETON_INCLUDED
 #define DLAL_SKELETON_INCLUDED
 
-#include "midiMessages.hpp"
-
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <functional>
@@ -11,6 +10,9 @@
 
 #ifdef _MSC_VER
 	#define DLAL __declspec(dllexport)
+	//this is a warning that certain well-defined behavior has occurred
+	//there doesn't seem to be a way to silence it in code
+	#pragma warning(disable: 4250)
 #else
 	#define DLAL
 #endif
@@ -24,10 +26,9 @@ extern "C"{
 	DLAL void dlalDemolishComponent(void* component);
 	DLAL void* dlalBuildSystem();
 	DLAL void dlalDemolishSystem(void* system);
-	DLAL char* dlalCommandComponent(void* component, const char* command);
-	DLAL char* dlalConnectInput(void* component, void* input);
-	DLAL char* dlalConnectOutput(void* component, void* output);
-	DLAL char* dlalAddComponent(void* system, void* component);
+	DLAL char* dlalCommand(void* component, const char* command);
+	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
+	DLAL char* dlalConnect(void* input, void* output);
 }
 
 namespace dlal{
@@ -44,55 +45,97 @@ char* toCStr(const std::string&);
 //returns true if parameter starts with "error"
 bool isError(const std::string&);
 
+//add audio to components
+void add(const float* audio, unsigned size, std::vector<Component*>&);
+
+//add audio to components that have audio
+void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
+
 class System{
 	public:
-		std::string addComponent(Component& component);
-		std::string queueAddComponent(Component& component);
-		std::string queueRemoveComponent(Component& component);
-		void evaluate(unsigned samples);
+		std::string add(Component& component, unsigned slot, bool queue=false);
+		std::string remove(Component& component, bool queue=false);
+		void evaluate();
+		bool set(std::string variable, unsigned value);
+		bool get(std::string variable, unsigned* value=NULL);
+		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 	private:
-		std::vector<Component*> _components;
-		std::vector<Component*> _componentsToAdd;
+		std::map<std::string, std::string> _variables;
+		std::vector<std::vector<Component*>> _components;
+		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;
 };
 
 class Component{
 	public:
-		Component(): _system(NULL) {}
+		Component();
 		virtual ~Component(){}
+		virtual void* derived(){ return nullptr; }
 
-		//interface for configuration
 		//on success, return x such that isError(x) is false
 		//on failure, return x such that isError(x) is true
-		std::string sendCommand(const std::string&);//see registerCommand
-		virtual std::string addInput(Component*){ return "error: unimplemented"; }
-		virtual std::string removeInput(Component*){ return "error: unimplemented"; }
-		virtual std::string addOutput(Component*){ return "error: unimplemented"; }
-		virtual std::string removeOutput(Component*){ return "error: unimplemented"; }
-		virtual std::string readyToEvaluate(){ return ""; }
+		virtual std::string command(const std::string&);//see registerCommand
+		virtual std::string join(System&);//see addJoinAction
+		virtual std::string connect(Component& output){ return "error: unimplemented"; }
+		virtual std::string disconnect(Component& output){ return "error: unimplemented"; }
 
 		//evaluation - audio/midi/command processing
-		virtual void evaluate(unsigned samples){}
+		virtual void evaluate(){}
 
-		//interface for evaluation
-		virtual float* readAudio(){ return nullptr; }
-		virtual MidiMessages* readMidi(){ return nullptr; }
-		virtual std::string* readText(){ return nullptr; }
-
-		System* _system;
+		//audio/midi
+		virtual void midi(const uint8_t* bytes, unsigned size){}
+		virtual bool midiAccepted(){ return false; }
+		virtual float* audio(){ return nullptr; }
+		virtual bool hasAudio(){ return false; }
 	protected:
 		typedef std::function<std::string(std::stringstream&)> Command;
+		typedef std::function<std::string(System&)> JoinAction;
 		void registerCommand(
 			const std::string& name,
 			const std::string& parameters,
 			Command
 		);
+		void addJoinAction(JoinAction);
 	private:
 		struct CommandWithParameters{
 			Command command;
 			std::string parameters;
 		};
 		std::map<std::string, CommandWithParameters> _commands;
+		std::vector<JoinAction> _joinActions;
+};
+
+class MultiOut: public virtual Component{
+	public:
+		MultiOut();
+		virtual ~MultiOut(){}
+		virtual std::string connect(Component& output);
+		virtual std::string disconnect(Component& output);
+		bool _checkAudio, _checkMidi;
+	protected:
+		std::vector<Component*> _outputs;
+};
+
+class SamplesPerEvaluationGetter: public virtual Component{
+	public:
+		SamplesPerEvaluationGetter();
+		virtual ~SamplesPerEvaluationGetter(){}
+	protected:
+		unsigned _samplesPerEvaluation;
+};
+
+class SampleRateGetter: public virtual Component{
+	public:
+		SampleRateGetter();
+		virtual ~SampleRateGetter(){}
+	protected:
+		unsigned _sampleRate;
+};
+
+class SystemGetter: public virtual Component{
+	public:
+		SystemGetter();
+		System* _system;
 };
 
 }//namespace dlal

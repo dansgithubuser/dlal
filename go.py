@@ -43,7 +43,7 @@ os.environ['LD_LIBRARY_PATH']=os.path.join(file_path, 'build', 'built')
 
 #run
 os.chdir('build/built')
-i=[]
-if args.q: q=['-i']
+i=['-i']
+if args.q: i=[]
 invocation=args.system.split()
 subprocess.check_call(['python']+i+['../../systems/'+invocation[0]+'.py']+invocation[1:])

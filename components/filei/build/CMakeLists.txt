@@ -1,2 +1,2 @@
 include(../../../build/CMakeCommon.txt)
-standard_component(Filei midiMessages page)
+standard_component(Filei page)

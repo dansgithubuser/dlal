@@ -42,14 +42,8 @@ std::string Softboard::processKey(sf::Keyboard::Key key, bool on){
 
 		default: return "";
 	}
-	dlal::MidiMessage message;
-	message._bytes[0]=on?0x90:0x80;
-	message._bytes[1]=12*_octave+note;
-	message._bytes[2]=0x3f;
-	dlal::MidiMessages messages(message);
-	dlal::Page page;
-	page.fromMidi(&messages, 0);
 	std::stringstream ss;
-	page.toFile(ss);
+	uint8_t midi[3]={on?0x90:0x80, 12*_octave+note, 0x3f};
+	dlal::Page(midi, sizeof(midi), 0).toFile(ss);
 	return ss.str();
 }

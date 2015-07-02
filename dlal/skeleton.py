@@ -10,18 +10,29 @@ skeleton=load('skeleton')
 skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
 skeleton.dlalBuildSystem.restype=ctypes.c_void_p
 skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
-skeleton.dlalCommandComponent.restype=ctypes.c_char_p
-skeleton.dlalCommandComponent.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
-skeleton.dlalConnectInput.restype=ctypes.c_char_p
-skeleton.dlalConnectInput.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
-skeleton.dlalConnectOutput.restype=ctypes.c_char_p
-skeleton.dlalConnectOutput.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
-skeleton.dlalAddComponent.restype=ctypes.c_char_p
-skeleton.dlalAddComponent.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+skeleton.dlalCommand.restype=ctypes.c_char_p
+skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
+skeleton.dlalAdd.restype=ctypes.c_char_p
+skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
+skeleton.dlalConnect.restype=ctypes.c_char_p
+skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+
+def report(text):
+	t=text.decode('utf-8')
+	if t.startswith('error'): raise RuntimeError(t)
+	return t
 
 class System:
 	def __init__(self): self.system=skeleton.dlalBuildSystem()
 	def __del__(self): skeleton.dlalDemolishSystem(self.system)
+
+	def add(self, *args, slot=0):
+		result=''
+		for arg in args:
+			for c in arg.components_to_add:
+				result+=report(skeleton.dlalAdd(self.system, c.component, slot))
+			if len(result): result+='\n';
+		return result
 
 component_libraries={}
 
@@ -32,33 +43,18 @@ class Component:
 			component_libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
 		self.library=component_libraries[component]
 		self.component=component_libraries[component].dlalBuildComponent()
+		self.components_to_add=[self]
 
 	def __del__(self): skeleton.dlalDemolishComponent(self.component)
 
 	def __getattr__(self, name):
-		return lambda *args: self.command(name+' '+' '.join([str(arg) for arg in args]))
+		return lambda *args: self.command(
+			name+' '+' '.join([str(arg) for arg in args])
+		)
 
 	def command(self, text):
 		text=str.encode(text, 'utf-8')
-		return self._report(
-			skeleton.dlalCommandComponent(self.component, text)
-		)
+		return report(skeleton.dlalCommand(self.component, text))
 
-	def add(self, system):
-		return self._report(
-			skeleton.dlalAddComponent(system.system, self.component)
-		)
-
-	def connect_input(self, input):
-		return self._report(
-			skeleton.dlalConnectInput(self.component, input.component)
-		)
-
-	def connect_output(self, output):
-		return self._report(
-			skeleton.dlalConnectOutput(self.component, output.component)
-		)
-
-	def _report(self, text):
-		if text.startswith(b'error'): raise RuntimeError(text)
-		return text.decode('utf-8')
+	def connect(self, output):
+		return report(skeleton.dlalConnect(self.component, output.component))

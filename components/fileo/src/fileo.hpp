@@ -9,17 +9,22 @@
 
 namespace dlal{
 
-class Fileo: public Component{
+class Fileo: public SamplesPerEvaluationGetter{
 	public:
 		Fileo();
 		~Fileo();
-		std::string addInput(Component*);
-		std::string readyToEvaluate();
-		void evaluate(unsigned samples);
+		std::string command(const std::string&);
+		void evaluate();
+		void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
+		float* audio();
+		bool hasAudio(){ return true; }
 	private:
+		void finish();
 		uint64_t _evaluation;
-		Component* _input;
 		Queue<Page> _queue;
+		std::vector<float> _audio;
+		bool _audioRead;
 		std::ofstream _file;
 		std::thread _thread;
 		bool _quit;

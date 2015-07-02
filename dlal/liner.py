@@ -10,7 +10,7 @@ g_notes={
 class Liner(Component):
 	def __init__(self, period_in_samples, samples_per_beat):
 		Component.__init__(self, 'liner')
-		self.period(period_in_samples)
+		self.resize(period_in_samples)
 		self.samples_per_beat=samples_per_beat
 
 	def line(self, text):

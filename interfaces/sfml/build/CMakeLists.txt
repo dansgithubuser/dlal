@@ -33,8 +33,8 @@ set(
 	"../src/dyad.cpp"
 	"../src/main.cpp"
 	"../src/softboard.cpp"
+	"../../../skeleton/src/skeleton.cpp"
 	"../../../skeleton/src/page.cpp"
-	"../../../skeleton/src/midiMessages.cpp"
 	"../../../skeleton/deps/dyad/src/dyad.c"
 )
 

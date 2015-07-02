@@ -1,25 +1,22 @@
-#ifndef DLAL_AUDIO_INCLUDED
-#define DLAL_AUDIO_INCLUDED
+#ifndef DLAL_RAW_INCLUDED
+#define DLAL_RAW_INCLUDED
 
 #include <skeleton.hpp>
 
 namespace dlal{
 
-class Raw: public Component{
+class Raw: public SystemGetter{
 	public:
 		Raw();
-		std::string addInput(Component*);
-		std::string readyToEvaluate();
-		void evaluate(unsigned samples);
-		float* readAudio();
+		float* audio(){ return _audio.data(); }
+		bool hasAudio(){ return true; }
 	private:
 		unsigned _sampleRate, _log2SamplesPerCallback;
-		std::vector<Component*> _inputs;
-		std::vector<float> _output;
+		std::vector<float> _audio;
 		unsigned _duration;
 		std::string _fileName;
 };
 
 }//namespace dlal
 
-#endif//#ifndef DLAL_AUDIO_INCLUDED
+#endif//#ifndef DLAL_RAW_INCLUDED

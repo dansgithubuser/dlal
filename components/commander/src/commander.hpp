@@ -8,39 +8,46 @@
 #include <vector>
 
 extern "C"{
-	DLAL char* dlalCommanderConnectInput(void* commander, void* component, void* input, unsigned periodEdgesToWait);
-	DLAL char* dlalCommanderConnectOutput(void* commander, void* component, void* output, unsigned periodEdgesToWait);
-	DLAL char* dlalCommanderAddComponent(void* commander, void* component, unsigned periodEdgesToWait);
-	DLAL char* dlalCommanderSetCallback(void* commander, dlal::TextCallback callback);
+	DLAL char* dlalCommanderAdd(
+		void* commander, void* component, unsigned slot, unsigned edgesToWait
+	);
+
+	DLAL char* dlalCommanderConnect(
+		void* commander, void* input, void* output, unsigned edgesToWait
+	);
+
+	DLAL char* dlalCommanderSetCallback(
+		void* commander, dlal::TextCallback callback
+	);
 }
 
 namespace dlal{
 
-class Commander: public Component{
+class Commander:
+	public MultiOut, public SamplesPerEvaluationGetter, public SystemGetter
+{
 	public:
 		struct Directive{
-			enum Type{ COMMAND, CONNECT_INPUT, CONNECT_OUTPUT, ADD };
+			enum Type{ COMMAND, ADD, CONNECT };
 			Directive();
-			Directive(const std::string& command);
-			Directive(Component* a, Component* b, Type, unsigned periodEdgesToWait);
-			Directive(Component*, unsigned periodEdgesToWait);
+			Directive(const std::string& command, unsigned edgesToWait);
+			Directive(Component&, unsigned slot, unsigned edgesToWait);
+			Directive(Component& input, Component& output, unsigned edgesToWait);
 			Type _type;
 			std::string _command;
 			Component* _a;
 			Component* _b;
-			unsigned _periodEdgesToWait;
-			unsigned _output;
+			unsigned _slot, _edgesToWait, _output;
 		};
 		Commander();
-		std::string addOutput(Component*);
-		void evaluate(unsigned samples);
+		void* derived(){ return this; }
+		void evaluate();
 		Queue<Directive> _queue;
 		TextCallback _callback;
 	private:
 		void dispatch(const Directive&);
 		std::vector<Directive> _dequeued;
 		unsigned _size;
-		std::vector<Component*> _outputs;
 		unsigned _period, _phase;
 };
 

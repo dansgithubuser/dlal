@@ -4,24 +4,26 @@
 #include <skeleton.hpp>
 
 #include <vector>
-#include <map>
 #include <cstdint>
 
 namespace dlal{
 
-class Liner: public Component{
+class Liner: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Liner();
-		std::string addInput(Component*);
-		std::string readyToEvaluate();
-		void evaluate(unsigned samples);
-		MidiMessages* readMidi();
+		void evaluate();
+		void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
 	private:
-		std::map<uint64_t, MidiMessages> _line;
-		MidiMessages _emptyMidi;
-		MidiMessages* _midi;
+		struct Midi{
+			Midi(uint64_t sample, const uint8_t* midi, unsigned size);
+			uint64_t sample;
+			std::vector<uint8_t> midi;
+		};
+		void put(const uint8_t* midi, unsigned size, uint64_t sample);
+		std::vector<Midi> _line;
+		unsigned _index;
 		uint64_t _sample, _period;
-		std::vector<Component*> _inputs;
 };
 
 }//namespace dlal

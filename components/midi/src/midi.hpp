@@ -8,18 +8,16 @@
 
 namespace dlal{
 
-class Midi: public Component{
+class Midi: public MultiOut{
 	public:
 		Midi();
 		~Midi();
-		void evaluate(unsigned samples);
-		MidiMessages* readMidi();
-		void queue(const MidiMessage&);
+		void evaluate();
+		void queue(const std::vector<uint8_t>&);
 	private:
 		std::string allocate();
 		RtMidiIn* _rtMidiIn;
-		Queue<MidiMessage> _queue;
-		MidiMessages _messages;
+		Queue<std::vector<uint8_t>> _queue;
 };
 
 }//namespace dlal

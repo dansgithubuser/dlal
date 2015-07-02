@@ -90,16 +90,11 @@ class VgmSetting:
 		return result
 
 class Fm(Component):
-	def __init__(self, sample_rate):
+	def __init__(self):
 		Component.__init__(self, 'fm')
-		self.command('rate {0}'.format(sample_rate))
 		self.commander=Component('commander')
-		self.commander.connect_output(self)
-		self.sample_rate=sample_rate
-
-	def add(self, system):
-		self.commander.add(system)
-		Component.add(self, system)
+		self.commander.connect(self)
+		self.components_to_add=[self.commander, self]
 
 	def show_controls(self, title='dlal fm controls'):
 		self.root=tkinter.Tk()
@@ -284,7 +279,7 @@ class Fm(Component):
 			else: raise Exception('vgm: unhandled command 0x{0:x} at offset 0x{1:x}'.format(vgm[i], i))
 		return setting
 
-	def set_vgm(self, vgm, channel):
+	def set_vgm(self, vgm, channel, sample_rate=44100):
 		self.set_range(exponent=1)
 		#defaults
 		feedback=0.0
@@ -322,10 +317,10 @@ class Fm(Component):
 			for command, value in commands['ops'][i].items():
 				if command=='multiply': self.oscillators[i].m.set(value)
 				elif command=='total level': total_level[i]=2**(-value/32.0)
-				elif command=='attack rate': self.oscillators[i].a.set(2**((value-1)/2.0)/(self.sample_rate*8));
-				elif command=='first decay rate': self.oscillators[i].d.set(2**((value-1)/2.0)/(self.sample_rate*24))
+				elif command=='attack rate': self.oscillators[i].a.set(2**((value-1)/2.0)/(sample_rate*8))
+				elif command=='first decay rate': self.oscillators[i].d.set(2**((value-1)/2.0)/(sample_rate*24))
 				elif command=='second level': self.oscillators[i].s.set(1.0/2**value)
-				elif command=='release rate': self.oscillators[i].r.set(2**value/(self.sample_rate*24.0))
+				elif command=='release rate': self.oscillators[i].r.set(2**value/(sample_rate*24.0))
 		#clear connections and outputs
 		for o in self.oscillators:
 			o.o.set(0)

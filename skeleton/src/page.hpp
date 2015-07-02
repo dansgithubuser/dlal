@@ -1,7 +1,7 @@
 #ifndef DLAL_PAGE_INCLUDED
 #define DLAL_PAGE_INCLUDED
 
-#include "midiMessages.hpp"
+#include "skeleton.hpp"
 
 #include <string>
 #include <vector>
@@ -11,17 +11,19 @@
 namespace dlal{
 
 struct Page{
-		bool fromAudio(float* audio, unsigned size, uint64_t evaluation);
-		bool fromMidi(MidiMessages* midi, uint64_t evaluation);
-		bool fromText(std::string* text, uint64_t evaluation);
-		void toFile(std::ostream&);
-		void fromFile(std::istream&);
-		enum Type{ AUDIO, MIDI, TEXT };
-		Type _type;
-		uint64_t _evaluation;
-		std::vector<float> _audio;
-		MidiMessages _midi;
-		std::string _text;
+	Page(){}
+	Page(const float* audio, unsigned size, uint64_t evaluation);
+	Page(const uint8_t* midi, unsigned size, uint64_t evaluation);
+	Page(const std::string& text, uint64_t evaluation);
+	Page(std::istream&);
+	void toFile(std::ostream&) const;
+	void dispatch(int samplesPerEvaluation, std::vector<Component*>&) const;
+	enum Type{ AUDIO, MIDI, TEXT };
+	Type _type;
+	uint64_t _evaluation;
+	std::vector<float> _audio;
+	std::vector<uint8_t> _midi;
+	std::string _text;
 };
 
 }//namespace dlal

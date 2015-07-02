@@ -12,7 +12,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 set(src "../deps/rtmidi/RtMidi.cpp")
-component_src(midiMessages page)
+component_src(page)
 footer()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")

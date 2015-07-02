@@ -4,56 +4,66 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Liner; }
 
 namespace dlal{
 
-Liner::Liner(): _midi(&_emptyMidi), _sample(0), _period(0) {
-	registerCommand("resize", "<period in samples>", [&](std::stringstream& ss){
+Liner::Liner(): _sample(0), _period(0), _index(0) {
+	_checkMidi=true;
+	addJoinAction([this](System&){
+		if(!_period) return "error: size not set";
+		return "";
+	});
+	registerCommand("resize", "<period in samples>", [this](std::stringstream& ss){
 		ss>>_period;
 		return "";
 	});
 	registerCommand("midi", "<time in samples> byte[1]..byte[n]",
-		[&](std::stringstream& ss){
+		[this](std::stringstream& ss){
 			unsigned sample;
 			ss>>sample;
-			MidiMessage message;
-			unsigned byte, i=0;
-			while(ss>>byte&&i<MidiMessage::SIZE){
-				message._bytes[i]=byte;
-				++i;
-			}
-			_line[sample].push_back(message);
+			std::vector<uint8_t> m;
+			unsigned byte;
+			while(ss>>byte) m.push_back(byte);
+			put(m.data(), m.size(), sample);
 			return "";
 		}
 	);
-	registerCommand("clear", "", [&](std::stringstream& ss){
+	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
 		return "";
 	});
 }
 
-std::string Liner::addInput(Component* input){
-	if(!input->readMidi()) return "error: input must provide midi!";
-	_inputs.push_back(input);
-	return "";
-}
-
-std::string Liner::readyToEvaluate(){
-	if(!_period) return "error: period not set";
-	return "";
-}
-
-void Liner::evaluate(unsigned samples){
-	//record inputs
-	for(auto input: _inputs){
-		MidiMessages& midi=*input->readMidi();
-		if(midi.size()) _line[_sample].push_back(midi);
+void Liner::evaluate(){
+	//output
+	while(_index<_line.size()&&_line[_index].sample<=_sample){
+		for(auto output: _outputs){
+			std::vector<uint8_t>& m=_line[_index].midi;
+			output->midi(m.data(), m.size());
+		}
+		++_index;
 	}
-	//set output
-	_midi=&_emptyMidi;
-	if(_line.count(_sample)) _midi=&_line[_sample];
 	//move forward
-	_sample+=samples;
-	_sample%=_period;
+	_sample+=_samplesPerEvaluation;
+	if(_sample>=_period){
+		_sample-=_period;
+		_index=0;
+	}
 }
 
-MidiMessages* Liner::readMidi(){ return _midi; }
+void Liner::midi(const uint8_t* bytes, unsigned size){
+	put(bytes, size, _sample);
+}
+
+Liner::Midi::Midi(uint64_t sample, const uint8_t* midi, unsigned size):
+	sample(sample), midi(midi, midi+size)
+{}
+
+void Liner::put(const uint8_t* midi, unsigned size, uint64_t sample){
+	Midi m(sample, midi, size);
+	for(auto i=_line.begin(); i!=_line.end(); ++i)
+		if(i->sample>=sample){
+			_line.insert(i, m);
+			return;
+		}
+	_line.push_back(m);
+}
 
 }//namespace dlal
