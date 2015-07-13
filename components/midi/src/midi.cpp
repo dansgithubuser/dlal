@@ -42,6 +42,9 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 			}
 		return "error: couldn't find requested port";
 	});
+	registerCommand("lockless", "", [this](std::stringstream& ss){
+		return _queue.lockless()?"lockless":"lockfull";
+	});
 }
 
 Midi::~Midi(){ if(_rtMidiIn) delete _rtMidiIn; }

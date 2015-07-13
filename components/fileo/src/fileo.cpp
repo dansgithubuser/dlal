@@ -31,6 +31,9 @@ Fileo::Fileo(): _evaluation(0), _queue(8), _audioRead(false), _quit(false) {
 		finish();
 		return "";
 	});
+	registerCommand("lockless", "", [this](std::stringstream& ss){
+		return _queue.lockless()?"lockless":"lockfull";
+	});
 }
 
 Fileo::~Fileo(){ finish(); }

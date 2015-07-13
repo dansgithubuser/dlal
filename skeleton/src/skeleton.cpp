@@ -29,6 +29,11 @@ char* dlalConnect(void* input, void* output){
 	return toCStr(toComponent(input)->connect(*toComponent(output)));
 }
 
+char* dlalDisconnect(void* input, void* output){
+	using namespace dlal;
+	return toCStr(toComponent(input)->disconnect(*toComponent(output)));
+}
+
 namespace dlal{
 
 Component* toComponent(void* p){ return (dlal::Component*)p; }
@@ -164,6 +169,8 @@ std::string MultiOut::connect(Component& output){
 		return "error: output must have audio";
 	if(_checkMidi&&!output.midiAccepted())
 		return "error: output must accept midi";
+	if(std::find(_outputs.begin(), _outputs.end(), &output)!=_outputs.end())
+		return "error: output already connected";
 	_outputs.push_back(&output);
 	return "";
 }

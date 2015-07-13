@@ -38,10 +38,6 @@ if(TEST)
 	add_definitions(-DTEST_AUDIO)
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-	add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS)
-endif()
-
 #=====source=====#
 if(TEST)
 	set(src ${src} "../src/test.cpp")

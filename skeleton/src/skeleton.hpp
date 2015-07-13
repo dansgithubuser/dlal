@@ -29,6 +29,7 @@ extern "C"{
 	DLAL char* dlalCommand(void* component, const char* command);
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
 	DLAL char* dlalConnect(void* input, void* output);
+	DLAL char* dlalDisconnect(void* input, void* output);
 }
 
 namespace dlal{

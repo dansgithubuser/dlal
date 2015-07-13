@@ -28,6 +28,18 @@ char* dlalCommanderConnect(
 	return toCStr("");
 }
 
+char* dlalCommanderDisconnect(
+	void* commander, void* input, void* output, unsigned edgesToWait
+){
+	using namespace dlal;
+	if(!toCommander(commander)->_queue.write(Commander::Directive(
+		*toComponent(input),
+		*toComponent(output),
+		edgesToWait
+	).disconnect())) return toCStr("error: queue full");
+	return toCStr("");
+}
+
 char* dlalCommanderSetCallback(void* commander, dlal::TextCallback callback){
 	using namespace dlal;
 	toCommander(commander)->_callback=callback;
@@ -74,6 +86,9 @@ Commander::Commander():
 			return "";
 		}
 	);
+	registerCommand("lockless", "", [this](std::stringstream& ss){
+		return _queue.lockless()?"lockless":"lockfull";
+	});
 }
 
 void Commander::evaluate(){
@@ -107,11 +122,14 @@ void Commander::dispatch(const Directive& d){
 		case Directive::COMMAND:
 			result=_outputs[d._output]->command(d._command);
 			break;
+		case Directive::ADD:
+			result=_system->add(*d._a, d._slot, true);
+			break;
 		case Directive::CONNECT:
 			result=d._a->connect(*d._b);
 			break;
-		case Directive::ADD:
-			result=_system->add(*d._a, d._slot, true);
+		case Directive::DISCONNECT:
+			result=d._a->disconnect(*d._b);
 			break;
 	}
 	if(_callback) _callback(dlal::toCStr(result));

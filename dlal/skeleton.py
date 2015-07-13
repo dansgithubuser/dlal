@@ -1,60 +1,76 @@
 import ctypes, platform
 
-def upperfirst(s): return s[0].upper()+s[1:]
-
 def load(name):
+	def upperfirst(s): return s[0].upper()+s[1:]
 	if platform.system()!='Windows': name='lib'+upperfirst(name)+'.so'
 	return ctypes.CDLL(name)
-
-skeleton=load('skeleton')
-skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
-skeleton.dlalBuildSystem.restype=ctypes.c_void_p
-skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
-skeleton.dlalCommand.restype=ctypes.c_char_p
-skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
-skeleton.dlalAdd.restype=ctypes.c_char_p
-skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
-skeleton.dlalConnect.restype=ctypes.c_char_p
-skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
 
 def report(text):
 	t=text.decode('utf-8')
 	if t.startswith('error'): raise RuntimeError(t)
 	return t
 
+def connect(*args):
+	if len(args)<=1: return
+	result=''
+	for i in range(len(args)-1):
+		result+=args[i].connect(args[i+1])
+		if len(result): result+='\n'
+	return result
+
+_skeleton=load('skeleton')
+_skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
+_skeleton.dlalBuildSystem.restype=ctypes.c_void_p
+_skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
+_skeleton.dlalCommand.restype=ctypes.c_char_p
+_skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
+_skeleton.dlalAdd.restype=ctypes.c_char_p
+_skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
+_skeleton.dlalConnect.restype=ctypes.c_char_p
+_skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+
 class System:
-	def __init__(self): self.system=skeleton.dlalBuildSystem()
-	def __del__(self): skeleton.dlalDemolishSystem(self.system)
+	def __init__(self): self.system=_skeleton.dlalBuildSystem()
+	def __del__(self): _skeleton.dlalDemolishSystem(self.system)
 
 	def add(self, *args, slot=0):
 		result=''
 		for arg in args:
 			for c in arg.components_to_add:
-				result+=report(skeleton.dlalAdd(self.system, c.component, slot))
+				result+=report(_skeleton.dlalAdd(self.system, c.component, slot))
 			if len(result): result+='\n';
 		return result
 
-component_libraries={}
-
 class Component:
+	_libraries={}
+
 	def __init__(self, component):
-		if component not in component_libraries:
-			component_libraries[component]=load(component)
-			component_libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
-		self.library=component_libraries[component]
-		self.component=component_libraries[component].dlalBuildComponent()
+		if component not in Component._libraries:
+			Component._libraries[component]=load(component)
+			Component._libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
+		self.library=Component._libraries[component]
+		self.component=Component._libraries[component].dlalBuildComponent()
 		self.components_to_add=[self]
 
-	def __del__(self): skeleton.dlalDemolishComponent(self.component)
+	def __del__(self): _skeleton.dlalDemolishComponent(self.component)
 
 	def __getattr__(self, name):
 		return lambda *args: self.command(
 			name+' '+' '.join([str(arg) for arg in args])
 		)
 
-	def command(self, text):
-		text=str.encode(text, 'utf-8')
-		return report(skeleton.dlalCommand(self.component, text))
+	def command(self, command):
+		command=str.encode(command, 'utf-8')
+		return report(_skeleton.dlalCommand(self.component, command))
 
 	def connect(self, output):
-		return report(skeleton.dlalConnect(self.component, output.component))
+		return report(_skeleton.dlalConnect(self.component, output.component))
+
+class Pipe:
+	def __init__(self, *args):
+		self.component=args[0]
+		self.components_to_add=[x for arg in args for x in arg.components_to_add]
+
+	def __getitem__(self, i): return self.components_to_add[i]
+
+	def connect(self, output): return self.components_to_add[-1].connect(output)

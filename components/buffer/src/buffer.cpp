@@ -27,8 +27,10 @@ Buffer::Buffer(): _i(0), _clearOnEvaluate(false) {
 		circularIncrement(_i, 0, size);
 		return "";
 	});
-	registerCommand("clear_on_evaluate", "", [this](std::stringstream& ss){
-		_clearOnEvaluate=true;
+	registerCommand("clear_on_evaluate", "y/n", [this](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		_clearOnEvaluate=s=="y";
 		return "";
 	});
 }

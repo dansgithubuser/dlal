@@ -6,20 +6,40 @@ class Commander(Component):
 		self.callback_type=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 		self.library.dlalCommanderConnect.restype=ctypes.c_char_p
 		self.library.dlalCommanderConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
+		self.library.dlalCommanderDisconnect.restype=ctypes.c_char_p
+		self.library.dlalCommanderDisconnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 		self.library.dlalCommanderAdd.restype=ctypes.c_char_p
 		self.library.dlalCommanderAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint]
 		self.library.dlalCommanderSetCallback.restype=ctypes.c_char_p
 		self.library.dlalCommanderSetCallback.argtypes=[ctypes.c_void_p, self.callback_type]
+		self.set_callback(report)
 
-	def queue_add(self, component, slot=0, edgesToWait=0):
-		return report(
-			self.library.dlalCommanderAdd(self.component, component.component, slot, edgesToWait)
-		)
+	def queue_command(self, i, *args, edges_to_wait=0):
+		return self.queue(i, edges_to_wait, *args)
 
-	def queue_connect(self, input, output, edgesToWait=0):
-		return report(
-			self.library.dlalCommanderConnect(self.component, input.component, output.component, edgesToWait)
-		)
+	def queue_add(self, *args, slot=0, edges_to_wait=0):
+		result=''
+		for arg in args:
+			for c in arg.components_to_add:
+				result+=report(self.library.dlalCommanderAdd(
+					self.component, c.component, slot, edges_to_wait
+				))
+			if len(result): result+='\n';
+		return result
+
+	def queue_connect(self, *args, edges_to_wait=0, enable=True):
+		if len(args)<=1: return
+		result=''
+		if enable:
+			f=self.library.dlalCommanderConnect
+		else:
+			f=self.library.dlalCommanderDisconnect
+		for i in range(len(args)-1):
+			result+=report(f(
+				self.component, args[i].component, args[i+1].component, edges_to_wait
+			))
+			if len(result): result+='\n'
+		return result
 
 	def set_callback(self, callback):
 		self.callback=self.callback_type(callback)

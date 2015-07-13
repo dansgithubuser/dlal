@@ -3,14 +3,18 @@ import os, argparse, subprocess
 
 #args
 parser=argparse.ArgumentParser(description='run a system')
-parser.add_argument('-s', action='store_true', help='skip build, just run')
-parser.add_argument('-d', action='store_true', help='use debug configuration')
-parser.add_argument('-q', action='store_true', help='quit immediately after running system')
-parser.add_argument('system', help='which system to run')
+parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
+parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
+parser.add_argument('--test', '-t', help='run tests specified by glob')
+parser.add_argument('--system', '-s', help='which system to run')
 args=parser.parse_args()
 
-#pythonpath
+#current directory
 file_path=os.path.split(os.path.realpath(__file__))[0]
+os.chdir(file_path)
+built_rel_path=os.path.join('build', 'built')
+
+#pythonpath
 if 'PYTHONPATH' in os.environ:
 	os.environ['PYTHONPATH']+=os.pathsep+file_path
 else:
@@ -18,7 +22,7 @@ else:
 
 #config
 config='Release'
-if args.d: config='Debug'
+if args.debug: config='Debug'
 
 #build
 def shell(*args):
@@ -26,9 +30,9 @@ def shell(*args):
 	p=subprocess.Popen(cmd, shell=True)
 	if p.wait(): raise subprocess.CalledProcessError(p.returncode, cmd)
 
-if not args.s:
-	if not os.path.exists('build/built'): os.makedirs('build/built')
-	os.chdir('build/built')
+if not args.run_only:
+	if not os.path.exists(built_rel_path): os.makedirs(built_rel_path)
+	os.chdir(built_rel_path)
 	preamble=''
 	generator=''
 	if os.name=='nt':
@@ -41,9 +45,45 @@ if not args.s:
 #library path
 os.environ['LD_LIBRARY_PATH']=os.path.join(file_path, 'build', 'built')
 
+#test
+if args.test:
+	#setup
+	import glob, sys
+	tests=[os.path.realpath(x) for x in glob.glob(os.path.join('tests', args.test))]
+	overall=0
+	print('RUNNING TESTS')
+	#loop over tests
+	for test in tests:
+		#run test
+		os.chdir(built_rel_path)
+		r=subprocess.call(['python', os.path.join(test, 'test.py')])
+		os.chdir(file_path)
+		#read result and expected
+		def read(file_name):
+			with open(file_name) as file: contents=file.read()
+			return [float(x) for x in contents.split()]
+		raw=read(os.path.join('build', 'built', 'raw.txt'))
+		expected=read(os.path.join(test, 'expected.txt'))
+		#compare result to expected
+		if len(raw)!=len(expected): r=1
+		else:
+			for i in range(len(raw)):
+				if abs(raw[i]-expected[i])>0.00001:
+					r=1
+		#report
+		overall|=r
+		print('-' if r else '+', os.path.split(test)[1])
+	#finish
+	if overall:
+		print('TESTS HAVE FAILED!')
+		sys.exit(-1)
+	print('ALL TESTS SUCCEEDED')
+
 #run
-os.chdir('build/built')
-i=['-i']
-if args.q: i=[]
-invocation=args.system.split()
-subprocess.check_call(['python']+i+['../../systems/'+invocation[0]+'.py']+invocation[1:])
+if args.system:
+	os.chdir(built_rel_path)
+	shell('python', '-i', os.path.join('..', '..', 'systems', args.system+'.py'))
+	os.chdir(file_path)
+
+#done
+print('all requests processed; call with -h for help')

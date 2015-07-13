@@ -31,7 +31,6 @@ file organization
 todo
 ----
 - fm reset all amplitudes when note is done
-- better looper
 - memory leak check
 - midi split instrument
 - fm pitch slide
@@ -40,3 +39,4 @@ todo
 - low pass component
 - diodefilter component
 - pitch shift component
+- auto dj

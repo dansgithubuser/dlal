@@ -16,6 +16,10 @@ extern "C"{
 		void* commander, void* input, void* output, unsigned edgesToWait
 	);
 
+	DLAL char* dlalCommanderDisconnect(
+		void* commander, void* input, void* output, unsigned edgesToWait
+	);
+
 	DLAL char* dlalCommanderSetCallback(
 		void* commander, dlal::TextCallback callback
 	);
@@ -28,11 +32,12 @@ class Commander:
 {
 	public:
 		struct Directive{
-			enum Type{ COMMAND, ADD, CONNECT };
+			enum Type{ COMMAND, ADD, CONNECT, DISCONNECT };
 			Directive();
 			Directive(const std::string& command, unsigned edgesToWait);
 			Directive(Component&, unsigned slot, unsigned edgesToWait);
 			Directive(Component& input, Component& output, unsigned edgesToWait);
+			Directive& disconnect(){ _type=DISCONNECT; return *this; }
 			Type _type;
 			std::string _command;
 			Component* _a;

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
 cmake_policy(SET CMP0000 OLD)
 cmake_policy(SET CMP0042 NEW)
 
+add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_WINSOCK_DEPRECATED_NO_WARNINGS)
+
 function(component_src)
 	#include
 	include_directories(

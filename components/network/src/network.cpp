@@ -78,6 +78,9 @@ Network::Network(): _queue(8), _inited(false) {
 	registerCommand("check", "", [this](std::stringstream& ss)->std::string{
 		return fMessage;
 	});
+	registerCommand("lockless", "", [this](std::stringstream& ss){
+		return _queue.lockless()?"lockless":"lockfull";
+	});
 }
 
 Network::~Network(){
