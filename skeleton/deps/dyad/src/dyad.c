@@ -7,7 +7,9 @@
 
 #ifdef _WIN32
   #define _WIN32_WINNT 0x501
-  #define _CRT_SECURE_NO_WARNINGS
+  #ifndef _CRT_SECURE_NO_WARNINGS
+    #define _CRT_SECURE_NO_WARNINGS
+  #endif
   #include <winsock2.h>
   #include <ws2tcpip.h>
   #include <windows.h>
@@ -700,8 +702,13 @@ void dyad_update(void) {
   }
 
   /* Init timeout value and do select */
-  tv.tv_sec = dyad_updateTimeout;
-  tv.tv_usec = (dyad_updateTimeout - tv.tv_sec) * 1e6;
+  #ifdef _WIN32
+    tv.tv_sec = (long) dyad_updateTimeout;
+    tv.tv_usec = (long) ((dyad_updateTimeout - tv.tv_sec) * 1e6);
+  #else
+    tv.tv_sec = (time_t) dyad_updateTimeout;
+    tv.tv_usec = (suseconds_t) ((dyad_updateTimeout - tv.tv_sec) * 1e6);
+  #endif
 
   select(dyad_selectSet.maxfd + 1,
          dyad_selectSet.fds[SELECT_READ],
