@@ -33,7 +33,8 @@ class System:
 	def __init__(self): self.system=_skeleton.dlalBuildSystem()
 	def __del__(self): _skeleton.dlalDemolishSystem(self.system)
 
-	def add(self, *args, slot=0):
+	def add(self, *args, **kwargs):
+		slot=kwargs.get('slot', 0)
 		result=''
 		for arg in args:
 			for c in arg.components_to_add:

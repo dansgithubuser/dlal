@@ -14,10 +14,13 @@ class Commander(Component):
 		self.library.dlalCommanderSetCallback.argtypes=[ctypes.c_void_p, self.callback_type]
 		self.set_callback(report)
 
-	def queue_command(self, i, *args, edges_to_wait=0):
+	def queue_command(self, i, *args, **kwargs):
+		edges_to_wait=kwargs.get('edges_to_wait', 0)
 		return self.queue(i, edges_to_wait, *args)
 
-	def queue_add(self, *args, slot=0, edges_to_wait=0):
+	def queue_add(self, *args, **kwargs):
+		slot=kwargs.get('slot', 0)
+		edges_to_wait=kwargs.get('edges_to_wait', 0)
 		result=''
 		for arg in args:
 			for c in arg.components_to_add:
@@ -27,7 +30,9 @@ class Commander(Component):
 			if len(result): result+='\n';
 		return result
 
-	def queue_connect(self, *args, edges_to_wait=0, enable=True):
+	def queue_connect(self, *args, **kwargs):
+		edges_to_wait=kwargs.get('edges_to_wait', 0)
+		enable=kwargs.get('enable', True)
 		if len(args)<=1: return
 		result=''
 		if enable:
