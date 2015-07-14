@@ -43,7 +43,7 @@ std::string Softboard::processKey(sf::Keyboard::Key key, bool on){
 		default: return "";
 	}
 	std::stringstream ss;
-	uint8_t midi[3]={on?0x90:0x80, 12*_octave+note, 0x3f};
+	uint8_t midi[3]={uint8_t(on?0x90:0x80), uint8_t(12*_octave+note), 0x3f};
 	dlal::Page(midi, sizeof(midi), 0).toFile(ss);
 	return ss.str();
 }
