@@ -27,6 +27,15 @@ Buffer::Buffer(): _i(0), _clearOnEvaluate(false) {
 		circularIncrement(_i, 0, size);
 		return "";
 	});
+	registerCommand("crop", "", [this](std::stringstream& ss){
+		_audio.resize(_i);
+		_i=0;
+		return "";
+	});
+	registerCommand("reset", "", [this](std::stringstream& ss){
+		_i=0;
+		return "";
+	});
 	registerCommand("clear_on_evaluate", "y/n", [this](std::stringstream& ss){
 		std::string s;
 		ss>>s;

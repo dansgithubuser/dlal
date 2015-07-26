@@ -6,13 +6,23 @@ static dlal::Commander* toCommander(void* p){
 	return (dlal::Commander*)((dlal::Component*)p)->derived();
 }
 
+char* dlalCommanderCommand(
+	void* commander, void* component, const char* command, unsigned edgesToWait
+){
+	using namespace dlal;
+	if(!toCommander(commander)->_queue.write(Commander::Directive(
+			*toComponent(component), std::string(command), edgesToWait
+	))) return toCStr("error: queue full");
+	return toCStr("");
+}
+
 char* dlalCommanderAdd(
 	void* commander, void* component, unsigned slot, unsigned edgesToWait
 ){
 	using namespace dlal;
-	if(!toCommander(commander)->_queue.write(
-		Commander::Directive(*toComponent(component), slot, edgesToWait)
-	)) return toCStr("error: queue full");
+	if(!toCommander(commander)->_queue.write(Commander::Directive(
+		*toComponent(component), slot, edgesToWait
+	))) return toCStr("error: queue full");
 	return toCStr("");
 }
 
@@ -21,9 +31,7 @@ char* dlalCommanderConnect(
 ){
 	using namespace dlal;
 	if(!toCommander(commander)->_queue.write(Commander::Directive(
-		*toComponent(input),
-		*toComponent(output),
-		edgesToWait
+		*toComponent(input), *toComponent(output), edgesToWait
 	))) return toCStr("error: queue full");
 	return toCStr("");
 }
@@ -33,9 +41,7 @@ char* dlalCommanderDisconnect(
 ){
 	using namespace dlal;
 	if(!toCommander(commander)->_queue.write(Commander::Directive(
-		*toComponent(input),
-		*toComponent(output),
-		edgesToWait
+		*toComponent(input), *toComponent(output), edgesToWait
 	).disconnect())) return toCStr("error: queue full");
 	return toCStr("");
 }
@@ -46,19 +52,32 @@ char* dlalCommanderSetCallback(void* commander, dlal::TextCallback callback){
 	return toCStr("");
 }
 
+char* dlalCommanderRegisterCommand(
+	void* commander, const char* name, dlal::TextCallback command
+){
+	using namespace dlal;
+	toCommander(commander)->customCommand(std::string(name), command);
+	return toCStr("");
+}
+
 namespace dlal{
 
 Commander::Directive::Directive(){}
 
-Commander::Directive::Directive(const std::string& command, unsigned edgesToWait):
-	_type(COMMAND), _command(command), _edgesToWait(edgesToWait)
-{
-	std::stringstream ss(_command);
-	ss>>_output;
-	ss.ignore(1);
-	_command.clear();
-	std::getline(ss, _command);
-}
+Commander::Directive::Directive(
+	Component& component, const std::string& command, unsigned edgesToWait
+):
+	_type(COMMAND), _command(command), _a(&component), _edgesToWait(edgesToWait)
+{}
+
+Commander::Directive::Directive(
+	unsigned i, const std::string& command, unsigned edgesToWait
+):
+	_type(COMMAND_INDEXED),
+	_command(command),
+	_edgesToWait(edgesToWait),
+	_output(i)
+{}
 
 Commander::Directive::Directive(
 	Component& component, unsigned slot, unsigned edgesToWait
@@ -76,13 +95,24 @@ Commander::Commander():
 		ss>>_period;
 		return "";
 	});
+		registerCommand("crop", "", [this](std::stringstream& ss){
+		_period=_phase;
+		_phase=0;
+		return "";
+	});
+	registerCommand("reset", "", [this](std::stringstream& ss){
+		_phase=0;
+		return "";
+	});
 	registerCommand("queue", "<period edges to wait> <output index> command",
 		[this](std::stringstream& ss){
-			unsigned edgesToWait;
-			ss>>edgesToWait;
+			unsigned edgesToWait, output;
+			ss>>edgesToWait>>output;
+			ss.ignore(1);
 			std::string s;
 			std::getline(ss, s);
-			if(!_queue.write(Directive(s, edgesToWait))) return "error: queue full";
+			if(!_queue.write(Directive(output, s, edgesToWait)))
+				return "error: queue full";
 			return "";
 		}
 	);
@@ -104,6 +134,7 @@ void Commander::evaluate(){
 	if(_phase<_period) return;
 	_phase-=_period;
 	//command
+	if(_callback) _callback(dlal::toCStr("edge"));
 	unsigned i=0;
 	while(i<_size){
 		--_dequeued[i]._edgesToWait;
@@ -116,10 +147,22 @@ void Commander::evaluate(){
 	}
 }
 
+void Commander::customCommand(
+	const std::string& name, dlal::TextCallback command
+){
+	registerCommand(name, "", [this, command](std::stringstream& ss){
+		command(dlal::toCStr(ss.str()));
+		return "";
+	});
+}
+
 void Commander::dispatch(const Directive& d){
 	std::string result;
 	switch(d._type){
 		case Directive::COMMAND:
+			result=d._a->command(d._command);
+			break;
+		case Directive::COMMAND_INDEXED:
 			result=_outputs[d._output]->command(d._command);
 			break;
 		case Directive::ADD:

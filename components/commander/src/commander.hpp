@@ -8,6 +8,10 @@
 #include <vector>
 
 extern "C"{
+	DLAL char* dlalCommanderCommand(
+		void* commander, void* component, const char* command, unsigned edgesToWait
+	);
+
 	DLAL char* dlalCommanderAdd(
 		void* commander, void* component, unsigned slot, unsigned edgesToWait
 	);
@@ -23,6 +27,10 @@ extern "C"{
 	DLAL char* dlalCommanderSetCallback(
 		void* commander, dlal::TextCallback callback
 	);
+
+	DLAL char* dlalCommanderRegisterCommand(
+		void* commander, const char* name, dlal::TextCallback command
+	);
 }
 
 namespace dlal{
@@ -32,9 +40,10 @@ class Commander:
 {
 	public:
 		struct Directive{
-			enum Type{ COMMAND, ADD, CONNECT, DISCONNECT };
+			enum Type{ COMMAND, COMMAND_INDEXED, ADD, CONNECT, DISCONNECT };
 			Directive();
-			Directive(const std::string& command, unsigned edgesToWait);
+			Directive(Component&, const std::string& command, unsigned edgesToWait);
+			Directive(unsigned i, const std::string& command, unsigned edgesToWait);
 			Directive(Component&, unsigned slot, unsigned edgesToWait);
 			Directive(Component& input, Component& output, unsigned edgesToWait);
 			Directive& disconnect(){ _type=DISCONNECT; return *this; }
@@ -47,6 +56,7 @@ class Commander:
 		Commander();
 		void* derived(){ return this; }
 		void evaluate();
+		void customCommand(const std::string& name, dlal::TextCallback command);
 		Queue<Directive> _queue;
 		TextCallback _callback;
 	private:

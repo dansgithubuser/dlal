@@ -25,17 +25,15 @@ class AudioTrack(Pipe):
 
 class Looper:
 	def __init__(self, sample_rate=44100, log_2_samples_per_callback=6):
-		self.system=system=System()
+		self.system=System()
 		self.commander=Commander()
 		self.audio=Component('audio')
 		self.audio.set(sample_rate, log_2_samples_per_callback)
 		self.system.add(self.audio, self.commander)
-		self.audio.start()
 		self.tracks=[]
 
-	def __del__(self): self.audio.finish()
-
 	def add(self, track):
+		self.tracks.append(track)
 		self.commander.queue_add(track)
 
 	def play(self, track, enable, edges_to_wait):
@@ -46,3 +44,13 @@ class Looper:
 
 	def replay(self, track, enable, edges_to_wait):
 		self.commander.queue_connect(track.synth, self.audio, edges_to_wait=edges_to_wait, enable=enable)
+
+	def reset(self):
+		for track in self.tracks:
+			self.commander.queue_command(track.container, 'reset')
+		self.commander.reset()
+
+	def crop(self):
+		for track in self.tracks:
+			self.commander.queue_command(track.container, 'crop')
+		self.commander.crop()

@@ -14,6 +14,17 @@ Liner::Liner(): _sample(0), _period(0), _index(0) {
 		ss>>_period;
 		return "";
 	});
+	registerCommand("crop", "", [this](std::stringstream& ss){
+		_period=_sample;
+		_sample=0;
+		_index=0;
+		return "";
+	});
+	registerCommand("reset", "", [this](std::stringstream& ss){
+		_sample=0;
+		_index=0;
+		return "";
+	});
 	registerCommand("midi", "<time in samples> byte[1]..byte[n]",
 		[this](std::stringstream& ss){
 			unsigned sample;

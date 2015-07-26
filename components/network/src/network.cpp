@@ -81,6 +81,24 @@ Network::Network(): _queue(8), _inited(false) {
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _queue.lockless()?"lockless":"lockfull";
 	});
+	registerCommand("map_midi", "<key> <midi bytes>", [this](std::stringstream& ss){
+		std::string key;
+		ss>>key;
+		std::vector<uint8_t> midi;
+		unsigned byte;
+		while(ss>>byte) midi.push_back(byte);
+		_map[key]=dlal::Page(midi.data(), midi.size(), 0);
+		return "";
+	});
+	registerCommand("map_command", "<key> <command>", [this](std::stringstream& ss){
+		std::string key;
+		ss>>key;
+		std::string command;
+		ss.ignore(1);
+		std::getline(ss, command);
+		_map[key]=dlal::Page(command, 0);
+		return "";
+	});
 }
 
 Network::~Network(){
@@ -99,6 +117,8 @@ void Network::evaluate(){
 			page.toFile(ss);
 			printf("%s\n", ss.str().c_str());
 		#else
+			if(page._type==dlal::Page::TEXT&&_map.count(page._text))
+				page=_map[page._text];
 			page.dispatch(_samplesPerEvaluation, _outputs);
 		#endif
 	}
