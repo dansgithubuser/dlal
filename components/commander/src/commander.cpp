@@ -95,7 +95,7 @@ Commander::Commander():
 		ss>>_period;
 		return "";
 	});
-		registerCommand("crop", "", [this](std::stringstream& ss){
+	registerCommand("crop", "", [this](std::stringstream& ss){
 		_period=_phase;
 		_phase=0;
 		return "";

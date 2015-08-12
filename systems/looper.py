@@ -1,12 +1,13 @@
 import dlal, atexit
 
+max_track_samples=64000*8
+samples_per_beat=32000
+edges_to_wait=0
+track=0
+
 #looper
 looper=dlal.Looper()
-looper.commander.period(64000*8)
-def print_report(text):
-	r=dlal.report(text)
-	if len(r): print(r)
-looper.commander.set_callback(print_report)
+looper.commander.set_callback(dlal.report)
 
 #midi
 midi=dlal.Component('midi')
@@ -23,31 +24,59 @@ looper.system.add(network)
 tracks=[]
 
 def command_add_midi():
-	track=dlal.MidiTrack(midi, dlal.Fm(), 64000*8, 32000)
+	track=dlal.MidiTrack(
+		midi,
+		dlal.Fm(),
+		max_track_samples,
+		samples_per_beat
+	)
 	global tracks
 	tracks.append(track)
 	looper.add(track)
 
-def command_reset():
-	looper.reset()
+def track_next():
+	global track
+	if track+1<len(tracks): track+=1
 
-def command_crop():
-	looper.crop()
+def track_prev():
+	global track
+	if track.get()>0: track-=1
+
+def uncrop():
+	looper.commander.queue_command(
+		looper.commander,
+		'period',
+		0,
+		edges_to_wait=edges_to_wait
+	)
+
+def wait_more():
+	global edges_to_wait
+	edges_to_wait+=1
+
+def wait_less():
+	global edges_to_wait
+	if edges_to_wait.get()>0: edges_to_wait-=1
 
 def generate_standard_command(function, sense):
-	def command(): function(looper, tracks[0], sense, 0)
+	def command(): function(looper, tracks[track], sense, edges_to_wait)
 	return command
 
 commands={
-	'Return': command_reset,
-	'Space': command_crop,
+	'Return': lambda: looper.reset(),
+	'Space': lambda: looper.crop(),
+	'\\': uncrop,
+	'U': track_next,
+	'J': track_prev,
+	'I': wait_more,
+	'K': wait_less,
 	'1': command_add_midi,
 	'Q': generate_standard_command(dlal.Looper.record, False),
-	'W': generate_standard_command(dlal.Looper.record, True),
-	'A': generate_standard_command(dlal.Looper.play  , False),
+	'A': generate_standard_command(dlal.Looper.record, True),
+	'W': generate_standard_command(dlal.Looper.play  , False),
 	'S': generate_standard_command(dlal.Looper.play  , True),
-	'Z': generate_standard_command(dlal.Looper.replay, False),
-	'X': generate_standard_command(dlal.Looper.replay, True),
+	'E': generate_standard_command(dlal.Looper.replay, False),
+	'D': generate_standard_command(dlal.Looper.replay, True),
 }
 
 def command(text):
@@ -57,5 +86,6 @@ def command(text):
 	if sense: commands[name]()
 for name in commands: looper.commander.register_command(name, command)
 
+#start
 looper.audio.start()
 atexit.register(lambda: looper.audio.finish())
