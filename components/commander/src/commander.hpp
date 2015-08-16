@@ -7,6 +7,10 @@
 #include <atomic>
 #include <vector>
 
+namespace dlal{
+	typedef void (*TextCallback)(char*);
+}
+
 extern "C"{
 	DLAL char* dlalCommanderCommand(
 		void* commander, void* component, const char* command, unsigned edgesToWait
@@ -22,10 +26,6 @@ extern "C"{
 
 	DLAL char* dlalCommanderDisconnect(
 		void* commander, void* input, void* output, unsigned edgesToWait
-	);
-
-	DLAL char* dlalCommanderSetCallback(
-		void* commander, dlal::TextCallback callback
 	);
 
 	DLAL char* dlalCommanderRegisterCommand(
@@ -58,7 +58,6 @@ class Commander:
 		void evaluate();
 		void customCommand(const std::string& name, dlal::TextCallback command);
 		Queue<Directive> _queue;
-		TextCallback _callback;
 	private:
 		void dispatch(const Directive&);
 		std::vector<Directive> _dequeued;

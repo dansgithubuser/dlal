@@ -1,4 +1,12 @@
-import ctypes, platform
+import ctypes, platform, atexit
+
+_port=9088
+_systems=0
+
+def set_port(port):
+	assert(_systems==0)
+	global _port
+	_port=port
 
 def load(name):
 	def upperfirst(s): return s[0].upper()+s[1:]
@@ -20,7 +28,9 @@ def connect(*args):
 
 _skeleton=load('skeleton')
 _skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
+_skeleton.dlalDyadInit.argtypes=[ctypes.c_int]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
+_skeleton.dlalDemolishSystem.restype=ctypes.c_char_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
 _skeleton.dlalCommand.restype=ctypes.c_char_p
 _skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
@@ -30,8 +40,18 @@ _skeleton.dlalConnect.restype=ctypes.c_char_p
 _skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
 
 class System:
-	def __init__(self): self.system=_skeleton.dlalBuildSystem()
-	def __del__(self): _skeleton.dlalDemolishSystem(self.system)
+	def __init__(self):
+		global _systems
+		if _systems==0: _skeleton.dlalDyadInit(_port)
+		_systems+=1
+		self.system=_skeleton.dlalBuildSystem()
+		assert(self.system)
+
+	def __del__(self):
+		report(_skeleton.dlalDemolishSystem(self.system))
+		global _systems
+		_systems-=1
+		if _systems==0: _skeleton.dlalDyadShutdown()
 
 	def add(self, *args, **kwargs):
 		slot=kwargs.get('slot', 0)

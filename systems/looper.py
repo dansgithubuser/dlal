@@ -7,7 +7,6 @@ track=0
 
 #looper
 looper=dlal.Looper()
-looper.commander.set_callback(dlal.report)
 
 #midi
 midi=dlal.Component('midi')
@@ -16,7 +15,6 @@ if len(ports): midi.open(ports[0])
 
 #network
 network=dlal.Component('network')
-network.open(9089)
 network.connect(looper.commander)
 looper.system.add(network)
 

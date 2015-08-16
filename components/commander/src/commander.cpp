@@ -46,12 +46,6 @@ char* dlalCommanderDisconnect(
 	return toCStr("");
 }
 
-char* dlalCommanderSetCallback(void* commander, dlal::TextCallback callback){
-	using namespace dlal;
-	toCommander(commander)->_callback=callback;
-	return toCStr("");
-}
-
 char* dlalCommanderRegisterCommand(
 	void* commander, const char* name, dlal::TextCallback command
 ){
@@ -88,7 +82,7 @@ Commander::Directive::Directive(
 ): _type(CONNECT), _a(&input), _b(&output), _edgesToWait(edgesToWait) {}
 
 Commander::Commander():
-	_queue(8), _callback(nullptr), _size(0), _period(0), _phase(0)
+	_queue(8), _size(0), _period(0), _phase(0)
 {
 	_dequeued.resize(256);
 	registerCommand("period", "<period in samples>", [this](std::stringstream& ss){
@@ -134,7 +128,6 @@ void Commander::evaluate(){
 	if(_phase<_period) return;
 	_phase-=_period;
 	//command
-	if(_callback) _callback(dlal::toCStr("edge"));
 	unsigned i=0;
 	while(i<_size){
 		--_dequeued[i]._edgesToWait;
@@ -175,7 +168,7 @@ void Commander::dispatch(const Directive& d){
 			result=d._a->disconnect(*d._b);
 			break;
 	}
-	if(_callback) _callback(dlal::toCStr(result));
+	_system->report(System::RC_IN_EVALUATION, result, this);
 }
 
 }//namespace dlal

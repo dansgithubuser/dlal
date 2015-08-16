@@ -53,7 +53,6 @@ file organization
 todo
 ----
 - better system user feedback
-	- system is dyad host, network is dyad server
 	- system is server that reports changes
 	- system visualizer interface
 - simple improvements

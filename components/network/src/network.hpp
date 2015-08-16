@@ -5,24 +5,18 @@
 #include <page.hpp>
 #include <queue.hpp>
 
-#include <vector>
-#include <thread>
-#include <mutex>
 #include <map>
 
 namespace dlal{
 
-class Network: public MultiOut, public SamplesPerEvaluationGetter{
+class Network: public MultiOut, public SamplesPerEvaluationGetter, public SystemGetter{
 	public:
 		Network();
-		~Network();
 		void evaluate();
 		void queue(const Page&);
 	private:
+		int _port;
 		Queue<Page> _queue;
-		bool _inited, _quit;
-		std::thread _thread;
-		std::mutex _mutex;
 		std::map<std::string, dlal::Page> _map;
 };
 

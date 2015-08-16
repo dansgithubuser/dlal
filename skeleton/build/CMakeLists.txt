@@ -1,4 +1,5 @@
 include(../../build/CMakeCommon.txt)
+include_directories("../deps/dyad/src")
 set(output Skeleton)
-set(src "../src/skeleton.cpp")
+set(src "../src/skeleton.cpp" "../deps/dyad/src/dyad.c")
 footer()

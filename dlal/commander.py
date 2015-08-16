@@ -12,11 +12,8 @@ class Commander(Component):
 		self.library.dlalCommanderConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 		self.library.dlalCommanderDisconnect.restype=ctypes.c_char_p
 		self.library.dlalCommanderDisconnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
-		self.library.dlalCommanderSetCallback.restype=ctypes.c_char_p
-		self.library.dlalCommanderSetCallback.argtypes=[ctypes.c_void_p, self.callback_type]
 		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_char_p
 		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, self.callback_type]
-		self.set_callback(report)
 		self.commands=[]
 
 	def queue_command(self, component, *args, **kwargs):
@@ -55,12 +52,6 @@ class Commander(Component):
 			))
 			if len(result): result+='\n'
 		return result
-
-	def set_callback(self, callback):
-		self.callback=self.callback_type(callback)
-		return report(
-			self.library.dlalCommanderSetCallback(self.component, self.callback)
-		)
 
 	def register_command(self, name, command):
 		command=self.callback_type(command)

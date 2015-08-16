@@ -1,6 +1,8 @@
 #ifndef DLAL_SKELETON_INCLUDED
 #define DLAL_SKELETON_INCLUDED
 
+#include <dyad.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -24,8 +26,10 @@ extern "C"{
 
 	//implemented by skeleton
 	DLAL void dlalDemolishComponent(void* component);
-	DLAL void* dlalBuildSystem();
-	DLAL void dlalDemolishSystem(void* system);
+	DLAL void dlalDyadInit();
+	DLAL void dlalDyadShutdown();
+	DLAL void* dlalBuildSystem(int port);
+	DLAL char* dlalDemolishSystem(void* system);
 	DLAL char* dlalCommand(void* component, const char* command);
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
 	DLAL char* dlalConnect(void* input, void* output);
@@ -34,7 +38,6 @@ extern "C"{
 
 namespace dlal{
 
-typedef void (*TextCallback)(char*);
 class Component;
 
 //cast to Component
@@ -52,19 +55,42 @@ void add(const float* audio, unsigned size, std::vector<Component*>&);
 //add audio to components that have audio
 void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
 
+//pause dyad and do something
+std::string dyadPauseAnd(std::function<std::string()>);
+
 class System{
 	public:
+		enum ReportContext{
+			RC_IN_EVALUATION, RC_IN_DYAD, RC_SENTINEL
+		};
+		System(int port);
+		~System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
 		void evaluate();
 		bool set(std::string variable, unsigned value);
 		bool get(std::string variable, unsigned* value=NULL);
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
+		std::string report(
+			ReportContext rc=RC_SENTINEL,
+			const std::string& s="",
+			const Component* reporter=NULL
+		);
+		dyad_Stream* dyadNewStream();
+		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
+		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
+		std::vector<dyad_Stream*> _clients;
+		std::vector<dyad_Stream*> _streams;
 	private:
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
 		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;
+		std::vector<std::string> _report[RC_SENTINEL];
+		std::function<dyad_Stream*()> _dyadNewStream;
+		std::function<void(dyad_Stream*, int event, dyad_Callback, void* userData)> _dyadAddListener;
+		std::function<int(dyad_Stream*, const char* host, int port, int backlog)> _dyadListenEx;
+		dyad_Stream* _server;
 };
 
 class Component{
