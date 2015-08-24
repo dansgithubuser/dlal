@@ -2,7 +2,6 @@
 #define DLAL_MIDI_INCLUDED
 
 #include <skeleton.hpp>
-#include <queue.hpp>
 
 #include <RtMidi.h>
 

@@ -1,6 +1,8 @@
 #ifndef DLAL_SKELETON_INCLUDED
 #define DLAL_SKELETON_INCLUDED
 
+#include "queue.hpp"
+
 #include <dyad.h>
 
 #include <cstdint>

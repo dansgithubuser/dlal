@@ -2,7 +2,6 @@
 #define DLAL_COMMANDER_INCLUDED
 
 #include <skeleton.hpp>
-#include <queue.hpp>
 
 #include <atomic>
 #include <vector>
