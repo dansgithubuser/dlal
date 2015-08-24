@@ -26,6 +26,7 @@ void dlalDyadInit(){
 	dyad_atPanic(atPanic);
 	dyad_init();
 	dyad_setUpdateTimeout(0.01);
+	dyad_setTickInterval(0.01);
 	dyadDone=false;
 	dyadThread=std::thread([](){
 		while(!dyadDone){
@@ -115,6 +116,16 @@ std::string dyadPauseAnd(std::function<std::string()> f){
 }
 
 //=====System=====//
+static std::string pointerToString(const void* pointer){
+	std::stringstream ss;
+	ss<<(uint64_t)pointer;
+	return ss.str();
+}
+
+static std::string componentToStr(const Component* component){
+	return pointerToString(component);
+}
+
 static void onDestroyed(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->report(System::RC_IN_DYAD, "error: server destroyed");
@@ -128,9 +139,55 @@ static void onError(dyad_Event* e){
 static void onAccept(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->_clients.push_back(e->remote);
+	std::stringstream ss;
+	for(auto i: system->_reportComponents) ss<<"add "<<i<<" ";
+	dyad_write(e->remote, ss.str().data(), ss.str().size());
 }
 
-System::System(int port){
+static void onTick(dyad_Event* e){
+	System* system=(System*)e->udata;
+	std::string s;
+	std::stringstream ss;
+	while(system->_reportQueue.read(s, true)){
+		ss<<s<<" ";
+		std::stringstream tt(s);
+		std::string t;
+		tt>>t;
+		if(t=="add"){
+			tt>>t;
+			system->_reportComponents.push_back(t);
+		}
+		else if(t=="connect"){
+			tt>>t;
+			std::string u;
+			tt>>u;
+			system->_reportConnections.push_back(
+				std::pair<std::string, std::string>(t, u)
+			);
+		}
+		else if(t=="disconnect"){
+			tt>>t;
+			std::string u;
+			tt>>u;
+			for(unsigned i=0; i<system->_reportConnections.size(); ++i)
+				if(
+					system->_reportConnections[i].first==t
+					&&
+					system->_reportConnections[i].second==u
+				){
+					system->_reportConnections.erase(
+						system->_reportConnections.begin()+i
+					);
+					break;
+				}
+		}
+	}
+	if(ss.str().size())
+		for(auto i: system->_clients)
+			dyad_write(i, ss.str().data(), ss.str().size());
+}
+
+System::System(int port): _reportQueue(8){
 	_dyadNewStream=dyad_newStream;
 	_dyadAddListener=dyad_addListener;
 	_dyadListenEx=dyad_listenEx;
@@ -140,6 +197,7 @@ System::System(int port){
 		dyad_addListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
 		dyad_addListener(_server, DYAD_EVENT_ERROR  , onError    , this);
 		dyad_addListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
+		dyad_addListener(_server, DYAD_EVENT_TICK   , onTick     , this);
 		if(dyad_listenEx(_server, "0.0.0.0", port, 511)<0)
 			return "error: couldn't listen";
 		return "";
@@ -167,6 +225,7 @@ std::string System::add(Component& component, unsigned slot, bool queue){
 		_componentsToAdd[slot].push_back(&component);
 	}
 	else _components[slot].push_back(&component);
+	_reportQueue.write("add "+componentToStr(&component));
 	return "";
 }
 
@@ -176,6 +235,7 @@ std::string System::remove(Component& component, bool queue){
 		if(j!=i.end()){
 			if(queue) _componentsToRemove.push_back(&component);
 			else i.erase(j);
+			_reportQueue.write("remove "+componentToStr(&component));
 			return "";
 		}
 	}
@@ -207,7 +267,7 @@ std::string System::report(
 ){
 	if(s.size()){
 		std::stringstream ss;
-		ss<<(uint64_t)reporter<<": "<<s;
+		ss<<pointerToString(reporter)<<": "<<s;
 		_report[(unsigned)rc].push_back(ss.str());
 		return dyadPauseAnd([&]()->std::string{
 			std::vector<uint8_t> bytes;
@@ -309,27 +369,6 @@ void Component::registerCommand(
 
 void Component::addJoinAction(JoinAction j){ _joinActions.push_back(j); }
 
-//=====MultiOut=====//
-MultiOut::MultiOut(): _checkAudio(false), _checkMidi(false) {}
-
-std::string MultiOut::connect(Component& output){
-	if(_checkAudio&&!output.hasAudio())
-		return "error: output must have audio";
-	if(_checkMidi&&!output.midiAccepted())
-		return "error: output must accept midi";
-	if(std::find(_outputs.begin(), _outputs.end(), &output)!=_outputs.end())
-		return "error: output already connected";
-	_outputs.push_back(&output);
-	return "";
-}
-
-std::string MultiOut::disconnect(Component& output){
-	auto i=std::find(_outputs.begin(), _outputs.end(), &output);
-	if(i==_outputs.end()) return "error: component was not connected";
-	_outputs.erase(i);
-	return "";
-}
-
 //=====SamplesPerEvaluationGetter=====//
 SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
 	addJoinAction([this](System& system){
@@ -354,6 +393,41 @@ SystemGetter::SystemGetter(): _system(nullptr) {
 		_system=&system;
 		return "";
 	});
+}
+
+//=====MultiOut=====//
+MultiOut::MultiOut(): _checkAudio(false), _checkMidi(false) {
+	addJoinAction([this](System& system){
+		std::stringstream ss;
+		for(auto i: _outputs)
+			ss<<"connect "+componentToStr(this)+" "+componentToStr(i)<<" ";
+		system._reportQueue.write(ss.str());
+		return "";
+	});
+}
+
+std::string MultiOut::connect(Component& output){
+	if(_checkAudio&&!output.hasAudio())
+		return "error: output must have audio";
+	if(_checkMidi&&!output.midiAccepted())
+		return "error: output must accept midi";
+	if(std::find(_outputs.begin(), _outputs.end(), &output)!=_outputs.end())
+		return "error: output already connected";
+	_outputs.push_back(&output);
+	if(_system) _system->_reportQueue.write(
+		"connect "+componentToStr(this)+" "+componentToStr(&output)
+	);
+	return "";
+}
+
+std::string MultiOut::disconnect(Component& output){
+	auto i=std::find(_outputs.begin(), _outputs.end(), &output);
+	if(i==_outputs.end()) return "error: component was not connected";
+	_outputs.erase(i);
+	if(_system) _system->_reportQueue.write(
+		"disconnect "+componentToStr(this)+" "+componentToStr(&output)
+	);
+	return "";
 }
 
 }//namespace dlal

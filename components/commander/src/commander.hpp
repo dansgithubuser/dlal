@@ -34,9 +34,7 @@ extern "C"{
 
 namespace dlal{
 
-class Commander:
-	public MultiOut, public SamplesPerEvaluationGetter, public SystemGetter
-{
+class Commander: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		struct Directive{
 			enum Type{ COMMAND, COMMAND_INDEXED, ADD, CONNECT, DISCONNECT };

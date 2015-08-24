@@ -53,7 +53,6 @@ file organization
 todo
 ----
 - better system user feedback
-	- system is server that reports changes
 	- system visualizer interface
 - simple improvements
 	- fm reset all amplitudes when note is done

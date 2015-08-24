@@ -8,7 +8,7 @@
 
 namespace dlal{
 
-class Network: public MultiOut, public SamplesPerEvaluationGetter, public SystemGetter{
+class Network: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Network();
 		void evaluate();

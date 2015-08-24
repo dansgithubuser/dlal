@@ -83,6 +83,9 @@ class System{
 		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
 		std::vector<dyad_Stream*> _clients;
 		std::vector<dyad_Stream*> _streams;
+		Queue<std::string> _reportQueue;
+		std::vector<std::string> _reportComponents;
+		std::vector<std::pair<std::string, std::string>> _reportConnections;
 	private:
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
@@ -134,17 +137,6 @@ class Component{
 		std::vector<JoinAction> _joinActions;
 };
 
-class MultiOut: public virtual Component{
-	public:
-		MultiOut();
-		virtual ~MultiOut(){}
-		virtual std::string connect(Component& output);
-		virtual std::string disconnect(Component& output);
-		bool _checkAudio, _checkMidi;
-	protected:
-		std::vector<Component*> _outputs;
-};
-
 class SamplesPerEvaluationGetter: public virtual Component{
 	public:
 		SamplesPerEvaluationGetter();
@@ -165,6 +157,17 @@ class SystemGetter: public virtual Component{
 	public:
 		SystemGetter();
 		System* _system;
+};
+
+class MultiOut: public SystemGetter{
+	public:
+		MultiOut();
+		virtual ~MultiOut(){}
+		virtual std::string connect(Component& output);
+		virtual std::string disconnect(Component& output);
+		bool _checkAudio, _checkMidi;
+	protected:
+		std::vector<Component*> _outputs;
 };
 
 }//namespace dlal

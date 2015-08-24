@@ -7,7 +7,7 @@
 
 namespace dlal{
 
-class Audio: public MultiOut, public SystemGetter{
+class Audio: public MultiOut{
 	public:
 		Audio();
 		~Audio(){ if(_started) finish(); }
