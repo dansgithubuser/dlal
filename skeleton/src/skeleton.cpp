@@ -82,7 +82,7 @@ char* dlalDisconnect(void* input, void* output){
 
 namespace dlal{
 
-Component* toComponent(void* p){ return (dlal::Component*)p; }
+Component* toComponent(void* p){ return (Component*)p; }
 
 char* toCStr(const std::string& s){
 	char* result=(char*)malloc(s.size()+1);
@@ -116,17 +116,17 @@ std::string dyadPauseAnd(std::function<std::string()> f){
 
 //=====System=====//
 static void onDestroyed(dyad_Event* e){
-	dlal::System* system=((dlal::System*)e->udata);
+	System* system=(System*)e->udata;
 	system->report(System::RC_IN_DYAD, "error: server destroyed");
 }
 
 static void onError(dyad_Event* e){
-	dlal::System* system=((dlal::System*)e->udata);
+	System* system=(System*)e->udata;
 	system->report(System::RC_IN_DYAD, "error: "+std::string(e->msg));
 }
 
 static void onAccept(dyad_Event* e){
-	dlal::System* system=((dlal::System*)e->udata);
+	System* system=(System*)e->udata;
 	system->_clients.push_back(e->remote);
 }
 
