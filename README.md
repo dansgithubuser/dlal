@@ -52,9 +52,8 @@ file organization
 
 todo
 ----
-- better system user feedback
-	- system visualizer interface
 - simple improvements
+	- go.py start interfaces
 	- fm reset all amplitudes when note is done
 	- memory leak check
 	- midi split instrument

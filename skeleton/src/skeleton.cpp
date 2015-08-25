@@ -141,6 +141,7 @@ static void onAccept(dyad_Event* e){
 	system->_clients.push_back(e->remote);
 	std::stringstream ss;
 	for(auto i: system->_reportComponents) ss<<"add "<<i<<" ";
+	for(auto i: system->_reportConnections) ss<<"connect "<<i.first<<" "<<i.second<<" ";
 	dyad_write(e->remote, ss.str().data(), ss.str().size());
 }
 
@@ -401,7 +402,7 @@ MultiOut::MultiOut(): _checkAudio(false), _checkMidi(false) {
 		std::stringstream ss;
 		for(auto i: _outputs)
 			ss<<"connect "+componentToStr(this)+" "+componentToStr(i)<<" ";
-		system._reportQueue.write(ss.str());
+		if(ss.str().size()) system._reportQueue.write(ss.str());
 		return "";
 	});
 }

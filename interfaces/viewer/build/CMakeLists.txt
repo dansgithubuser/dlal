@@ -21,25 +21,24 @@ endif()
 
 #=====include=====#
 include_directories(
-		"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src"
-		"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src"
-		"${CMAKE_CURRENT_SOURCE_DIR}/../src"
-		"${sfmlDir}/include"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../src"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../deps"
+	"${sfmlDir}/include"
 )
 
 #=====source=====#
 set(
 	src
-	"${CMAKE_CURRENT_SOURCE_DIR}/../src/dyad.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../src/main.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../src/softboard.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../src/viewer.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src/skeleton.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src/page.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src/dyad.c"
 )
 
 #=====products=====#
-set(output Softboard)
+set(output Viewer)
 add_executable(${output} ${src})
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
