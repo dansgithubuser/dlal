@@ -1,15 +1,19 @@
 #!/usr/bin/python
 
-#imports
-import os, argparse, subprocess
+import os, subprocess
 
 #args
+import argparse
 parser=argparse.ArgumentParser(description='run a system')
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--system', '-s', help='which system to run')
+parser.add_argument('--interface', '-i', action='append', help='interface:port')
 args=parser.parse_args()
+
+#helpers
+def shell(*args): p=subprocess.check_call(' '.join(args), shell=True)
 
 #current directory
 file_path=os.path.split(os.path.realpath(__file__))[0]
@@ -27,11 +31,6 @@ config='Release'
 if args.debug: config='Debug'
 
 #build
-def shell(*args):
-	cmd=' '.join(args)
-	p=subprocess.Popen(cmd, shell=True)
-	if p.wait(): raise subprocess.CalledProcessError(p.returncode, cmd)
-
 if not args.run_only:
 	if not os.path.exists(built_rel_path): os.makedirs(built_rel_path)
 	os.chdir(built_rel_path)
@@ -80,6 +79,29 @@ if args.test:
 		print('TESTS HAVE FAILED!')
 		sys.exit(-1)
 	print('ALL TESTS SUCCEEDED')
+
+#interfaces
+if args.interface:
+	def find_binary(name):
+		for root, dirs, files in os.walk('.'):
+			for file in files:
+				import re
+				if re.match(name.lower()+r'(\.exe)?$', file.lower()):
+					return os.path.join(root, file)
+	if not args.run_only:
+		for i in args.interface:
+			name, port=i.split(':')
+			os.chdir(os.path.join('interfaces', name, 'build'))
+			shell('cmake .')
+			shell('cmake --build .')
+			os.chdir(file_path)
+	for i in args.interface:
+		name, port=i.split(':')
+		os.chdir(os.path.join('interfaces', name, 'build'))
+		p=subprocess.Popen([find_binary(name), '127.0.0.1', port])
+		import atexit
+		atexit.register(lambda: p.kill())
+		os.chdir(file_path)
 
 #run
 if args.system:
