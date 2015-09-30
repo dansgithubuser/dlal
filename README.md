@@ -52,8 +52,17 @@ file organization
 
 todo
 ----
+- looper
+	- set track and wait as System::_variables
+	- viewer
+		- display System::_variables
+		- component dispay
+			- commander: custom command listing
+				- commands displayed on connections as decaying brightness
+			- containers: progress through loop
+				- period base class
+	- looper: quantization
 - simple improvements
-	- go.py start interfaces
 	- fm reset all amplitudes when note is done
 	- memory leak check
 	- midi split instrument

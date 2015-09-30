@@ -94,15 +94,32 @@ void Viewer::process(std::string s){
 			ss>>d;
 			_nameToComponent[s]._connections.erase(&_nameToComponent[d]);
 		}
+		else if(s=="variable"){
+			ss>>s;
+			std::string v;
+			ss>>v;
+			_variables[s]=v;
+		}
 	}
 }
 
 void Viewer::render(sf::RenderWindow& w){
+	//relayout if resized
 	if(w.getSize().x!=_w||w.getSize().y!=_h){
 		_w=w.getSize().x;
 		_h=w.getSize().y;
 		layout();
 	}
+	//variables
+	float y=0.0f;
+	for(auto i: _variables){
+		std::string s=i.first+": "+i.second;
+		sf::Text t(s.c_str(), _font, 12);
+		t.setPosition(6.0f, y);
+		w.draw(t);
+		y+=18.0f;
+	}
+	//components
 	sf::VertexArray v(sf::Lines);
 	for(auto i: _nameToComponent) i.second.render(v);
 	w.draw(v);

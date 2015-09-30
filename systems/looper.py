@@ -7,6 +7,8 @@ track=0
 
 #looper
 looper=dlal.Looper()
+looper.system.set('track', str(track))
+looper.system.set('wait', str(edges_to_wait))
 
 #midi
 midi=dlal.Component('midi')
@@ -34,11 +36,15 @@ def command_add_midi():
 
 def track_next():
 	global track
-	if track+1<len(tracks): track+=1
+	if track+1<len(tracks):
+		track+=1
+		looper.system.set('track', str(track))
 
 def track_prev():
 	global track
-	if track.get()>0: track-=1
+	if track>0:
+		track-=1
+		looper.system.set('track', str(track))
 
 def uncrop():
 	looper.commander.queue_command(
@@ -51,10 +57,13 @@ def uncrop():
 def wait_more():
 	global edges_to_wait
 	edges_to_wait+=1
+	looper.system.set('wait', str(edges_to_wait))
 
 def wait_less():
 	global edges_to_wait
-	if edges_to_wait.get()>0: edges_to_wait-=1
+	if edges_to_wait>0:
+		edges_to_wait-=1
+		looper.system.set('wait', str(edges_to_wait))
 
 def generate_standard_command(function, sense):
 	def command(): function(looper, tracks[track], sense, edges_to_wait)

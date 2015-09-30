@@ -32,6 +32,7 @@ extern "C"{
 	DLAL void dlalDyadShutdown();
 	DLAL void* dlalBuildSystem(int port);
 	DLAL char* dlalDemolishSystem(void* system);
+	DLAL void dlalSetVariable(void* system, const char* name, const char* value);
 	DLAL char* dlalCommand(void* component, const char* command);
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
 	DLAL char* dlalConnect(void* input, void* output);
@@ -70,8 +71,6 @@ class System{
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
 		void evaluate();
-		bool set(std::string variable, unsigned value);
-		bool get(std::string variable, unsigned* value=NULL);
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string report(
 			ReportContext rc=RC_SENTINEL,
@@ -84,11 +83,10 @@ class System{
 		std::vector<dyad_Stream*> _clients;
 		std::vector<dyad_Stream*> _streams;
 		Queue<std::string> _reportQueue;
-		std::vector<std::string> _reportComponents;
 		std::vector<std::pair<std::string, std::string>> _reportConnections;
-	private:
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
+	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;
 		std::vector<std::string> _report[RC_SENTINEL];

@@ -26,5 +26,6 @@ class Viewer{
 		void layout();
 		sf::Font _font;
 		std::map<std::string, Component> _nameToComponent;
+		std::map<std::string, std::string> _variables;
 		unsigned _w, _h;
 };

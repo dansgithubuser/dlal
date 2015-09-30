@@ -32,6 +32,7 @@ _skeleton.dlalDyadInit.argtypes=[ctypes.c_int]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
 _skeleton.dlalDemolishSystem.restype=ctypes.c_char_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
+_skeleton.dlalSetVariable.argtypes=[ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 _skeleton.dlalCommand.restype=ctypes.c_char_p
 _skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
 _skeleton.dlalAdd.restype=ctypes.c_char_p
@@ -61,6 +62,11 @@ class System:
 				result+=report(_skeleton.dlalAdd(self.system, c.component, slot))
 			if len(result): result+='\n';
 		return result
+
+	def set(self, name, value):
+		name=str.encode(name, 'utf-8')
+		value=str.encode(value, 'utf-8')
+		_skeleton.dlalSetVariable(self.system, name, value)
 
 class Component:
 	_libraries={}

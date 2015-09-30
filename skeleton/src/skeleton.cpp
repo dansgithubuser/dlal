@@ -61,6 +61,12 @@ char* dlalDemolishSystem(void* system){
 	return toCStr(result);
 }
 
+void dlalSetVariable(void* system, const char* name, const char* value){
+	dlal::System* s=(dlal::System*)system;
+	s->_variables[name]=value;
+	s->_reportQueue.write((std::string)"variable "+name+" "+value);
+}
+
 char* dlalCommand(void* component, const char* command){
 	using namespace dlal;
 	return toCStr(toComponent(component)->command(command));
@@ -140,8 +146,12 @@ static void onAccept(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->_clients.push_back(e->remote);
 	std::stringstream ss;
-	for(auto i: system->_reportComponents) ss<<"add "<<i<<" ";
-	for(auto i: system->_reportConnections) ss<<"connect "<<i.first<<" "<<i.second<<" ";
+	for(auto i: system->_components) for(auto j: i)
+		ss<<"add "<<componentToStr(j)<<" ";
+	for(auto i: system->_reportConnections)
+		ss<<"connect "<<i.first<<" "<<i.second<<" ";
+	for(auto i: system->_variables)
+		ss<<"variable "<<i.first<<" "<<i.second<<" ";
 	dyad_write(e->remote, ss.str().data(), ss.str().size());
 }
 
@@ -154,11 +164,7 @@ static void onTick(dyad_Event* e){
 		std::stringstream tt(s);
 		std::string t;
 		tt>>t;
-		if(t=="add"){
-			tt>>t;
-			system->_reportComponents.push_back(t);
-		}
-		else if(t=="connect"){
+		if(t=="connect"){
 			tt>>t;
 			std::string u;
 			tt>>u;
@@ -257,10 +263,16 @@ void System::evaluate(){
 	for(auto i: _components) for(auto j: i) j->evaluate();
 }
 
-bool System::set(std::string variable, unsigned value){
-	bool result=_variables.count(variable)!=0;
-	_variables[variable]=std::to_string(value);
-	return result;
+std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
+	if(!sampleRate||!log2SamplesPerCallback)
+		return "error: must set sample rate and log2 samples per callback";
+	if(_variables.count("sampleRate"))
+		return "error: system already has sampleRate";
+	if(_variables.count("samplesPerEvaluation"))
+		return "error: system already has samplesPerEvaluation";
+	_variables["sampleRate"]=std::to_string(sampleRate);
+	_variables["samplesPerEvaluation"]=std::to_string(1<<log2SamplesPerCallback);
+	return "";
 }
 
 std::string System::report(
@@ -316,24 +328,6 @@ int System::dyadListenEx(
 	return _dyadListenEx(stream, host, port, backlog);
 }
 
-bool System::get(std::string variable, unsigned* value){
-	if(!_variables.count(variable)) return false;
-	if(value) *value=std::atoi(_variables[variable].c_str());
-	return true;
-}
-
-std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
-	if(!sampleRate||!log2SamplesPerCallback)
-		return "error: must set sample rate and log2 samples per callback";
-	if(get("sampleRate"))
-		return "error: system already has sampleRate";
-	if(get("samplesPerEvaluation"))
-		return "error: system already has samplesPerEvaluation";
-	set("sampleRate", sampleRate);
-	set("samplesPerEvaluation", 1<<log2SamplesPerCallback);
-	return "";
-}
-
 //=====Component=====//
 Component::Component(){
 	registerCommand("help", "", [this](std::stringstream& ss){
@@ -373,8 +367,9 @@ void Component::addJoinAction(JoinAction j){ _joinActions.push_back(j); }
 //=====SamplesPerEvaluationGetter=====//
 SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
 	addJoinAction([this](System& system){
-		if(!system.get("samplesPerEvaluation", &_samplesPerEvaluation))
-		return "error: system does not have samplesPerEvaluation";
+		if(!system._variables.count("samplesPerEvaluation"))
+			return "error: system does not have samplesPerEvaluation";
+		_samplesPerEvaluation=std::stoi(system._variables["samplesPerEvaluation"]);
 		return "";
 	});
 }
@@ -382,8 +377,9 @@ SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
 //=====SampleRateGetter=====//
 SampleRateGetter::SampleRateGetter(){
 	addJoinAction([this](System& system){
-		if(!system.get("sampleRate", &_sampleRate))
-		return "error: system does not have sampleRate";
+		if(!system._variables.count("sampleRate"))
+			return "error: system does not have sampleRate";
+		_sampleRate=std::stoi(system._variables["sampleRate"]);
 		return "";
 	});
 }
