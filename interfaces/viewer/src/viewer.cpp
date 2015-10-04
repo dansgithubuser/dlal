@@ -1,6 +1,6 @@
 #include "viewer.hpp"
 
-#include <sansation.hpp>
+#include <courierCode.hpp>
 
 #include <sstream>
 #include <algorithm>
@@ -68,7 +68,7 @@ void Component::render(sf::VertexArray& v){
 }
 
 Viewer::Viewer(): _w(640), _h(480){
-	if(!_font.loadFromMemory(sansation, sansationSize))
+	if(!_font.loadFromMemory(courierCode, courierCodeSize))
 		throw std::runtime_error("couldn't load font");
 }
 
