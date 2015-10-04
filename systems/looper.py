@@ -93,6 +93,8 @@ def command(text):
 	if sense: commands[name]()
 for name in commands: looper.commander.register_command(name, command)
 
-#start
-looper.audio.start()
-atexit.register(lambda: looper.audio.finish())
+def go():
+	looper.audio.start()
+	atexit.register(lambda: looper.audio.finish())
+
+print('use the go function to start audio processing')
