@@ -11,6 +11,7 @@ namespace dlal{
 class Liner: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Liner();
+		std::string type() const { return "liner"; }
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }

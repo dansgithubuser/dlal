@@ -12,6 +12,7 @@ class Fileo: public SamplesPerEvaluationGetter{
 	public:
 		Fileo();
 		~Fileo();
+		std::string type() const { return "fileo"; }
 		std::string command(const std::string&);
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);

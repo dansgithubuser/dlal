@@ -10,6 +10,7 @@ class Sonic:
 {
 	public:
 		Sonic();
+		std::string type() const { return "fm"; }
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }

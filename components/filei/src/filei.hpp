@@ -9,6 +9,7 @@ namespace dlal{
 class Filei: public MultiOut, SamplesPerEvaluationGetter{
 	public:
 		Filei();
+		std::string type() const { return "filei"; }
 		void evaluate();
 	private:
 		uint64_t _evaluation;

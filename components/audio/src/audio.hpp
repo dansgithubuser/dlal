@@ -11,6 +11,7 @@ class Audio: public MultiOut{
 	public:
 		Audio();
 		~Audio(){ if(_started) finish(); }
+		std::string type() const { return "audio"; }
 		void evaluate();
 		float* audio(){ return _output; }
 		bool hasAudio(){ return true; }

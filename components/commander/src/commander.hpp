@@ -51,6 +51,7 @@ class Commander: public MultiOut, public SamplesPerEvaluationGetter{
 			unsigned _slot, _edgesToWait, _output;
 		};
 		Commander();
+		std::string type() const { return "commander"; }
 		void* derived(){ return this; }
 		void evaluate();
 		void customCommand(const std::string& name, dlal::TextCallback command);

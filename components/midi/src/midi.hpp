@@ -11,6 +11,7 @@ class Midi: public MultiOut{
 	public:
 		Midi();
 		~Midi();
+		std::string type() const { return "midi"; }
 		void evaluate();
 		void queue(const std::vector<uint8_t>&);
 	private:

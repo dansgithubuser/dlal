@@ -147,7 +147,7 @@ static void onAccept(dyad_Event* e){
 	system->_clients.push_back(e->remote);
 	std::stringstream ss;
 	for(auto i: system->_components) for(auto j: i)
-		ss<<"add "<<componentToStr(j)<<" ";
+		ss<<"add "<<componentToStr(j)<<" "<<j->type()<<" ";
 	for(auto i: system->_reportConnections)
 		ss<<"connect "<<i.first<<" "<<i.second<<" ";
 	for(auto i: system->_variables)
@@ -232,7 +232,7 @@ std::string System::add(Component& component, unsigned slot, bool queue){
 		_componentsToAdd[slot].push_back(&component);
 	}
 	else _components[slot].push_back(&component);
-	_reportQueue.write("add "+componentToStr(&component));
+	_reportQueue.write("add "+componentToStr(&component)+" "+component.type());
 	return "";
 }
 

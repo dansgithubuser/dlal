@@ -11,6 +11,7 @@ namespace dlal{
 class Network: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Network();
+		std::string type() const { return "network"; }
 		void evaluate();
 		void queue(const Page&);
 	private:

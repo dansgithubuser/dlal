@@ -5,94 +5,143 @@
 #include <sstream>
 #include <algorithm>
 
-const int S=8;
+static const int S=8;
 
-sf::Vector2f vector(int x, int y){ return sf::Vector2f((float)x, (float)y); }
+static const sf::Color colorComponent(0, 128, 0);
+static const sf::Color colorForward(0, 64, 64);
+static const sf::Color colorNormal(0, 64, 0);
+static const sf::Color colorBackward(64, 64, 0);
+
+static sf::Vertex vertex(int x, int y, const sf::Color& color){
+	return sf::Vertex(sf::Vector2f((float)x, (float)y), color);
+}
+
+static void stripToLines(
+	std::vector<sf::Vertex>& u, sf::VertexArray& v
+){
+	if(!u.size()) return;
+	for(unsigned i=0; i<u.size()-1; ++i){
+		v.append(u[i+0]);
+		v.append(u[i+1]);
+	}
+	u.clear();
+}
 
 Component::Component(){}
 
-Component::Component(std::string name): _name(name) {}
+Component::Component(std::string name, std::string type): _name(name) {
+	if(type=="audio") _type=AUDIO;
+	else if(type=="buffer") _type=BUFFER;
+	else if(type=="commander") _type=COMMANDER;
+	else if(type=="liner") _type=LINER;
+	else if(type=="midi") _type=MIDI;
+	else if(type=="network") _type=NETWORK;
+	else _type=OTHER;
+}
 
-void Component::render(sf::VertexArray& v){
-	//self
-	v.append(sf::Vertex(vector(_lX+S, _lY+S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX-S, _lY+S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX-S, _lY+S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX-S, _lY-S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX-S, _lY-S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX+S, _lY-S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX+S, _lY-S), sf::Color::Blue));
-	v.append(sf::Vertex(vector(_lX+S, _lY+S), sf::Color::Blue));
-	//connections
-	for(auto i: _connections){
-		if(i->_lY>_lY){
-			v.append(sf::Vertex(
-				vector(_lX, _lY+S),
-				sf::Color::Red
-			));
-			v.append(sf::Vertex(
-				vector(i->_lX, i->_lY-S),
-				sf::Color::Green
-			));
-		}
-		else{
-			const unsigned POINTS=6;
-			int dx=i->_lX>_lX?S:-S;
-			int ex=i->_lX==_lX?dx:-dx;
-			int points[POINTS*2]={
-				_lX, _lY+S,
-				_lX, _lY+S*2,
-				_lX+2*dx, _lY+S*2,
-				_lX+2*dx, i->_lY-2*S,
-				i->_lX+ex, i->_lY-2*S,
-				i->_lX   , i->_lY-S
-			};
-			for(unsigned j=0; j<POINTS-1; ++j){
-				v.append(sf::Vertex(vector(points[2*(j+0)], points[2*(j+0)+1]),
-					sf::Color(
-						255-255*(j+0)/(POINTS-1),
-						000+255*(j+0)/(POINTS-1),
-						0
-					)
-				));
-				v.append(sf::Vertex(vector(points[2*(j+1)], points[2*(j+1)+1]),
-					sf::Color(
-						255-255*(j+1)/(POINTS-1),
-						000+255*(j+1)/(POINTS-1),
-						0
-					)
-				));
-			}
-		}
+static int decode(char c){
+	switch(c){
+		case '-': return -S;
+		case '<': return -S/2;
+		case '=': return 0;
+		case '>': return S/2;
+		case '+': return S;
+		default: break;
+	}
+	return 0;
+}
+
+static void sketch(std::vector<sf::Vertex>& v, const char* s, int x, int y){
+	unsigned i=0;
+	while(s[i]!='\0'&&s[i+1]!='\0'){
+		v.push_back(vertex(x+decode(s[i]), y+decode(s[i+1]), colorComponent));
+		i+=2;
 	}
 }
 
-Viewer::Viewer(): _w(640), _h(480){
+void Component::render(sf::VertexArray& v){
+	//self
+	std::vector<sf::Vertex> u;
+	sketch(u, "++-+--+-++", _x, _y);
+	stripToLines(u, v);
+	switch(_type){
+		case AUDIO: sketch(u, "=++==--==+", _x, _y); break;
+		case BUFFER: sketch(u, "-<+<+>->", _x, _y); break;
+		case COMMANDER: sketch(u, "--+++--+", _x, _y); break;
+		case LINER: sketch(u, "-=+=", _x, _y); break;
+		case MIDI: sketch(u, "--=++-", _x, _y); break;
+		case NETWORK: sketch(u, "--++", _x, _y); break;
+		default: break;
+	}
+	stripToLines(u, v);
+	//connections
+	for(auto& i: _connections) if(i._on){
+		auto& dx=i._component->_x;
+		auto& dy=i._component->_y;
+		u.push_back(vertex    (_x    , _y+  S, colorNormal));//source
+		if(dy>_y){//destination below
+			u.push_back(vertex(_x-  S, _y+2*S, colorForward));//diagonal
+			u.push_back(vertex(_x-  S, dy-3*S, colorForward));//drop to just above destination
+			u.push_back(vertex(_x    , dy-2*S, colorNormal));//diagonal
+			u.push_back(vertex(dx    , dy-2*S, colorNormal));//align horizontally
+		}
+		else{
+			u.push_back(vertex  (_x+  S, _y+2*S, colorNormal));//diagonal
+			u.push_back(vertex  (_x+2*S, _y+  S, colorBackward));//diagonal
+			u.push_back(vertex  (_x+2*S, dy-  S, colorBackward));//align vertically
+			u.push_back(vertex  (_x+  S, dy-2*S, colorNormal));//diagonal
+			u.push_back(vertex  (dx    , dy-2*S, colorNormal));//align horizontally
+		}
+		u.push_back(vertex    (dx    , dy-  S, colorNormal));//destination
+		stripToLines(u, v);
+	}
+}
+
+Viewer::Viewer(): _w(0), _h(0) {
 	if(!_font.loadFromMemory(courierCode, courierCodeSize))
 		throw std::runtime_error("couldn't load font");
 }
 
 void Viewer::process(std::string s){
+	auto connect=[this](std::string s, std::string d){
+		auto i=_nameToComponent[s]._connections.find(_nameToComponent[d]);
+		if(i!=_nameToComponent[s]._connections.end()) i->_on=true;
+		else _nameToComponent[s]._connections.insert(_nameToComponent[d]);
+	};
 	std::stringstream ss(s);
 	while(ss>>s){
 		if(s=="add"){
 			ss>>s;
-			_nameToComponent[s]=Component(s);
-			layout();
+			std::string t;
+			ss>>t;
+			if(!_nameToComponent.count(s)){
+				_nameToComponent[s]=Component(s, t);
+				for(unsigned i=0; i<_pendingConnections.size(); /*nothing*/){
+					if(_nameToComponent.count(_pendingConnections[i].first)&&_nameToComponent.count(_pendingConnections[i].second)){
+						connect(_pendingConnections[i].first, _pendingConnections[i].second);
+						_pendingConnections[i]=_pendingConnections.back();
+						_pendingConnections.pop_back();
+					}
+					else ++i;
+				}
+				layout();
+			}
 		}
 		else if(s=="connect"){
 			ss>>s;
 			std::string d;
 			ss>>d;
-			_nameToComponent[s]._connections.insert(&_nameToComponent[d]);
-			_nameToComponent[s]._lKnownConnections.insert(&_nameToComponent[d]);
-			layout();
+			if(_nameToComponent.count(s)&&_nameToComponent.count(d)){
+				connect(s, d);
+				layout();
+			}
+			else _pendingConnections.push_back(std::pair<std::string, std::string>(s, d));
 		}
 		else if(s=="disconnect"){
 			ss>>s;
 			std::string d;
 			ss>>d;
-			_nameToComponent[s]._connections.erase(&_nameToComponent[d]);
+			_nameToComponent[s]._connections.find(_nameToComponent[d])->_on=false;
 		}
 		else if(s=="variable"){
 			ss>>s;
@@ -103,97 +152,134 @@ void Viewer::process(std::string s){
 	}
 }
 
-void Viewer::render(sf::RenderWindow& w){
-	//relayout if resized
-	if(w.getSize().x!=_w||w.getSize().y!=_h){
-		_w=w.getSize().x;
-		_h=w.getSize().y;
-		layout();
-	}
+void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	//variables
 	float y=0.0f;
 	for(auto i: _variables){
 		std::string s=i.first+": "+i.second;
 		sf::Text t(s.c_str(), _font, 12);
 		t.setPosition(6.0f, y);
-		w.draw(t);
+		wt.draw(t);
 		y+=18.0f;
+	}
+	//relayout if resized
+	if(wv.getSize().x!=_w||wv.getSize().y!=_h){
+		_w=wv.getSize().x;
+		_h=wv.getSize().y;
+		layout();
 	}
 	//components
 	sf::VertexArray v(sf::Lines);
 	for(auto i: _nameToComponent) i.second.render(v);
-	w.draw(v);
+	wv.draw(v);
 }
+
+class Layouter{
+	/*
+	components must have unique (x, y)
+	components must have unique x and unique y, except
+		components with identical connecters may share y
+		a connecter and connectee may share x if the connecter has only that connection
+			connectee must go below connecter
+	*/
+	public:
+		Layouter(): minX(0), minY(0) {}
+
+		void layout(Component& component, int x, int y){
+			//try potential points in an order that emanates in (+x, +y), and prefers horizontal>vertical>diagonal
+			int px, py, rung=0, step=0;
+			bool sense=false;
+			while(true){
+				px=x+(sense?rung-step/2:step/2);
+				py=y+(sense?step/2:rung-step/2);
+				if(
+					!taken.count(Point(px, py))
+					&&(
+						!xToBottom.count(px)
+						||(
+							xToBottom[px]->_connections.size()==1//connecter has only 1 connectee
+							&&xToBottom[px]->_connections.begin()->_component==&component//connecter connects to connectee
+						)
+					)
+				){
+					if(!yToConnecters.count(py)) break;
+					//these copies need to be made because of some weakass C++ or MSVC bullshit
+					//try it, I dare you
+					//if(*yToConnecters[py]==component._connecters) break;
+					auto a=*yToConnecters[py];
+					auto b=component._connecters;
+					if(a==b) break;
+				}
+				sense=!sense;
+				++step;
+				if(step>rung){ sense=false; step=0; ++rung; }
+			}
+			//assign this spot to the component
+			x=px; y=py;
+			xToBottom[x]=&component;
+			yToConnecters[y]=&component._connecters;
+			taken.insert(Point(x, y));
+			minX=std::min(minX, x);
+			minY=std::min(minY, y);
+			component._x=x;
+			component._y=y;
+			component._laidout=true;
+		};
+
+		typedef std::pair<int, int> Point;
+		std::set<Point> taken;
+		std::map<int, Component*> xToBottom;
+		std::map<int, std::set<Component*>*> yToConnecters;
+		int minX, minY;
+};
 
 void Viewer::layout(){
 	//reset
-	unsigned p=0, q=0;
 	for(auto& i: _nameToComponent){
-		i.second._lKnownConnecters.clear();
-		i.second._lLaidout=false;
-		i.second._lX=(5*p+3)*S;
-		i.second._lY=(5*q+3)*S;
-		++p;
-		if((5*p+3)*S>_w-3*S){ p=0; ++q; }
+		i.second._connecters.clear();
+		i.second._laidout=false;
 	}
 	//get connecters
-	for(auto i: _nameToComponent)
-		for(auto j: i.second._lKnownConnections)
-			j->_lKnownConnecters.insert(&i.second);
-	//count sources and sinks
-	int sources=0, sinks=0;
-	for(auto& i: _nameToComponent){
-		if(i.second._lKnownConnecters.size()==0) ++sources;
-		if(i.second._lKnownConnections.size()==0) ++sinks;
+	for(auto& i: _nameToComponent)
+		for(auto& j: i.second._connections)
+			j._component->_connecters.insert(&i.second);
+	//find sourcey components
+	std::vector<Component*> sourceys;
+	{
+		unsigned minConnecters=_nameToComponent.size()+1;
+		for(auto& i: _nameToComponent) minConnecters=std::min(i.second._connecters.size(), minConnecters);
+		for(auto& i: _nameToComponent) if(i.second._connecters.size()==minConnecters) sourceys.push_back(&i.second);
 	}
-	//layout sources and sinks
-	int source=0, sink=0;
-	for(auto& i: _nameToComponent){
-		if(i.second._lKnownConnecters.size()==0){
-			i.second._lX=_w*(source+1)/(sources+1);
-			i.second._lY=3*S;
-			i.second._lLaidout=true;
-			++source;
-		}
-		if(i.second._lKnownConnections.size()==0){
-			i.second._lX=_w*(sink+1)/(sinks+1);
-			i.second._lY=_h-3*S;
-			i.second._lLaidout=true;
-			++sink;
-		}
-	}
-	//layout one of the sourciest or sinkiest components if nothing is laidout
-	if(sources==0&&sinks==0){
-		auto j=_nameToComponent.begin();
-		auto k=j;
-		auto f=[j]()->unsigned{
-			return std::min(
-				j->second._lKnownConnecters.size(),
-				j->second._lKnownConnections.size()
-			);
-		};
-		unsigned m=f();
-		while(j!=_nameToComponent.end()){
-			if(f()<m){ m=f(); k=j; }
-			++j;
-		}
-		k->second._lX=3*S;
-		k->second._lY=3*S;
-		if(k->second._lKnownConnecters.size()>k->second._lKnownConnections.size())
-			k->second._lY=_h-3*S;
-		k->second._lLaidout=true;
-	}
-	//layout the rest
+	//find sinks
+	std::set<Component*> sinks;
+	for(auto& i: _nameToComponent) if(i.second._connections.size()==0) sinks.insert(&i.second);
+	//
+	Layouter layouter;
+	for(auto& i: sourceys) layouter.layout(*i, 0, 0);
 	while(true){
-		bool changed=false;
-		for(auto& i: _nameToComponent) if(!i.second._lLaidout)
-			for(auto j: i.second._lKnownConnections) if(j->_lLaidout){
-				i.second._lX=j->_lX;
-				i.second._lY=j->_lY-3*S;
-				i.second._lLaidout=true;
-				changed=true;
-				break;
-			}
-		if(!changed) break;
+		Component* component=NULL;
+		Component* connecter;
+		//try to get an unlaidout nonsink with a laidout connecter
+		for(auto& i: _nameToComponent){
+			if(i.second._laidout) continue;
+			if(sinks.count(&i.second)) continue;
+			connecter=NULL;
+			for(auto& j: i.second._connecters) if(j->_laidout){ connecter=j; break; }
+			if(connecter){ component=&i.second; break; }
+		}
+		//if there isn't one, we're done, otherwise layout
+		if(!component) break;
+		layouter.layout(*component, connecter->_x, connecter->_y);
+	}
+	//sinks
+	for(auto& i: _nameToComponent){
+		if(i.second._laidout) continue;
+		Component* j=*i.second._connecters.begin();
+		layouter.layout(i.second, j->_x, j->_y);
+	}
+	//logical coordinates to pixels
+	for(auto& i: _nameToComponent){
+		i.second._x=(i.second._x-layouter.minX+1)*S*4;
+		i.second._y=(i.second._y-layouter.minY+1)*S*5;
 	}
 }

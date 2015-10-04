@@ -101,6 +101,7 @@ class Component{
 		Component();
 		virtual ~Component(){}
 		virtual void* derived(){ return nullptr; }
+		virtual std::string type() const=0;
 
 		//on success, return x such that isError(x) is false
 		//on failure, return x such that isError(x) is true

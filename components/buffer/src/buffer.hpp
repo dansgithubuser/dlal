@@ -8,6 +8,7 @@ namespace dlal{
 class Buffer: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Buffer();
+		std::string type() const { return "buffer"; }
 		void evaluate();
 		float* audio();
 		bool hasAudio(){ return true; }

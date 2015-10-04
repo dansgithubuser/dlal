@@ -8,6 +8,7 @@ namespace dlal{
 class Raw: public SystemGetter{
 	public:
 		Raw();
+		std::string type() const { return "raw"; }
 		float* audio(){ return _audio.data(); }
 		bool hasAudio(){ return true; }
 	private:
