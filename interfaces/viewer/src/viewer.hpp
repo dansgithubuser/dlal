@@ -24,8 +24,9 @@ class Component{
 		};
 		Component();
 		Component(std::string name, std::string type);
-		void render(sf::VertexArray&);
-		std::string _name;
+		void renderLines(sf::VertexArray&);
+		void renderText(sf::RenderWindow&, const sf::Font&);
+		std::string _name, _label;
 		Type _type;
 		std::set<Connection> _connections;
 		std::set<Component*> _connecters;

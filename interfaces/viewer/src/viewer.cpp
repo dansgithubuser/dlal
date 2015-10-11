@@ -59,7 +59,7 @@ static void sketch(std::vector<sf::Vertex>& v, const char* s, int x, int y){
 	}
 }
 
-void Component::render(sf::VertexArray& v){
+void Component::renderLines(sf::VertexArray& v){
 	//self
 	std::vector<sf::Vertex> u;
 	sketch(u, "++-+--+-++", _x, _y);
@@ -95,6 +95,13 @@ void Component::render(sf::VertexArray& v){
 		u.push_back(vertex    (dx    , dy-  S, colorNormal));//destination
 		stripToLines(u, v);
 	}
+}
+
+void Component::renderText(sf::RenderWindow& w, const sf::Font& font){
+	if(!_label.size()) return;
+	sf::Text t(_label.c_str(), font, S);
+	t.setPosition(1.0f*_x, 1.0f*_y);
+	w.draw(t);
 }
 
 Viewer::Viewer(): _w(0), _h(0) {
@@ -149,6 +156,10 @@ void Viewer::process(std::string s){
 			ss>>v;
 			_variables[s]=v;
 		}
+		else if(s=="label"){
+			ss>>s;
+			ss>>_nameToComponent[s]._label;
+		}
 	}
 }
 
@@ -170,8 +181,9 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	}
 	//components
 	sf::VertexArray v(sf::Lines);
-	for(auto i: _nameToComponent) i.second.render(v);
+	for(auto i: _nameToComponent) i.second.renderLines(v);
 	wv.draw(v);
+	for(auto i: _nameToComponent) i.second.renderText(wv, _font);
 }
 
 class Layouter{

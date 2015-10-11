@@ -62,6 +62,9 @@ todo
 				- period base class
 	- looper: quantization
 - simple improvements
+	- softboard
+		- print out buttons pressed
+		- close when server goes away
 	- fm reset all amplitudes when note is done
 	- memory leak check
 	- midi split instrument

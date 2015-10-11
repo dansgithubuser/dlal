@@ -118,6 +118,9 @@ class Component{
 		virtual bool midiAccepted(){ return false; }
 		virtual float* audio(){ return nullptr; }
 		virtual bool hasAudio(){ return false; }
+
+		System* _system;
+		std::string _label;
 	protected:
 		typedef std::function<std::string(std::stringstream&)> Command;
 		typedef std::function<std::string(System&)> JoinAction;
@@ -152,13 +155,7 @@ class SampleRateGetter: public virtual Component{
 		unsigned _sampleRate;
 };
 
-class SystemGetter: public virtual Component{
-	public:
-		SystemGetter();
-		System* _system;
-};
-
-class MultiOut: public SystemGetter{
+class MultiOut: public virtual Component{
 	public:
 		MultiOut();
 		virtual ~MultiOut(){}

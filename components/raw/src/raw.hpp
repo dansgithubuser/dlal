@@ -5,7 +5,7 @@
 
 namespace dlal{
 
-class Raw: public SystemGetter{
+class Raw: public Component{
 	public:
 		Raw();
 		std::string type() const { return "raw"; }

@@ -146,8 +146,10 @@ static void onAccept(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->_clients.push_back(e->remote);
 	std::stringstream ss;
-	for(auto i: system->_components) for(auto j: i)
+	for(auto i: system->_components) for(auto j: i){
 		ss<<"add "<<componentToStr(j)<<" "<<j->type()<<" ";
+		if(j->_label.size()) ss<<"label "<<componentToStr(j)<<" "<<j->_label<<" ";
+	}
 	for(auto i: system->_reportConnections)
 		ss<<"connect "<<i.first<<" "<<i.second<<" ";
 	for(auto i: system->_variables)
@@ -329,11 +331,23 @@ int System::dyadListenEx(
 }
 
 //=====Component=====//
-Component::Component(){
+Component::Component(): _system(nullptr) {
+	addJoinAction([this](System& system){
+		_system=&system;
+		return "";
+	});
 	registerCommand("help", "", [this](std::stringstream& ss){
 		std::string result="recognized commands are:\n";
 		for(auto i: _commands) result+=i.first+" "+i.second.parameters+"\n";
 		return result;
+	});
+	registerCommand("label", "<label>", [this](std::stringstream& ss){
+		ss>>_label;
+		if(_system){
+			_system->_reportQueue.write("label "+componentToStr(this)+" "+_label);
+			return "";
+		}
+		return "error: no system";
 	});
 }
 
@@ -380,14 +394,6 @@ SampleRateGetter::SampleRateGetter(){
 		if(!system._variables.count("sampleRate"))
 			return "error: system does not have sampleRate";
 		_sampleRate=std::stoi(system._variables["sampleRate"]);
-		return "";
-	});
-}
-
-//=====SystemGetter=====//
-SystemGetter::SystemGetter(): _system(nullptr) {
-	addJoinAction([this](System& system){
-		_system=&system;
 		return "";
 	});
 }
