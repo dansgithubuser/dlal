@@ -168,7 +168,7 @@ void Commander::dispatch(const Directive& d){
 			result=d._a->disconnect(*d._b);
 			break;
 	}
-	_system->report(System::RC_IN_EVALUATION, result, this);
+	if(result.size()) _system->report(System::RC_IN_EVALUATION, result, this);
 }
 
 }//namespace dlal
