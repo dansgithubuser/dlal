@@ -46,6 +46,9 @@ class Component;
 //cast to Component
 Component* toComponent(void*);
 
+//to uniquely identify component
+std::string componentToStr(const Component*);
+
 //allocate c string with contents of c++ string
 char* toCStr(const std::string&);
 

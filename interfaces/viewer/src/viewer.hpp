@@ -17,10 +17,11 @@ class Component{
 			NETWORK
 		};
 		struct Connection{
-			Connection(Component& component): _on(true), _component(&component) {}
-			bool operator<(const Connection& other) const{ return _component->_name.compare(other._component->_name)<0; }
+			Connection(){}
+			Connection(Component& component): _component(&component), _on(true), _heat(0.0f) {}
 			Component* _component;
-			mutable bool _on;
+			bool _on;
+			float _heat;
 		};
 		Component();
 		Component(std::string name, std::string type);
@@ -28,7 +29,7 @@ class Component{
 		void renderText(sf::RenderWindow&, const sf::Font&);
 		std::string _name, _label;
 		Type _type;
-		std::set<Connection> _connections;
+		std::map<std::string, Connection> _connections;
 		std::set<Component*> _connecters;
 		int _x, _y;
 		bool _laidout;

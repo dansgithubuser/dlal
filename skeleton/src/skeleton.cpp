@@ -91,6 +91,12 @@ namespace dlal{
 
 Component* toComponent(void* p){ return (Component*)p; }
 
+std::string componentToStr(const Component* component){
+	std::stringstream ss;
+	ss<<(uint64_t)component;
+	return ss.str();
+}
+
 char* toCStr(const std::string& s){
 	char* result=(char*)malloc(s.size()+1);
 	result[s.size()]='\0';
@@ -122,16 +128,6 @@ std::string dyadPauseAnd(std::function<std::string()> f){
 }
 
 //=====System=====//
-static std::string pointerToString(const void* pointer){
-	std::stringstream ss;
-	ss<<(uint64_t)pointer;
-	return ss.str();
-}
-
-static std::string componentToStr(const Component* component){
-	return pointerToString(component);
-}
-
 static void onDestroyed(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->report(System::RC_IN_DYAD, "error: server destroyed");
@@ -282,7 +278,7 @@ std::string System::report(
 ){
 	if(s.size()){
 		std::stringstream ss;
-		ss<<pointerToString(reporter)<<": "<<s;
+		ss<<componentToStr(reporter)<<": "<<s;
 		_report[(unsigned)rc].push_back(ss.str());
 		return dyadPauseAnd([&]()->std::string{
 			std::vector<uint8_t> bytes;

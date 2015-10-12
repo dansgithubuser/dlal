@@ -84,7 +84,7 @@ void Network::evaluate(){
 	if(_queue.read(page, true)){
 		if(page._type==dlal::Page::TEXT&&_map.count(page._text))
 			page=_map[page._text];
-		page.dispatch(_samplesPerEvaluation, _outputs);
+		page.dispatch(*this, _outputs, _samplesPerEvaluation);
 	}
 }
 

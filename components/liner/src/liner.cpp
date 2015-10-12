@@ -48,6 +48,7 @@ void Liner::evaluate(){
 		for(auto output: _outputs){
 			std::vector<uint8_t>& m=_line[_index].midi;
 			output->midi(m.data(), m.size());
+			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(output));
 		}
 		++_index;
 	}

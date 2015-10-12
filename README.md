@@ -55,11 +55,11 @@ todo
 - looper
 	- viewer
 		- component dispay
-			- label components
-			- commands displayed on connections as decaying brightness
+			- queued commands
 			- commander: custom command listing in text area when hover
 			- containers: progress through loop
 				- period base class
+				- act as metronome
 	- looper: quantization
 - simple improvements
 	- softboard

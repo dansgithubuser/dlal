@@ -32,7 +32,7 @@ void Filei::evaluate(){
 	while(_index<_loaded.size()){
 		Page& page=_loaded[_index];
 		if(page._evaluation>_evaluation) break;
-		page.dispatch(_samplesPerEvaluation, _outputs);
+		page.dispatch(*this, _outputs, _samplesPerEvaluation);
 		++_index;
 	}
 	++_evaluation;

@@ -17,7 +17,11 @@ struct Page{
 	Page(const std::string& text, uint64_t evaluation);
 	Page(std::istream&);
 	void toFile(std::ostream&) const;
-	void dispatch(int samplesPerEvaluation, std::vector<Component*>&) const;
+	void dispatch(
+		const Component& component,
+		std::vector<Component*>& outputs,
+		int samplesPerEvaluation
+	) const;
 	enum Type{ AUDIO, MIDI, TEXT };
 	Type _type;
 	uint64_t _evaluation;

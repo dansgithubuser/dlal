@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include <algorithm>
+#include <functional>
 
 static const int S=8;
 
@@ -59,6 +60,14 @@ static void sketch(std::vector<sf::Vertex>& v, const char* s, int x, int y){
 	}
 }
 
+static sf::Color heat(const sf::Color& base, float heat){
+	sf::Color result;
+	result.r=(sf::Uint8)std::min(255.0f, base.r+255*heat);
+	result.g=(sf::Uint8)std::min(255.0f, base.g+255*heat);
+	result.b=(sf::Uint8)std::min(255.0f, base.b+255*heat);
+	return result;
+}
+
 void Component::renderLines(sf::VertexArray& v){
 	//self
 	std::vector<sf::Vertex> u;
@@ -75,25 +84,31 @@ void Component::renderLines(sf::VertexArray& v){
 	}
 	stripToLines(u, v);
 	//connections
-	for(auto& i: _connections) if(i._on){
-		auto& dx=i._component->_x;
-		auto& dy=i._component->_y;
-		u.push_back(vertex    (_x    , _y+  S, colorNormal));//source
-		if(dy>_y){//destination below
-			u.push_back(vertex(_x-  S, _y+2*S, colorForward));//diagonal
-			u.push_back(vertex(_x-  S, dy-3*S, colorForward));//drop to just above destination
-			u.push_back(vertex(_x    , dy-2*S, colorNormal));//diagonal
-			u.push_back(vertex(dx    , dy-2*S, colorNormal));//align horizontally
+	for(auto& i: _connections){
+		if(i.second._on){
+			auto& dx=i.second._component->_x;
+			auto& dy=i.second._component->_y;
+			sf::Color cn=heat(colorNormal, i.second._heat);
+			u.push_back(vertex    (_x    , _y+  S, cn));//source
+			if(dy>_y){//destination below
+				sf::Color cf=heat(colorForward, i.second._heat);
+				u.push_back(vertex  (_x-  S, _y+2*S, cf));//diagonal
+				u.push_back(vertex  (_x-  S, dy-3*S, cf));//drop to just above destination
+				u.push_back(vertex  (_x    , dy-2*S, cn));//diagonal
+				u.push_back(vertex  (dx    , dy-2*S, cn));//align horizontally
+			}
+			else{
+				sf::Color cb=heat(colorBackward, i.second._heat);
+				u.push_back(vertex  (_x+  S, _y+2*S, cn));//diagonal
+				u.push_back(vertex  (_x+2*S, _y+  S, cb));//diagonal
+				u.push_back(vertex  (_x+2*S, dy-  S, cb));//align vertically
+				u.push_back(vertex  (_x+  S, dy-2*S, cn));//diagonal
+				u.push_back(vertex  (dx    , dy-2*S, cn));//align horizontally
+			}
+			u.push_back(vertex    (dx    , dy-  S, cn));//destination
+			stripToLines(u, v);
 		}
-		else{
-			u.push_back(vertex  (_x+  S, _y+2*S, colorNormal));//diagonal
-			u.push_back(vertex  (_x+2*S, _y+  S, colorBackward));//diagonal
-			u.push_back(vertex  (_x+2*S, dy-  S, colorBackward));//align vertically
-			u.push_back(vertex  (_x+  S, dy-2*S, colorNormal));//diagonal
-			u.push_back(vertex  (dx    , dy-2*S, colorNormal));//align horizontally
-		}
-		u.push_back(vertex    (dx    , dy-  S, colorNormal));//destination
-		stripToLines(u, v);
+		i.second._heat/=2.0f;
 	}
 }
 
@@ -111,62 +126,76 @@ Viewer::Viewer(): _w(0), _h(0) {
 
 void Viewer::process(std::string s){
 	auto connect=[this](std::string s, std::string d){
-		auto i=_nameToComponent[s]._connections.find(_nameToComponent[d]);
-		if(i!=_nameToComponent[s]._connections.end()) i->_on=true;
-		else _nameToComponent[s]._connections.insert(_nameToComponent[d]);
+		if(_nameToComponent[s]._connections.count(d)) _nameToComponent[s]._connections[d]._on=true;
+		else _nameToComponent[s]._connections[d]=_nameToComponent[d];
 	};
 	std::stringstream ss(s);
 	while(ss>>s){
-		if(s=="add"){
-			ss>>s;
-			std::string t;
-			ss>>t;
-			if(!_nameToComponent.count(s)){
-				_nameToComponent[s]=Component(s, t);
-				for(unsigned i=0; i<_pendingConnections.size(); /*nothing*/){
-					if(_nameToComponent.count(_pendingConnections[i].first)&&_nameToComponent.count(_pendingConnections[i].second)){
-						connect(_pendingConnections[i].first, _pendingConnections[i].second);
-						_pendingConnections[i]=_pendingConnections.back();
-						_pendingConnections.pop_back();
+		static std::map<std::string, std::function<void()>> handlers={
+			{"add", [&](){
+				ss>>s;
+				std::string t;
+				ss>>t;
+				if(!_nameToComponent.count(s)){
+					_nameToComponent[s]=Component(s, t);
+					for(unsigned i=0; i<_pendingConnections.size(); /*nothing*/){
+						if(_nameToComponent.count(_pendingConnections[i].first)&&_nameToComponent.count(_pendingConnections[i].second)){
+							connect(_pendingConnections[i].first, _pendingConnections[i].second);
+							_pendingConnections[i]=_pendingConnections.back();
+							_pendingConnections.pop_back();
+						}
+						else ++i;
 					}
-					else ++i;
+					layout();
 				}
-				layout();
-			}
-		}
-		else if(s=="connect"){
-			ss>>s;
-			std::string d;
-			ss>>d;
-			if(_nameToComponent.count(s)&&_nameToComponent.count(d)){
-				connect(s, d);
-				layout();
-			}
-			else _pendingConnections.push_back(std::pair<std::string, std::string>(s, d));
-		}
-		else if(s=="disconnect"){
-			ss>>s;
-			std::string d;
-			ss>>d;
-			_nameToComponent[s]._connections.find(_nameToComponent[d])->_on=false;
-		}
-		else if(s=="variable"){
-			ss>>s;
-			std::string v;
-			ss>>v;
-			_variables[s]=v;
-		}
-		else if(s=="label"){
-			ss>>s;
-			ss>>_nameToComponent[s]._label;
-		}
+			}},
+			{"connect", [&](){
+				ss>>s;
+				std::string d;
+				ss>>d;
+				if(_nameToComponent.count(s)&&_nameToComponent.count(d)){
+					connect(s, d);
+					layout();
+				}
+				else _pendingConnections.push_back(std::pair<std::string, std::string>(s, d));
+			}},
+			{"disconnect", [&](){
+				ss>>s;
+				std::string d;
+				ss>>d;
+				_nameToComponent[s]._connections[d]._on=false;
+			}},
+			{"variable", [&](){
+				ss>>s;
+				std::string v;
+				ss>>v;
+				_variables[s]=v;
+			}},
+			{"label", [&](){
+				ss>>s;
+				ss>>_nameToComponent[s]._label;
+			}},
+			{"command", [&](){
+				ss>>s;
+				std::string d;
+				ss>>d;
+				_nameToComponent[s]._connections[d]._heat+=0.5f;
+			}},
+			{"midi", [&](){
+				ss>>s;
+				std::string d;
+				ss>>d;
+				_nameToComponent[s]._connections[d]._heat+=0.5f;
+			}}
+		};
+		if(handlers.count(s)) handlers[s]();
 	}
 }
 
 void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	//variables
 	float y=0.0f;
-	for(auto i: _variables){
+	for(auto& i: _variables){
 		std::string s=i.first+": "+i.second;
 		sf::Text t(s.c_str(), _font, 12);
 		t.setPosition(6.0f, y);
@@ -181,9 +210,9 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	}
 	//components
 	sf::VertexArray v(sf::Lines);
-	for(auto i: _nameToComponent) i.second.renderLines(v);
+	for(auto& i: _nameToComponent) i.second.renderLines(v);
 	wv.draw(v);
-	for(auto i: _nameToComponent) i.second.renderText(wv, _font);
+	for(auto& i: _nameToComponent) i.second.renderText(wv, _font);
 }
 
 class Layouter{
@@ -210,7 +239,7 @@ class Layouter{
 						!xToBottom.count(px)
 						||(
 							xToBottom[px]->_connections.size()==1//connecter has only 1 connectee
-							&&xToBottom[px]->_connections.begin()->_component==&component//connecter connects to connectee
+							&&xToBottom[px]->_connections.begin()->second._component==&component//connecter connects to connectee
 						)
 					)
 				){
@@ -254,7 +283,7 @@ void Viewer::layout(){
 	//get connecters
 	for(auto& i: _nameToComponent)
 		for(auto& j: i.second._connections)
-			j._component->_connecters.insert(&i.second);
+			j.second._component->_connecters.insert(&i.second);
 	//find sourcey components
 	std::vector<Component*> sourceys;
 	{

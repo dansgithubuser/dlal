@@ -52,7 +52,10 @@ Midi::~Midi(){ if(_rtMidiIn) delete _rtMidiIn; }
 void Midi::evaluate(){
 	std::vector<uint8_t> midi;
 	while(_queue.read(midi, true))
-		for(auto output: _outputs) output->midi(midi.data(), midi.size());
+		for(auto output: _outputs){
+			output->midi(midi.data(), midi.size());
+			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(output));
+		}
 }
 
 void Midi::queue(const std::vector<uint8_t>& midi){

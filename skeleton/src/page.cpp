@@ -66,17 +66,25 @@ void Page::toFile(std::ostream& file) const{
 }
 
 void Page::dispatch(
-	int samplesPerEvaluation, std::vector<Component*>& outputs
+	const Component& component,
+	std::vector<Component*>& outputs,
+	int samplesPerEvaluation
 ) const{
 	switch(_type){
 		case Page::AUDIO:
 			safeAdd(_audio.data(), samplesPerEvaluation, outputs);
 			break;
 		case Page::MIDI:
-			for(auto output: outputs) output->midi(_midi.data(), _midi.size());
+			for(auto output: outputs){
+				output->midi(_midi.data(), _midi.size());
+				component._system->_reportQueue.write((std::string)"midi "+componentToStr(&component)+" "+componentToStr(output));
+			}
 			break;
 		case Page::TEXT:
-			for(auto output: outputs) output->command(_text);
+			for(auto output: outputs){
+				output->command(_text);
+				component._system->_reportQueue.write((std::string)"command "+componentToStr(&component)+" "+componentToStr(output));
+			}
 			break;
 	}
 }
