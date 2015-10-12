@@ -33,10 +33,10 @@ class Looper:
 		self.tracks=[]
 
 	def add(self, track):
-		self.tracks.append(track)
 		self.commander.queue_add(track)
 		self.commander.queue_command(track.synth    , 'label', len(self.tracks))
 		self.commander.queue_command(track.container, 'label', len(self.tracks))
+		self.tracks.append(track)
 
 	def play(self, track, enable, edges_to_wait):
 		self.commander.queue_connect(track.input, track.output, edges_to_wait=edges_to_wait, enable=enable)

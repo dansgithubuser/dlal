@@ -53,14 +53,7 @@ file organization
 todo
 ----
 - looper
-	- viewer
-		- component dispay
-			- queued commands
-			- commander: custom command listing in text area when hover
-			- containers: progress through loop
-				- period base class
-				- act as metronome
-	- looper: quantization
+	- queue across edges in the things that have edges; not the commander
 - simple improvements
 	- softboard
 		- print out buttons pressed
@@ -70,6 +63,7 @@ todo
 	- midi split instrument
 	- fm pitch slide
 - probable future features
+	- looper: quantization
 	- vocoder
 	- sampler
 	- low pass component

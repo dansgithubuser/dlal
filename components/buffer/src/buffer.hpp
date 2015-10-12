@@ -5,16 +5,16 @@
 
 namespace dlal{
 
-class Buffer: public MultiOut, public SamplesPerEvaluationGetter{
+class Buffer: public MultiOut, public Periodic{
 	public:
 		Buffer();
 		std::string type() const { return "buffer"; }
 		void evaluate();
 		float* audio();
 		bool hasAudio(){ return true; }
+		void resize();
 	private:
 		std::vector<float> _audio;
-		unsigned _i;
 		bool _clearOnEvaluate;
 };
 

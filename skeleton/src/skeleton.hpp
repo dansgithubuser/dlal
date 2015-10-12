@@ -150,6 +150,19 @@ class SamplesPerEvaluationGetter: public virtual Component{
 		unsigned _samplesPerEvaluation;
 };
 
+class Periodic: public SamplesPerEvaluationGetter{
+	public:
+		Periodic();
+	protected:
+		virtual void resize(){}
+		virtual void crop(){}
+		virtual void reset(){}
+		bool phase();
+		uint64_t _period, _phase;
+	private:
+		float _last;
+};
+
 class SampleRateGetter: public virtual Component{
 	public:
 		SampleRateGetter();

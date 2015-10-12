@@ -4,36 +4,15 @@
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Buffer; }
 
-static void circularIncrement(unsigned& i, unsigned amount, unsigned size){
-	i+=amount;
-	if(i+amount>size) i-=size;
-}
-
 namespace dlal{
 
-Buffer::Buffer(): _i(0), _clearOnEvaluate(false) {
+Buffer::Buffer(): _clearOnEvaluate(false) {
 	_checkAudio=true;
 	addJoinAction([this](System&){
 		if(_audio.size()<_samplesPerEvaluation)
 			return "error: size is less than samplesPerEvaluation";
 		if(_audio.size()%_samplesPerEvaluation)
 			return "error: size is not a multiple of samplesPerEvaluation";
-		return "";
-	});
-	registerCommand("resize", "size", [this](std::stringstream& ss){
-		unsigned size;
-		ss>>size;
-		_audio.resize(size, 0.0f);
-		circularIncrement(_i, 0, size);
-		return "";
-	});
-	registerCommand("crop", "", [this](std::stringstream& ss){
-		_audio.resize(_i);
-		_i=0;
-		return "";
-	});
-	registerCommand("reset", "", [this](std::stringstream& ss){
-		_i=0;
 		return "";
 	});
 	registerCommand("clear_on_evaluate", "y/n", [this](std::stringstream& ss){
@@ -45,12 +24,16 @@ Buffer::Buffer(): _i(0), _clearOnEvaluate(false) {
 }
 
 void Buffer::evaluate(){
-	add(_audio.data()+_i, _samplesPerEvaluation, _outputs);
-	circularIncrement(_i, _samplesPerEvaluation, _audio.size());
+	add(_audio.data()+_phase, _samplesPerEvaluation, _outputs);
+	phase();
 	if(_clearOnEvaluate)
-		std::fill_n(_audio.data()+_i, _samplesPerEvaluation, 0.0f);
+		std::fill_n(_audio.data()+_phase, _samplesPerEvaluation, 0.0f);
 }
 
-float* Buffer::audio(){ return _audio.data()+_i; }
+float* Buffer::audio(){ return _audio.data()+_phase; }
+
+void Buffer::resize(){
+	if(_audio.size()<_period) _audio.resize(_period, 0.0f);
+}
 
 }//namespace dlal

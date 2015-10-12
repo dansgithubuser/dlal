@@ -8,13 +8,15 @@
 
 namespace dlal{
 
-class Liner: public MultiOut, public SamplesPerEvaluationGetter{
+class Liner: public MultiOut, public Periodic{
 	public:
 		Liner();
 		std::string type() const { return "liner"; }
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }
+		void crop();
+		void reset();
 	private:
 		struct Midi{
 			Midi(uint64_t sample, const uint8_t* midi, unsigned size);
@@ -24,7 +26,7 @@ class Liner: public MultiOut, public SamplesPerEvaluationGetter{
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
 		std::vector<Midi> _line;
 		unsigned _index;
-		uint64_t _sample, _period;
+		bool _resetOnMidi;
 };
 
 }//namespace dlal

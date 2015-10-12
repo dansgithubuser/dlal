@@ -1,7 +1,7 @@
 import dlal, atexit
 
-max_track_samples=64000*8
 samples_per_beat=32000
+max_track_beats=16
 edges_to_wait=0
 track=0
 
@@ -27,7 +27,7 @@ def command_add_midi():
 	track=dlal.MidiTrack(
 		midi,
 		dlal.Fm(),
-		max_track_samples,
+		samples_per_beat*max_track_beats,
 		samples_per_beat
 	)
 	global tracks
@@ -65,36 +65,44 @@ def wait_less():
 		edges_to_wait-=1
 		looper.system.set('wait', str(edges_to_wait))
 
+def command_reset_on_midi():
+	looper.commander.queue_command(tracks[track].container, 'reset_on_midi')
+
 def generate_standard_command(function, sense):
 	def command(): function(looper, tracks[track], sense, edges_to_wait)
 	return command
 
 commands={
-	'Return': lambda: looper.reset(),
-	'Space': lambda: looper.crop(),
-	'\\': uncrop,
-	'U': track_next,
-	'J': track_prev,
-	'I': wait_more,
-	'K': wait_less,
-	'1': command_add_midi,
-	'Q': generate_standard_command(dlal.Looper.record, False),
-	'A': generate_standard_command(dlal.Looper.record, True),
-	'W': generate_standard_command(dlal.Looper.play  , False),
-	'S': generate_standard_command(dlal.Looper.play  , True),
-	'E': generate_standard_command(dlal.Looper.replay, False),
-	'D': generate_standard_command(dlal.Looper.replay, True),
+	'1': (command_add_midi, 'add midi track'),
+	'Space': (lambda: looper.crop(), 'crop'),
+	'\\': (uncrop, 'uncrop'),
+	'U': (track_next, 'next track'),
+	'J': (track_prev, 'prev track'),
+	'I': (wait_more, 'wait more'),
+	'K': (wait_less, 'wait less'),
+	'Return': (command_reset_on_midi, 'reset track on midi'),
+	'Q': (generate_standard_command(dlal.Looper.record, False), 'stop track record'),
+	'A': (generate_standard_command(dlal.Looper.record, True ), 'start track record'),
+	'W': (generate_standard_command(dlal.Looper.play  , False), 'stop track play'),
+	'S': (generate_standard_command(dlal.Looper.play  , True ), 'start track play'),
+	'E': (generate_standard_command(dlal.Looper.replay, False), 'stop track replay'),
+	'D': (generate_standard_command(dlal.Looper.replay, True ), 'start track replay'),
 }
 
 def command(text):
 	c=text.decode('utf-8').split()
 	name=c[0]
 	sense=int(c[1])
-	if sense: commands[name]()
+	if sense: commands[name][0]()
 for name in commands: looper.commander.register_command(name, command)
 
 def go():
 	looper.audio.start()
 	atexit.register(lambda: looper.audio.finish())
 
+def help():
+	for name, command in commands.items():
+		print('{0}: {1}'.format(name, command[1]))
+
 print('use the go function to start audio processing')
+print('use the help function for softboard key listing')

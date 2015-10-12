@@ -384,6 +384,43 @@ SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
 	});
 }
 
+//=====Periodic=====//
+Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
+	registerCommand("resize", "size", [this](std::stringstream& ss){
+		ss>>_period;
+		resize();
+		_phase%=_period;
+		return "";
+	});
+	registerCommand("crop", "", [this](std::stringstream& ss){
+		crop();
+		_period=_phase;
+		_phase=0;
+		return "";
+	});
+	registerCommand("reset", "", [this](std::stringstream& ss){
+		reset();
+		_phase=0;
+		return "";
+	});
+}
+
+bool Periodic::phase(){
+	_phase+=_samplesPerEvaluation;
+	if(_phase<_period){
+		float current=1.0f*_phase/_period;
+		if(current-_last>0.01f){
+			_system->_reportQueue.write((std::string)"phase "+componentToStr(this)+" "+std::to_string(current));
+			_last=current;
+		}
+		return false;
+	}
+	_phase-=_period;
+	_system->_reportQueue.write((std::string)"edge "+componentToStr(this));
+	_last=0.0f;
+	return true;
+}
+
 //=====SampleRateGetter=====//
 SampleRateGetter::SampleRateGetter(){
 	addJoinAction([this](System& system){

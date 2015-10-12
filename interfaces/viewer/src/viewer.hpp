@@ -29,6 +29,7 @@ class Component{
 		void renderText(sf::RenderWindow&, const sf::Font&);
 		std::string _name, _label;
 		Type _type;
+		float _phase;
 		std::map<std::string, Connection> _connections;
 		std::set<Component*> _connecters;
 		int _x, _y;

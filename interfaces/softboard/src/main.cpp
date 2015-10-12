@@ -20,10 +20,11 @@ int main(int argc, char** argv){
 	ss>>port;
 	if(!dyadInit(std::string(argv[1]), port)) return EXIT_FAILURE;
 	Softboard softboard;
-	sf::RenderWindow window(sf::VideoMode(640, 480), "dlal softboard");
+	sf::RenderWindow window(sf::VideoMode(160, 20), "dlal softboard");
 	window.setKeyRepeatEnabled(false);
 	int result=EXIT_SUCCESS;
 	while(window.isOpen()){
+		if(!dyadCheck()) window.close();
 		sf::Event event;
 		while(window.pollEvent(event)){
 			switch(event.type){

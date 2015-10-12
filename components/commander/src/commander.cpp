@@ -82,22 +82,9 @@ Commander::Directive::Directive(
 ): _type(CONNECT), _a(&input), _b(&output), _edgesToWait(edgesToWait) {}
 
 Commander::Commander():
-	_queue(8), _size(0), _period(0), _phase(0)
+	_queue(8), _size(0)
 {
 	_dequeued.resize(256);
-	registerCommand("period", "<period in samples>", [this](std::stringstream& ss){
-		ss>>_period;
-		return "";
-	});
-	registerCommand("crop", "", [this](std::stringstream& ss){
-		_period=_phase;
-		_phase=0;
-		return "";
-	});
-	registerCommand("reset", "", [this](std::stringstream& ss){
-		_phase=0;
-		return "";
-	});
 	registerCommand("queue", "<period edges to wait> <output index> command",
 		[this](std::stringstream& ss){
 			unsigned edgesToWait, output;
@@ -124,9 +111,7 @@ void Commander::evaluate(){
 		else ++_size;
 	}
 	//update
-	_phase+=_samplesPerEvaluation;
-	if(_phase<_period) return;
-	_phase-=_period;
+	if(!phase()) return;
 	//command
 	unsigned i=0;
 	while(i<_size){

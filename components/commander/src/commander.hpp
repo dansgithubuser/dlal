@@ -34,7 +34,7 @@ extern "C"{
 
 namespace dlal{
 
-class Commander: public MultiOut, public SamplesPerEvaluationGetter{
+class Commander: public MultiOut, public Periodic{
 	public:
 		struct Directive{
 			enum Type{ COMMAND, COMMAND_INDEXED, ADD, CONNECT, DISCONNECT };
@@ -60,7 +60,6 @@ class Commander: public MultiOut, public SamplesPerEvaluationGetter{
 		void dispatch(const Directive&);
 		std::vector<Directive> _dequeued;
 		unsigned _size;
-		unsigned _period, _phase;
 };
 
 }//namespace dlal

@@ -5,6 +5,7 @@
 #include <sstream>
 #include <algorithm>
 #include <functional>
+#include <cassert>
 
 static const int S=8;
 
@@ -12,6 +13,7 @@ static const sf::Color colorComponent(0, 128, 0);
 static const sf::Color colorForward(0, 64, 64);
 static const sf::Color colorNormal(0, 64, 0);
 static const sf::Color colorBackward(64, 64, 0);
+static const sf::Color colorPhase(0, 0, 255);
 
 static sf::Vertex vertex(int x, int y, const sf::Color& color){
 	return sf::Vertex(sf::Vector2f((float)x, (float)y), color);
@@ -30,7 +32,7 @@ static void stripToLines(
 
 Component::Component(){}
 
-Component::Component(std::string name, std::string type): _name(name) {
+Component::Component(std::string name, std::string type): _name(name), _phase(-1.0f) {
 	if(type=="audio") _type=AUDIO;
 	else if(type=="buffer") _type=BUFFER;
 	else if(type=="commander") _type=COMMANDER;
@@ -83,11 +85,17 @@ void Component::renderLines(sf::VertexArray& v){
 		default: break;
 	}
 	stripToLines(u, v);
+	//phase
+	if(_phase>=0.0f){
+		float x=_x-S+2*S*_phase;
+		v.append(sf::Vertex(sf::Vector2f(x, (float)_y-S), colorPhase));
+		v.append(sf::Vertex(sf::Vector2f(x, (float)_y+S), colorPhase));
+	}
 	//connections
 	for(auto& i: _connections){
 		if(i.second._on){
-			auto& dx=i.second._component->_x;
-			auto& dy=i.second._component->_y;
+			auto dx=i.second._component->_x;
+			auto dy=i.second._component->_y;
 			sf::Color cn=heat(colorNormal, i.second._heat);
 			u.push_back(vertex    (_x    , _y+  S, cn));//source
 			if(dy>_y){//destination below
@@ -161,8 +169,10 @@ void Viewer::process(std::string s){
 			}},
 			{"disconnect", [&](){
 				ss>>s;
+				assert(_nameToComponent.count(s));
 				std::string d;
 				ss>>d;
+				assert(_nameToComponent[s]._connections.count(d));
 				_nameToComponent[s]._connections[d]._on=false;
 			}},
 			{"variable", [&](){
@@ -173,19 +183,34 @@ void Viewer::process(std::string s){
 			}},
 			{"label", [&](){
 				ss>>s;
+				assert(_nameToComponent.count(s));
 				ss>>_nameToComponent[s]._label;
 			}},
 			{"command", [&](){
 				ss>>s;
+				if(!_nameToComponent.count(s)) return;
 				std::string d;
 				ss>>d;
+				if(!_nameToComponent[s]._connections.count(d)) return;
 				_nameToComponent[s]._connections[d]._heat+=0.5f;
 			}},
 			{"midi", [&](){
 				ss>>s;
+				if(!_nameToComponent.count(s)) return;
 				std::string d;
 				ss>>d;
+				if(!_nameToComponent[s]._connections.count(d)) return;
 				_nameToComponent[s]._connections[d]._heat+=0.5f;
+			}},
+			{"phase", [&](){
+				ss>>s;
+				if(!_nameToComponent.count(s)) return;
+				ss>>_nameToComponent[s]._phase;
+			}},
+			{"edge", [&](){
+				ss>>s;
+				if(!_nameToComponent.count(s)) return;
+				_nameToComponent[s]._phase=0.0f;
 			}}
 		};
 		if(handlers.count(s)) handlers[s]();

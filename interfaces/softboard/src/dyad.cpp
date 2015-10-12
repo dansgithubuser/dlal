@@ -6,6 +6,7 @@
 #include <mutex>
 #include <algorithm>
 #include <vector>
+#include <cstdlib>
 
 bool fReady, fGood, fQuit;
 dyad_Stream* fStream;
@@ -59,6 +60,8 @@ bool dyadFinish(){
 	dyad_shutdown();
 	return fGood;
 }
+
+bool dyadCheck(){ return fGood; }
 
 bool dyadWrite(std::string s){
 	if(!s.size()) return fGood;
