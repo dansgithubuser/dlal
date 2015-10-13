@@ -15,8 +15,7 @@ class Liner: public MultiOut, public Periodic{
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }
-		void crop();
-		void reset();
+		void setPhase(uint64_t);
 	private:
 		struct Midi{
 			Midi(uint64_t sample, const uint8_t* midi, unsigned size);

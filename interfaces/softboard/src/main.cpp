@@ -15,12 +15,16 @@ int main(int argc, char** argv){
 		return EXIT_FAILURE;
 	}
 	int port;
-	std::stringstream ss;
-	ss<<argv[2];
-	ss>>port;
+	{
+		std::stringstream ss;
+		ss<<argv[2];
+		ss>>port;
+	}
 	if(!dyadInit(std::string(argv[1]), port)) return EXIT_FAILURE;
 	Softboard softboard;
-	sf::RenderWindow window(sf::VideoMode(160, 20), "dlal softboard");
+	std::stringstream ss;
+	ss<<"dlal softboard "<<port;
+	sf::RenderWindow window(sf::VideoMode(200, 20), ss.str().c_str());
 	window.setKeyRepeatEnabled(false);
 	int result=EXIT_SUCCESS;
 	while(window.isOpen()){

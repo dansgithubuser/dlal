@@ -154,9 +154,8 @@ class Periodic: public SamplesPerEvaluationGetter{
 	public:
 		Periodic();
 	protected:
-		virtual void resize(){}
-		virtual void crop(){}
-		virtual void reset(){}
+		virtual void resize(uint64_t period);
+		virtual void setPhase(uint64_t phase);
 		bool phase();
 		uint64_t _period, _phase;
 	private:

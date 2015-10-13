@@ -3,16 +3,21 @@ import dlal, atexit
 period=8*2*32000
 edges_to_wait=0
 track=0
+sequence=None
 
 #looper
 looper=dlal.Looper()
 looper.system.set('track', str(track))
 looper.system.set('wait', str(edges_to_wait))
+looper.system.set('sequence', 'none')
 
 #midi
 midi=dlal.Component('midi')
 ports=[x for x in midi.ports().split('\n') if len(x)]
 if len(ports): midi.open(ports[0])
+qweboard=dlal.Qweboard()
+qweboard.connect(midi)
+looper.system.add(qweboard)
 
 #network
 network=dlal.Component('network')
@@ -27,9 +32,6 @@ def add_midi():
 	global tracks
 	tracks.append(track)
 	looper.add(track)
-
-def reset():
-	looper.commander.queue_command(looper.commander, 'resize', 0)
 
 def commander_match():
 	period, phase=tracks[track].container.get().split()
@@ -59,10 +61,10 @@ def wait_less():
 		edges_to_wait-=1
 		looper.system.set('wait', str(edges_to_wait))
 
-def reset_on_midi():
+def track_reset_on_midi():
 	looper.commander.queue_command(tracks[track].container, 'reset_on_midi')
 
-def crop():
+def track_crop():
 	looper.commander.queue_command(tracks[track].container, 'crop')
 
 def track_match():
@@ -70,34 +72,60 @@ def track_match():
 	looper.commander.queue_command(tracks[track].container, 'resize', period)
 	looper.commander.queue_command(tracks[track].container, 'set_phase', phase)
 
+def track_reset():
+	looper.commander.queue_command(tracks[track].container, 'set_phase', 0, edges_to_wait=edges_to_wait)
+
 def generate_standard_command(function, sense):
 	def command(): function(looper, tracks[track], sense, edges_to_wait)
 	return command
 
+def sequence_start():
+	global sequence
+	sequence=[]
+	looper.system.set('sequence', '-')
+
+def sequence_commit():
+	for name in sequence: commands[name][0]()
+	sequence_cancel()
+
+def sequence_cancel():
+	global sequence
+	sequence=None
+	looper.system.set('sequence', 'none')
+
 commands={
 	'1': (add_midi, 'add midi track'),
 	'[': (commander_match, 'match commander to current track'),
-	']': (reset, 'reset commander'),
 	'U': (track_next, 'next track'),
 	'J': (track_prev, 'prev track'),
 	'I': (wait_more, 'wait more'),
 	'K': (wait_less, 'wait less'),
-	'Return': (reset_on_midi, 'reset track on midi'),
-	'Space': (crop, 'crop track'),
-	'\\': (track_match, 'match current track to commander'),
+	'Return': (track_reset_on_midi, 'reset track on midi'),
+	'Space': (track_crop, 'crop track'),
+	']': (track_match, 'match current track to commander'),
+	'F': (track_reset, 'reset track'),
 	'Q': (generate_standard_command(dlal.Looper.record, False), 'stop track record'),
 	'A': (generate_standard_command(dlal.Looper.record, True ), 'start track record'),
 	'W': (generate_standard_command(dlal.Looper.play  , False), 'stop track play'),
 	'S': (generate_standard_command(dlal.Looper.play  , True ), 'start track play'),
 	'E': (generate_standard_command(dlal.Looper.replay, False), 'stop track replay'),
 	'D': (generate_standard_command(dlal.Looper.replay, True ), 'start track replay'),
+	',': (sequence_start, 'start sequence'),
+	'.': (sequence_commit, 'commit sequence'),
+	'/': (sequence_cancel, 'cancel sequence'),
 }
 
 def command(text):
 	c=text.decode('utf-8').split()
 	name=c[0]
 	sense=int(c[1])
-	if sense: commands[name][0]()
+	if not sense: return
+	if sequence!=None and name not in ['.', '/']:
+		if name!=',':
+			sequence.append(name)
+			looper.system.set('sequence', '-'.join(sequence))
+		return
+	commands[name][0]()
 for name in commands: looper.commander.register_command(name, command)
 
 def go():

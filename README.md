@@ -53,9 +53,7 @@ file organization
 todo
 ----
 - simple improvements
-	- softboard
-		- print out buttons pressed
-		- close when server goes away
+	- softboard print out buttons pressed
 	- fm reset all amplitudes when note is done
 	- memory leak check
 	- midi split instrument

@@ -12,7 +12,7 @@ class Buffer: public MultiOut, public Periodic{
 		void evaluate();
 		float* audio();
 		bool hasAudio(){ return true; }
-		void resize();
+		void resize(uint64_t period);
 	private:
 		std::vector<float> _audio;
 		bool _clearOnEvaluate;
