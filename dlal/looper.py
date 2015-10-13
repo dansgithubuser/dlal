@@ -46,13 +46,3 @@ class Looper:
 
 	def replay(self, track, enable, edges_to_wait):
 		self.commander.queue_connect(track.synth, self.audio, edges_to_wait=edges_to_wait, enable=enable)
-
-	def reset(self):
-		for track in self.tracks:
-			self.commander.queue_command(track.container, 'reset')
-		self.commander.reset()
-
-	def crop(self):
-		for track in self.tracks:
-			self.commander.queue_command(track.container, 'crop')
-		self.commander.crop()

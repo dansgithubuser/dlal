@@ -386,10 +386,11 @@ SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
 
 //=====Periodic=====//
 Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
-	registerCommand("resize", "size", [this](std::stringstream& ss){
+	registerCommand("resize", "<period in samples>", [this](std::stringstream& ss){
 		ss>>_period;
 		resize();
-		_phase%=_period;
+		if(_period) _phase%=_period;
+		else _phase=0;
 		return "";
 	});
 	registerCommand("crop", "", [this](std::stringstream& ss){
@@ -401,6 +402,14 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 	registerCommand("reset", "", [this](std::stringstream& ss){
 		reset();
 		_phase=0;
+		return "";
+	});
+	registerCommand("get", "", [this](std::stringstream& ss){
+		std::string result=std::to_string(_period)+" "+std::to_string(_phase);
+		return result;
+	});
+	registerCommand("set_phase", "<phase>", [this](std::stringstream& ss){
+		ss>>_phase;
 		return "";
 	});
 }

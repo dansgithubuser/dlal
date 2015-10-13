@@ -52,8 +52,6 @@ file organization
 
 todo
 ----
-- looper
-	- queue across edges in the things that have edges; not the commander
 - simple improvements
 	- softboard
 		- print out buttons pressed
