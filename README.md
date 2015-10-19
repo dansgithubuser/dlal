@@ -53,7 +53,6 @@ file organization
 todo
 ----
 - simple improvements
-	- fm reset all amplitudes when note is done
 	- memory leak check
 	- midi split instrument
 	- fm pitch slide

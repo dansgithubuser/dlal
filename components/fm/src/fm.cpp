@@ -181,9 +181,12 @@ bool Sonic::Oscillator::update(Runner& runner) const{
 	return _output==0.0f;
 }
 
-Sonic::Runner::Runner(): _phase(0.0f), _volume(0.0f), _output(0.0f) {}
+Sonic::Runner::Runner(): _phase(0.0f), _output(0.0f) {}
 
-void Sonic::Runner::start(){ _stage=ATTACK; }
+void Sonic::Runner::start(){
+	_stage=ATTACK;
+	_volume=0.0f;
+}
 
 void Sonic::Runner::phase(){
 	_phase+=_step;
