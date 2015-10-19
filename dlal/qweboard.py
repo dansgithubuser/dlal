@@ -26,7 +26,8 @@ class Qweboard(Pipe):
 			status=[0x80, 0x90][sense]
 			if   name=='PageUp'  : sense and octavate(+1)
 			elif name=='PageDown': sense and octavate(-1)
-			else: self.commander.queue(0, 0, 'midi', status, self.octave*12+notes[name], 0x40)
+			elif name in notes:
+				self.commander.queue(0, 0, 'midi', status, self.octave*12+notes[name], 0x40)
 		self.commander.register_command('PageUp'  , command)
 		self.commander.register_command('PageDown', command)
 		for name in notes: self.commander.register_command(name, command)

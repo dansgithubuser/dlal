@@ -125,7 +125,7 @@ def command(text):
 			sequence.append(name)
 			looper.system.set('sequence', '-'.join(sequence))
 		return
-	commands[name][0]()
+	if name in commands: commands[name][0]()
 for name in commands: looper.commander.register_command(name, command)
 
 def go():

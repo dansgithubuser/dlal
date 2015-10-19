@@ -6,8 +6,7 @@
 
 Softboard::Softboard(): _octave(0) {}
 
-std::string Softboard::processKey(sf::Keyboard::Key key, bool on){
-	std::string s;
+std::string Softboard::processKey(sf::Keyboard::Key key, bool on, std::string& s){
 	switch(key){
 		case sf::Keyboard::Key::Comma    : s=","       ; break;
 		case sf::Keyboard::Key::Period   : s="."       ; break;
@@ -72,7 +71,7 @@ std::string Softboard::processKey(sf::Keyboard::Key key, bool on){
 		case sf::Keyboard::Key::X        : s="X"       ; break;
 		case sf::Keyboard::Key::Y        : s="Y"       ; break;
 		case sf::Keyboard::Key::Z        : s="Z"       ; break;
-		default: break;
+		default: return "";
 	}
 	dlal::Page page(s+std::string(on?" 1":" 0"), 0);
 	std::stringstream ss;
