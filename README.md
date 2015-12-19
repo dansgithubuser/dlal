@@ -52,6 +52,9 @@ file organization
 
 todo
 ----
+- looper: two keyboard inputs
+- midi controllers
+- metronome
 - simple improvements
 	- memory leak check
 	- midi split instrument
