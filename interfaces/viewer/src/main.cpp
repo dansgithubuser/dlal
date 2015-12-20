@@ -1,36 +1,9 @@
 #include "viewer.hpp"
 
-#include <queue.hpp>
-
-#include <dyad.h>
+#include <dryad.hpp>
 
 #include <sstream>
-#include <thread>
-#include <chrono>
-#include <cstdlib>
-#include <cassert>
 #include <iostream>
-#include <atomic>
-
-static std::atomic<bool> fQuit=false;
-static dlal::Queue<std::string> fQueue(8);
-
-static void atPanic(const char* message){
-	assert(0);
-	exit(1);
-}
-
-static void atDestroy(dyad_Event* e){ if(!fQuit) exit(0); }
-
-static void atError(dyad_Event* e){
-	std::cerr<<"dyad error: "<<e->msg<<"\n";
-	assert(0);
-	exit(1);
-}
-
-static void atData(dyad_Event* e){
-	fQueue.write(std::string(e->data));
-}
 
 int main(int argc, char** argv){
 	if(argc!=3){
@@ -42,17 +15,10 @@ int main(int argc, char** argv){
 	ss<<argv[2];
 	ss>>port;
 	//dyad
-	dyad_atPanic(atPanic);
-	dyad_init();
-	dyad_Stream* stream=dyad_newStream();
-	dyad_addListener(stream, DYAD_EVENT_DESTROY, atDestroy, NULL);
-	dyad_addListener(stream, DYAD_EVENT_ERROR  , atError  , NULL);
-	dyad_addListener(stream, DYAD_EVENT_DATA   , atData   , NULL);
-	dyad_connect(stream, argv[1], port);
-	auto thread=std::thread([](){ while(!fQuit) dyad_update(); });
+	dryad::Client client(argv[1], port);
 	//sfml
-	sf::RenderWindow wv(sf::RenderWindow(sf::VideoMode(640, 480), "dlal viewer - system visualization"));
-	sf::RenderWindow wt(sf::RenderWindow(sf::VideoMode(240, 480), "dlal viewer - text"));
+	sf::RenderWindow wv(sf::VideoMode(640, 480), "dlal viewer - system visualization");
+	sf::RenderWindow wt(sf::VideoMode(240, 480), "dlal viewer - text");
 	std::vector<sf::RenderWindow*> windows;
 	windows.push_back(&wv);
 	windows.push_back(&wt);
@@ -81,17 +47,14 @@ int main(int argc, char** argv){
 		}
 		//process viewer
 		std::string s;
-		while(fQueue.read(s, true)) viewer.process(s);
+		while(client.readSizedString(s)) viewer.process(s);
 		viewer.render(wv, wt);
 		//display
 		for(auto window: windows) window->display();
 		//don't spin
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	for(auto window: windows) window->close();
 	//cleanup
-	fQuit=true;
-	thread.join();
-	dyad_shutdown();
+	for(auto window: windows) window->close();
 	return EXIT_SUCCESS;
 }

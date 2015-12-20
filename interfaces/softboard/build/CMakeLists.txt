@@ -31,7 +31,6 @@ include_directories(
 #=====source=====#
 set(
 	src
-	"${CMAKE_CURRENT_SOURCE_DIR}/../src/dyad.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../src/main.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../src/softboard.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src/skeleton.cpp"

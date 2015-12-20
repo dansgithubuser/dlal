@@ -1,6 +1,6 @@
 #include "softboard.hpp"
-#include "dyad.hpp"
 
+#include <dryad.hpp>
 #include <courierCode.hpp>
 
 #include <SFML/Graphics.hpp>
@@ -23,7 +23,7 @@ int main(int argc, char** argv){
 		ss<<argv[2];
 		ss>>port;
 	}
-	if(!dyadInit(std::string(argv[1]), port)) return EXIT_FAILURE;
+	dryad::Client client(std::string(argv[1]), port);
 	sf::Font font;
 	if(!font.loadFromMemory(courierCode, courierCodeSize)) return EXIT_FAILURE;
 	Softboard softboard;
@@ -34,7 +34,6 @@ int main(int argc, char** argv){
 	std::set<std::string> keys;
 	int result=EXIT_SUCCESS;
 	while(window.isOpen()){
-		if(!dyadCheck()) window.close();
 		sf::Event event;
 		while(window.pollEvent(event)){
 			switch(event.type){
@@ -47,10 +46,7 @@ int main(int argc, char** argv){
 						s
 					);
 					if(!t.size()) break;
-					if(!dyadWrite(t)){
-						result=EXIT_FAILURE;
-						window.close();
-					}
+					client.writeSizedString(t);
 					if(event.type==sf::Event::KeyPressed) keys.insert(s);
 					else keys.erase(s);
 					break;
@@ -70,6 +66,5 @@ int main(int argc, char** argv){
 		window.display();
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-	if(!dyadFinish()) return EXIT_FAILURE;
 	return result;
 }

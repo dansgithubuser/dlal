@@ -69,7 +69,7 @@ class System{
 		enum ReportContext{
 			RC_IN_EVALUATION, RC_IN_DYAD, RC_SENTINEL
 		};
-		System(int port);
+		System(int port=9088);
 		~System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);

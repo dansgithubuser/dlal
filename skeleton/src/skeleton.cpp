@@ -17,6 +17,16 @@ static void atPanic(const char* message){
 	throw std::runtime_error(message);
 }
 
+static void dyadWrite(dyad_Stream* stream, const uint8_t* data, uint32_t size){
+	uint8_t s[4];
+	s[0]=(size>>0x00)&0xff;
+	s[1]=(size>>0x08)&0xff;
+	s[2]=(size>>0x10)&0xff;
+	s[3]=(size>>0x18)&0xff;
+	dyad_write(stream, s, 4);
+	dyad_write(stream, data, size);
+}
+
 static std::atomic<bool> dyadDone;
 static std::thread dyadThread;
 static std::mutex dyadMutex;
@@ -150,7 +160,7 @@ static void onAccept(dyad_Event* e){
 		ss<<"connect "<<i.first<<" "<<i.second<<" ";
 	for(auto i: system->_variables)
 		ss<<"variable "<<i.first<<" "<<i.second<<" ";
-	dyad_write(e->remote, ss.str().data(), ss.str().size());
+	dyadWrite(e->remote, (uint8_t*)ss.str().data(), ss.str().size());
 }
 
 static void onTick(dyad_Event* e){
@@ -189,7 +199,7 @@ static void onTick(dyad_Event* e){
 	}
 	if(ss.str().size())
 		for(auto i: system->_clients)
-			dyad_write(i, ss.str().data(), ss.str().size());
+			dyadWrite(i, (uint8_t*)ss.str().data(), ss.str().size());
 }
 
 System::System(int port): _reportQueue(8){
@@ -281,16 +291,8 @@ std::string System::report(
 		ss<<componentToStr(reporter)<<": "<<s;
 		_report[(unsigned)rc].push_back(ss.str());
 		return dyadPauseAnd([&]()->std::string{
-			std::vector<uint8_t> bytes;
-			unsigned size=ss.str().size();
-			bytes.resize(4+size);
-			bytes[0]=(size>>0x00)&0xff;
-			bytes[1]=(size>>0x08)&0xff;
-			bytes[2]=(size>>0x10)&0xff;
-			bytes[3]=(size>>0x18)&0xff;
-			for(unsigned i=0; i<size; ++i) bytes[4+i]=ss.str()[i];
-			for(auto client: _clients)
-				dyad_write(client, bytes.data(), bytes.size());
+			for(auto i: _clients)
+				dyadWrite(i, (uint8_t*)ss.str().data(), ss.str().size());
 			return "";
 		});
 	}
