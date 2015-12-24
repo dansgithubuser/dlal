@@ -1,4 +1,4 @@
-import dlal, atexit
+import dlal
 
 period=8*2*32000
 edges_to_wait=0
@@ -130,11 +130,17 @@ for name in commands: looper.commander.register_command(name, command)
 
 def go():
 	looper.audio.start()
-	atexit.register(lambda: looper.audio.finish())
+
+def quit():
+	looper.audio.finish()
+	looper.system.demolish()
+	import sys
+	sys.exit()
 
 def help():
 	for name, command in commands.items():
 		print('{0}: {1}'.format(name, command[1]))
 
 print('use the go function to start audio processing')
+print('use the quit function to quit')
 print('use the help function for softboard key listing')

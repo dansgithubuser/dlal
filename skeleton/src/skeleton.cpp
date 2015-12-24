@@ -29,13 +29,13 @@ static void dyadWrite(dyad_Stream* stream, const uint8_t* data, uint32_t size){
 
 static std::atomic<bool> dyadDone;
 static std::thread dyadThread;
-static std::mutex dyadMutex;
+static std::recursive_mutex dyadMutex;
 
 void dlalDyadInit(){
 	dyadMutex.lock();
 	dyad_atPanic(atPanic);
 	dyad_init();
-	dyad_setUpdateTimeout(0.01);
+	dyad_setUpdateTimeout(0.0);
 	dyad_setTickInterval(0.01);
 	dyadDone=false;
 	dyadThread=std::thread([](){
@@ -43,6 +43,7 @@ void dlalDyadInit(){
 			dyadMutex.lock();
 			dyad_update();
 			dyadMutex.unlock();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	});
 	dyadMutex.unlock();
@@ -131,8 +132,9 @@ void safeAdd(
 }
 
 std::string dyadPauseAnd(std::function<std::string()> f){
+	std::string r;
 	dyadMutex.lock();
-	std::string r=f();
+	if(!dyadDone) r=f();
 	dyadMutex.unlock();
 	return r;
 }
@@ -226,7 +228,8 @@ System::~System(){
 		dyad_removeListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
 		dyad_removeListener(_server, DYAD_EVENT_ERROR  , onError    , this);
 		dyad_removeListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
-		for(auto i: _streams) dyad_removeAllListeners(i, DYAD_EVENT_DESTROY);
+		dyad_removeListener(_server, DYAD_EVENT_TICK   , onTick     , this);
+		for(auto i: _streams) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
 		return "";
 	});
 }

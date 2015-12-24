@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <chrono>
 
 int main(int argc, char** argv){
 	if(argc!=3){
@@ -24,6 +25,7 @@ int main(int argc, char** argv){
 	windows.push_back(&wt);
 	//loop
 	Viewer viewer;
+	auto lastDraw=std::chrono::steady_clock::now();
 	while(true){
 		//check if any window was closed
 		bool quit=false;
@@ -43,14 +45,17 @@ int main(int argc, char** argv){
 					default: break;
 				}
 			}
-			window->clear();
 		}
 		//process viewer
 		std::string s;
+		if(client.timesDisconnected()) break;
 		while(client.readSizedString(s)) viewer.process(s);
-		viewer.render(wv, wt);
-		//display
-		for(auto window: windows) window->display();
+		if(std::chrono::steady_clock::now()-lastDraw>std::chrono::milliseconds(15)){
+			for(auto window: windows) window->clear();
+			viewer.render(wv, wt);
+			for(auto window: windows) window->display();
+			lastDraw=std::chrono::steady_clock::now();
+		}
 		//don't spin
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}

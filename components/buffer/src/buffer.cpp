@@ -34,7 +34,7 @@ float* Buffer::audio(){ return _audio.data()+_phase; }
 
 void Buffer::resize(uint64_t period){
 	Periodic::resize(period);
-	if(_audio.size()<_period) _audio.resize(_period, 0.0f);
+	if(_audio.size()<_period) _audio.resize((std::vector<float>::size_type)_period, 0.0f);
 }
 
 }//namespace dlal

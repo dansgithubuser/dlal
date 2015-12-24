@@ -153,6 +153,7 @@ class SamplesPerEvaluationGetter: public virtual Component{
 class Periodic: public SamplesPerEvaluationGetter{
 	public:
 		Periodic();
+		virtual ~Periodic(){}
 	protected:
 		virtual void resize(uint64_t period);
 		virtual void setPhase(uint64_t phase);

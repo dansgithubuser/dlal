@@ -1,4 +1,4 @@
-import dlal, atexit
+import dlal
 
 #create
 system=dlal.System()
@@ -19,9 +19,15 @@ fm.show_controls()
 
 #main
 def go(port=None):
-	atexit.register(lambda: audio.finish())
 	audio.start()
 	if port: midi.open(port)
 
+def quit():
+	audio.finish()
+	system.demolish()
+	import sys
+	sys.exit()
+
 print('available midi ports:\n', midi.ports())
 print('use the go function to start audio processing')
+print('use the quit function to quit')

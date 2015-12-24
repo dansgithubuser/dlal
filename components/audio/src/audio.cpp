@@ -51,11 +51,11 @@ Audio::Audio():
 	);
 	registerCommand("start", "", [this](std::stringstream& ss)->std::string{
 		if(!_system) return "error: must add before starting";
-		if(_started) return "error: already started";
+		if(_started) return "already started";
 		return start();
 	});
 	registerCommand("finish", "", [this](std::stringstream& ss)->std::string{
-		if(!_started) return "error: not started";
+		if(!_started) return "not started";
 		return finish();
 	});
 	#ifdef TEST_AUDIO

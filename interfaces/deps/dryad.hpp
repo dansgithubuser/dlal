@@ -11,30 +11,33 @@ class Client;
 static Client* fClient=NULL;
 
 static void onPanic(const char* message);
+static void onConnected(dyad_Event* e);
 static void onDestroyed(dyad_Event* e);
 static void onError(dyad_Event* e);
 static void onData(dyad_Event* e);
 
 class Client{
+	friend void onConnected(dyad_Event*);
+	friend void onClosed(dyad_Event*);
 	friend void onDestroyed(dyad_Event*);
 	friend void onData(dyad_Event*);
 	public:
-		Client(std::string ip, int port): _ip(ip), _port(port){
+		Client(std::string ip, int port):
+			_ip(ip), _port(port), _timesConnected(0), _timesDisconnected(0)
+		{
 			assert(!fClient);
 			fClient=this;
 			dyad_atPanic(onPanic);
 			dyad_init();
-			_stream=dyad_newStream();
-			dyad_addListener(_stream, DYAD_EVENT_DESTROY, onDestroyed, NULL);
-			dyad_addListener(_stream, DYAD_EVENT_ERROR  , onError    , NULL);
-			dyad_addListener(_stream, DYAD_EVENT_DATA   , onData     , NULL);
+			dyad_setUpdateTimeout(0.0);
 			connect();
-			dyad_setUpdateTimeout(0.001);
+			_quit=false;
 			_thread=std::thread([this](){
 				while(!_quit){
 					_mutex.lock();
 					dyad_update();
 					_mutex.unlock();
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				}
 			});
 		}
@@ -60,7 +63,7 @@ class Client{
 			write(bytes);
 		}
 		bool readSizedString(std::string& s){
-			std::lock_guard<std::mutex> lock(_mutex);
+			std::lock_guard<std::recursive_mutex> lock(_mutex);
 			if(_queue.size()<4) return false;
 			uint32_t size=
 				(_queue[0]<<0x00)|
@@ -73,16 +76,26 @@ class Client{
 			_queue.erase(_queue.begin(), _queue.begin()+4+size);
 			return true;
 		}
+		unsigned timesConnected(){ return _timesConnected; }
+		unsigned timesDisconnected(){ return _timesDisconnected; }
 	private:
-		void connect(){ dyad_connect(_stream, _ip.c_str(), _port); }
+		void connect(){
+			_stream=dyad_newStream();
+			dyad_addListener(_stream, DYAD_EVENT_CONNECT, onConnected, NULL);
+			dyad_addListener(_stream, DYAD_EVENT_DESTROY, onDestroyed, NULL);
+			dyad_addListener(_stream, DYAD_EVENT_ERROR, onError, NULL);
+			dyad_addListener(_stream, DYAD_EVENT_DATA, onData, NULL);
+			dyad_connect(_stream, _ip.c_str(), _port);
+		}
 		void queue(uint8_t* data, unsigned size){ _queue.insert(_queue.end(), data, data+size); }
 		std::string _ip;
 		int _port;
 		dyad_Stream* _stream;
 		std::thread _thread;
 		bool _quit;
-		std::mutex _mutex;
+		std::recursive_mutex _mutex;
 		std::vector<uint8_t> _queue;
+		unsigned _timesConnected, _timesDisconnected;
 };
 
 static void onPanic(const char* message){
@@ -90,8 +103,13 @@ static void onPanic(const char* message){
 	assert(false);
 }
 
+static void onConnected(dyad_Event* e){
+	++fClient->_timesConnected;
+}
+
 static void onDestroyed(dyad_Event* e){
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
+	if(fClient->_timesConnected>fClient->_timesDisconnected) ++fClient->_timesDisconnected;
 	if(!fClient->_quit) fClient->connect();
 }
 

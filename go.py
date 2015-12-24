@@ -10,7 +10,37 @@ parser.add_argument('--debug', '-d', action='store_true', help='use debug config
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--system', '-s', help='which system to run')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
+parser.add_argument('--can', '-c', help='canned commands -- name.options')
 args=parser.parse_args()
+
+#canned commands
+if args.can:
+	canned_commands={
+		'l': '-s looper -i viewer:9088 -i softboard:9089',
+		'f': '-s fm -i viewer:9088 -i softboard:9087',
+	}
+	canned_options={
+		'r': '-r',
+		'd': '-d'
+	}
+	can=args.can.split('.')
+	name=can[0]
+	options=can[1] if len(can)>1 else ''
+	import pprint
+	if name not in canned_commands:
+		print('invalid command -- valid commands are')
+		pprint.pprint(canned_commands)
+		sys.exit(-1)
+	command=canned_commands[name]
+	for i in options:
+		if i not in canned_options:
+			print('invalid option "{0}" -- valid options are'.format(i))
+			pprint.pprint(canned_options)
+			continue
+		command+=' '+canned_options[i]
+	subprocess.check_call('python go.py '+command, shell=True)
+	import sys
+	sys.exit(0)
 
 #helpers
 def shell(*args): p=subprocess.check_call(' '.join(args), shell=True)
@@ -36,11 +66,8 @@ if not args.run_only:
 	os.chdir(built_rel_path)
 	preamble=''
 	generator=''
-	if os.name=='nt':
-		preamble='vcvarsall&&'
-		generator='-G "NMake Makefiles"'
 	shell(preamble, 'cmake', generator, '-DBUILD_SHARED_LIBS=ON', '-DCMAKE_BUILD_TYPE='+config, '..')
-	shell(preamble, 'cmake --build .')
+	shell(preamble, 'cmake --build . --config '+config)
 	os.chdir(file_path)
 
 #library path
@@ -93,14 +120,12 @@ if args.interface:
 			name, port=i.split(':')
 			os.chdir(os.path.join('interfaces', name, 'build'))
 			shell('cmake .')
-			shell('cmake --build .')
+			shell('cmake --build . --config '+config)
 			os.chdir(file_path)
 	for i in args.interface:
 		name, port=i.split(':')
 		os.chdir(os.path.join('interfaces', name, 'build'))
-		p=subprocess.Popen([find_binary(name), '127.0.0.1', port])
-		import atexit
-		atexit.register(lambda: p.kill())
+		subprocess.Popen([find_binary(name), '127.0.0.1', port])
 		os.chdir(file_path)
 
 #run

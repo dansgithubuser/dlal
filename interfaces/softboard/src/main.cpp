@@ -33,6 +33,7 @@ int main(int argc, char** argv){
 	window.setKeyRepeatEnabled(false);
 	std::set<std::string> keys;
 	int result=EXIT_SUCCESS;
+	auto lastDraw=std::chrono::steady_clock::now();
 	while(window.isOpen()){
 		sf::Event event;
 		while(window.pollEvent(event)){
@@ -57,14 +58,18 @@ int main(int argc, char** argv){
 				default: break;
 			}
 		}
-		window.clear();
-		std::string s;
-		for(auto i: keys) s+=i;
-		sf::Text t(s.c_str(), font, 16);
-		t.setPosition(2, 2);
-		window.draw(t);
-		window.display();
+		if(std::chrono::steady_clock::now()-lastDraw>std::chrono::milliseconds(15)){
+			window.clear();
+			std::string s;
+			for(auto i: keys) s+=i;
+			sf::Text t(s.c_str(), font, 16);
+			t.setPosition(2, 2);
+			window.draw(t);
+			window.display();
+			lastDraw=std::chrono::steady_clock::now();
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		if(client.timesDisconnected()) break;
 	}
 	return result;
 }

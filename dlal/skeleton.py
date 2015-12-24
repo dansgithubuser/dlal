@@ -1,4 +1,4 @@
-import ctypes, platform, atexit
+import ctypes, platform
 
 _port=9088
 _systems=0
@@ -48,7 +48,7 @@ class System:
 		self.system=_skeleton.dlalBuildSystem(9088)
 		assert(self.system)
 
-	def __del__(self):
+	def demolish(self):
 		report(_skeleton.dlalDemolishSystem(self.system))
 		global _systems
 		_systems-=1
