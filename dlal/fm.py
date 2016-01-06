@@ -95,6 +95,7 @@ class Fm(Component):
 		self.commander=Component('commander')
 		self.commander.connect(self)
 		self.components_to_add=[self.commander, self]
+		self.oscillators=[]
 
 	def show_controls(self, title='dlal fm controls'):
 		self.root=tkinter.Tk()
@@ -115,6 +116,7 @@ class Fm(Component):
 		self.refresh_controls()
 
 	def refresh_controls(self):
+		if not self.oscillators: return
 		settings=self.save('i').split('\n')
 		for setting in settings:
 			if not setting: continue
@@ -131,7 +133,7 @@ class Fm(Component):
 				i.set(float(cmd[3])**(1.0/osc.exponents[i]))
 
 	def load(self, file_name):
-		result=fm.command('load '+file_name)
+		result=self.command('load '+file_name)
 		self.refresh_controls()
 		return result
 

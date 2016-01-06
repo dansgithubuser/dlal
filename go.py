@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, subprocess
+import os, subprocess, sys
 
 #args
 import argparse
@@ -10,7 +10,7 @@ parser.add_argument('--debug', '-d', action='store_true', help='use debug config
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--system', '-s', help='which system to run')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
-parser.add_argument('--can', '-c', help='canned commands -- name.options')
+parser.add_argument('--can', '-c', help='canned commands -- name.options -- use h for help')
 args=parser.parse_args()
 
 #canned commands
@@ -23,10 +23,16 @@ if args.can:
 		'r': '-r',
 		'd': '-d'
 	}
+	import pprint
+	if args.can=='h':
+		print('available cans:')
+		pprint.pprint(canned_commands)
+		print('available options:')
+		pprint.pprint(canned_options)
+		sys.exit(0)
 	can=args.can.split('.')
 	name=can[0]
 	options=can[1] if len(can)>1 else ''
-	import pprint
 	if name not in canned_commands:
 		print('invalid command -- valid commands are')
 		pprint.pprint(canned_commands)
@@ -39,7 +45,6 @@ if args.can:
 			continue
 		command+=' '+canned_options[i]
 	subprocess.check_call('python go.py '+command, shell=True)
-	import sys
 	sys.exit(0)
 
 #helpers

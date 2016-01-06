@@ -312,7 +312,7 @@ void Viewer::layout(){
 	//find sourcey components
 	std::vector<Component*> sourceys;
 	{
-		unsigned minConnecters=_nameToComponent.size()+1;
+		auto minConnecters=_nameToComponent.size()+1;
 		for(auto& i: _nameToComponent) minConnecters=std::min(i.second._connecters.size(), minConnecters);
 		for(auto& i: _nameToComponent) if(i.second._connecters.size()==minConnecters) sourceys.push_back(&i.second);
 	}
