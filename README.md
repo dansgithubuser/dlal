@@ -52,7 +52,6 @@ file organization
 
 todo
 ----
-- looper: two keyboard inputs
 - midi controllers
 - simple improvements
 	- memory leak check

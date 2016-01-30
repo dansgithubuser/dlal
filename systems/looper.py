@@ -4,20 +4,25 @@ samples_per_beat=32000
 
 period=8*2*samples_per_beat
 edges_to_wait=0
+input=0
 track=0
 sequence=None
 
 #looper
 looper=dlal.Looper()
-looper.system.set('track', str(track))
 looper.system.set('wait', str(edges_to_wait))
+looper.system.set('input', str(input))
+looper.system.set('track', str(track))
 looper.system.set('sequence', 'none')
 
-#midi
-midi=dlal.Component('midi')
-qweboard=dlal.Qweboard()
-qweboard.connect(midi)
-looper.system.add(qweboard)
+#inputs
+class Input:
+	def __init__(self):
+		self.midi=dlal.Component('midi')
+		self.qweboard=dlal.Qweboard()
+		looper.commander.queue_connect(self.qweboard, self.midi, enable=True)
+		looper.commander.queue_add(self.qweboard)
+inputs=[]
 
 #network
 network=dlal.Component('network')
@@ -28,23 +33,32 @@ looper.system.add(network)
 tracks=[]
 
 def add_midi():
-	track=dlal.MidiTrack(midi, dlal.Fm(), period, samples_per_beat)
-	global tracks
+	track=dlal.MidiTrack(inputs[input].midi, dlal.Fm(), period, samples_per_beat)
 	tracks.append(track)
 	looper.add(track)
 
 def add_metronome():
-	track=dlal.MidiTrack(midi, dlal.Fm(), period, samples_per_beat)
+	track=dlal.MidiTrack(inputs[input].midi, dlal.Fm(), period, samples_per_beat)
 	track.drumline()
 	track.synth.load(os.path.join(dlal.root, 'components', 'fm', 'settings', 'snare.txt'))
-	global tracks
 	tracks.append(track)
 	looper.add(track)
 
-def commander_match():
-	period, phase=tracks[track].container.get().split()
-	looper.commander.queue_command(looper.commander, 'resize', period)
-	looper.commander.queue_command(looper.commander, 'set_phase', phase)
+def add_input():
+	looper.system.set(str(dlal.Qweboard.port), str(len(inputs)))
+	inputs.append(Input())
+
+def input_next():
+	global input
+	if input+1<len(inputs):
+		input+=1
+		looper.system.set('input', str(input))
+
+def input_prev():
+	global input
+	if input>0:
+		input-=1
+		looper.system.set('input', str(input))
 
 def track_next():
 	global track
@@ -75,6 +89,11 @@ def track_reset_on_midi():
 def track_crop():
 	looper.commander.queue_command(tracks[track].container, 'crop')
 
+def commander_match():
+	period, phase=tracks[track].container.get().split()
+	looper.commander.queue_command(looper.commander, 'resize', period)
+	looper.commander.queue_command(looper.commander, 'set_phase', phase)
+
 def track_match():
 	period, phase=looper.commander.get().split()
 	looper.commander.queue_command(tracks[track].container, 'resize', period)
@@ -102,12 +121,15 @@ def sequence_cancel():
 	looper.system.set('sequence', 'none')
 
 commands=[
-	('1', (add_midi, 'add midi track')),
-	('2', (add_metronome, 'add metronome midi track')),
-	('J', (track_next, 'next track')),
-	('U', (track_prev, 'prev track')),
-	('K', (wait_more, 'wait more')),
-	('I', (wait_less, 'wait less')),
+	('F1', (add_input, 'add input')),
+	('F5', (add_midi, 'add midi track')),
+	('F6', (add_metronome, 'add metronome midi track')),
+	('J', (input_next, 'next input')),
+	('U', (input_prev, 'prev input')),
+	('K', (track_next, 'next track')),
+	('I', (track_prev, 'prev track')),
+	('L', (wait_more, 'wait more')),
+	('O', (wait_less, 'wait less')),
 	('Return', (track_reset_on_midi, 'reset track on midi')),
 	('Space', (track_crop, 'crop track')),
 	('[', (commander_match, 'match commander to current track')),
@@ -142,9 +164,12 @@ def help():
 	for name, command in commands:
 		print('{0}: {1}'.format(name, command[1]))
 
-go, quit, ports=dlal.standard_system_functionality(looper.system, looper.audio, midi, ['use the help function for softboard key listing'])
+add_input()
+go, quit, ports=dlal.standard_system_functionality(looper.system, looper.audio, inputs[0].midi, ['use the help function for softboard key listing'])
 
 class Quitter():
 	def __repr__(self): quit()
 
 qq=Quitter()
+
+for i in 'F5 S D'.split(): commands_dict[i][0]()

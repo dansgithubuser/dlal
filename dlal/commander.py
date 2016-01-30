@@ -48,7 +48,7 @@ class Commander(Component):
 			f=self.library.dlalCommanderDisconnect
 		for i in range(len(args)-1):
 			result+=report(f(
-				self.component, args[i].component, args[i+1].component, edges_to_wait
+				self.component, args[i].output(), args[i+1].component, edges_to_wait
 			))
 			if len(result): result+='\n'
 		return result

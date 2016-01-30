@@ -2,12 +2,14 @@ from .commander import *
 from .skeleton import *
 
 class Qweboard(Pipe):
-	def __init__(self, port=9087):
+	port=9120
+	def __init__(self):
 		self.network=Component('network')
 		self.commander=Commander()
 		Pipe.__init__(self, self.network, self.commander)
 		self.network.connect(self.commander)
-		self.network.port(port)
+		self.network.port(Qweboard.port)
+		Qweboard.port+=1
 		self.octave=5
 		def octavate(o): self.octave+=o
 		notes={
