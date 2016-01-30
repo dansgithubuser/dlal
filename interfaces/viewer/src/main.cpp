@@ -42,6 +42,15 @@ int main(int argc, char** argv){
 					case sf::Event::Closed:
 						window->close();
 						break;
+					case sf::Event::KeyPressed:
+						if(window==&wv) switch(event.key.code){
+							case sf::Keyboard::Space:
+								wt.setPosition(wv.getPosition()+sf::Vector2i(wv.getSize().x, 0));
+								wt.setSize(sf::Vector2u(wt.getSize().x, wv.getSize().y));
+								break;
+							default: break;
+						}
+						break;
 					default: break;
 				}
 			}
