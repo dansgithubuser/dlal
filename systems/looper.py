@@ -15,8 +15,6 @@ looper.system.set('sequence', 'none')
 
 #midi
 midi=dlal.Component('midi')
-ports=[x for x in midi.ports().split('\n') if len(x)]
-if len(ports): midi.open(ports[0])
 qweboard=dlal.Qweboard()
 qweboard.connect(midi)
 looper.system.add(qweboard)
@@ -140,30 +138,13 @@ def command(text):
 	if name in commands_dict: commands_dict[name][0]()
 for name in commands_dict: looper.commander.register_command(name, command)
 
-def go():
-	looper.audio.start()
-	print('audio processing going')
-
-def quit():
-	looper.audio.finish()
-	looper.system.demolish()
-	sys.exit()
-
-class Quitter():
-	def __repr__(self):
-		quit()
-		return 'quit'
-
-qq=Quitter()
-
 def help():
 	for name, command in commands:
 		print('{0}: {1}'.format(name, command[1]))
 
-print('use the go function to start audio processing')
-print('use the quit function or qq to quit')
-print('use the help function for softboard key listing')
+go, quit, ports=dlal.standard_system_functionality(looper.system, looper.audio, midi, ['use the help function for softboard key listing'])
 
-if len(sys.argv)>1 and sys.argv[1]=='-g':
-	print('-g option specified -- starting audio processing')
-	go()
+class Quitter():
+	def __repr__(self): quit()
+
+qq=Quitter()

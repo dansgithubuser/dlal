@@ -18,16 +18,4 @@ fm.connect(audio)
 fm.show_controls()
 
 #main
-def go(port=None):
-	audio.start()
-	if port: midi.open(port)
-
-def quit():
-	audio.finish()
-	system.demolish()
-	import sys
-	sys.exit()
-
-print('available midi ports:\n', midi.ports())
-print('use the go function to start audio processing')
-print('use the quit function to quit')
+go, quit, ports=dlal.standard_system_functionality(system, audio, midi)
