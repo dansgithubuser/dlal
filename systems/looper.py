@@ -85,7 +85,7 @@ def sequence_start():
 	looper.system.set('sequence', '-')
 
 def sequence_commit():
-	for name in sequence: commands[name][0]()
+	for name in sequence: commands_dict[name][0]()
 	sequence_cancel()
 
 def sequence_cancel():
@@ -93,27 +93,29 @@ def sequence_cancel():
 	sequence=None
 	looper.system.set('sequence', 'none')
 
-commands={
-	'1': (add_midi, 'add midi track'),
-	'[': (commander_match, 'match commander to current track'),
-	'U': (track_next, 'next track'),
-	'J': (track_prev, 'prev track'),
-	'I': (wait_more, 'wait more'),
-	'K': (wait_less, 'wait less'),
-	'Return': (track_reset_on_midi, 'reset track on midi'),
-	'Space': (track_crop, 'crop track'),
-	']': (track_match, 'match current track to commander'),
-	'F': (track_reset, 'reset track'),
-	'Q': (generate_standard_command(dlal.Looper.record, False), 'stop track record'),
-	'A': (generate_standard_command(dlal.Looper.record, True ), 'start track record'),
-	'W': (generate_standard_command(dlal.Looper.play  , False), 'stop track play'),
-	'S': (generate_standard_command(dlal.Looper.play  , True ), 'start track play'),
-	'E': (generate_standard_command(dlal.Looper.replay, False), 'stop track replay'),
-	'D': (generate_standard_command(dlal.Looper.replay, True ), 'start track replay'),
-	',': (sequence_start, 'start sequence'),
-	'.': (sequence_commit, 'commit sequence'),
-	'/': (sequence_cancel, 'cancel sequence'),
-}
+commands=[
+	('1', (add_midi, 'add midi track')),
+	('2', (add_metronome, 'add metronome midi track')),
+	('J', (track_next, 'next track')),
+	('U', (track_prev, 'prev track')),
+	('K', (wait_more, 'wait more')),
+	('I', (wait_less, 'wait less')),
+	('Return', (track_reset_on_midi, 'reset track on midi')),
+	('Space', (track_crop, 'crop track')),
+	('[', (commander_match, 'match commander to current track')),
+	(']', (track_match, 'match current track to commander')),
+	('F', (track_reset, 'reset track')),
+	('Q', (generate_standard_command(dlal.Looper.record, False), 'stop track record')),
+	('A', (generate_standard_command(dlal.Looper.record, True ), 'start track record')),
+	('W', (generate_standard_command(dlal.Looper.play  , False), 'stop track play')),
+	('S', (generate_standard_command(dlal.Looper.play  , True ), 'start track play')),
+	('E', (generate_standard_command(dlal.Looper.replay, False), 'stop track replay')),
+	('D', (generate_standard_command(dlal.Looper.replay, True ), 'start track replay')),
+	(',', (sequence_start, 'start sequence')),
+	('.', (sequence_commit, 'commit sequence')),
+	('/', (sequence_cancel, 'cancel sequence')),
+]
+commands_dict=dict(commands)
 
 def command(text):
 	c=text.decode('utf-8').split()
@@ -125,11 +127,12 @@ def command(text):
 			sequence.append(name)
 			looper.system.set('sequence', '-'.join(sequence))
 		return
-	if name in commands: commands[name][0]()
-for name in commands: looper.commander.register_command(name, command)
+	if name in commands_dict: commands_dict[name][0]()
+for name in commands_dict: looper.commander.register_command(name, command)
 
 def go():
 	looper.audio.start()
+	print('audio processing going')
 
 def quit():
 	looper.audio.finish()
@@ -137,10 +140,21 @@ def quit():
 	import sys
 	sys.exit()
 
+class Quitter():
+	def __repr__(self):
+		quit()
+		return 'quit'
+
+qq=Quitter()
+
 def help():
-	for name, command in commands.items():
+	for name, command in commands:
 		print('{0}: {1}'.format(name, command[1]))
 
 print('use the go function to start audio processing')
-print('use the quit function to quit')
+print('use the quit function or qq to quit')
 print('use the help function for softboard key listing')
+
+if len(sys.argv)>1 and sys.argv[1]=='-g':
+	print('-g option specified -- starting audio processing')
+	go()

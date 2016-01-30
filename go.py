@@ -25,6 +25,7 @@ if args.can:
 	}
 	import pprint
 	if args.can=='h':
+		print('usage: `can.options`')
 		print('available cans:')
 		pprint.pprint(canned_commands)
 		print('available options:')
@@ -136,7 +137,7 @@ if args.interface:
 #run
 if args.system:
 	os.chdir(built_rel_path)
-	shell('python', '-i', os.path.join('..', '..', 'systems', args.system+'.py'))
+	shell('python', '-i', os.path.join('..', '..', 'systems', args.system+'.py'), '-g')
 	os.chdir(file_path)
 
 #done
