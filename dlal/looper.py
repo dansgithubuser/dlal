@@ -12,6 +12,10 @@ class MidiTrack(Pipe):
 		self.container.resize(period_in_samples)
 		self.container.connect(self.synth)
 
+	def drumline(self, text=None, beats=4):
+		if not text: text='S '+str(self.container.samples_per_beat//2)+' z . x . z . . . '
+		self.container.line(text*((self.container.period_in_samples//self.container.samples_per_beat+beats-1)//beats))
+
 class AudioTrack(Pipe):
 	def __init__(self, audio, period_in_samples):
 		self.input=audio

@@ -1,4 +1,6 @@
-import ctypes, platform
+import ctypes, os, platform
+
+root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
 
 _port=9088
 _systems=0

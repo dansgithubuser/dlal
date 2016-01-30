@@ -1,6 +1,8 @@
-import dlal
+import dlal, os, sys
 
-period=8*2*32000
+samples_per_beat=32000
+
+period=8*2*samples_per_beat
 edges_to_wait=0
 track=0
 sequence=None
@@ -28,7 +30,15 @@ looper.system.add(network)
 tracks=[]
 
 def add_midi():
-	track=dlal.MidiTrack(midi, dlal.Fm(), period, 32000)
+	track=dlal.MidiTrack(midi, dlal.Fm(), period, samples_per_beat)
+	global tracks
+	tracks.append(track)
+	looper.add(track)
+
+def add_metronome():
+	track=dlal.MidiTrack(midi, dlal.Fm(), period, samples_per_beat)
+	track.drumline()
+	track.synth.load(os.path.join(dlal.root, 'components', 'fm', 'settings', 'snare.txt'))
 	global tracks
 	tracks.append(track)
 	looper.add(track)
@@ -137,7 +147,6 @@ def go():
 def quit():
 	looper.audio.finish()
 	looper.system.demolish()
-	import sys
 	sys.exit()
 
 class Quitter():

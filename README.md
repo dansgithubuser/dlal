@@ -52,11 +52,8 @@ file organization
 
 todo
 ----
-sfml cmake
-pa cmake
 - looper: two keyboard inputs
 - midi controllers
-- metronome
 - simple improvements
 	- memory leak check
 	- midi split instrument
