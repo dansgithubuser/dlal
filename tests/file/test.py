@@ -23,6 +23,8 @@ midi.connect(fileo)
 raw.start()
 #finish
 fileo.finish()
+#finish
+system.demolish()
 
 #-----in-----#
 #create
@@ -40,3 +42,5 @@ filei.connect(fm)
 fm.connect(raw)
 #start
 raw.start()
+#finish
+system.demolish()

@@ -17,3 +17,5 @@ commander.queue(0, 0, 'midi', 0x90, 0x3C, 0x40)
 system.add(raw, commander)
 #start
 raw.start()
+#finish
+system.demolish()

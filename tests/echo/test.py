@@ -25,3 +25,5 @@ multiplier.connect(buffer)
 buffer.connect(raw)
 #start
 raw.start()
+#finish
+system.demolish()

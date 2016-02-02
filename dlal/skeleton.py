@@ -97,10 +97,12 @@ class Component:
 
 	def output(self): return self.component
 
-class Pipe:
+class Pipe(Component):
 	def __init__(self, *args):
 		self.component=args[0].component
 		self.components_to_add=[x for arg in args for x in arg.components_to_add]
+
+	def __del__(self): pass
 
 	def __getitem__(self, i): return self.components_to_add[i]
 

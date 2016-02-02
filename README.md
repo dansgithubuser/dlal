@@ -52,7 +52,6 @@ file organization
 
 todo
 ----
-- midi controllers
 - simple improvements
 	- memory leak check
 	- midi split instrument
@@ -61,7 +60,5 @@ todo
 	- looper: quantization
 	- vocoder
 	- sampler
-	- low pass component
-	- diodefilter component
 	- pitch shift component
 	- auto dj
