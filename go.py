@@ -16,7 +16,7 @@ args=parser.parse_args()
 #canned commands
 if args.can:
 	canned_commands={
-		'l': '-s looper -i viewer:9088 -i softboard:9089',
+		'l': '-s looper -i viewer:9088 -i softboard:9120',
 		'f': '-s fm -i viewer:9088 -i softboard:9120',
 	}
 	canned_options={

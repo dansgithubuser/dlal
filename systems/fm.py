@@ -14,6 +14,7 @@ system.add(audio, qweboard, midi, fm, lpf)
 #connect
 qweboard.connect(midi)
 midi.connect(fm)
+midi.connect(lpf)
 fm.connect(audio)
 lpf.connect(audio)
 #start

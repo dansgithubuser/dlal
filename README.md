@@ -56,6 +56,8 @@ todo
 	- memory leak check
 	- midi split instrument
 	- fm pitch slide
+	- lfo
+	- midi control fm settings
 - probable future features
 	- looper: quantization
 	- vocoder

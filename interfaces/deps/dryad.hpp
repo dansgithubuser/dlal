@@ -72,7 +72,8 @@ class Client{
 				(_queue[3]<<0x18)
 			;
 			if(_queue.size()<4+size) return false;
-			s=std::string((char*)&_queue[4], size);
+			if(size==0) s="";
+			else s=std::string((char*)&_queue[4], size);
 			_queue.erase(_queue.begin(), _queue.begin()+4+size);
 			return true;
 		}
