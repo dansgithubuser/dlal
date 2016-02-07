@@ -14,7 +14,7 @@ multiplier=dlal.Component('multiplier')
 #command
 raw.set(44100, log_2_samples_per_callback)
 midi.midi(0x90, 0x3C, 0x40)
-buffer.resize(4<<log_2_samples_per_callback)
+buffer.periodic_resize(4<<log_2_samples_per_callback)
 multiplier.set(0.5)
 #add
 system.add(raw, midi, fm, multiplier, buffer)

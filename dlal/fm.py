@@ -133,6 +133,9 @@ class Fm(Component):
 				i.set(float(cmd[3])**(1.0/osc.exponents[i]))
 
 	def load(self, file_name):
+		if os.path.split(file_name)[1]==file_name:
+			file_name=os.path.join('..', '..', 'components', 'fm', 'settings', file_name)
+		if file_name[-4:]!='.txt': file_name+='.txt'
 		result=self.command('load '+file_name)
 		self.refresh_controls()
 		return result

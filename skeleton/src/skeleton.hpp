@@ -182,6 +182,38 @@ class MultiOut: public virtual Component{
 		std::vector<Component*> _outputs;
 };
 
+class MidiControllee: public virtual Component{
+	public:
+		MidiControllee();
+		virtual void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
+	protected:
+		std::map<std::string, float*> _nameToControl;
+	private:
+		enum class PretendControl{
+			PITCH_WHEEL=0x100,
+			SENTINEL
+		};
+		class Range{
+			public:
+				Range(): _new(true) {}
+				operator int(){ return _max-_min; }
+				void value(int v);
+				int _min, _max;
+			private:
+				bool _new;
+		};
+		struct Control{
+			Control(): _control(NULL) { _f.push_back(0.0f); _f.push_back(1.0f); }
+			int _min, _max;
+			std::vector<float> _f;
+			float* _control;
+		};
+		float* _listening;
+		std::map<int, Range> _listeningControls;
+		std::vector<Control> _controls;
+};
+
 }//namespace dlal
 
 #endif//#ifndef DLAL_SKELETON_INCLUDED

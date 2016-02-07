@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <mutex>
+#include <stdexcept>
 #include <thread>
 
 void dlalDemolishComponent(void* component){
@@ -374,6 +375,7 @@ void Component::registerCommand(
 	const std::string& parameters,
 	Command command
 ){
+	if(_commands.count(name)) throw std::logic_error("command "+name+" already exists");
 	_commands[name]={command, parameters};
 }
 
@@ -391,22 +393,22 @@ SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
 
 //=====Periodic=====//
 Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
-	registerCommand("resize", "<period in samples>", [this](std::stringstream& ss){
+	registerCommand("periodic_resize", "<period in samples>", [this](std::stringstream& ss){
 		uint64_t period;
 		ss>>period;
 		resize(period);
 		return "";
 	});
-	registerCommand("crop", "", [this](std::stringstream& ss){
+	registerCommand("periodic_crop", "", [this](std::stringstream& ss){
 		resize(_phase);
 		setPhase(0);
 		return "";
 	});
-	registerCommand("get", "", [this](std::stringstream& ss){
+	registerCommand("periodic_get", "", [this](std::stringstream& ss){
 		std::string result=std::to_string(_period)+" "+std::to_string(_phase);
 		return result;
 	});
-	registerCommand("set_phase", "<phase>", [this](std::stringstream& ss){
+	registerCommand("periodic_set_phase", "<phase>", [this](std::stringstream& ss){
 		uint64_t phase;
 		ss>>phase;
 		_last=0.0f;
@@ -482,6 +484,106 @@ std::string MultiOut::disconnect(Component& output){
 		"disconnect "+componentToStr(this)+" "+componentToStr(&output)
 	);
 	return "";
+}
+
+//=====MidiControlled=====//
+MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendControl::SENTINEL)){
+	registerCommand("control_listen", "control", [this](std::stringstream& ss)->std::string{
+		std::string s;
+		ss>>s;
+		if(_nameToControl.count(s)){
+			_listening=_nameToControl[s];
+			_listeningControls.clear();
+			return "listening";
+		}
+		else if(_listeningControls.size()){
+			auto a=_listeningControls.begin();
+			int control=a->first;
+			int min=a->second._min;
+			int max=a->second._max;
+			int maxRange=a->second;
+			if(control==int(PretendControl::PITCH_WHEEL)) maxRange>>=7;
+			for(auto i: _listeningControls) if(i.second>maxRange){
+				if(i.first==int(PretendControl::PITCH_WHEEL)&&i.second>>7<=maxRange) continue;
+				control=i.first;
+				min=i.second._min;
+				max=i.second._max;
+				maxRange=i.second;
+			}
+			_controls[control]._min=min;
+			_controls[control]._max=max;
+			_controls[control]._control=_listening;
+			_listening=nullptr;
+			return "control "+std::to_string(control)+" range "+std::to_string(min)+".."+std::to_string(max);
+		}
+		else _listening=nullptr;
+		return "";
+	});
+	registerCommand("control_function", "control y[1]..y[n]", [this](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		for(auto& i: _controls) if(i._control==_nameToControl[s]){
+			i._f.clear();
+			float f;
+			while(ss>>f) i._f.push_back(f);
+			if(i._f.empty()){
+				i._f.push_back(0.0f);
+				i._f.push_back(1.0f);
+			}
+			return "";
+		}
+		return "error: unknown control";
+	});
+	registerCommand("control_list", "", [this](std::stringstream& ss){
+		std::string result;
+		for(auto i: _nameToControl) result+=i.first+"\n";
+		return result;
+	});
+	registerCommand("control_clear", "", [this](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		for(auto& i: _controls) if(i._control==_nameToControl[s]){
+			i._control=nullptr;
+			return "";
+		}
+		return "error: unknown control";
+	});
+}
+
+void MidiControllee::midi(const uint8_t* bytes, unsigned size){
+	if(size!=3) return;
+	int value, controller;
+	switch(bytes[0]&0xf0){
+		case 0xb0:
+			value=bytes[2];
+			controller=bytes[1];
+			break;
+		case 0xe0:
+			value=(bytes[2]<<7)+bytes[1];
+			controller=int(PretendControl::PITCH_WHEEL);
+			break;
+		default: break;
+	}
+	if(_listening) _listeningControls[controller].value(value);
+	Control& control=_controls[controller];
+	if(control._control){
+		float f=1.0f*(value-control._min)/(control._max-control._min)*(control._f.size()-1);
+		int i=int(f);
+		float j=f-i;
+		if(i>=(int)control._f.size()-1) *control._control=control._f.back();
+		else if(i<0) *control._control=control._f.front();
+		else *control._control=(1-j)*control._f[i]+j*control._f[i+1];
+	}
+}
+
+void MidiControllee::Range::value(int v){
+	if(_new){
+		_min=_max=v;
+		_new=false;
+		return;
+	}
+	if     (v<_min) _min=v;
+	else if(v>_max) _max=v;
 }
 
 }//namespace dlal

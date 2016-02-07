@@ -87,20 +87,20 @@ def track_reset_on_midi():
 	looper.commander.queue_command(tracks[track].container, 'reset_on_midi')
 
 def track_crop():
-	looper.commander.queue_command(tracks[track].container, 'crop')
+	looper.commander.queue_command(tracks[track].container, 'periodic_crop')
 
 def commander_match():
-	period, phase=tracks[track].container.get().split()
-	looper.commander.queue_command(looper.commander, 'resize', period)
-	looper.commander.queue_command(looper.commander, 'set_phase', phase)
+	period, phase=tracks[track].container.periodic_get().split()
+	looper.commander.queue_command(looper.commander, 'periodic_resize', period)
+	looper.commander.queue_command(looper.commander, 'periodic_set_phase', phase)
 
 def track_match():
-	period, phase=looper.commander.get().split()
-	looper.commander.queue_command(tracks[track].container, 'resize', period)
-	looper.commander.queue_command(tracks[track].container, 'set_phase', phase)
+	period, phase=looper.commander.periodic_get().split()
+	looper.commander.queue_command(tracks[track].container, 'periodic_resize', period)
+	looper.commander.queue_command(tracks[track].container, 'periodic_set_phase', phase)
 
 def track_reset():
-	looper.commander.queue_command(tracks[track].container, 'set_phase', 0, edges_to_wait=edges_to_wait)
+	looper.commander.queue_command(tracks[track].container, 'periodic_set_phase', 0, edges_to_wait=edges_to_wait)
 
 def generate_standard_command(function, sense):
 	def command(): function(looper, tracks[track], sense, edges_to_wait)

@@ -9,7 +9,7 @@ class MidiTrack(Pipe):
 		self.synth=synth
 		self.output=synth
 		Pipe.__init__(self, self.input, self.container, self.synth)
-		self.container.resize(period_in_samples)
+		self.container.periodic_resize(period_in_samples)
 		self.container.connect(self.synth)
 
 	def drumline(self, text=None, beats=4):
@@ -24,7 +24,7 @@ class AudioTrack(Pipe):
 		self.output=audio
 		self.multiplier=Component('multiplier')
 		Pipe.__init__(self, self.container, self.multiplier)
-		self.container.resize(period_in_samples)
+		self.container.periodic_resize(period_in_samples)
 		self.multiplier.connect(self.container)
 
 class Looper:
