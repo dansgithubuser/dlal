@@ -6,7 +6,7 @@
 namespace dlal{
 
 class Sonic:
-	public MultiOut, public SamplesPerEvaluationGetter, public SampleRateGetter
+	public MultiOut, public SamplesPerEvaluationGetter, public SampleRateGetter, public MidiControllee
 {
 	public:
 		Sonic();

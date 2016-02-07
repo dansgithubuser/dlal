@@ -57,7 +57,6 @@ todo
 	- midi split instrument
 	- fm pitch slide
 	- lfo
-	- midi control fm settings
 - probable future features
 	- looper: quantization
 	- vocoder

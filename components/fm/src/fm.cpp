@@ -110,6 +110,23 @@ Sonic::Sonic(){
 		if(error) result="error: a load command failed\n"+result;
 		return result;
 	});
+	for(unsigned i=0; i<OSCILLATORS; ++i){
+		std::stringstream ss;
+		ss<<i;
+		std::string s=ss.str();
+		_nameToControl["a"+s]=&_oscillators[i]._attack;
+		_nameToControl["d"+s]=&_oscillators[i]._decay;
+		_nameToControl["s"+s]=&_oscillators[i]._sustain;
+		_nameToControl["r"+s]=&_oscillators[i]._release;
+		_nameToControl["m"+s]=&_oscillators[i]._frequencyMultiplier;
+		for(unsigned j=0; j<OSCILLATORS; ++j){
+			std::stringstream tt;
+			tt<<j;
+			std::string t=tt.str();
+			_nameToControl["i"+s+t]=&_oscillators[i]._inputs[j];
+		}
+		_nameToControl["o"+s]=&_oscillators[i]._output;
+	}
 }
 
 void Sonic::evaluate(){
@@ -125,6 +142,7 @@ void Sonic::evaluate(){
 }
 
 void Sonic::midi(const uint8_t* bytes, unsigned size){
+	MidiControllee::midi(bytes, size);
 	if(!size) return;
 	uint8_t command=bytes[0]&0xf0;
 	switch(command){
