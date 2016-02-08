@@ -15,5 +15,3 @@ midi.connect(fm)
 fm.connect(raw)
 #start
 raw.start()
-#finish
-system.demolish()

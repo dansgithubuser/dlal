@@ -16,7 +16,8 @@ def load(name):
 	return ctypes.CDLL(name)
 
 def report(text):
-	t=text.decode('utf-8')
+	t=ctypes.cast(text, ctypes.c_char_p).value.decode('utf-8')
+	_skeleton.dlalFree(text)
 	if t.startswith('error'): raise RuntimeError(t)
 	return t
 
@@ -32,15 +33,16 @@ _skeleton=load('skeleton')
 _skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
 _skeleton.dlalDyadInit.argtypes=[ctypes.c_int]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
-_skeleton.dlalDemolishSystem.restype=ctypes.c_char_p
+_skeleton.dlalDemolishSystem.restype=ctypes.c_void_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
 _skeleton.dlalSetVariable.argtypes=[ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-_skeleton.dlalCommand.restype=ctypes.c_char_p
+_skeleton.dlalCommand.restype=ctypes.c_void_p
 _skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
-_skeleton.dlalAdd.restype=ctypes.c_char_p
+_skeleton.dlalAdd.restype=ctypes.c_void_p
 _skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
-_skeleton.dlalConnect.restype=ctypes.c_char_p
+_skeleton.dlalConnect.restype=ctypes.c_void_p
 _skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+_skeleton.dlalFree.argtypes=[ctypes.c_void_p]
 
 class System:
 	def __init__(self, port=9088):
@@ -50,7 +52,7 @@ class System:
 		self.system=_skeleton.dlalBuildSystem(9088)
 		assert(self.system)
 
-	def demolish(self):
+	def __del__(self):
 		report(_skeleton.dlalDemolishSystem(self.system))
 		global _systems
 		_systems-=1

@@ -99,6 +99,8 @@ char* dlalDisconnect(void* input, void* output){
 	return toCStr(toComponent(input)->disconnect(*toComponent(output)));
 }
 
+void dlalFree(void* p){ free(p); }
+
 namespace dlal{
 
 Component* toComponent(void* p){ return (Component*)p; }

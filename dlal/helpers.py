@@ -5,7 +5,6 @@ def standard_system_functionality(system, audio, midi=None, extra_help=[]):
 		print('audio processing going')
 	def quit():
 		audio.finish()
-		system.demolish()
 		sys.exit()
 	print('use the go function to start audio processing')
 	print('use the quit function to quit')

@@ -17,5 +17,3 @@ fm.connect(raw)
 lpf.connect(raw)
 #start
 raw.start()
-#finish
-system.demolish()

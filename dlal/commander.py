@@ -4,15 +4,15 @@ class Commander(Component):
 	def __init__(self):
 		Component.__init__(self, 'commander')
 		self.callback_type=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
-		self.library.dlalCommanderCommand.restype=ctypes.c_char_p
+		self.library.dlalCommanderCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderCommand.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint]
-		self.library.dlalCommanderAdd.restype=ctypes.c_char_p
+		self.library.dlalCommanderAdd.restype=ctypes.c_void_p
 		self.library.dlalCommanderAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint]
-		self.library.dlalCommanderConnect.restype=ctypes.c_char_p
+		self.library.dlalCommanderConnect.restype=ctypes.c_void_p
 		self.library.dlalCommanderConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
-		self.library.dlalCommanderDisconnect.restype=ctypes.c_char_p
+		self.library.dlalCommanderDisconnect.restype=ctypes.c_void_p
 		self.library.dlalCommanderDisconnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
-		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_char_p
+		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, self.callback_type]
 		self.commands=[]
 

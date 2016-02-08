@@ -53,7 +53,6 @@ file organization
 todo
 ----
 - simple improvements
-	- memory leak check
 	- midi split instrument
 	- fm pitch slide
 	- lfo

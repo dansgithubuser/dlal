@@ -37,6 +37,7 @@ extern "C"{
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
 	DLAL char* dlalConnect(void* input, void* output);
 	DLAL char* dlalDisconnect(void* input, void* output);
+	DLAL void dlalFree(void* p);
 }
 
 namespace dlal{

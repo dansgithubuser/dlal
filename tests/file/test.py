@@ -24,7 +24,7 @@ raw.start()
 #finish
 fileo.finish()
 #finish
-system.demolish()
+del system
 
 #-----in-----#
 #create
@@ -42,5 +42,3 @@ filei.connect(fm)
 fm.connect(raw)
 #start
 raw.start()
-#finish
-system.demolish()
