@@ -45,8 +45,7 @@ if args.can:
 			pprint.pprint(canned_options)
 			continue
 		command+=' '+canned_options[i]
-	subprocess.check_call('python go.py '+command, shell=True)
-	sys.exit(0)
+	args=parser.parse_args(command.split())
 
 #helpers
 def shell(*args): p=subprocess.check_call(' '.join(args), shell=True)
@@ -82,7 +81,7 @@ os.environ['LD_LIBRARY_PATH']=os.path.join(file_path, 'build', 'built')
 #test
 if args.test:
 	#setup
-	import glob, sys
+	import glob
 	tests=[os.path.realpath(x) for x in glob.glob(os.path.join('tests', args.test))]
 	overall=0
 	print('RUNNING TESTS')
@@ -131,7 +130,10 @@ if args.interface:
 	for i in args.interface:
 		name, port=i.split(':')
 		os.chdir(os.path.join('interfaces', name, 'build'))
-		subprocess.Popen([find_binary(name), '127.0.0.1', port])
+		invocation=find_binary(name)+' 127.0.0.1 '+port
+		import platform
+		if platform.system()=='Windows': os.system('start '+invocation)
+		else: subprocess.Popen(invocation, shell=True)
 		os.chdir(file_path)
 
 #run

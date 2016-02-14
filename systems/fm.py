@@ -21,4 +21,4 @@ lpf.connect(audio)
 fm.show_controls()
 
 #main
-go, quit, ports=dlal.standard_system_functionality(system, audio, midi)
+go, ports=dlal.standard_system_functionality(audio, midi)

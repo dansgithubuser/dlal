@@ -23,14 +23,17 @@ int main(int argc, char** argv){
 		ss<<argv[2];
 		ss>>port;
 	}
+	//dyad
 	dryad::Client client(std::string(argv[1]), port);
+	//sfml
 	sf::Font font;
 	if(!font.loadFromMemory(courierCode, courierCodeSize)) return EXIT_FAILURE;
-	Softboard softboard;
 	std::stringstream ss;
 	ss<<"dlal softboard "<<port;
 	sf::RenderWindow window(sf::VideoMode(200, 20), ss.str().c_str());
 	window.setKeyRepeatEnabled(false);
+	//loop
+	Softboard softboard;
 	std::set<std::string> keys;
 	int result=EXIT_SUCCESS;
 	auto lastDraw=std::chrono::steady_clock::now();

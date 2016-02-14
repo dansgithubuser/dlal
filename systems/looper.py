@@ -165,11 +165,6 @@ def help():
 		print('{0}: {1}'.format(name, command[1]))
 
 add_input()
-go, quit, ports=dlal.standard_system_functionality(looper.system, looper.audio, inputs[0].midi, ['use the help function for softboard key listing'])
-
-class Quitter():
-	def __repr__(self): quit()
-
-qq=Quitter()
+go, ports=dlal.standard_system_functionality(looper.audio, inputs[0].midi, ['use the help function for softboard key listing'])
 
 for i in 'F5 S D'.split(): commands_dict[i][0]()
