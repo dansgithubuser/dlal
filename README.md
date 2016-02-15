@@ -56,7 +56,8 @@ todo
 	- midi split instrument
 	- fm pitch slide
 	- lfo
-	- soundfont
+	- arpeggiator
+	- vst host (replace gui with cli)
 - probable future features
 	- looper: quantization
 	- vocoder

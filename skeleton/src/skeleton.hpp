@@ -215,6 +215,15 @@ class MidiControllee: public virtual Component{
 		std::vector<Control> _controls;
 };
 
+class Dummy: public SamplesPerEvaluationGetter{
+	public:
+		Dummy(){ addJoinAction([this](System&){ _audio.resize(_samplesPerEvaluation, 10.1f); return ""; }); }
+		std::string type() const { return "dummy"; }
+		float* audio(){ return _audio.data(); }
+		bool hasAudio(){ return true; }
+		std::vector<float> _audio;
+};
+
 }//namespace dlal
 
 #endif//#ifndef DLAL_SKELETON_INCLUDED
