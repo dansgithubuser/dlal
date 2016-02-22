@@ -217,7 +217,7 @@ class MidiControllee: public virtual Component{
 
 class Dummy: public SamplesPerEvaluationGetter{
 	public:
-		Dummy(){ addJoinAction([this](System&){ _audio.resize(_samplesPerEvaluation, 10.1f); return ""; }); }
+		Dummy(){ addJoinAction([this](System&){ _audio.resize(_samplesPerEvaluation, .101f); return ""; }); }
 		std::string type() const { return "dummy"; }
 		float* audio(){ return _audio.data(); }
 		bool hasAudio(){ return true; }

@@ -52,15 +52,18 @@ file organization
 
 todo
 ----
+- asio cannot be redistributed - does windows have native low latency now?
 - simple improvements
 	- midi split instrument
 	- fm pitch slide
 	- lfo
 	- arpeggiator
-	- vst host (replace gui with cli)
-- probable future features
+- possible future features
 	- looper: quantization
 	- vocoder
 	- sampler
 	- pitch shift component
 	- auto dj
+	- vst host
+		- gui
+		- midi

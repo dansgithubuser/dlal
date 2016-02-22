@@ -2,7 +2,7 @@ include(../../../build/CMakeCommon.txt)
 
 option(TEST "ON to test, OFF otherwise")
 
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+if(WIN32)
 	set(ASIO ON)
 else()
 	set(ASIO OFF)
@@ -21,7 +21,7 @@ if(ASIO)
 		"../deps/ASIOSDK2/host"
 	)
 
-	if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	if(WIN32)
 		include_directories(
 			"../deps/portaudio/src/os/win"
 			"../deps/ASIOSDK2/host/pc"
@@ -65,7 +65,7 @@ if(ASIO)
 		"../deps/portaudio/src/common/pa_trace.c"
 	)
 
-	if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+	if(WIN32)
 		set(
 			src_pa
 			${src_pa}
