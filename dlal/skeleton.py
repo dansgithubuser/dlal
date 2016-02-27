@@ -53,7 +53,7 @@ class System:
 		assert(self.system)
 
 	def __del__(self):
-		report(_skeleton.dlalDemolishSystem(self.system))
+		print(report(_skeleton.dlalDemolishSystem(self.system)))
 		global _systems
 		_systems-=1
 		if _systems==0: _skeleton.dlalDyadShutdown()

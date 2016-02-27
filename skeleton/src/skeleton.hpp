@@ -76,7 +76,7 @@ class System{
 		std::string remove(Component& component, bool queue=false);
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
-		std::string report(
+		std::string report(//for errors
 			ReportContext rc=RC_SENTINEL,
 			const std::string& s="",
 			const Component* reporter=NULL
@@ -86,7 +86,7 @@ class System{
 		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
 		std::vector<dyad_Stream*> _clients;
 		std::vector<dyad_Stream*> _streams;
-		Queue<std::string> _reportQueue;
+		Queue<std::string> _reportQueue;//for system visualization, populated in evaluation
 		std::vector<std::pair<std::string, std::string>> _reportConnections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
