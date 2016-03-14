@@ -13,14 +13,11 @@ dlal is cross-platform.
 The benefit of being cross-platform is that as underlying systems change,
 dlal remains capable of taking whatever best suits it.
 So far this is loosely enforced.
-I've had luck on Windows 7 with ASIO and OSX 10.9, and trouble on Trusty Tahr.
+I've had luck on Windows 10 and OSX 10.9, and trouble on Trusty Tahr.
 
 dlal is conservative in its dependencies.
 C++11, Python (2 or 3), and cmake are used to build.
 Audio is built on PortAudio.
-SFML is used for keyboard input and video output.
-dyad is used for networking.
-RtMidi is used for midi.
 As much as possible, dependencies are kept in-repo and reasonable errors should pop up if a requirement isn't met.
 Despite this, build scripts should be flexible enough to use out-of-repo versions of dependencies.
 
@@ -38,6 +35,9 @@ features
 - SFML input and output over a network
 - looping
 - record and replay sessions
+- networking
+- SoundFont
+- VST host
 
 file organization
 -----------------
@@ -49,6 +49,8 @@ file organization
 - build: Overall build description.
 - dlal: Python module that wraps skeleton.
 - systems: Python scripts that describe some useful audio systems.
+- interfaces: Interfaces that communicate with audio systems over the network.
+- tests: Sanity tests.
 
 todo
 ----
