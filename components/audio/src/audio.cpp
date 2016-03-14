@@ -92,9 +92,13 @@ std::string Audio::start(){
 	//initialize
 	err=Pa_Initialize();
 	if(err!=paNoError) return "error: Pa_Initialize failed: "+paError(err);
+	//get wasapi if it exists
+	PaHostApiIndex apiIndex=Pa_GetDefaultHostApi();
+	for(PaHostApiIndex i=0; i<Pa_GetHostApiCount(); ++i)
+		if(Pa_GetHostApiInfo(i)->type==paWASAPI){ apiIndex=i; break; }
 	//input
 	PaStreamParameters inputParameters;
-	inputParameters.device=Pa_GetDefaultInputDevice();
+	inputParameters.device=Pa_GetHostApiInfo(apiIndex)->defaultInputDevice;
 	if(inputParameters.device==paNoDevice)
 		return "error: no default input device: "+paError(err);
 	inputParameters.channelCount=1;
@@ -104,7 +108,7 @@ std::string Audio::start(){
 	inputParameters.hostApiSpecificStreamInfo=NULL;
 	//output
 	PaStreamParameters outputParameters;
-	outputParameters.device=Pa_GetDefaultOutputDevice();
+	outputParameters.device=Pa_GetHostApiInfo(apiIndex)->defaultOutputDevice;
 	if(outputParameters.device==paNoDevice)
 		return "error: no default output device: "+paError(err);
 	outputParameters.channelCount=1;

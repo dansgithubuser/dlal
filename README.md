@@ -52,7 +52,6 @@ file organization
 
 todo
 ----
-- asio cannot be redistributed - does windows have native low latency now?
 - simple improvements
 	- midi split instrument
 	- fm pitch slide
