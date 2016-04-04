@@ -8,7 +8,6 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../deps/SFML" "${CMAKE_CURRENT_
 include_directories(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../deps"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../deps/SFML/include"
 )
@@ -20,7 +19,6 @@ add_definitions(-DSFML_STATIC)
 set(
 	src
 	"${CMAKE_CURRENT_SOURCE_DIR}/../src/main.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../src/softboard.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src/skeleton.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src/page.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src/dyad.c"
