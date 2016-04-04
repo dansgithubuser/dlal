@@ -54,17 +54,24 @@ file organization
 
 todo
 ----
+- vst host, use 8bitZ as motivation
+	- midi
+	- gui
+	- mac, linux
+- soundboard
+	- doioioioing
+	- toilet
+	- meow, bark, cuckoo, bok bok bok, mooo
+- robot voice
+- looping
+- sampling
+- dance suit (expand)
 - simple improvements
-	- midi split instrument
 	- fm pitch slide
 	- lfo
 	- arpeggiator
 - possible future features
 	- looper: quantization
 	- vocoder
-	- sampler
 	- pitch shift component
 	- auto dj
-	- vst host
-		- gui
-		- midi

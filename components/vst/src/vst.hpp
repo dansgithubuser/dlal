@@ -35,12 +35,32 @@ class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public Mu
 			Process processReplacing;
 		};
 		typedef int* (Vst2xHostCallback)(Plugin* effect, int32_t opcode, int32_t index, int* value, void* data, float opt);
+		class Buffer{
+			public:
+				Buffer(): _data(nullptr) {}
+				~Buffer(){ destruct(); }
+				void destruct(){
+					if(!_data) return;
+					for(unsigned i=0; i<_size; ++i) delete[] _data[i];
+					delete[] _data;
+				}
+				void resize(unsigned n, unsigned m){
+					destruct();
+					_size=n;
+					_data=new float*[_size];
+					for(unsigned i=0; i<_size; ++i) _data[i]=new float[m];
+				}
+				float** data(){ return _data; }
+			private:
+				unsigned _size;
+				float** _data;
+		};
 		static Vst2xHostCallback vst2xHostCallback;
 		static Vst* _self;
 		static std::atomic<bool> _hostCallbackExpected;
 		std::string operateOnPlugin(std::function<std::string()>);
 		Plugin* _plugin;
-		std::vector<float> _i;
+		Buffer _i, _o;
 		uint64_t _samples;
 		double _samplesPerBeat, _startToNowInQuarters, _lastBarToNowInQuarters;
 		int32_t _beatsPerBar, _beatsPerQuarter;

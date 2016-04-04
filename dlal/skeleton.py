@@ -18,7 +18,8 @@ def load(name):
 def report(text):
 	t=ctypes.cast(text, ctypes.c_char_p).value.decode('utf-8')
 	_skeleton.dlalFree(text)
-	if t.startswith('error'): raise RuntimeError(t)
+	if   t.startswith('error'): raise RuntimeError(t)
+	elif t.startswith('warning'): print(t)
 	return t
 
 def connect(*args):

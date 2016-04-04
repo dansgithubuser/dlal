@@ -4,8 +4,10 @@
 	#include <windows.h>
 #endif
 
+#include <cassert>
 #include <chrono>
 #include <cmath>
+#include <iostream>
 #include <stdexcept>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Vst; }
@@ -41,6 +43,33 @@ struct Vst2xTimeInfo{
 	;
 };
 
+#define EVENT_HEADER int32_t type, size, delta, flags;
+
+struct Event{
+	EVENT_HEADER
+	char data[16];
+};
+
+struct MidiEvent{
+	MidiEvent(uint32_t flags, const uint8_t* bytes, unsigned size):
+		type(1), size(sizeof(MidiEvent)), delta(0), flags(flags),
+		noteDuration(0), offset(0), detune(0), noteOffVelocity(0), reserved1(0), reserved2(0)
+	{
+		memset(midi, 0, sizeof(midi));
+		assert(size<4);
+		memcpy(midi, bytes, size);
+	}
+	EVENT_HEADER
+	int32_t noteDuration, offset;
+	char midi[4], detune, noteOffVelocity, reserved1, reserved2;
+};
+
+struct Events{
+	int32_t size;
+	int* reserved;
+	Event* events[2];
+};
+
 Vst::Vst():
 	_samples(0),
 	_samplesPerBeat(22050),
@@ -51,12 +80,15 @@ Vst::Vst():
 {
 	_checkAudio=true;
 	addJoinAction([this](System&){
-		_i.resize(_samplesPerEvaluation, 0.0f);
+		const int defaultChannels=2;
+		_i.resize(defaultChannels, _samplesPerEvaluation);
+		_o.resize(defaultChannels, _samplesPerEvaluation);
 		return "";
 	});
 	registerCommand("load", "<vst>", [this](std::stringstream& ss)->std::string{
 		std::string s;
-		ss>>s;
+		ss>>std::ws;
+		std::getline(ss, s);
 		#ifdef DLAL_WINDOWS
 			HMODULE library=LoadLibraryExA((LPCSTR)s.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 			if(!library) return "error: couldn't load library, error code "+std::to_string(GetLastError());
@@ -83,11 +115,11 @@ Vst::Vst():
 			arrangement.type=0;//mono
 			arrangement.channels=1;
 			arrangement.properties[0]=properties;
-			if(!_plugin->dispatcher(_plugin, 42, 0, (int*)&arrangement, &arrangement, 0.0f))
-				return "error: couldn't set speaker arrangement";
+			std::string result;
+			_plugin->dispatcher(_plugin, 42, 0, (int*)&arrangement, &arrangement, 0.0f);
 			_plugin->dispatcher(_plugin, 12, 0, (int*)1, NULL, 0.0f);//audio processing on
 			_plugin->dispatcher(_plugin, 71, 0, (int*)0, NULL, 0.0f);//audio processing start
-			return "";
+			return result;
 		});
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
@@ -99,10 +131,13 @@ Vst::~Vst(){}
 
 void Vst::evaluate(){
 	for(auto output: _outputs){
-		memcpy(_i.data(), output->audio(), _samplesPerEvaluation*sizeof(float));
-		float* i=_i.data();
-		float* o=output->audio();
-		operateOnPlugin([this, &i, &o]()->std::string{ _plugin->processReplacing(_plugin, &i, &o, _samplesPerEvaluation); return ""; });
+		memcpy(_i.data()[0], output->audio(), _samplesPerEvaluation*sizeof(float));
+		memcpy(_i.data()[1], output->audio(), _samplesPerEvaluation*sizeof(float));
+		operateOnPlugin([this]()->std::string{
+			_plugin->processReplacing(_plugin, _i.data(), _o.data(), _samplesPerEvaluation);
+			return "";
+		});
+		for(unsigned i=0; i<_samplesPerEvaluation; ++i) output->audio()[i]=_o.data()[0][i]+_o.data()[1][i];
 	}
 	_samples+=_samplesPerEvaluation;
 	double quarters=_samplesPerEvaluation/_samplesPerBeat/_beatsPerQuarter;
@@ -113,14 +148,30 @@ void Vst::evaluate(){
 }
 
 void Vst::midi(const uint8_t* bytes, unsigned size){
+	if(size>=4) return;
+	MidiEvent midiEvent(1/*realtime*/, bytes, size);
+	Events events;
+	events.size=1;
+	events.reserved=0;
+	events.events[0]=(Event*)&midiEvent;
+	operateOnPlugin([this, &events](){
+		if(!_plugin->dispatcher(_plugin, 25, 0, (int*)0, &events, 0.0f))
+			_system->report(dlal::System::RC_IN_EVALUATION, "midi failed");
+		return "";
+	});
 }
 
 int* Vst::vst2xHostCallback(
 	Plugin* effect, int32_t opcode, int32_t index, int* value, void* data, float opt
 ){
 	if(!_hostCallbackExpected) throw std::runtime_error("host callback called unexpectedly");
+	#ifdef DLAL_VST_TEST
+		std::cout<<"callback - opcode "<<opcode<<" index "<<index<<" value "<<value<<" data "<<data<<" opt "<<opt<<std::flush;
+	#endif
+	void* result=(void*)0;
 	switch(opcode){
-		case 1: return (int*)2400;//version 2.4
+		case 0: break;//parameter updated
+		case 1: result=(void*)2400; break;//version 2.4
 		case 3: break;//idle
 		case 6: break;//want midi
 		case 7:{//get time
@@ -137,20 +188,26 @@ int* Vst::vst2xHostCallback(
 			double q24=_self->_startToNowInQuarters*24;
 			timeInfo.nowToQuarter24thInSamples=int32_t(-samplesPer24*(q24-std::floor(q24)));
 			timeInfo.flags=(unsigned(value)&0xaf00)|0x02;
-			return (int*)&timeInfo;
+			result=&timeInfo;
+			break;
 		}
-		case 16: return (int*)_self->_sampleRate;
-		case 17: return (int*)_self->_samplesPerEvaluation;
+		case 16: result=(void*)_self->_sampleRate; break;
+		case 17: result=(void*)_self->_samplesPerEvaluation; break;
 		case 23: break;//get current process level - unknown
 		case 24: break;//get automation state - unsupported
 		case 32: strcpy((char*)data, "dan"); break;//get vendor string
 		case 33: strcpy((char*)data, "dlal"); break;//get product string
-		case 38: return (int*)1;//get language - english
+		case 37: if(!strcmp((char*)data, "receiveVstMidiEvent")) result=(void*)1; break;
+		case 38: break;//get language - 0 means english
+		case 42: break;//update display
 		default:
 			_self->_system->report(dlal::System::RC_IN_EVALUATION, "unhandled opcode "+std::to_string(opcode));
 			break;
 	}
-	return (int*)0;
+	#ifdef DLAL_VST_TEST
+		std::cout<<" - returning "<<result<<std::endl;
+	#endif
+	return (int*)result;
 }
 
 Vst* Vst::_self;
@@ -159,7 +216,13 @@ std::atomic<bool> Vst::_hostCallbackExpected;
 std::string Vst::operateOnPlugin(std::function<std::string()> f){
 	_self=this;
 	_hostCallbackExpected=true;
+	#ifdef DLAL_VST_TEST
+		std::cout<<"plugin operation starting"<<std::endl;
+	#endif
 	auto r=f();
+	#ifdef DLAL_VST_TEST
+		std::cout<<"plugin operation finished"<<std::endl;
+	#endif
 	_hostCallbackExpected=false;
 	return r;
 }
