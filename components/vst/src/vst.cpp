@@ -4,11 +4,14 @@
 	#include <windows.h>
 #endif
 
+#include <SFML/Window.hpp>
+
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Vst; }
 
@@ -122,12 +125,23 @@ Vst::Vst():
 			return result;
 		});
 	});
+	registerCommand("show", "", [this](std::stringstream& ss){
+		sf::Window window(sf::VideoMode(800, 600), "dlal vst");
+		operateOnPlugin([this, &window](){
+			_plugin->dispatcher(_plugin, 14, 0, (int*)0, window.getSystemHandle(), 0.0f);
+			while(window.isOpen()){
+				sf::Event event;
+				while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+			return "";
+		});
+		return "";
+	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _hostCallbackExpected.is_lock_free()?"lockless":"lockfull";
 	});
 }
-
-Vst::~Vst(){}
 
 void Vst::evaluate(){
 	for(auto output: _outputs){
@@ -156,7 +170,7 @@ void Vst::midi(const uint8_t* bytes, unsigned size){
 	events.events[0]=(Event*)&midiEvent;
 	operateOnPlugin([this, &events](){
 		if(!_plugin->dispatcher(_plugin, 25, 0, (int*)0, &events, 0.0f))
-			_system->report(dlal::System::RC_IN_EVALUATION, "midi failed");
+			std::cerr<<"midi failed"<<std::endl;
 		return "";
 	});
 }
@@ -164,7 +178,11 @@ void Vst::midi(const uint8_t* bytes, unsigned size){
 int* Vst::vst2xHostCallback(
 	Plugin* effect, int32_t opcode, int32_t index, int* value, void* data, float opt
 ){
-	if(!_hostCallbackExpected) throw std::runtime_error("host callback called unexpectedly");
+	if(!_hostCallbackExpected){
+		const char* message="host callback called unexpectedly";
+		std::cerr<<message<<std::endl;
+		throw std::runtime_error(message);
+	}
 	#ifdef DLAL_VST_TEST
 		std::cout<<"callback - opcode "<<opcode<<" index "<<index<<" value "<<value<<" data "<<data<<" opt "<<opt<<std::flush;
 	#endif
@@ -201,7 +219,7 @@ int* Vst::vst2xHostCallback(
 		case 38: break;//get language - 0 means english
 		case 42: break;//update display
 		default:
-			_self->_system->report(dlal::System::RC_IN_EVALUATION, "unhandled opcode "+std::to_string(opcode));
+			std::cerr<<"unhandled opcode "+std::to_string(opcode)<<std::endl;
 			break;
 	}
 	#ifdef DLAL_VST_TEST
@@ -211,11 +229,11 @@ int* Vst::vst2xHostCallback(
 }
 
 Vst* Vst::_self;
-std::atomic<bool> Vst::_hostCallbackExpected;
+std::atomic<unsigned> Vst::_hostCallbackExpected=0;
 
 std::string Vst::operateOnPlugin(std::function<std::string()> f){
 	_self=this;
-	_hostCallbackExpected=true;
+	++_hostCallbackExpected;
 	#ifdef DLAL_VST_TEST
 		std::cout<<"plugin operation starting"<<std::endl;
 	#endif
@@ -223,7 +241,7 @@ std::string Vst::operateOnPlugin(std::function<std::string()> f){
 	#ifdef DLAL_VST_TEST
 		std::cout<<"plugin operation finished"<<std::endl;
 	#endif
-	_hostCallbackExpected=false;
+	--_hostCallbackExpected;
 	return r;
 }
 

@@ -11,7 +11,6 @@ namespace dlal{
 class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public MultiOut {
 	public:
 		Vst();
-		~Vst();
 		std::string type() const { return "vst"; }
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
@@ -57,7 +56,7 @@ class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public Mu
 		};
 		static Vst2xHostCallback vst2xHostCallback;
 		static Vst* _self;
-		static std::atomic<bool> _hostCallbackExpected;
+		static std::atomic<unsigned> _hostCallbackExpected;
 		std::string operateOnPlugin(std::function<std::string()>);
 		Plugin* _plugin;
 		Buffer _i, _o;
