@@ -2,14 +2,14 @@ include(../../../build/CMakeCommon.txt)
 
 #=====subdirectories=====#
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "static")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../deps/SFML" "${CMAKE_CURRENT_BINARY_DIR}/SFML")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../deps/SFML" "${CMAKE_CURRENT_BINARY_DIR}/SFML")
 
 #=====include=====#
 include_directories(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../deps"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../deps/SFML/include"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../deps/SFML/include"
 )
 
 #=====defines=====#
