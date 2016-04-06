@@ -92,6 +92,7 @@ Vst::Vst():
 		std::string s;
 		ss>>std::ws;
 		std::getline(ss, s);
+		setSelf(nullptr);
 		#ifdef DLAL_WINDOWS
 			HMODULE library=LoadLibraryExA((LPCSTR)s.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 			if(!library) return "error: couldn't load library, error code "+std::to_string(GetLastError());
@@ -102,44 +103,45 @@ Vst::Vst():
 				if(pluginMain) break;
 			}
 			if(!pluginMain) return "error: couldn't get plugin's main";
-			operateOnPlugin([this, &pluginMain]()->std::string{ _plugin=pluginMain(vst2xHostCallback); return ""; });
+			_plugin=pluginMain(vst2xHostCallback);
 		#else
 				return "error: unsupported platform";
 		#endif
 		if(_plugin->magic!=('V'<<24|'s'<<16|'t'<<8|'P')) return "error: wrong magic number";
-		return operateOnPlugin([this]()->std::string{
-			Vst2xSpeakerProperties properties;
-			properties.azimuth=0;
-			properties.elevation=0;
-			strcpy(properties.name, "speaker");
-			properties.radius=1.0f;
-			properties.type=0;//mono
-			Vst2xSpeakerArrangement arrangement;
-			arrangement.type=0;//mono
-			arrangement.channels=1;
-			arrangement.properties[0]=properties;
-			std::string result;
-			_plugin->dispatcher(_plugin, 42, 0, (int*)&arrangement, &arrangement, 0.0f);
-			_plugin->dispatcher(_plugin, 12, 0, (int*)1, NULL, 0.0f);//audio processing on
-			_plugin->dispatcher(_plugin, 71, 0, (int*)0, NULL, 0.0f);//audio processing start
-			return result;
-		});
+		setSelf(_plugin);
+		Vst2xSpeakerProperties properties;
+		properties.azimuth=0;
+		properties.elevation=0;
+		strcpy(properties.name, "speaker");
+		properties.radius=1.0f;
+		properties.type=0;//mono
+		Vst2xSpeakerArrangement arrangement;
+		arrangement.type=0;//mono
+		arrangement.channels=1;
+		arrangement.properties[0]=properties;
+		_plugin->dispatcher(_plugin, 42, 0, (int*)&arrangement, &arrangement, 0.0f);
+		_plugin->dispatcher(_plugin, 12, 0, (int*)1, NULL, 0.0f);//audio processing on
+		_plugin->dispatcher(_plugin, 71, 0, (int*)0, NULL, 0.0f);//audio processing start
+		return "";
 	});
 	registerCommand("show", "", [this](std::stringstream& ss){
 		sf::Window window(sf::VideoMode(800, 600), "dlal vst");
-		operateOnPlugin([this, &window](){
-			_plugin->dispatcher(_plugin, 14, 0, (int*)0, window.getSystemHandle(), 0.0f);
-			while(window.isOpen()){
-				sf::Event event;
-				while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-			return "";
-		});
+		_plugin->dispatcher(_plugin, 14, 0, (int*)0, window.getSystemHandle(), 0.0f);
+		while(window.isOpen()){
+			sf::Event event;
+			while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 		return "";
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
-		return _hostCallbackExpected.is_lock_free()?"lockless":"lockfull";
+		return (
+			_samples.is_lock_free()
+			&&
+			_samplesPerBeat.is_lock_free()
+			&&
+			_beatsPerBar.is_lock_free()
+		)?"lockless":"lockfull";
 	});
 }
 
@@ -147,18 +149,15 @@ void Vst::evaluate(){
 	for(auto output: _outputs){
 		memcpy(_i.data()[0], output->audio(), _samplesPerEvaluation*sizeof(float));
 		memcpy(_i.data()[1], output->audio(), _samplesPerEvaluation*sizeof(float));
-		operateOnPlugin([this]()->std::string{
-			_plugin->processReplacing(_plugin, _i.data(), _o.data(), _samplesPerEvaluation);
-			return "";
-		});
+		_plugin->processReplacing(_plugin, _i.data(), _o.data(), _samplesPerEvaluation);
 		for(unsigned i=0; i<_samplesPerEvaluation; ++i) output->audio()[i]=_o.data()[0][i]+_o.data()[1][i];
 	}
 	_samples+=_samplesPerEvaluation;
 	double quarters=_samplesPerEvaluation/_samplesPerBeat/_beatsPerQuarter;
-	_startToNowInQuarters+=quarters;
-	_lastBarToNowInQuarters+=quarters;
+	_startToNowInQuarters=_startToNowInQuarters+quarters;
+	_lastBarToNowInQuarters=_lastBarToNowInQuarters+quarters;
 	double quartersPerBar=1.0*_beatsPerBar/_beatsPerQuarter;
-	if(_lastBarToNowInQuarters>quartersPerBar) _lastBarToNowInQuarters-=quartersPerBar;
+	if(_lastBarToNowInQuarters>quartersPerBar) _lastBarToNowInQuarters=_lastBarToNowInQuarters-quartersPerBar;
 }
 
 void Vst::midi(const uint8_t* bytes, unsigned size){
@@ -168,21 +167,17 @@ void Vst::midi(const uint8_t* bytes, unsigned size){
 	events.size=1;
 	events.reserved=0;
 	events.events[0]=(Event*)&midiEvent;
-	operateOnPlugin([this, &events](){
-		if(!_plugin->dispatcher(_plugin, 25, 0, (int*)0, &events, 0.0f))
-			std::cerr<<"midi failed"<<std::endl;
-		return "";
-	});
+	if(!_plugin->dispatcher(_plugin, 25, 0, (int*)0, &events, 0.0f)) std::cerr<<"midi failed"<<std::endl;
 }
 
 int* Vst::vst2xHostCallback(
-	Plugin* effect, int32_t opcode, int32_t index, int* value, void* data, float opt
+	Plugin* plugin, int32_t opcode, int32_t index, int* value, void* data, float opt
 ){
-	if(!_hostCallbackExpected){
-		const char* message="host callback called unexpectedly";
-		std::cerr<<message<<std::endl;
-		throw std::runtime_error(message);
-	}
+	Vst* self;
+	_mutex.lock();
+	if(!_self.count(plugin)) self=_self[nullptr];
+	else self=_self[plugin];
+	_mutex.unlock();
 	#ifdef DLAL_VST_TEST
 		std::cout<<"callback - opcode "<<opcode<<" index "<<index<<" value "<<value<<" data "<<data<<" opt "<<opt<<std::flush;
 	#endif
@@ -194,23 +189,23 @@ int* Vst::vst2xHostCallback(
 		case 6: break;//want midi
 		case 7:{//get time
 			static Vst2xTimeInfo timeInfo;
-			timeInfo.startToNowInSamples=(double)_self->_samples;
-			timeInfo.sampleRate=_self->_sampleRate;
+			timeInfo.startToNowInSamples=(double)self->_samples;
+			timeInfo.sampleRate=self->_sampleRate;
 			timeInfo.systemTimeInNanoseconds=double(std::chrono::system_clock::now().time_since_epoch()/std::chrono::nanoseconds(1));
-			timeInfo.startToNowInQuarters=_self->_startToNowInQuarters;
-			timeInfo.tempo=60*_self->_sampleRate/_self->_samplesPerBeat;
-			timeInfo.startToLastBarInQuarters=_self->_startToNowInQuarters-_self->_lastBarToNowInQuarters;
-			timeInfo.timeSigTop=_self->_beatsPerBar;
-			timeInfo.timeSigBottom=_self->_beatsPerQuarter*4;
-			double samplesPer24=_self->_samplesPerBeat*_self->_beatsPerQuarter/24;
-			double q24=_self->_startToNowInQuarters*24;
+			timeInfo.startToNowInQuarters=self->_startToNowInQuarters;
+			timeInfo.tempo=60*self->_sampleRate/self->_samplesPerBeat;
+			timeInfo.startToLastBarInQuarters=self->_startToNowInQuarters-self->_lastBarToNowInQuarters;
+			timeInfo.timeSigTop=self->_beatsPerBar;
+			timeInfo.timeSigBottom=self->_beatsPerQuarter*4;
+			double samplesPer24=self->_samplesPerBeat*self->_beatsPerQuarter/24;
+			double q24=self->_startToNowInQuarters*24;
 			timeInfo.nowToQuarter24thInSamples=int32_t(-samplesPer24*(q24-std::floor(q24)));
 			timeInfo.flags=(unsigned(value)&0xaf00)|0x02;
 			result=&timeInfo;
 			break;
 		}
-		case 16: result=(void*)_self->_sampleRate; break;
-		case 17: result=(void*)_self->_samplesPerEvaluation; break;
+		case 16: result=(void*)self->_sampleRate; break;
+		case 17: result=(void*)self->_samplesPerEvaluation; break;
 		case 23: break;//get current process level - unknown
 		case 24: break;//get automation state - unsupported
 		case 32: strcpy((char*)data, "dan"); break;//get vendor string
@@ -228,21 +223,13 @@ int* Vst::vst2xHostCallback(
 	return (int*)result;
 }
 
-Vst* Vst::_self;
-std::atomic<unsigned> Vst::_hostCallbackExpected=0;
+std::map<Vst::Plugin*, Vst*> Vst::_self;
+std::mutex Vst::_mutex;
 
-std::string Vst::operateOnPlugin(std::function<std::string()> f){
-	_self=this;
-	++_hostCallbackExpected;
-	#ifdef DLAL_VST_TEST
-		std::cout<<"plugin operation starting"<<std::endl;
-	#endif
-	auto r=f();
-	#ifdef DLAL_VST_TEST
-		std::cout<<"plugin operation finished"<<std::endl;
-	#endif
-	--_hostCallbackExpected;
-	return r;
+void Vst::setSelf(Plugin* plugin){
+	_mutex.lock();
+	_self[plugin]=this;
+	_mutex.unlock();
 }
 
 }//namespace dlal

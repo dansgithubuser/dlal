@@ -3,8 +3,9 @@
 
 #include <skeleton.hpp>
 
-#include <atomic>
 #include <functional>
+#include <map>
+#include <mutex>
 
 namespace dlal{
 
@@ -55,14 +56,14 @@ class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public Mu
 				float** _data;
 		};
 		static Vst2xHostCallback vst2xHostCallback;
-		static Vst* _self;
-		static std::atomic<unsigned> _hostCallbackExpected;
-		std::string operateOnPlugin(std::function<std::string()>);
+		static std::map<Plugin*, Vst*> _self;
+		static std::mutex _mutex;
+		void setSelf(Plugin*);
 		Plugin* _plugin;
 		Buffer _i, _o;
-		uint64_t _samples;
-		double _samplesPerBeat, _startToNowInQuarters, _lastBarToNowInQuarters;
-		int32_t _beatsPerBar, _beatsPerQuarter;
+		std::atomic<uint64_t> _samples;
+		std::atomic<double> _samplesPerBeat, _startToNowInQuarters, _lastBarToNowInQuarters;
+		std::atomic<int32_t> _beatsPerBar, _beatsPerQuarter;
 };
 
 }//namespace dlal

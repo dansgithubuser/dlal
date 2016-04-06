@@ -55,7 +55,6 @@ file organization
 todo
 ----
 - vst host, use 8bitZ as motivation
-	- two vsts at the same time
 	- mac, linux
 - just use std::cerr instead of error reporting
 - soundboard
