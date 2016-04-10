@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define TRUE 1
+#define FALSE 0
+
 #define PRETEND_POINTER (void*)0xdede
 
 /*error*/
@@ -14,7 +17,7 @@ typedef struct{
 	char* message;
 } GError;
 
-inline void g_clear_error(void* err){}
+static void g_clear_error(void* err){}
 
 /*time*/
 typedef struct{
@@ -22,18 +25,18 @@ typedef struct{
 	long tv_usec;
 } GTimeVal;
 
-inline void g_get_current_time(GTimeVal* result){ result->tv_sec=0; result->tv_usec=0; }
+static void g_get_current_time(GTimeVal* result){ result->tv_sec=0; result->tv_usec=0; }
 
 /*threads*/
 typedef void* GThread;
 typedef void* GThreadFunc;
 
-inline int g_thread_supported(){ return 0; }
-inline void g_thread_init(void* vtable){}
-inline void* g_thread_create(void* func, void* data, int joinable, void* error){ return PRETEND_POINTER; }
-inline void* g_thread_join(void* thread){ return PRETEND_POINTER; }
+static int g_thread_supported(){ return 0; }
+static void g_thread_init(void* vtable){}
+static void* g_thread_create(void* func, void* data, int joinable, void* error){ return PRETEND_POINTER; }
+static void* g_thread_join(void* thread){ return PRETEND_POINTER; }
 
-inline void g_usleep(unsigned long microseconds){ printf("g_usleep called\n"); }
+static void g_usleep(unsigned long microseconds){ printf("g_usleep called\n"); }
 
 /*mutexes*/
 #define G_STATIC_MUTEX_INIT PRETEND_POINTER
@@ -43,42 +46,42 @@ typedef void* GRecMutex;
 typedef void* GStaticMutex;
 typedef void* GStaticRecMutex;
 
-inline void* g_mutex_new(){ return PRETEND_POINTER; }
-inline void g_mutex_free(void* mutex){}
-inline void g_mutex_lock(void* mutex){}
-inline void g_mutex_unlock(void* mutex){}
-inline void g_static_mutex_init(void* mutex){}
-inline void g_static_mutex_free(void* mutex){}
-inline void g_static_mutex_lock(void* mutex){}
-inline void g_static_mutex_unlock(void* mutex){}
-inline void g_static_rec_mutex_init(void* mutex){}
-inline void g_static_rec_mutex_free(void* mutex){}
-inline void g_static_rec_mutex_lock(void* mutex){}
-inline void g_static_rec_mutex_unlock(void* mutex){}
+static void* g_mutex_new(){ return PRETEND_POINTER; }
+static void g_mutex_free(void* mutex){}
+static void g_mutex_lock(void* mutex){}
+static void g_mutex_unlock(void* mutex){}
+static void g_static_mutex_init(void* mutex){}
+static void g_static_mutex_free(void* mutex){}
+static void g_static_mutex_lock(void* mutex){}
+static void g_static_mutex_unlock(void* mutex){}
+static void g_static_rec_mutex_init(void* mutex){}
+static void g_static_rec_mutex_free(void* mutex){}
+static void g_static_rec_mutex_lock(void* mutex){}
+static void g_static_rec_mutex_unlock(void* mutex){}
 
 /*conditions*/
 typedef void* GCond;
 
-inline void* g_cond_new(){ return PRETEND_POINTER; }
-inline void g_cond_free(void* cond){}
-inline void g_cond_signal(void* cond){}
-inline void g_cond_wait(void* cond, void* mutex){}
-inline void g_cond_broadcast(void* cond){}
+static void* g_cond_new(){ return PRETEND_POINTER; }
+static void g_cond_free(void* cond){}
+static void g_cond_signal(void* cond){}
+static void g_cond_wait(void* cond, void* mutex){}
+static void g_cond_broadcast(void* cond){}
 
 /*atomic*/
-inline void g_atomic_int_set(volatile int* atomic, int newval){ *atomic=newval; }
-inline int g_atomic_int_get(const volatile int* atomic){ return *atomic; }
-inline int g_atomic_int_add(volatile int* atomic, int val){ int tmp=*atomic; *atomic+=val; return tmp; }
-inline int g_atomic_int_exchange_and_add(volatile int* atomic, int val){ return g_atomic_int_add(atomic, val); }
-inline void g_atomic_int_inc(int* atomic){ ++*atomic; }
+static void g_atomic_int_set(volatile int* atomic, int newval){ *atomic=newval; }
+static int g_atomic_int_get(const volatile int* atomic){ return *atomic; }
+static int g_atomic_int_add(volatile int* atomic, int val){ int tmp=*atomic; *atomic+=val; return tmp; }
+static int g_atomic_int_exchange_and_add(volatile int* atomic, int val){ return g_atomic_int_add(atomic, val); }
+static void g_atomic_int_inc(int* atomic){ ++*atomic; }
 
 /*private -- not to be confused with private members or asymmetric cryptography*/
 typedef void* GStaticPrivate;
 
-inline void g_static_private_init(void* private_key){}
-inline void g_static_private_free(void* private_key){}
-inline void g_static_private_set(void* private_key, void* data, void* notify){}
-inline void* g_static_private_get(void* private_key){ return PRETEND_POINTER; }
+static void g_static_private_init(void* private_key){}
+static void g_static_private_free(void* private_key){}
+static void g_static_private_set(void* private_key, void* data, void* notify){}
+static void* g_static_private_get(void* private_key){ return PRETEND_POINTER; }
 
 /*g_newa*/
 #if defined(__GNUC__)
@@ -177,8 +180,8 @@ typedef int16_t gint16;
 typedef int32_t gint32;
 typedef uint32_t guint32;
 
-inline int g_snprintf(char* string, unsigned long n, char const* format, ...){ return 0; }
-inline int g_shell_parse_argv(const char* command_line, int* argcp, char*** argvp, void* error){ return 0; }
-inline void g_strfreev(void* str_array){}
+static int g_snprintf(char* string, unsigned long n, char const* format, ...){ return 0; }
+static int g_shell_parse_argv(const char* command_line, int* argcp, char*** argvp, void* error){ return 0; }
+static void g_strfreev(void* str_array){}
 
 #endif//GLIB_H_INCLUDED

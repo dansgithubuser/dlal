@@ -22,7 +22,7 @@ include_directories(
 )
 
 #=====defines=====#
-add_definitions(-DFLUIDSYNTH_NOT_A_DLL -DDEFAULT_SOUNDFONT="")
+add_definitions(-DFLUIDSYNTH_NOT_A_DLL -DDEFAULT_SOUNDFONT="" -DHAVE_CONFIG_H=1)
 
 #=====source=====#
 if(TEST)

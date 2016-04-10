@@ -19,7 +19,7 @@ soundfont.connect(audio)
 lpf.connect(audio)
 #start
 import os
-soundfont.load(os.path.join('..', '..', 'components', 'soundfont', 'deps', 'SGM-V2.01.sf2'))
+soundfont.load(os.path.join('..', '..', 'components', 'soundfont', 'deps', '32MbGMStereo.sf2'))
 
 #main
 go, ports=dlal.standard_system_functionality(audio, midi)
