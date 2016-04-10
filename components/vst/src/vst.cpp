@@ -200,12 +200,12 @@ int* Vst::vst2xHostCallback(
 			double samplesPer24=self->_samplesPerBeat*self->_beatsPerQuarter/24;
 			double q24=self->_startToNowInQuarters*24;
 			timeInfo.nowToQuarter24thInSamples=int32_t(-samplesPer24*(q24-std::floor(q24)));
-			timeInfo.flags=(unsigned(value)&0xaf00)|0x02;
+			timeInfo.flags=(ptrdiff_t(value)&0xaf00)|0x02;
 			result=&timeInfo;
 			break;
 		}
-		case 16: result=(void*)self->_sampleRate; break;
-		case 17: result=(void*)self->_samplesPerEvaluation; break;
+		case 16: result=(void*)(ptrdiff_t)self->_sampleRate; break;
+		case 17: result=(void*)(ptrdiff_t)self->_samplesPerEvaluation; break;
 		case 23: break;//get current process level - unknown
 		case 24: break;//get automation state - unsupported
 		case 32: strcpy((char*)data, "dan"); break;//get vendor string
