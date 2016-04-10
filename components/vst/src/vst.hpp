@@ -27,7 +27,10 @@ class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public Mu
 			Process processDeprecated;
 			SetParameter setParameter;
 			GetParameter getParameter;
-			int32_t programs, params, inputs, outputs, flags, reserved1, reserved2, initialDelay, realQualitiesDeprecated, offQualitiesDeprecated;
+			int32_t programs, params, inputs, outputs, flags;
+			int* reserved1;
+			int* reserved2;
+			int32_t initialDelay, realQualitiesDeprecated, offQualitiesDeprecated;
 			float ioRatioDeprecated;
 			void* object;
 			void* user;
