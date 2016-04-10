@@ -83,13 +83,16 @@ class Component:
 		self.library=Component._libraries[component]
 		self.component=Component._libraries[component].dlalBuildComponent()
 		self.components_to_add=[self]
+		self.recognized_commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
 
 	def __del__(self): _skeleton.dlalDemolishComponent(self.component)
 
 	def __getattr__(self, name):
-		return lambda *args: self.command(
-			name+' '+' '.join([str(arg) for arg in args])
-		)
+		if name in self.recognized_commands:
+			return lambda *args: self.command(
+				name+' '+' '.join([str(arg) for arg in args])
+			)
+		raise AttributeError
 
 	def command(self, command):
 		command=str.encode(command, 'utf-8')
