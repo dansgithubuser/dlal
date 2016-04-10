@@ -2,6 +2,9 @@
 
 #ifdef DLAL_WINDOWS
 	#include <windows.h>
+#elif defined(DLAL_OSX)
+	#include <Foundation/Foundation.h>
+	#include <AppKit/AppKit.h>
 #endif
 
 #include <SFML/Window.hpp>
@@ -16,6 +19,17 @@
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Vst; }
 
 namespace dlal{
+
+#ifdef DLAL_OSX
+	template<typename T> class Releaser{
+		public:
+			Releaser(T t): _(t) {}
+			~Releaser(){ if(_) CFRelease(_); }
+			operator T(){ return _; }
+		protected:
+			T _;
+	};
+#endif
 
 struct Vst2xSpeakerProperties{
 	float azimuth, elevation, radius, reserved;
@@ -73,6 +87,8 @@ struct Events{
 	Event* events[2];
 };
 
+struct Rect{ int16_t top, left, bottom, right; };
+
 Vst::Vst():
 	_samples(0),
 	_samplesPerBeat(22050),
@@ -93,20 +109,33 @@ Vst::Vst():
 		ss>>std::ws;
 		std::getline(ss, s);
 		setSelf(nullptr);
+		typedef Plugin* (*Vst2xPluginMain)(Vst2xHostCallback);
+		Vst2xPluginMain pluginMain;
 		#ifdef DLAL_WINDOWS
+		{
 			HMODULE library=LoadLibraryExA((LPCSTR)s.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 			if(!library) return "error: couldn't load library, error code "+std::to_string(GetLastError());
-			typedef Plugin* (*Vst2xPluginMain)(Vst2xHostCallback);
-			Vst2xPluginMain pluginMain;
 			for(auto i: {"VSTPluginMain", "VstPluginMain()", "main"}){
 				pluginMain=(Vst2xPluginMain)GetProcAddress(library, i);
 				if(pluginMain) break;
 			}
-			if(!pluginMain) return "error: couldn't get plugin's main";
-			_plugin=pluginMain(vst2xHostCallback);
+		}
+		#elif defined(DLAL_OSX)
+		{
+			Releaser<CFStringRef> path=CFStringCreateWithCString(NULL, s.c_str(), kCFStringEncodingASCII);
+			if(!path) return "error: couldn't create string";
+			Releaser<CFURLRef> url=CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, kCFURLPOSIXPathStyle, true);
+			if(!url) return "error: couldn't create URL";
+			CFBundleRef bundle=CFBundleCreate(kCFAllocatorDefault, url);
+			if(!bundle) return "error: couldn't create bundle";
+			pluginMain=(Vst2xPluginMain)CFBundleGetFunctionPointerForName(bundle, CFSTR("VSTPluginMain"));
+			if(!pluginMain) pluginMain=(Vst2xPluginMain)CFBundleGetFunctionPointerForName(bundle, CFSTR("main_macho"));
+		}
 		#else
-				return "error: unsupported platform";
+			return "error: unsupported platform";
 		#endif
+		if(!pluginMain) return "error: couldn't get plugin's main";
+		_plugin=pluginMain(vst2xHostCallback);
 		if(_plugin->magic!=('V'<<24|'s'<<16|'t'<<8|'P')) return "error: wrong magic number";
 		setSelf(_plugin);
 		Vst2xSpeakerProperties properties;
@@ -125,13 +154,36 @@ Vst::Vst():
 		return "";
 	});
 	registerCommand("show", "", [this](std::stringstream& ss){
-		sf::Window window(sf::VideoMode(800, 600), "dlal vst");
-		_plugin->dispatcher(_plugin, 14, 0, (int*)0, window.getSystemHandle(), 0.0f);
-		while(window.isOpen()){
-			sf::Event event;
-			while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		Rect* rect=nullptr;
+		_plugin->dispatcher(_plugin, 13, 0, (int*)0, &rect, 0.0f);
+		unsigned width=800, height=600;
+		if(rect){
+			width=rect->right-rect->left;
+			height=rect->bottom-rect->top;
 		}
+		#ifdef DLAL_OSX
+			static NSWindow* window;
+			window=[
+				[NSWindow alloc]
+				initWithContentRect: NSMakeRect(0, 0, width, height)
+				styleMask: NSTitledWindowMask|NSClosableWindowMask
+				backing: NSBackingStoreBuffered
+				defer: NO
+			];
+			[window makeKeyAndOrderFront: NSApp];
+			auto windowHandle=(__bridge void*)[window contentView];
+		#else
+			auto window(sf::VideoMode(width, height), "dlal vst");
+			auto windowHandle=window.getSystemHandle();
+		#endif
+		_plugin->dispatcher(_plugin, 14, 0, (int*)0, windowHandle, 0.0f);
+		#ifndef DLAL_OSX
+			while(window.isOpen()){
+				sf::Event event;
+				while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+		#endif
 		return "";
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
@@ -186,7 +238,7 @@ int* Vst::vst2xHostCallback(
 		case 0: break;//parameter updated
 		case 1: result=(void*)2400; break;//version 2.4
 		case 3: break;//idle
-		case 6: break;//want midi
+		case 6: result=(void*)1; break;//want midi
 		case 7:{//get time
 			static Vst2xTimeInfo timeInfo;
 			timeInfo.startToNowInSamples=(double)self->_samples;

@@ -18,4 +18,8 @@ endif()
 
 standard_component(Vst)
 
+if(APPLE)
+	set_source_files_properties("../src/vst.cpp" APPEND_STRING PROPERTY COMPILE_FLAGS "-x objective-c++ -fobjc-arc")
+endif()
+
 target_link_libraries(Vst sfml-system sfml-window)

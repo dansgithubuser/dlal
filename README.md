@@ -55,7 +55,8 @@ file organization
 todo
 ----
 - vst host, use 8bitZ as motivation
-	- mac, linux
+	- linux
+- travis and appveyor
 - just use std::cerr instead of error reporting
 - soundboard
 	- doioioioing
