@@ -564,7 +564,7 @@ void MidiControllee::midi(const uint8_t* bytes, unsigned size){
 			value=(bytes[2]<<7)+bytes[1];
 			controller=int(PretendControl::PITCH_WHEEL);
 			break;
-		default: break;
+		default: return;
 	}
 	if(_listening) _listeningControls[controller].value(value);
 	Control& control=_controls[controller];
