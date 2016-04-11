@@ -24,27 +24,34 @@ endif()
 footer()
 
 if(NOT WIN32)
-	add_custom_command(
-		TARGET ${output}
-		PRE_LINK
-		COMMAND ./configure
-		COMMAND make
-		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../deps/portaudio"
+	execute_process(
+		COMMAND python portaudio.py
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		RESULT_VARIABLE result
 	)
+	if(${result})
+		message(FATAL_ERROR 'portaudio build failed')
+	endif()
 endif()
 
 if(WIN32)
 	target_link_libraries(${output} portaudio_static)
 elseif(APPLE)
-	function(find_and_link target)
+	function(find_and_link target static)
 		foreach(i ${ARGN})
 			unset(x CACHE)
-			find_library(x ${i})
+			if(static)
+				find_library(x NAMES lib${i}.a ${i})
+			else()
+				find_library(x ${i})
+			endif()
 			if("${x}" MATCHES "NOTFOUND")
 				message(FATAL_ERROR "${i} not found")
 			endif()
 			target_link_libraries(${target} ${x})
 		endforeach()
 	endfunction()
-	find_and_link(${output} CoreAudio AudioToolbox AudioUnit CoreServices Carbon portaudio)
+	find_and_link(${output} OFF CoreAudio AudioToolbox AudioUnit CoreServices Carbon)
+	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ../deps/portaudio/lib/.libs)
+	find_and_link(${output} ON portaudio)
 endif()
