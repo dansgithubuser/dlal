@@ -1,7 +1,8 @@
 def standard_system_functionality(audio, midi=None, extra_help=[]):
-	import sys
+	import sys, atexit
 	def go():
 		audio.start()
+		atexit.register(lambda: audio.finish())
 		print('audio processing going')
 	print('use the go function to start audio processing')
 	for help in extra_help: print(help)

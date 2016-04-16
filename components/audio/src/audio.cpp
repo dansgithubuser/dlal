@@ -94,6 +94,7 @@ std::string Audio::start(){
 	if(err!=paNoError) return "error: Pa_Initialize failed: "+paError(err);
 	//get wasapi if it exists
 	PaHostApiIndex apiIndex=Pa_GetDefaultHostApi();
+	if(apiIndex<0) return "error: no default host API: "+paError(apiIndex);
 	for(PaHostApiIndex i=0; i<Pa_GetHostApiCount(); ++i)
 		if(Pa_GetHostApiInfo(i)->type==paWASAPI){ apiIndex=i; break; }
 	//input

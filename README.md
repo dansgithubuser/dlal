@@ -57,6 +57,7 @@ todo
 - vst host, use 8bitZ as motivation
 	- linux
 - travis and appveyor
+- make raw just a mode of audio?
 - just use std::cerr instead of error reporting
 - soundboard
 	- doioioioing

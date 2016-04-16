@@ -166,9 +166,9 @@ static void* g_static_private_get(void* private_key){ return PRETEND_POINTER; }
 #define g_return_val_if_fail
 #define g_return_if_fail
 
-#define GPOINTER_TO_INT(p) ((int)(p))
-#define GPOINTER_TO_UINT(p) ((unsigned int)(p))
-#define GINT_TO_POINTER(i) ((void*)(i))
+#define GPOINTER_TO_INT(p) ((int)(long)(p))
+#define GPOINTER_TO_UINT(p) ((unsigned)(long)(p))
+#define GINT_TO_POINTER(i) ((void*)(long)(i))
 
 typedef int gboolean;
 typedef void* gpointer;

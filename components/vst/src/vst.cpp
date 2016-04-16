@@ -12,6 +12,8 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -173,10 +175,10 @@ Vst::Vst():
 			[window makeKeyAndOrderFront: NSApp];
 			auto windowHandle=(__bridge void*)[window contentView];
 		#else
-			auto window(sf::VideoMode(width, height), "dlal vst");
+			sf::Window window(sf::VideoMode(width, height), "dlal vst");
 			auto windowHandle=window.getSystemHandle();
 		#endif
-		_plugin->dispatcher(_plugin, 14, 0, (int*)0, windowHandle, 0.0f);
+		_plugin->dispatcher(_plugin, 14, 0, (int*)0, (void*)windowHandle, 0.0f);
 		#ifndef DLAL_OSX
 			while(window.isOpen()){
 				sf::Event event;
