@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
 cmake_policy(SET CMP0000 OLD)
-cmake_policy(SET CMP0042 NEW)
+if(POLICY CMP0042)
+	cmake_policy(SET CMP0042 NEW)
+endif()
+if(POLICY CMP0054)
+	cmake_policy(SET CMP0054 NEW)
+endif()
 
 add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_WINSOCK_DEPRECATED_NO_WARNINGS)
 
@@ -42,7 +47,7 @@ function(cpp11WithExceptions)
 endfunction()
 
 function(footer)
-	if(TEST)
+	if(DLAL_TEST)
 		add_executable(${output} ${src})
 	else()
 		add_library(${output} MODULE ${src})

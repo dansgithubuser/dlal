@@ -34,7 +34,7 @@ Audio::Audio():
 	_sampleRate(0),
 	_started(false),
 	_underflows(0)
-	#ifdef TEST_AUDIO
+	#ifdef DLAL_AUDIO_TEST
 		,_test(false)
 	#endif
 {
@@ -58,7 +58,7 @@ Audio::Audio():
 		if(!_started) return "not started";
 		return finish();
 	});
-	#ifdef TEST_AUDIO
+	#ifdef DLAL_AUDIO_TEST
 		registerCommand("test", "", [this](std::stringstream& ss){
 			_testPhase=0.0f;
 			_test=true;
@@ -75,7 +75,7 @@ void Audio::evaluate(){
 			if(i->audio()) std::fill_n(i->audio(), samples, 0.0f);
 		++_underflows;
 	}
-	#ifdef TEST_AUDIO
+	#ifdef DLAL_AUDIO_TEST
 		if(_test){
 			for(unsigned i=0; i<samples; ++i){
 				_output[i]=_testPhase;

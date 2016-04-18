@@ -1,6 +1,6 @@
 include(../../../build/CMakeCommon.txt)
 
-option(TEST "ON to test, OFF otherwise")
+option(DLAL_TEST "ON to test, OFF otherwise")
 
 set(BUILD_SHARED_LIBS_OUTER "${BUILD_SHARED_LIBS}")
 set(BUILD_SHARED_LIBS OFF)
@@ -14,7 +14,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../../deps/SFML/include")
 
 add_definitions(-DSFML_STATIC)
 
-if(TEST)
+if(DLAL_TEST)
 	set(src "../src/test.cpp")
 	add_definitions(-DDLAL_VST_TEST)
 endif()

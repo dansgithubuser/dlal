@@ -25,7 +25,7 @@ class Audio: public MultiOut{
 		PaStream* _paStream;
 		bool _started;
 		unsigned _underflows;
-		#ifdef TEST_AUDIO
+		#ifdef DLAL_AUDIO_TEST
 			bool _test;
 			float _testPhase;
 		#endif

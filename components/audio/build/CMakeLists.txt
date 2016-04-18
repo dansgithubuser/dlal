@@ -1,6 +1,6 @@
 include(../../../build/CMakeCommon.txt)
 
-option(TEST "ON to test, OFF otherwise")
+option(DLAL_TEST "ON to test, OFF otherwise")
 
 add_definitions(-DPA_WDMKS_NO_KSGUID_LIB)
 
@@ -10,14 +10,14 @@ endif()
 
 include_directories("../deps/portaudio/include")
 
-if(TEST)
-	add_definitions(-DTEST_AUDIO)
+if(DLAL_TEST)
+	add_definitions(-DDLAL_AUDIO_TEST)
 endif()
 
 set(output Audio)
 component_src()
 
-if(TEST)
+if(DLAL_TEST)
 	set(src ${src} "../src/test.cpp")
 endif()
 
@@ -39,7 +39,6 @@ if(WIN32)
 else()
 	function(find_and_link target static)
 		foreach(i ${ARGN})
-			unset(x CACHE)
 			if(static)
 				find_library(x NAMES lib${i}.a ${i})
 			else()
@@ -49,6 +48,7 @@ else()
 				message(FATAL_ERROR "${i} not found")
 			endif()
 			target_link_libraries(${target} ${x})
+			unset(x CACHE)
 		endforeach()
 	endfunction()
 	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ../deps/portaudio/lib/.libs)

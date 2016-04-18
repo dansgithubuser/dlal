@@ -1,6 +1,6 @@
 include(../../../build/CMakeCommon.txt)
 
-option(TEST "ON to test, OFF otherwise")
+option(DLAL_TEST "ON to test, OFF otherwise")
 
 set(fluidsynthdir ../deps/fluidsynth)
 
@@ -25,7 +25,7 @@ include_directories(
 add_definitions(-DFLUIDSYNTH_NOT_A_DLL -DDEFAULT_SOUNDFONT="" -DHAVE_CONFIG_H=1)
 
 #=====source=====#
-if(TEST)
+if(DLAL_TEST)
 	set(src ${src} "../src/test.cpp")
 endif()
 
