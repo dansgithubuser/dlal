@@ -5,6 +5,8 @@
 #elif defined(DLAL_OSX)
 	#include <Foundation/Foundation.h>
 	#include <AppKit/AppKit.h>
+#elif defined(DLAL_LINUX)
+	#include <dlfcn.h>
 #endif
 
 #include <SFML/Window.hpp>
@@ -133,6 +135,13 @@ Vst::Vst():
 			pluginMain=(Vst2xPluginMain)CFBundleGetFunctionPointerForName(bundle, CFSTR("VSTPluginMain"));
 			if(!pluginMain) pluginMain=(Vst2xPluginMain)CFBundleGetFunctionPointerForName(bundle, CFSTR("main_macho"));
 		}
+		#elif defined(DLAL_LINUX)
+			auto handle=dlopen(s.c_str(), RTLD_LOCAL|RTLD_NOW);
+			if(!handle) return "error: couldn't load library";
+			for(auto i: {"VSTPluginMain", "main"}){
+				pluginMain=(Vst2xPluginMain)dlsym(handle, i);
+				if(pluginMain) break;
+			}
 		#else
 			return "error: unsupported platform";
 		#endif
