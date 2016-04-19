@@ -1,0 +1,9 @@
+os:
+  - linux
+  - osx
+dist: trusty
+sudo: required
+install:
+  - sudo python go.py --setup
+  - export PATH=/usr/local/bin:$PATH
+script: python go.py -t "*"

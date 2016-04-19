@@ -1,15 +1,16 @@
 #!/usr/bin/python
 
-import os, subprocess, sys
+import os, platform, subprocess, sys
 
 #args
 import argparse
-parser=argparse.ArgumentParser(description='run a system')
-parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
-parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
+parser=argparse.ArgumentParser(description='interface for developer operations')
+parser.add_argument('--setup', action='store_true', help='install dependencies')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--system', '-s', help='which system to run')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
+parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
+parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands -- name.options -- use h for help')
 args=parser.parse_args()
 
@@ -65,6 +66,33 @@ else:
 #config
 config='Release'
 if args.debug: config='Debug'
+
+#setup
+if args.setup:
+	if platform.system()=='Linux':
+		#sfml dependencies
+		shell('sudo apt-get install --yes --force-yes '
+			'libxcb-image0-dev freeglut3-dev libjpeg-dev libfreetype6-dev '
+			'libxrandr-dev libglew-dev libsndfile1-dev libopenal-dev libudev-dev '
+		)
+		#tkinter
+		shell('sudo apt-get install --yes --force-yes python-tk')
+		#portaudio (jack) dependencies
+		shell('sudo apt-get install --yes --force-yes libjack-dev jackd')
+		#rtmidi dependencies
+		shell('sudo apt-get install --yes --force-yes libasound2-dev')
+		#cmake
+		shell('wget http://www.cmake.org/files/v3.2/cmake-3.2.3-Linux-x86_64.sh')
+		shell('chmod a+x cmake-3.2.3-Linux-x86_64.sh')
+		shell('sudo ./cmake-3.2.3-Linux-x86_64.sh --skip-license --prefix=/usr/local')
+	elif platform.system()=='Darwin':
+		shell('brew update')
+		shell('sudo brew uninstall --force cmake')
+		shell('brew install cmake')
+	else:
+		print('unrecognized system '+platform.system())
+		sys.exit(-1)
+	sys.exit(0)
 
 #build
 if not args.run_only:
@@ -132,7 +160,6 @@ if args.interface:
 		name, port=i.split(':')
 		os.chdir(os.path.join('interfaces', name, 'build'))
 		invocation=find_binary(name)+' 127.0.0.1 '+port
-		import platform
 		if platform.system()=='Windows': os.system('start '+invocation)
 		else: subprocess.Popen(invocation, shell=True)
 		os.chdir(file_path)
