@@ -1,20 +1,12 @@
 include(../../../build/CMakeCommon.txt)
 
-#=====subdirectories=====#
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "static")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../deps/SFML" "${CMAKE_CURRENT_BINARY_DIR}/SFML")
-
 #=====include=====#
 include_directories(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../skeleton/deps/dyad/src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../deps"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../../deps/SFML/include"
 )
-
-#=====defines=====#
-add_definitions(-DSFML_STATIC)
 
 #=====source=====#
 set(
@@ -30,6 +22,7 @@ set(output Viewer)
 add_executable(${output} ${src})
 
 #=====linking=====#
+sfml()
 target_link_libraries(${output} sfml-system sfml-window sfml-graphics)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")

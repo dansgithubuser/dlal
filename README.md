@@ -61,7 +61,6 @@ file organization
 
 todo
 ----
-- only compile sfml once
 - make raw just a mode of audio?
 - just use std::cerr instead of error reporting
 - vst set and get parameters

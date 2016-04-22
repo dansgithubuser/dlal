@@ -149,16 +149,9 @@ if args.interface:
 				import re
 				if re.match(name.lower()+r'(\.exe)?$', file.lower()):
 					return os.path.join(root, file)
-	if not args.run_only:
-		for i in args.interface:
-			name, port=i.split(':')
-			os.chdir(os.path.join('interfaces', name, 'build'))
-			shell('cmake .')
-			shell('cmake --build . --config '+config)
-			os.chdir(file_path)
 	for i in args.interface:
 		name, port=i.split(':')
-		os.chdir(os.path.join('interfaces', name, 'build'))
+		os.chdir(built_rel_path)
 		invocation=find_binary(name)+' 127.0.0.1 '+port
 		if platform.system()=='Windows': os.system('start '+invocation)
 		else: subprocess.Popen(invocation, shell=True)
