@@ -61,9 +61,12 @@ file organization
 
 todo
 ----
-- make raw just a mode of audio?
+- skeleton object library
 - just use std::cerr instead of error reporting
 - vst set and get parameters
+- vst unit test
+- soundfont unit test
+- network unit test
 - soundboard
 	- doioioioing
 	- toilet

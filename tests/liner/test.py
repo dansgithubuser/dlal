@@ -13,7 +13,8 @@ fm=dlal.Fm()
 raw.set(44100, log2SamplesPerCallback)
 liner.line('z')
 #add
-system.add(raw, liner, fm)
+system.add(raw, slot=1)
+system.add(liner, fm)
 #connect
 liner.connect(fm)
 fm.connect(raw)

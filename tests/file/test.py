@@ -16,14 +16,15 @@ raw.set(sample_rate, log_2_samples_per_callback)
 midi.midi(0x90, 0x3C, 0x40)
 fileo.name('file.txt')
 #add
-system.add(raw, midi, fileo)
+system.add(raw, slot=1)
+system.add(midi, fileo)
 #connect
 midi.connect(fileo)
 #start
 raw.start()
 #finish
 fileo.finish()
-#finish
+raw.finish()
 del system
 
 #-----in-----#
@@ -36,7 +37,8 @@ fm=dlal.Fm()
 raw.set(sample_rate, log_2_samples_per_callback)
 filei.name('file.txt')
 #add
-system.add(raw, filei, fm)
+system.add(raw, slot=1)
+system.add(filei, fm)
 #connect
 filei.connect(fm)
 fm.connect(raw)

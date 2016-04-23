@@ -17,7 +17,8 @@ midi.midi(0x90, 0x3C, 0x40)
 buffer.periodic_resize(4<<log_2_samples_per_callback)
 multiplier.set(0.5)
 #add
-system.add(raw, midi, fm, multiplier, buffer)
+system.add(raw, slot=1)
+system.add(midi, fm, multiplier, buffer)
 #connect
 midi.connect(fm)
 fm.connect(buffer)

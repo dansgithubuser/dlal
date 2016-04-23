@@ -1,14 +1,16 @@
 #include "raw.hpp"
 
-#include <fstream>
-
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Raw; }
 
 namespace dlal{
 
-Raw::Raw(): _sampleRate(0), _duration(10), _fileName("raw.txt") {
+Raw::Raw(): _sampleRate(0), _duration(10), _sample(0), _fileName("raw.txt") {
 	addJoinAction([this](System& system){
-		return system.set(_sampleRate, _log2SamplesPerCallback);
+		_audio.resize(1<<_log2SamplesPerCallback, 0.0f);
+		_file.open(_fileName.c_str());
+		system.set(_sampleRate, _log2SamplesPerCallback);
+		_maxSample=_duration*unsigned(_sampleRate)/1000;
+		return "";
 	});
 	registerCommand("set", "sampleRate <log2(samples per callback)>",
 		[this](std::stringstream& ss){
@@ -29,18 +31,25 @@ Raw::Raw(): _sampleRate(0), _duration(10), _fileName("raw.txt") {
 			return "";
 		}
 	);
-	registerCommand("start", "", [this](std::stringstream& ss)->std::string{
+	registerCommand("start", "", [this](std::stringstream& ss){
 		if(!_system) return "error: must add before starting";
-		unsigned samples=1<<_log2SamplesPerCallback;
-		_audio.resize(samples);
-		std::ofstream file(_fileName.c_str());
-		for(unsigned i=0; i<_duration*_sampleRate/1000; i+=samples){
-			std::fill_n(_audio.data(), samples, 0.0f);
-			_system->evaluate();
-			for(unsigned j=0; j<samples; ++j) file<<_audio[j]<<'\n';
-		}
+		const unsigned samples=1<<_log2SamplesPerCallback;
+		for(unsigned i=0; i<_maxSample; i+=samples) _system->evaluate();
 		return "";
 	});
+	registerCommand("finish", "", [this](std::stringstream& ss){
+		_file.close();
+		return "";
+	});
+}
+
+void Raw::evaluate(){
+	if(_sample>=_maxSample) return;
+	const unsigned samples=1<<_log2SamplesPerCallback;
+	for(unsigned i=0; i<samples; ++i) _file<<_audio[i]<<'\n';
+	_file.flush();
+	std::fill_n(_audio.data(), samples, 0.0f);
+	_sample+=samples;
 }
 
 }//namespace dlal

@@ -9,7 +9,8 @@ fm=dlal.Fm()
 raw.set(44100, 6)
 midi.midi(0x90, 0x3C, 0x40)
 #add
-system.add(raw, midi, fm)
+system.add(raw, slot=1)
+system.add(midi, fm)
 #connect
 midi.connect(fm)
 fm.connect(raw)
