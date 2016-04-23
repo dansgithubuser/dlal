@@ -61,7 +61,6 @@ file organization
 
 todo
 ----
-- just use std::cerr instead of error reporting
 - vst set and get parameters
 - vst unit test
 - soundfont unit test

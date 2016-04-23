@@ -34,7 +34,6 @@ _skeleton=load('skeleton')
 _skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
 _skeleton.dlalDyadInit.argtypes=[ctypes.c_int]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
-_skeleton.dlalDemolishSystem.restype=ctypes.c_void_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
 _skeleton.dlalSetVariable.argtypes=[ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 _skeleton.dlalCommand.restype=ctypes.c_void_p
@@ -54,7 +53,7 @@ class System:
 		assert(self.system)
 
 	def __del__(self):
-		print(report(_skeleton.dlalDemolishSystem(self.system)))
+		_skeleton.dlalDemolishSystem(self.system)
 		global _systems
 		_systems-=1
 		if _systems==0: _skeleton.dlalDyadShutdown()

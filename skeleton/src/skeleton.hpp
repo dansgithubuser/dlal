@@ -31,7 +31,7 @@ extern "C"{
 	DLAL void dlalDyadInit();
 	DLAL void dlalDyadShutdown();
 	DLAL void* dlalBuildSystem(int port);
-	DLAL char* dlalDemolishSystem(void* system);
+	DLAL void dlalDemolishSystem(void* system);
 	DLAL void dlalSetVariable(void* system, const char* name, const char* value);
 	DLAL char* dlalCommand(void* component, const char* command);
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
@@ -67,20 +67,12 @@ std::string dyadPauseAnd(std::function<std::string()>);
 
 class System{
 	public:
-		enum ReportContext{
-			RC_IN_EVALUATION, RC_IN_DYAD, RC_SENTINEL
-		};
 		System(int port=9088);
 		~System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
-		std::string report(//for errors
-			ReportContext rc=RC_SENTINEL,
-			const std::string& s="",
-			const Component* reporter=NULL
-		);
 		dyad_Stream* dyadNewStream();
 		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
 		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
@@ -93,7 +85,6 @@ class System{
 	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;
-		std::vector<std::string> _report[RC_SENTINEL];
 		std::function<dyad_Stream*()> _dyadNewStream;
 		std::function<void(dyad_Stream*, int event, dyad_Callback, void* userData)> _dyadAddListener;
 		std::function<int(dyad_Stream*, const char* host, int port, int backlog)> _dyadListenEx;

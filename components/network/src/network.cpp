@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <sstream>
+#include <iostream>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Network; }
 
@@ -23,13 +24,13 @@ static void onData(dyad_Event* e){
 static void onDestroyed(dyad_Event* e){
 	using namespace dlal;
 	Network* network=(Network*)e->udata;
-	network->_system->report(System::RC_IN_DYAD, "error: server destroyed", network);
+	std::cerr<<"error: server destroyed"<<std::endl;
 }
 
 static void onError(dyad_Event* e){
 	using namespace dlal;
 	Network* network=(Network*)e->udata;
-	network->_system->report(System::RC_IN_DYAD, "error: "+std::string(e->msg), network);
+	std::cerr<<"error: "<<e->msg<<std::endl;
 }
 
 static void onAccept(dyad_Event* e){

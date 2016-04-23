@@ -66,11 +66,8 @@ void* dlalBuildSystem(int port){
 	}
 }
 
-char* dlalDemolishSystem(void* system){
-	using namespace dlal;
-	std::string result=((System*)system)->report();
-	delete (System*)system;
-	return toCStr(result);
+void dlalDemolishSystem(void* system){
+	delete (dlal::System*)system;
 }
 
 void dlalSetVariable(void* system, const char* name, const char* value){
@@ -145,12 +142,12 @@ std::string dyadPauseAnd(std::function<std::string()> f){
 //=====System=====//
 static void onDestroyed(dyad_Event* e){
 	System* system=(System*)e->udata;
-	system->report(System::RC_IN_DYAD, "error: server destroyed");
+	std::cerr<<"error: server destroyed"<<std::endl;
 }
 
 static void onError(dyad_Event* e){
 	System* system=(System*)e->udata;
-	system->report(System::RC_IN_DYAD, "error: "+std::string(e->msg));
+	std::cerr<<"error: "<<e->msg<<std::endl;
 }
 
 static void onAccept(dyad_Event* e){
@@ -211,7 +208,6 @@ System::System(int port): _reportQueue(8){
 	_dyadNewStream=dyad_newStream;
 	_dyadAddListener=dyad_addListener;
 	_dyadListenEx=dyad_listenEx;
-	for(unsigned i=0; i<RC_SENTINEL; ++i) _report[i].reserve(16);
 	std::string r=dyadPauseAnd([&]()->std::string{
 		_server=dyad_newStream();
 		dyad_addListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
@@ -287,33 +283,6 @@ std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
 	_variables["sampleRate"]=std::to_string(sampleRate);
 	_variables["samplesPerEvaluation"]=std::to_string(1<<log2SamplesPerCallback);
 	return "";
-}
-
-std::string System::report(
-	ReportContext rc, const std::string& s, const Component* reporter
-){
-	if(s.size()){
-		std::stringstream ss;
-		ss<<componentToStr(reporter)<<": "<<s;
-		_report[(unsigned)rc].push_back(ss.str());
-		return dyadPauseAnd([&]()->std::string{
-			for(auto i: _clients)
-				dyadWrite(i, (uint8_t*)ss.str().data(), ss.str().size());
-			return "";
-		});
-	}
-	else{
-		std::string result;
-		for(unsigned i=0; i<RC_SENTINEL; ++i){
-			if(!_report[i].size()) continue;
-			switch(i){
-				case RC_IN_EVALUATION: result+="---in evaluation---\n"; break;
-				case RC_IN_DYAD:       result+="---in dyad---\n";       break;
-			}
-			for(auto j: _report[i]) result+=j+"\n";
-		}
-		return result;
-	}
 }
 
 dyad_Stream* System::dyadNewStream(){

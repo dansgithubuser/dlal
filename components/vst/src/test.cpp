@@ -22,7 +22,6 @@ int main(int argc, char** argv){
 		std::cin>>s;
 		if(s=="q") break;
 		system.evaluate();
-		std::cout<<system.report();
 		for(unsigned i=0; i<dummy._audio.size(); ++i) std::cout<<dummy._audio[i]<<" ";
 		std::cout<<"\n";
 	}

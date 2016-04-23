@@ -1,5 +1,7 @@
 #include "commander.hpp"
 
+#include <iostream>
+
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Commander; }
 
 static dlal::Commander* toCommander(void* p){
@@ -154,7 +156,7 @@ void Commander::dispatch(const Directive& d){
 			result=d._a->disconnect(*d._b);
 			break;
 	}
-	if(result.size()) _system->report(System::RC_IN_EVALUATION, result, this);
+	if(result.size()) std::cerr<<result<<std::endl;
 }
 
 }//namespace dlal
