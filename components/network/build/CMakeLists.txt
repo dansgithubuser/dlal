@@ -1,2 +1,2 @@
 include(../../../build/CMakeCommon.txt)
-standard_component(Network page)
+standard_component(Network)

@@ -5,7 +5,6 @@ option(DLAL_TEST "ON to test, OFF otherwise")
 set(fluidsynthdir ../deps/fluidsynth)
 
 set(output Soundfont)
-component_src()
 
 #=====include=====#
 include_directories(
@@ -66,4 +65,4 @@ set(src ${src}
 )
 
 #=====products=====#
-footer()
+standard_component(${output})

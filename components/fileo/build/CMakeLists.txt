@@ -1,2 +1,2 @@
 include(../../../build/CMakeCommon.txt)
-standard_component(Fileo page)
+standard_component(Fileo)

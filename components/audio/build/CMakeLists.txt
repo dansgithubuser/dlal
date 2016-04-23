@@ -15,13 +15,12 @@ if(DLAL_TEST)
 endif()
 
 set(output Audio)
-component_src()
 
 if(DLAL_TEST)
 	set(src ${src} "../src/test.cpp")
 endif()
 
-footer()
+standard_component(${output})
 
 if(NOT WIN32)
 	execute_process(

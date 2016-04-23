@@ -61,7 +61,6 @@ file organization
 
 todo
 ----
-- skeleton object library
 - just use std::cerr instead of error reporting
 - vst set and get parameters
 - vst unit test

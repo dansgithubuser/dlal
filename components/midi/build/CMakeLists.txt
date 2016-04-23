@@ -12,8 +12,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 set(src "../deps/rtmidi/RtMidi.cpp")
-component_src(page)
-footer()
+standard_component(${output})
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
 	target_link_libraries(${output} asound pthread)
