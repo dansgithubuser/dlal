@@ -267,6 +267,7 @@ int* Vst::vst2xHostCallback(
 			result=&timeInfo;
 			break;
 		}
+		case 13: break;//plugin notifies inputs/outputs has changed - we assume all plugins have 2 or fewer outputs
 		case 16: result=(void*)(ptrdiff_t)self->_sampleRate; break;
 		case 17: result=(void*)(ptrdiff_t)self->_samplesPerEvaluation; break;
 		case 23: break;//get current process level - unknown
