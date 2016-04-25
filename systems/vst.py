@@ -17,8 +17,6 @@ midi.connect(fm)
 midi.connect(vst)
 fm.connect(audio)
 vst.connect(audio)
-#start
-fm.show_controls()
 
 #main
 vst.load(os.environ['DLAL_VST_PLUGIN_PATH'])

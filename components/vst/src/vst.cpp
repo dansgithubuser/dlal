@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstring>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -160,8 +161,8 @@ Vst::Vst():
 		arrangement.channels=1;
 		arrangement.properties[0]=properties;
 		_plugin->dispatcher(_plugin, 42, 0, (int*)&arrangement, &arrangement, 0.0f);
-		_plugin->dispatcher(_plugin, 12, 0, (int*)1, NULL, 0.0f);//audio processing on
-		_plugin->dispatcher(_plugin, 71, 0, (int*)0, NULL, 0.0f);//audio processing start
+		_plugin->dispatcher(_plugin, 12, 0, (int*)1, nullptr, 0.0f);//audio processing on
+		_plugin->dispatcher(_plugin, 71, 0, (int*)0, nullptr, 0.0f);//audio processing start
 		return "";
 	});
 	registerCommand("show", "", [this](std::stringstream& ss){
@@ -205,6 +206,63 @@ Vst::Vst():
 			&&
 			_beatsPerBar.is_lock_free()
 		)?"lockless":"lockfull";
+	});
+	registerCommand("list", "", [this](std::stringstream& ss){
+		std::vector<std::string> names, displays, labels;
+		std::vector<float> values;
+		std::vector<uint8_t> automatables;
+		unsigned maxNameSize=0;
+		for(int32_t i=0; i<_plugin->params; ++i){
+			auto s=getString(8, i);
+			if(s.size()>maxNameSize) maxNameSize=s.size();
+			names.push_back(s);
+			displays.push_back(getString(7, i));
+			labels.push_back(getString(6, i));
+			values.push_back(_plugin->getParameter(_plugin, i));
+			automatables.push_back((uint8_t)(ptrdiff_t)_plugin->dispatcher(_plugin, 26, i, nullptr, nullptr, 0.0f));
+		}
+		std::stringstream result;
+		for(unsigned i=0; i<names.size(); ++i){
+			result<<std::setw(unsigned(std::log10(_plugin->params))+2)<<i<<" ";
+			result<<std::setw(maxNameSize)<<names[i]<<": ";
+			result<<displays[i]<<" ("<<labels[i]<<") ["<<values[i]<<"] ";
+			if(!automatables[i]) result<<"UNAUTOMATABLE";
+			result<<"\n";
+		}
+		return result.str();
+	});
+	registerCommand("get", "<parameter index>", [this](std::stringstream& ss){
+		int32_t i;
+		ss>>i;
+		std::stringstream tt;
+		tt<<_plugin->getParameter(_plugin, i);
+		return tt.str();
+	});
+	registerCommand("set", "<parameter index> <value>", [this](std::stringstream& ss){
+		int32_t i;
+		float value;
+		ss>>i>>value;
+		_plugin->setParameter(_plugin, i, value);
+		return "";
+	});
+	registerCommand("set_program", "<program number>", [this](std::stringstream& ss){
+		int i;
+		ss>>i;
+		if(_plugin->dispatcher(_plugin, 67, 0, nullptr, nullptr, 0.0f)){
+			_plugin->dispatcher(_plugin, 2, 0, nullptr, nullptr, 0.0f);
+			_plugin->dispatcher(_plugin, 68, 0, nullptr, nullptr, 0.0f);
+			return "";
+		}
+		return "couldn't set program";
+	});
+	registerCommand("get_programs", "", [this](std::stringstream& ss){
+		std::stringstream tt;
+		const int32_t programs=_plugin->programs;
+		for(int32_t i=0; i<programs; ++i){
+			tt<<std::setw(unsigned(std::log10(programs))+2)<<i<<": ";
+			tt<<getString(29, i)<<"\n";
+		}
+		return tt.str();
 	});
 }
 
@@ -294,6 +352,15 @@ void Vst::setSelf(Plugin* plugin){
 	_mutex.lock();
 	_self[plugin]=this;
 	_mutex.unlock();
+}
+
+std::string Vst::getString(int32_t opcode, int32_t index){
+	char s[32];
+	_plugin->dispatcher(_plugin, opcode, index, nullptr, s, 0.0f);
+	std::string result(s);
+	result.erase(0, result.find_first_not_of(" \n\r\t"));
+	result.erase(result.find_last_not_of(" \n\r\t")+1);
+	return result;
 }
 
 }//namespace dlal

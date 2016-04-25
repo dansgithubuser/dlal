@@ -61,8 +61,8 @@ file organization
 
 todo
 ----
-- vst set and get parameters
 - vst unit test
+	- compare window to file
 - soundfont unit test
 - network unit test
 - soundboard

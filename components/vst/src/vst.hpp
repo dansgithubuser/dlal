@@ -62,6 +62,7 @@ class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public Mu
 		static std::map<Plugin*, Vst*> _self;
 		static std::mutex _mutex;
 		void setSelf(Plugin*);
+		std::string getString(int32_t opcode, int32_t index);
 		Plugin* _plugin;
 		Buffer _i, _o;
 		std::atomic<uint64_t> _samples;
