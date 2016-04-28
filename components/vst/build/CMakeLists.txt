@@ -14,4 +14,4 @@ if(APPLE)
 endif()
 
 sfml()
-target_link_libraries(Vst sfml-system sfml-window)
+target_link_libraries(Vst sfml-system sfml-window sfml-graphics)

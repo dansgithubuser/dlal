@@ -9,7 +9,7 @@
 	#include <dlfcn.h>
 #endif
 
-#include <SFML/Window.hpp>
+#include <SFML/Graphics.hpp>
 
 #include <cassert>
 #include <chrono>
@@ -92,8 +92,6 @@ struct Events{
 	Event* events[2];
 };
 
-struct Rect{ int16_t top, left, bottom, right; };
-
 Vst::Vst():
 	_samples(0),
 	_samplesPerBeat(22050),
@@ -166,37 +164,14 @@ Vst::Vst():
 		return "";
 	});
 	registerCommand("show", "", [this](std::stringstream& ss){
-		Rect* rect=nullptr;
-		_plugin->dispatcher(_plugin, 13, 0, (int*)0, &rect, 0.0f);
-		unsigned width=800, height=600;
-		if(rect){
-			width=rect->right-rect->left;
-			height=rect->bottom-rect->top;
-		}
-		#ifdef DLAL_OSX
-			static NSWindow* window;
-			window=[
-				[NSWindow alloc]
-				initWithContentRect: NSMakeRect(0, 0, width, height)
-				styleMask: NSTitledWindowMask|NSClosableWindowMask
-				backing: NSBackingStoreBuffered
-				defer: NO
-			];
-			[window makeKeyAndOrderFront: NSApp];
-			auto windowHandle=(__bridge void*)[window contentView];
-		#else
-			sf::Window window(sf::VideoMode(width, height), "dlal vst");
-			auto windowHandle=window.getSystemHandle();
-		#endif
-		_plugin->dispatcher(_plugin, 14, 0, (int*)0, (void*)windowHandle, 0.0f);
-		#ifndef DLAL_OSX
-			while(window.isOpen()){
-				sf::Event event;
-				while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-		#endif
+		show();
 		return "";
+	});
+	registerCommand("show_test", "<duration in ms> <expectation file name>", [this](std::stringstream& ss){
+		unsigned duration;
+		std::string expectationFileName;
+		ss>>duration>>expectationFileName;
+		return show(duration, expectationFileName);
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return (
@@ -361,6 +336,117 @@ std::string Vst::getString(int32_t opcode, int32_t index){
 	result.erase(0, result.find_first_not_of(" \n\r\t"));
 	result.erase(result.find_last_not_of(" \n\r\t")+1);
 	return result;
+}
+
+struct Rect{ int16_t top, left, bottom, right; };
+
+std::string Vst::show(unsigned duration, std::string expectationFileName){
+	Rect* rect=nullptr;
+	_plugin->dispatcher(_plugin, 13, 0, (int*)0, &rect, 0.0f);
+	unsigned width=800, height=600;
+	if(rect){
+		width=rect->right-rect->left;
+		height=rect->bottom-rect->top;
+	}
+	#ifdef DLAL_OSX
+		static NSWindow* window;
+		window=[
+			[NSWindow alloc]
+			initWithContentRect: NSMakeRect(0, 0, width, height)
+			styleMask: NSTitledWindowMask|NSClosableWindowMask
+			backing: NSBackingStoreBuffered
+			defer: NO
+		];
+		[window makeKeyAndOrderFront: NSApp];
+		auto windowHandle=(__bridge void*)[window contentView];
+	#else
+		sf::Window window(sf::VideoMode(width, height), "dlal vst");
+		auto windowHandle=window.getSystemHandle();
+	#endif
+	_plugin->dispatcher(_plugin, 14, 0, (int*)0, (void*)windowHandle, 0.0f);
+	#ifndef DLAL_OSX
+		auto start=std::chrono::steady_clock::now();
+		while(window.isOpen()&&(!duration||std::chrono::steady_clock::now()-start<std::chrono::milliseconds(duration))){
+			sf::Event event;
+			while(window.pollEvent(event)) if(event.type==sf::Event::Closed) window.close();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		if(duration){
+			std::vector<uint8_t> actualPixels(4*width*height, 0x7f);
+			#ifdef DLAL_WINDOWS
+				auto windowDc=GetDC(windowHandle);
+				if(!windowDc) return "error: couldn't get window DC";
+				auto captureDc=CreateCompatibleDC(windowDc);
+				if(!captureDc) return "error: couldn't create DC";
+				auto captureBitmap=CreateCompatibleBitmap(windowDc, width, height);
+				if(!captureBitmap) return "error: couldn't create bitmap";
+				if(!SelectObject(captureDc, captureBitmap)) return "error: couldn't select bitmap";
+				if(!BitBlt(captureDc, 0, 0, width, height, windowDc, 0, 0, SRCCOPY)) return "error: couldn't blit";
+				BITMAPINFOHEADER header;
+				header.biSize=sizeof(BITMAPINFOHEADER);
+				header.biWidth=width;
+				header.biHeight=height;
+				header.biPlanes=1;
+				header.biBitCount=32;
+				header.biCompression=BI_RGB;
+				header.biSizeImage=0;
+				header.biXPelsPerMeter=0;
+				header.biYPelsPerMeter=0;
+				header.biClrUsed=0;
+				header.biClrImportant=0;
+				auto r=GetDIBits(windowDc, captureBitmap, 0, height, actualPixels.data(), (BITMAPINFO*)&header, DIB_RGB_COLORS);
+				if(r==0||r==ERROR_INVALID_PARAMETER) return "error: couldn't get DIB";
+				for(unsigned i=0; i<4*width*height; i+=4){
+					auto _=actualPixels[i+0];
+					actualPixels[i+0]=actualPixels[i+2];
+					actualPixels[i+2]=_;
+					actualPixels[i+3]=0xff;
+				}
+				for(unsigned i=0; i<width; ++i)
+					for(unsigned j=0; j<height/2; ++j){
+						auto swap=[&](unsigned a, unsigned b){
+							uint8_t temp[4];
+							memcpy(temp, &actualPixels[a*4], 4);
+							memcpy(&actualPixels[a*4], &actualPixels[b*4], 4);
+							memcpy(&actualPixels[b*4], temp, 4);
+						};
+						swap(j*width+i, (height-1-j)*width+i);
+					}
+				if(!DeleteObject(captureDc)) return "error: couldn't delete DC";
+				if(!DeleteObject(captureBitmap)) return "error: couldn't delete bitmap";
+				if(!ReleaseDC(windowHandle, windowDc)) return "error: couldn't release window DC";
+			#elif defined(DLAL_LINUX)
+				return "error: unimplemented";
+			#else
+				#error unsupported platform
+			#endif
+			sf::Image expected;
+			expected.loadFromFile(expectationFileName);
+			auto expectedPixels=expected.getPixelsPtr();
+			std::vector<uint8_t> differencePixels(4*width*height, 0xff);
+			uint64_t differenceTotal=0;
+			for(unsigned i=0; i<4*width*height; i+=4){
+				differencePixels[i+0]=abs(int(actualPixels[i+0])-expectedPixels[i+0]);
+				differencePixels[i+1]=abs(int(actualPixels[i+1])-expectedPixels[i+1]);
+				differencePixels[i+2]=abs(int(actualPixels[i+2])-expectedPixels[i+2]);
+				differenceTotal+=abs(int(actualPixels[i+0])-expectedPixels[i+0]);
+				differenceTotal+=abs(int(actualPixels[i+1])-expectedPixels[i+1]);
+				differenceTotal+=abs(int(actualPixels[i+2])-expectedPixels[i+2]);
+			}
+			if(differenceTotal>1500000){
+				sf::Image actual, difference;
+				actual.create(width, height, actualPixels.data());
+				actual.saveToFile("vst-show-test-actual.png");
+				difference.create(width, height, differencePixels.data());
+				difference.saveToFile("vst-show-test-difference.png");
+				return "error: GUI didn't look as expected, total difference: "+std::to_string(differenceTotal);
+			}
+		}
+		window.close();
+	#else
+		if(duration) return "error: unimplemented";
+	#endif
+	return "";
 }
 
 }//namespace dlal

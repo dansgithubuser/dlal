@@ -61,8 +61,6 @@ file organization
 
 todo
 ----
-- vst unit test
-	- compare window to file
 - soundfont unit test
 - network unit test
 - soundboard
