@@ -79,15 +79,14 @@ std::string processKey(sf::Keyboard::Key key, bool on, std::string& s){
 		case sf::Keyboard::Key::Z        : s="Z"       ; break;
 		default: return "";
 	}
-	dlal::Page page(s+std::string(on?" 1":" 0"), 0);
 	std::stringstream ss;
-	page.toFile(ss);
+	dlal::Page(s+std::string(on?" 1":" 0"), 0).toFile(ss);
 	return ss.str();
 }
 
 int main(int argc, char** argv){
-	if(argc!=3){
-		std::cerr<<"usage: Softboard ip port\n";
+	if(argc<3||argc>4){
+		std::cerr<<"usage: Softboard ip port [key]\n";
 		return EXIT_FAILURE;
 	}
 	int port;
@@ -98,6 +97,13 @@ int main(int argc, char** argv){
 	}
 	//dyad
 	dryad::Client client(std::string(argv[1]), port);
+	//command-line
+	if(argc>3){
+		std::stringstream ss;
+		dlal::Page(argv[3], 0).toFile(ss);
+		client.writeSizedString(ss.str());
+		return EXIT_SUCCESS;
+	}
 	//sfml
 	sf::Font font;
 	if(!font.loadFromMemory(courierCode, courierCodeSize)) return EXIT_FAILURE;
@@ -107,7 +113,6 @@ int main(int argc, char** argv){
 	window.setKeyRepeatEnabled(false);
 	//loop
 	std::set<std::string> keys;
-	int result=EXIT_SUCCESS;
 	auto lastDraw=std::chrono::steady_clock::now();
 	while(window.isOpen()){
 		sf::Event event;
@@ -146,5 +151,5 @@ int main(int argc, char** argv){
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if(client.timesDisconnected()) break;
 	}
-	return result;
+	return EXIT_SUCCESS;
 }

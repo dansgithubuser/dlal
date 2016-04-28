@@ -44,6 +44,9 @@ class Client{
 		~Client(){
 			_quit=true;
 			_thread.join();
+			_mutex.lock();
+			dyad_update();
+			_mutex.unlock();
 			dyad_shutdown();
 		}
 		void write(const std::vector<uint8_t>& v){

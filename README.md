@@ -61,7 +61,6 @@ file organization
 
 todo
 ----
-- network unit test
 - soundboard
 	- doioioioing
 	- toilet
