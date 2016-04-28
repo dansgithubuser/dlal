@@ -14,6 +14,7 @@ class Network: public MultiOut, public SamplesPerEvaluationGetter{
 		std::string type() const { return "network"; }
 		void evaluate();
 		void queue(const Page&);
+		Queue<uint8_t> _data;
 	private:
 		int _port;
 		Queue<Page> _queue;

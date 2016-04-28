@@ -7,29 +7,33 @@
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Network; }
 
 static void onData(dyad_Event* e){
-	int i=0;
-	while(i<e->size){
+	auto& self=*(dlal::Network*)e->udata;
+	for(int i=0; i<e->size; ++i) self._data.write(e->data[i]);
+	while(true){
+		uint8_t sizeBytes[4];
+		if(!self._data.read(sizeBytes, 4, false)) return;
 		uint32_t size=
-			(e->data[0]<<0x00)|
-			(e->data[1]<<0x08)|
-			(e->data[2]<<0x10)|
-			(e->data[3]<<0x18);
-		i+=4;
+			(sizeBytes[0]<<0x00)|
+			(sizeBytes[1]<<0x08)|
+			(sizeBytes[2]<<0x10)|
+			(sizeBytes[3]<<0x18)
+		;
+		if(!self._data.read(nullptr, size, false)) return;
+		self._data.read(nullptr, 4, true);
+		static std::vector<uint8_t> payload;
+		payload.resize(size);
+		self._data.read(payload.data(), size, true);
 		std::stringstream ss;
-		for(unsigned j=0; j<size; ++j) ss<<(char)e->data[i++];
-		((dlal::Network*)e->udata)->queue(dlal::Page(ss));
+		for(unsigned i=0; i<size; ++i) ss<<payload[i];
+		self.queue(dlal::Page(ss));
 	}
 }
 
 static void onDestroyed(dyad_Event* e){
-	using namespace dlal;
-	Network* network=(Network*)e->udata;
 	std::cerr<<"error: server destroyed"<<std::endl;
 }
 
 static void onError(dyad_Event* e){
-	using namespace dlal;
-	Network* network=(Network*)e->udata;
 	std::cerr<<"error: "<<e->msg<<std::endl;
 }
 
@@ -41,7 +45,7 @@ static void onAccept(dyad_Event* e){
 
 namespace dlal{
 
-Network::Network(): _port(9089), _queue(8) {
+Network::Network(): _data(10), _port(9089), _queue(8) {
 	addJoinAction([this](System&)->std::string{
 		return dyadPauseAnd([this]()->std::string{
 			dyad_Stream* server=_system->dyadNewStream();
@@ -58,7 +62,7 @@ Network::Network(): _port(9089), _queue(8) {
 		return "";
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
-		return _queue.lockless()?"lockless":"lockfull";
+		return (_data.lockless()&&_queue.lockless())?"lockless":"lockfull";
 	});
 	registerCommand("map_midi", "<key> <midi bytes>", [this](std::stringstream& ss){
 		std::string key;
