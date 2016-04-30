@@ -8,6 +8,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
 
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/installed)
+
 sfml()
 
 add_subdirectory(../skeleton/build skeleton)
@@ -25,3 +27,8 @@ foreach(i ${interfaces})
 		add_subdirectory("${i}/build" "${bin}_bin")
 	endif()
 endforeach()
+
+add_custom_target(post-install
+	COMMAND python post-install.py ${CMAKE_BINARY_DIR} installed
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)

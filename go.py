@@ -101,7 +101,8 @@ if not args.run_only:
 	preamble=''
 	generator=''
 	shell(preamble, 'cmake', generator, '-DBUILD_SHARED_LIBS=ON', '-DCMAKE_BUILD_TYPE='+config, '..')
-	shell(preamble, 'cmake --build . --config '+config)
+	shell(preamble, 'cmake --build . --config '+config+' --target install')
+	shell(preamble, 'cmake --build . --config '+config+' --target post-install')
 	os.chdir(file_path)
 
 #library path

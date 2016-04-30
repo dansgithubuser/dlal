@@ -61,10 +61,6 @@ file organization
 
 todo
 ----
-- soundboard
-	- doioioioing
-	- toilet
-	- meow, bark, cuckoo, bok bok bok, mooo
 - robot voice
 - looping
 - sampling

@@ -6,6 +6,6 @@ sudo: required
 install:
   - sudo python go.py --setup
   - export PATH=/usr/local/bin:$PATH
-script: python go.py -t "*"
+script: sudo python go.py -t "*"
 notifications:
   email: false

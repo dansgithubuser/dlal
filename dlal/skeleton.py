@@ -76,6 +76,7 @@ class Component:
 	_libraries={}
 
 	def __init__(self, component):
+		self.recognized_commands=[]#prevents infinite recurse in __getattr__ if something fails
 		if component not in Component._libraries:
 			Component._libraries[component]=load(component)
 			Component._libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
