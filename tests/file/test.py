@@ -1,6 +1,6 @@
 #filei, fileo
 
-import dlal, os
+import dlal
 
 sample_rate=44100
 log_2_samples_per_callback=6

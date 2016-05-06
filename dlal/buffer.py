@@ -1,11 +1,10 @@
 from .skeleton import *
 
-import os
-
 class Buffer(Component):
 	def __init__(self):
 		Component.__init__(self, 'buffer')
 		self.known_sounds={}
+		import os
 		for path, folders, files in os.walk(os.path.join('..', '..', 'components', 'buffer', 'sounds')):
 			for file in files:
 				name, extension=os.path.splitext(file)

@@ -17,13 +17,15 @@ args=parser.parse_args()
 #canned commands
 if args.can:
 	canned_commands={
-		'l': '-s looper -i viewer:9088 -i softboard:9120',
-		'f': '-s fm -i viewer:9088 -i softboard:9120',
-		's': '-s soundfont -i softboard:9120'
+		'b': '-s soundboard -i softboard:9120',
+		'f': '-s fm         -i softboard:9120',
+		's': '-s soundfont  -i softboard:9120',
+		'v': '-s vst        -i softboard:9120',
+		'l': '-s looper     -i softboard:9120 -i viewer:9088',
 	}
 	canned_options={
 		'r': '-r',
-		'd': '-d'
+		'd': '-d',
 	}
 	import pprint
 	if args.can=='h':

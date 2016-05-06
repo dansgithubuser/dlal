@@ -1,3 +1,5 @@
+#network
+
 import dlal, os, subprocess
 
 #create

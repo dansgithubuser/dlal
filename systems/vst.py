@@ -1,23 +1,10 @@
 import dlal, os
 
-#create
-system=dlal.System()
-qweboard=dlal.Qweboard()
-midi=dlal.Component('midi')
 fm=dlal.Fm()
 vst=dlal.Component('vst')
-audio=dlal.Component('audio')
-#command
-audio.set(44100, 6)
-#add
-system.add(audio, qweboard, midi, fm, vst)
-#connect
-qweboard.connect(midi)
-midi.connect(fm)
-midi.connect(vst)
-fm.connect(audio)
-vst.connect(audio)
-
-#main
-vst.load(os.environ['DLAL_VST_PLUGIN_PATH'])
-go, ports=dlal.standard_system_functionality(audio, midi)
+system=dlal.SimpleSystem([fm, vst])
+vst_path=dlal.tunefish_path()
+if 'DLAL_VST_PLUGIN_PATH' in os.environ:
+	vst_path=os.environ['DLAL_VST_PLUGIN_PATH']
+vst.load(vst_path)
+go, ports=system.standard_system_functionality()
