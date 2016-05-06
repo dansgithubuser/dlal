@@ -34,6 +34,6 @@ class Liner(Component):
 							nextSample+=stride
 					else: notes.append(12*octave+g_notes[t[j]])
 				for note in notes:
-					self.midi(sample    , 0x90, note, 0x40)
-					self.midi(nextSample, 0x80, note, 0x40)
+					self.midi_event(sample    , 0x90, note, 0x40)
+					self.midi_event(nextSample, 0x80, note, 0x40)
 				sample=nextSample

@@ -6,19 +6,12 @@ static void rtMidiCallback(
 	double delta, std::vector<unsigned char>* message, void* userData
 ){
 	dlal::Midi* midi=(dlal::Midi*)userData;
-	midi->queue(*message);
+	midi->midi(message->data(), message->size());
 }
 
 namespace dlal{
 
 Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
-	registerCommand("midi", "byte[1]..byte[n]", [this](std::stringstream& ss){
-		std::vector<uint8_t> midi;
-		unsigned byte;
-		while(ss>>byte) midi.push_back(byte);
-		queue(midi);
-		return "";
-	});
 	registerCommand("ports", "", [this](std::stringstream& ss){
 		std::string s;
 		s=allocate();
@@ -58,8 +51,8 @@ void Midi::evaluate(){
 		}
 }
 
-void Midi::queue(const std::vector<uint8_t>& midi){
-	_queue.write(midi);
+void Midi::midi(const uint8_t* bytes, unsigned size){
+	_queue.write(std::vector<uint8_t>(bytes, bytes+size));
 }
 
 std::string Midi::allocate(){

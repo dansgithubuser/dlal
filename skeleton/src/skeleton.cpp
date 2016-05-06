@@ -322,6 +322,14 @@ Component::Component(): _system(nullptr) {
 		}
 		return "error: no system";
 	});
+	registerCommand("midi", "byte[1]..byte[n]", [this](std::stringstream& ss){
+		if(!midiAccepted()) return "error: midi not accepted";
+		std::vector<uint8_t> bytes;
+		unsigned byte;
+		while(ss>>byte) bytes.push_back(byte);
+		midi(bytes.data(), bytes.size());
+		return "";
+	});
 }
 
 std::string Component::command(const std::string& command){

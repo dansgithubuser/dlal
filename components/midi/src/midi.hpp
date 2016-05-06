@@ -13,7 +13,8 @@ class Midi: public MultiOut{
 		~Midi();
 		std::string type() const { return "midi"; }
 		void evaluate();
-		void queue(const std::vector<uint8_t>&);
+		void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
 	private:
 		std::string allocate();
 		RtMidiIn* _rtMidiIn;

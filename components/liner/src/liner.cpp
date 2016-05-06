@@ -10,7 +10,7 @@ Liner::Liner(): _index(0), _resetOnMidi(false) {
 		if(!_period) return "error: size not set";
 		return "";
 	});
-	registerCommand("midi", "<time in samples> byte[1]..byte[n]",
+	registerCommand("midi_event", "<time in samples> byte[1]..byte[n]",
 		[this](std::stringstream& ss){
 			unsigned sample;
 			ss>>sample;
