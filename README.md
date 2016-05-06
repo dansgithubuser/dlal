@@ -61,7 +61,6 @@ file organization
 todo
 ----
 - robot voice
-	- ring modulator
 	- comb filter
 	- formants
 - looping

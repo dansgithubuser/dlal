@@ -13,9 +13,12 @@ Multiplier::Multiplier(): _multiplier(1.0f) {
 }
 
 void Multiplier::evaluate(){
-	for(auto output: _outputs)
+	if(_outputs.empty()) return;
+	for(unsigned i=0; i<_samplesPerEvaluation; ++i)
+		_outputs[0]->audio()[i]*=_multiplier;
+	for(unsigned j=1; j<_outputs.size(); ++j)
 		for(unsigned i=0; i<_samplesPerEvaluation; ++i)
-			output->audio()[i]*=_multiplier;
+			_outputs[j]->audio()[i]*=_outputs[j-1]->audio()[i];
 }
 
 }//namespace dlal

@@ -23,3 +23,9 @@ class Buffer(Component):
 			self.load_sound(i, path)
 			i+=1
 			if i==128: break
+
+	def lfo(self, period_in_samples):
+		import math
+		period=[str(math.sin(2*math.pi*x/period_in_samples)) for x in range(period_in_samples)]
+		self.read_sound(0, ' '.join(period))
+		self.repeat_sound('y')

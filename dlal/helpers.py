@@ -47,7 +47,8 @@ def tunefish_path():
 	return os.path.join(vst_folder, vst_file)
 
 class SimpleSystem:
-	def __init__(self, components, outputs=None, test=False):
+	def __init__(self, components, outputs=None, test=False, test_duration=10):
+		self.sample_rate=44100
 		self.test=test
 		#create
 		self.system=System()
@@ -57,10 +58,11 @@ class SimpleSystem:
 		self.components=components
 		if self.test:
 			self.audio=Component('raw')
+			self.audio.duration(test_duration)
 		else:
 			self.audio=Component('audio')
 		#command
-		self.audio.set(44100, 6)
+		self.audio.set(self.sample_rate, 6)
 		#add
 		self.system.add(self.audio, slot=1 if self.test else 0)
 		if not self.test: self.system.add(self.qweboard)

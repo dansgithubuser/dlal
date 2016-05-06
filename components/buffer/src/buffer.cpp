@@ -12,8 +12,10 @@ namespace dlal{
 Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(false) {
 	_checkAudio=true;
 	addJoinAction([this](System&){
-		if(_audio.size()<_samplesPerEvaluation)
-			return "error: size is less than samplesPerEvaluation";
+		if(_audio.size()<_samplesPerEvaluation){
+			if(_audio.empty()) resize(_samplesPerEvaluation);
+			else return "error: size is less than samplesPerEvaluation";
+		}
 		if(_audio.size()%_samplesPerEvaluation)
 			return "error: size is not a multiple of samplesPerEvaluation";
 		return "";
