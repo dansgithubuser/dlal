@@ -47,12 +47,11 @@ features
 
 file organization
 -----------------
-- build: Overall build description.
-- components: C++ components that can be connected to each other to create an audio system. Each has:
-	- build: Build description.
-	- deps: 3rd party dependencies.
-	- src: Source code.
-- deps: 3rd party dependencies used throughout.
+- build folders are build descriptions for the item represented by the parent folder.
+- deps folders are 3rd party dependencies for the item represented by parent folder.
+- src folders are source code for the item represented by the parent folder.
+
+- components: C++ components that can be connected to each other to create an audio system.
 - dlal: Python module that wraps skeleton.
 - interfaces: Interfaces that communicate with audio systems over the network.
 - skeleton: C++ library; audio system definition and abstract component definition.
