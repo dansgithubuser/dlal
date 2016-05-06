@@ -19,9 +19,9 @@ class Buffer: public MultiOut, public Periodic, public SampleRateGetter{
 		void resize(uint64_t period);
 	private:
 		std::vector<float> _audio;
-		bool _clearOnEvaluate;
+		bool _clearOnEvaluate, _repeatSound, _pitchSound;
 		std::vector<std::vector<float>> _sounds;
-		std::map<unsigned, unsigned> _playing;
+		std::map<unsigned, float> _playing;
 };
 
 }//namespace dlal
