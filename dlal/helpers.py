@@ -47,7 +47,7 @@ def tunefish_path():
 	return os.path.join(vst_folder, vst_file)
 
 class SimpleSystem:
-	def __init__(self, components, outputs=None, test=False, test_duration=10):
+	def __init__(self, components, midi_receivers=None, outputs=None, test=False, test_duration=10):
 		self.sample_rate=44100
 		self.test=test
 		#create
@@ -69,9 +69,12 @@ class SimpleSystem:
 		self.system.add(self.midi, *self.components)
 		#connect
 		if not self.test: self.qweboard.connect(self.midi)
-		for component in self.components: self.midi.connect(component)
-		if outputs: components=outputs
-		for component in components: component.connect(self.audio)
+		x=components
+		if midi_receivers!=None: x=midi_receivers
+		for component in x: self.midi.connect(component)
+		x=components
+		if outputs!=None: x=outputs
+		for component in x: component.connect(self.audio)
 
 	def standard_system_functionality(self):
 		return standard_system_functionality(
