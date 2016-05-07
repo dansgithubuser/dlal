@@ -46,9 +46,13 @@ def tunefish_path():
 			vst_file='tunefish4-32.so'
 	return os.path.join(vst_folder, vst_file)
 
+def round_up(x, m): return (x+m-1)//m*m
+
 class SimpleSystem:
 	def __init__(self, components, midi_receivers=None, outputs=None, test=False, test_duration=10):
 		self.sample_rate=44100
+		self.log_2_samples_per_evaluation=6
+		self.samples_per_evaluation=1<<self.log_2_samples_per_evaluation
 		self.test=test
 		#create
 		self.system=System()
@@ -62,7 +66,7 @@ class SimpleSystem:
 		else:
 			self.audio=Component('audio')
 		#command
-		self.audio.set(self.sample_rate, 6)
+		self.audio.set(self.sample_rate, self.log_2_samples_per_evaluation)
 		#add
 		self.system.add(self.audio, slot=1 if self.test else 0)
 		if not self.test: self.system.add(self.qweboard)

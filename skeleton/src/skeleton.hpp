@@ -147,8 +147,8 @@ class Periodic: public SamplesPerEvaluationGetter{
 		Periodic();
 		virtual ~Periodic(){}
 	protected:
-		virtual void resize(uint64_t period);
-		virtual void setPhase(uint64_t phase);
+		virtual std::string resize(uint64_t period);
+		virtual std::string setPhase(uint64_t phase);
 		bool phase();
 		uint64_t _period, _phase;
 	private:

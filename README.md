@@ -61,7 +61,6 @@ file organization
 todo
 ----
 - robot voice
-	- comb filter
 	- formants
 - looping
 - sampling

@@ -16,8 +16,9 @@ class Buffer: public MultiOut, public Periodic, public SampleRateGetter{
 		bool midiAccepted(){ return true; }
 		float* audio();
 		bool hasAudio(){ return true; }
-		void resize(uint64_t period);
+		std::string resize(uint64_t period);
 	private:
+		std::string checkSize(uint64_t period);
 		std::vector<float> _audio;
 		bool _clearOnEvaluate, _repeatSound, _pitchSound;
 		std::vector<std::vector<float>> _sounds;

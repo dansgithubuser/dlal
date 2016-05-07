@@ -361,7 +361,7 @@ void Component::registerCommand(
 void Component::addJoinAction(JoinAction j){ _joinActions.push_back(j); }
 
 //=====SamplesPerEvaluationGetter=====//
-SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(){
+SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(): _samplesPerEvaluation(0) {
 	addJoinAction([this](System& system){
 		if(!system._variables.count("samplesPerEvaluation"))
 			return "error: system does not have samplesPerEvaluation";
@@ -375,13 +375,12 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 	registerCommand("periodic_resize", "<period in samples>", [this](std::stringstream& ss){
 		uint64_t period;
 		ss>>period;
-		resize(period);
-		return "";
+		return resize(period);
 	});
 	registerCommand("periodic_crop", "", [this](std::stringstream& ss){
-		resize(_phase);
-		setPhase(0);
-		return "";
+		auto s=resize(_phase);
+		if(isError(s)) return s;
+		return setPhase(0);
 	});
 	registerCommand("periodic_get", "", [this](std::stringstream& ss){
 		std::string result=std::to_string(_period)+" "+std::to_string(_phase);
@@ -390,19 +389,20 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 	registerCommand("periodic_set_phase", "<phase>", [this](std::stringstream& ss){
 		uint64_t phase;
 		ss>>phase;
-		_last=0.0f;
-		setPhase(phase);
-		return "";
+		auto s=setPhase(phase);
+		if(!isError(s)) _last=0.0f;
+		return s;
 	});
 }
 
-void Periodic::resize(uint64_t period){
+std::string Periodic::resize(uint64_t period){
 	_period=period;
 	if(_period) _phase%=_period;
 	else _phase=0;
+	return "";
 }
 
-void Periodic::setPhase(uint64_t phase){ _phase=phase; }
+std::string Periodic::setPhase(uint64_t phase){ _phase=phase; return ""; }
 
 bool Periodic::phase(){
 	_phase+=_samplesPerEvaluation;
@@ -421,7 +421,7 @@ bool Periodic::phase(){
 }
 
 //=====SampleRateGetter=====//
-SampleRateGetter::SampleRateGetter(){
+SampleRateGetter::SampleRateGetter(): _sampleRate(0) {
 	addJoinAction([this](System& system){
 		if(!system._variables.count("sampleRate"))
 			return "error: system does not have sampleRate";

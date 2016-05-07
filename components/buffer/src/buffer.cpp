@@ -12,13 +12,8 @@ namespace dlal{
 Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(false) {
 	_checkAudio=true;
 	addJoinAction([this](System&){
-		if(_audio.size()<_samplesPerEvaluation){
-			if(_audio.empty()) resize(_samplesPerEvaluation);
-			else return "error: size is less than samplesPerEvaluation";
-		}
-		if(_audio.size()%_samplesPerEvaluation)
-			return "error: size is not a multiple of samplesPerEvaluation";
-		return "";
+		if(_audio.size()==0) resize(_samplesPerEvaluation);
+		return checkSize(_audio.size());
 	});
 	registerCommand("clear_on_evaluate", "y/n", [this](std::stringstream& ss){
 		std::string s;
@@ -143,9 +138,22 @@ void Buffer::midi(const uint8_t* bytes, unsigned size){
 
 float* Buffer::audio(){ return _audio.data()+_phase; }
 
-void Buffer::resize(uint64_t period){
+std::string Buffer::resize(uint64_t period){
+	if(_samplesPerEvaluation){
+		auto s=checkSize(period);
+		if(isError(s)) return s;
+	}
 	Periodic::resize(period);
 	if(_audio.size()<_period) _audio.resize((std::vector<float>::size_type)_period, 0.0f);
+	return "";
+}
+
+std::string Buffer::checkSize(uint64_t period){
+	if(period<_samplesPerEvaluation)
+		return "error: size is less than samplesPerEvaluation";
+	if(period%_samplesPerEvaluation)
+		return "error: size is not a multiple of samplesPerEvaluation";
+	return "";
 }
 
 }//namespace dlal

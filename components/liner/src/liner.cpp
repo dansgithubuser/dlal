@@ -54,10 +54,11 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 	put(bytes, size, _phase);
 }
 
-void Liner::setPhase(uint64_t phase){
+std::string Liner::setPhase(uint64_t phase){
 	Periodic::setPhase(phase);
 	_index=0;
 	while(_index<_line.size()&&_line[_index].sample<=_phase) ++_index;
+	return "";
 }
 
 Liner::Midi::Midi(uint64_t sample, const uint8_t* midi, unsigned size):
