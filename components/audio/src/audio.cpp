@@ -58,6 +58,11 @@ Audio::Audio():
 		if(!_started) return "not started";
 		return finish();
 	});
+	registerCommand("underflows", "", [this](std::stringstream&){
+		std::stringstream ss;
+		ss<<_underflows;
+		return ss.str();
+	});
 	#ifdef DLAL_AUDIO_TEST
 		registerCommand("test", "", [this](std::stringstream& ss){
 			_testPhase=0.0f;
