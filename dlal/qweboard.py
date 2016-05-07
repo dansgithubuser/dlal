@@ -11,7 +11,10 @@ class Qweboard(Pipe):
 		self.network.port(Qweboard.port)
 		Qweboard.port+=1
 		self.octave=5
-		def octavate(o): self.octave+=o
+		def octavate(o):
+			self.octave+=o
+			if self.octave<0: self.octave=0
+			if self.octave>10: self.octave=10
 		notes={
 			'Z':  0, 'S':  1, 'X':  2, 'D':  3, 'C':  4, 'V':  5,
 			'G':  6, 'B':  7, 'H':  8, 'N':  9, 'J': 10, 'M': 11,
