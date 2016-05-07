@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <mutex>
+#include <set>
 #include <stdexcept>
 #include <thread>
 
@@ -257,6 +258,19 @@ std::string System::remove(Component& component, bool queue){
 		}
 	}
 	return "error: component was not added";
+}
+
+std::string System::check(){
+	std::set<std::string> components;
+	for(auto connection: _reportConnections){
+		components.insert(connection.first);
+		components.insert(connection.second);
+	}
+	for(auto slot: _components)
+		for(auto component: slot)
+			components.erase(componentToStr(component));
+	if(components.size()) return "error: connected components have not been added";
+	return "";
 }
 
 void System::evaluate(){

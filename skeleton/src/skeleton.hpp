@@ -71,6 +71,7 @@ class System{
 		~System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
+		std::string check();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		dyad_Stream* dyadNewStream();

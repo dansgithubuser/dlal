@@ -31,8 +31,10 @@ Raw::Raw(): _sampleRate(0), _duration(10), _sample(0), _fileName("raw.txt") {
 			return "";
 		}
 	);
-	registerCommand("start", "", [this](std::stringstream& ss){
+	registerCommand("start", "", [this](std::stringstream& ss)->std::string{
 		if(!_system) return "error: must add before starting";
+		auto s=_system->check();
+		if(isError(s)) return s;
 		const unsigned samples=1<<_log2SamplesPerCallback;
 		for(unsigned i=0; i<_maxSample; i+=samples) _system->evaluate();
 		return "";
