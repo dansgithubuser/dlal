@@ -161,10 +161,11 @@ if args.interface:
 		os.chdir(file_path)
 
 #run
-if args.system:
-	os.chdir(built_rel_path)
-	shell('python', '-i', os.path.join('..', '..', 'systems', args.system+'.py'), '-g')
-	os.chdir(file_path)
+os.chdir(built_rel_path)
+x=['python', '-i']
+if args.system: x+=[os.path.join('..', '..', 'systems', args.system+'.py'), '-g']
+if not args.test: shell(*x)
+os.chdir(file_path)
 
 #done
 print('all requests processed; call with -h for help')
