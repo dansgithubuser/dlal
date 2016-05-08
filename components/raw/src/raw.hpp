@@ -2,6 +2,7 @@
 #define DLAL_RAW_INCLUDED
 
 #include <skeleton.hpp>
+#include <ringbuffer.hpp>
 
 #include <fstream>
 
@@ -20,6 +21,9 @@ class Raw: public Component{
 		unsigned _duration, _sample, _maxSample;
 		std::string _fileName;
 		std::ofstream _file;
+		bool _peak;
+		unsigned _peakWidth;
+		Ringbuffer<float> _x;
 };
 
 }//namespace dlal

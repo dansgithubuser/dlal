@@ -20,14 +20,14 @@ class Sonic:
 		struct Runner{
 			Runner();
 			void start();
-			void phase();
+			void phase(float frequencyMultiplier);
 			enum Stage{ ATTACK, DECAY, SUSTAIN, RELEASE };
 			Stage _stage;
 			float _phase, _step, _volume, _output;
 		};
 		struct Oscillator{
 			Oscillator();
-			bool update(Runner&) const;//returns true if the runner is done
+			bool update(Runner&, float frequencyMultiplier) const;//returns true if the runner is done
 			float _attack, _decay, _sustain, _release;
 			float _frequencyMultiplier, _inputs[OSCILLATORS];
 			float _output;
@@ -38,8 +38,9 @@ class Sonic:
 			void start(float volume, const Oscillator* oscillators);
 			void stop();
 			float update(//returns output
-				unsigned,//index of runner
-				const Oscillator* oscillators
+				unsigned runner,
+				const Oscillator* oscillators,
+				float frequencyMultiplier
 			);
 			Runner _runners[OSCILLATORS];
 			float _volume;
@@ -48,6 +49,7 @@ class Sonic:
 		void update();
 		Oscillator _oscillators[OSCILLATORS];
 		Note _notes[NOTES];
+		float _frequencyMultiplier;
 };
 
 }//namespace dlal

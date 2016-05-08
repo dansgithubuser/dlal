@@ -60,8 +60,6 @@ file organization
 
 todo
 ----
-- robot voice
-	- formants
 - looping
 - sampling
 - dance suit (expand)
@@ -69,6 +67,7 @@ todo
 	- fm pitch slide
 	- lfo
 	- arpeggiator
+	- consistentize fm/sonic
 - possible future features
 	- looper: quantization
 	- vocoder

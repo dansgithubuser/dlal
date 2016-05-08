@@ -19,6 +19,6 @@ midi.connect(fm)
 fm.connect(raw)
 #network client
 os.environ['PATH']='.'
-subprocess.check_call('Softboard 127.0.0.1 9120 "Z 1"', shell=True)
+subprocess.check_call('Softboard 127.0.0.1 9120 "z 1"', shell=True)
 #start
 raw.start()

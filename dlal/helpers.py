@@ -1,5 +1,7 @@
-from .skeleton import *
+from .buffer import *
+from .fm import *
 from .qweboard import *
+from .skeleton import *
 
 import sys
 
@@ -22,7 +24,7 @@ def standard_system_functionality(audio, midi=None, test=False):
 			midi.open(ports[0])
 	return go, ports
 
-def raw_to_unsigned_8_bit_pcm(input_file_name, output_file_name):
+def raw_to_u8_pcm(input_file_name='raw.txt', output_file_name='raw.raw'):
 	with open(input_file_name) as file: samples=file.read().split()
 	with open(output_file_name, 'wb') as file:
 		for sample in samples: file.write(chr(int((float(sample)+1)*63)).encode())
@@ -48,10 +50,40 @@ def tunefish_path():
 
 def round_up(x, m): return (x+m-1)//m*m
 
+def frequency_response(component, duration=10000):
+	#create
+	system=System()
+	commander=Commander()
+	fm=Fm()
+	buffer=Buffer()
+	raw=Component('raw')
+	#command
+	sample_rate=44100
+	log_2_samples_per_callback=6
+	commands=int(duration/1000.0*sample_rate)>>log_2_samples_per_callback
+	commander.queue_resize(commands)
+	for i in range(1, commands):
+		commander.queue_command(fm, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, edges_to_wait=i)
+	fm.midi(0x90, 69, 0x7f)
+	buffer.clear_on_evaluate('y')
+	raw.duration(duration)
+	raw.set(sample_rate, log_2_samples_per_callback)
+	raw.peak(sample_rate/20)
+	#add
+	system.add(raw, slot=1)
+	system.add(buffer, commander, fm, component)
+	#connect
+	connect(fm, buffer)
+	connect(component, buffer, raw)
+	#go
+	raw.start()
+
 class SimpleSystem:
+	sample_rate=44100
+	log_2_samples_per_evaluation=6
 	def __init__(self, components, midi_receivers=None, outputs=None, test=False, test_duration=10):
-		self.sample_rate=44100
-		self.log_2_samples_per_evaluation=6
+		self.sample_rate=SimpleSystem.sample_rate
+		self.log_2_samples_per_evaluation=SimpleSystem.log_2_samples_per_evaluation
 		self.samples_per_evaluation=1<<self.log_2_samples_per_evaluation
 		self.test=test
 		#create

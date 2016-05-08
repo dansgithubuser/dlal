@@ -11,7 +11,7 @@ static float wave(float phase){
 
 namespace dlal{
 
-Sonic::Sonic(){
+Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 	_oscillators[0]._output=1.0f;
 	_checkAudio=true;
 	addJoinAction([this](System&){ update(); return ""; });
@@ -66,6 +66,10 @@ Sonic::Sonic(){
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._output;
+		return "";
+	});
+	registerCommand("frequency_multiplier", "<frequency multiplier>", [this](std::stringstream& ss){
+		ss>>_frequencyMultiplier;
 		return "";
 	});
 	registerCommand("test", "", [this](std::stringstream& ss){
@@ -136,7 +140,7 @@ void Sonic::evaluate(){
 			_notes[i]._done=true;
 			for(unsigned k=0; k<OSCILLATORS; ++k)
 				for(auto output: _outputs)
-					output->audio()[j]+=_notes[i].update(k, _oscillators);
+					output->audio()[j]+=_notes[i].update(k, _oscillators, _frequencyMultiplier);
 		}
 	}
 }
@@ -169,8 +173,8 @@ Sonic::Oscillator::Oscillator():
 	for(unsigned i=0; i<OSCILLATORS; ++i) _inputs[i]=0.0f;
 }
 
-bool Sonic::Oscillator::update(Runner& runner) const{
-	runner.phase();
+bool Sonic::Oscillator::update(Runner& runner, float frequencyMultiplier) const{
+	runner.phase(frequencyMultiplier);
 	switch(runner._stage){
 		case Runner::ATTACK:
 			runner._volume+=_attack;
@@ -206,8 +210,8 @@ void Sonic::Runner::start(){
 	_volume=0.0f;
 }
 
-void Sonic::Runner::phase(){
-	_phase+=_step;
+void Sonic::Runner::phase(float frequencyMultiplier){
+	_phase+=_step*frequencyMultiplier;
 	if(_phase>1.0f) _phase-=1.0f;
 }
 
@@ -232,8 +236,8 @@ void Sonic::Note::stop(){
 	for(unsigned i=0; i<OSCILLATORS; ++i) _runners[i]._stage=Runner::RELEASE;
 }
 
-float Sonic::Note::update(unsigned i, const Oscillator* oscillators){
-	_done&=oscillators[i].update(_runners[i]);
+float Sonic::Note::update(unsigned i, const Oscillator* oscillators, float frequencyMultiplier){
+	_done&=oscillators[i].update(_runners[i], frequencyMultiplier);
 	float modulatedPhase=_runners[i]._phase;
 	for(unsigned j=0; j<OSCILLATORS; ++j)
 		modulatedPhase+=_runners[j]._output*oscillators[i]._inputs[j];

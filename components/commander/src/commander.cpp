@@ -1,5 +1,6 @@
 #include "commander.hpp"
 
+#include <cmath>
 #include <iostream>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Commander; }
@@ -99,6 +100,12 @@ Commander::Commander():
 			return "";
 		}
 	);
+	registerCommand("queue_resize", "size", [this](std::stringstream& ss){
+		unsigned size;
+		ss>>size;
+		_queue.resize(unsigned(std::log2(size))+1);
+		return "";
+	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _queue.lockless()?"lockless":"lockfull";
 	});

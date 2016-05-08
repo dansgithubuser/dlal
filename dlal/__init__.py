@@ -1,5 +1,6 @@
 from .buffer import *
 from .commander import *
+from .fir import *
 from .fm import *
 from .helpers import *
 from .liner import *

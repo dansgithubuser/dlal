@@ -9,7 +9,11 @@ namespace dlal{
 //lockless single reader, single writer queue
 template <typename T> class Queue{
 	public:
-		Queue(unsigned log2Size): _v(1<<log2Size), _mask(1), _r(0), _w(0) {
+		Queue(unsigned log2Size): _r(0), _w(0) { resize(log2Size); }
+
+		void resize(unsigned log2Size){
+			_v.resize(1<<log2Size);
+			_mask=1;
 			if(log2Size>0) for(unsigned i=0; i<log2Size-1; ++i) _mask|=_mask<<1;
 		}
 
