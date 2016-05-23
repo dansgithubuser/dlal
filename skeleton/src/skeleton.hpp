@@ -32,7 +32,7 @@ extern "C"{
 	DLAL void dlalDyadShutdown();
 	DLAL void* dlalBuildSystem(int port);
 	DLAL void dlalDemolishSystem(void* system);
-	DLAL void dlalSetVariable(void* system, const char* name, const char* value);
+	DLAL char* dlalSetVariable(void* system, const char* name, const char* value);
 	DLAL char* dlalCommand(void* component, const char* command);
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
 	DLAL char* dlalConnect(void* input, void* output);

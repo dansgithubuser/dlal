@@ -176,9 +176,9 @@ void Viewer::process(std::string s){
 				_nameToComponent[s]._connections[d]._on=false;
 			}},
 			{"variable", [&](){
-				ss>>s;
+				std::getline(ss, s);
 				std::string v;
-				ss>>v;
+				std::getline(ss, v);
 				_variables[s]=v;
 			}},
 			{"label", [&](){
@@ -213,6 +213,7 @@ void Viewer::process(std::string s){
 				_nameToComponent[s]._phase=0.0f;
 			}}
 		};
+		ss>>std::ws;
 		if(handlers.count(s)) handlers[s]();
 	}
 }

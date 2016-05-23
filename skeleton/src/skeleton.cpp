@@ -71,10 +71,15 @@ void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
 }
 
-void dlalSetVariable(void* system, const char* name, const char* value){
+char* dlalSetVariable(void* system, const char* name, const char* value){
+	if(std::string(name ).find('\n')!=std::string::npos)
+		return dlal::toCStr("error: name cannot contain newline");
+	if(std::string(value).find('\n')!=std::string::npos)
+		return dlal::toCStr("error: value cannot contain newline");
 	dlal::System* s=(dlal::System*)system;
 	s->_variables[name]=value;
-	s->_reportQueue.write((std::string)"variable "+name+" "+value);
+	s->_reportQueue.write((std::string)"variable "+name+"\n"+value+"\n");
+	return dlal::toCStr("");
 }
 
 char* dlalCommand(void* component, const char* command){
@@ -162,7 +167,7 @@ static void onAccept(dyad_Event* e){
 	for(auto i: system->_reportConnections)
 		ss<<"connect "<<i.first<<" "<<i.second<<" ";
 	for(auto i: system->_variables)
-		ss<<"variable "<<i.first<<" "<<i.second<<" ";
+		ss<<"variable "<<i.first<<"\n"<<i.second<<"\n";
 	dyadWrite(e->remote, (uint8_t*)ss.str().data(), ss.str().size());
 }
 

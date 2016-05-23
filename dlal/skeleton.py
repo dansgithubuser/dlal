@@ -35,6 +35,7 @@ _skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
 _skeleton.dlalDyadInit.argtypes=[ctypes.c_int]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
+_skeleton.dlalSetVariable.restype=ctypes.c_void_p
 _skeleton.dlalSetVariable.argtypes=[ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 _skeleton.dlalCommand.restype=ctypes.c_void_p
 _skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
@@ -70,7 +71,7 @@ class System:
 	def set(self, name, value):
 		name=str.encode(name, 'utf-8')
 		value=str.encode(value, 'utf-8')
-		_skeleton.dlalSetVariable(self.system, name, value)
+		report(_skeleton.dlalSetVariable(self.system, name, value))
 
 class Component:
 	_libraries={}
