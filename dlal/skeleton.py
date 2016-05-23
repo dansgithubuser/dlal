@@ -77,23 +77,19 @@ class Component:
 	_libraries={}
 
 	def __init__(self, component):
-		self.recognized_commands=[]#prevents infinite recurse in __getattr__ if something fails
 		if component not in Component._libraries:
 			Component._libraries[component]=load(component)
 			Component._libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
 		self.library=Component._libraries[component]
 		self.component=Component._libraries[component].dlalBuildComponent()
 		self.components_to_add=[self]
-		self.recognized_commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
+		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
+		def captain(command):
+			return lambda *args: self.command(command+' '+' '.join([str(i) for i in args]))
+		for command in commands:
+			setattr(self, command, captain(command))
 
 	def __del__(self): _skeleton.dlalDemolishComponent(self.component)
-
-	def __getattr__(self, name):
-		if name in self.recognized_commands:
-			return lambda *args: self.command(
-				name+' '+' '.join([str(arg) for arg in args])
-			)
-		raise AttributeError
 
 	def command(self, command):
 		command=str.encode(command, 'utf-8')
