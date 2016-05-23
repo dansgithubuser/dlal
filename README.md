@@ -60,8 +60,6 @@ file organization
 
 todo
 ----
-- looping
-- sampling
 - dance suit (expand)
 - simple improvements
 	- fm pitch slide

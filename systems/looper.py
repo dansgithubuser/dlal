@@ -32,6 +32,10 @@ looper.system.add(network)
 #commands
 tracks=[]
 
+def add_input():
+	looper.system.set('input {}'.format(len(inputs)), 'port {}'.format(dlal.Qweboard.port))
+	inputs.append(Input())
+
 def add_midi():
 	track=dlal.MidiTrack(inputs[input].midi, dlal.Fm(), period, samples_per_beat)
 	tracks.append(track)
@@ -44,9 +48,10 @@ def add_metronome():
 	tracks.append(track)
 	looper.add(track)
 
-def add_input():
-	looper.system.set(str(dlal.Qweboard.port), str(len(inputs)))
-	inputs.append(Input())
+def add_audio():
+	track=dlal.AudioTrack(looper.audio, period)
+	tracks.append(track)
+	looper.add(track)
 
 def input_next():
 	global input
@@ -124,23 +129,24 @@ commands=[
 	('F1', (add_input, 'add input')),
 	('F5', (add_midi, 'add midi track')),
 	('F6', (add_metronome, 'add metronome midi track')),
-	('J', (input_next, 'next input')),
-	('U', (input_prev, 'prev input')),
-	('K', (track_next, 'next track')),
-	('I', (track_prev, 'prev track')),
-	('L', (wait_more, 'wait more')),
-	('O', (wait_less, 'wait less')),
+	('F7', (add_audio, 'add audio track')),
+	('j', (input_next, 'next input')),
+	('u', (input_prev, 'prev input')),
+	('k', (track_next, 'next track')),
+	('i', (track_prev, 'prev track')),
+	('l', (wait_more, 'wait more')),
+	('o', (wait_less, 'wait less')),
 	('Return', (track_reset_on_midi, 'reset track on midi')),
 	('Space', (track_crop, 'crop track')),
 	('[', (commander_match, 'match commander to current track')),
 	(']', (track_match, 'match current track to commander')),
-	('F', (track_reset, 'reset track')),
-	('Q', (generate_standard_command(dlal.Looper.record, False), 'stop track record')),
-	('A', (generate_standard_command(dlal.Looper.record, True ), 'start track record')),
-	('W', (generate_standard_command(dlal.Looper.play  , False), 'stop track play')),
-	('S', (generate_standard_command(dlal.Looper.play  , True ), 'start track play')),
-	('E', (generate_standard_command(dlal.Looper.replay, False), 'stop track replay')),
-	('D', (generate_standard_command(dlal.Looper.replay, True ), 'start track replay')),
+	('f', (track_reset, 'reset track')),
+	('q', (generate_standard_command(dlal.Looper.record, False), 'stop track record')),
+	('a', (generate_standard_command(dlal.Looper.record, True ), 'start track record')),
+	('w', (generate_standard_command(dlal.Looper.play  , False), 'stop track play')),
+	('s', (generate_standard_command(dlal.Looper.play  , True ), 'start track play')),
+	('e', (generate_standard_command(dlal.Looper.replay, False), 'stop track replay')),
+	('d', (generate_standard_command(dlal.Looper.replay, True ), 'start track replay')),
 	(',', (sequence_start, 'start sequence')),
 	('.', (sequence_commit, 'commit sequence')),
 	('/', (sequence_cancel, 'cancel sequence')),
@@ -161,10 +167,15 @@ def command(text):
 for name in commands_dict: looper.commander.register_command(name, command)
 
 def help():
+	print('functions:')
+	print('\thelp: print this help')
+	print('qweboard commands:')
 	for name, command in commands:
-		print('{0}: {1}'.format(name, command[1]))
+		print('\t{0}: {1}'.format(name, command[1]))
 
 add_input()
-go, ports=dlal.standard_system_functionality(looper.audio, inputs[0].midi, ['use the help function for softboard key listing'])
+go, ports=dlal.standard_system_functionality(looper.audio, inputs[0].midi)
 
-for i in 'F5 S D'.split(): commands_dict[i][0]()
+for i in 'F5 s d'.split(): commands_dict[i][0]()
+
+help()
