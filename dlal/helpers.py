@@ -27,7 +27,7 @@ def standard_system_functionality(audio, midi=None, test=False):
 def raw_to_u8_pcm(input_file_name='raw.txt', output_file_name='raw.raw'):
 	with open(input_file_name) as file: samples=file.read().split()
 	with open(output_file_name, 'wb') as file:
-		for sample in samples: file.write(chr(int((float(sample)+1)*63)).encode())
+		for sample in samples: file.write(chr(int((float(sample)+1)*63)).encode('utf-8'))
 
 def tunefish_path():
 	file_path=os.path.split(os.path.realpath(__file__))[0]

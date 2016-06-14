@@ -26,7 +26,7 @@ system=dlal.SimpleSystem(
 )
 #phonetic interface
 def phonetic(text):
-	key, pressed=text.decode().split()
+	key, pressed=text.decode('utf-8').split()
 	if int(pressed):
 		fir_voice.phonetic_voice(key)
 		fir_noise.phonetic_noise(key)

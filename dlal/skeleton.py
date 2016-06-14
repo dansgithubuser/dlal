@@ -69,8 +69,8 @@ class System:
 		return result
 
 	def set(self, name, value):
-		name=str.encode(name, 'utf-8')
-		value=str.encode(value, 'utf-8')
+		name=name.encode('utf-8')
+		value=value.encode('utf-8')
 		report(_skeleton.dlalSetVariable(self.system, name, value))
 
 class Component:
@@ -92,7 +92,7 @@ class Component:
 	def __del__(self): _skeleton.dlalDemolishComponent(self.component)
 
 	def command(self, command):
-		command=str.encode(command, 'utf-8')
+		command=command.encode('utf-8')
 		return report(_skeleton.dlalCommand(self.component, command))
 
 	def connect(self, output):

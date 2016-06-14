@@ -21,7 +21,7 @@ class Commander(Component):
 		return report(self.library.dlalCommanderCommand(
 			self.component,
 			component.component,
-			str.encode(' '.join([str(arg) for arg in args]), 'utf-8'),
+			' '.join([str(arg) for arg in args]).encode('utf-8'),
 			edges_to_wait
 		))
 
@@ -58,6 +58,6 @@ class Commander(Component):
 		self.commands.append(command)
 		return report(
 			self.library.dlalCommanderRegisterCommand(
-				self.component, str.encode(name, 'utf-8'), command
+				self.component, name.encode('utf-8'), command
 			)
 		)

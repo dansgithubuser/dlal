@@ -44,6 +44,9 @@ features
 - networking
 - SoundFont
 - VST host
+- soundboarding
+- filtering
+- robot voices
 
 file organization
 -----------------
@@ -60,12 +63,13 @@ file organization
 
 todo
 ----
-- dance suit (expand)
 - simple improvements
-	- fm pitch slide
-	- lfo
+	- drums (buffer sound set)
+	- fm pitch slide (midi command)
+	- lfo (audio -> midi command)
 	- arpeggiator
 	- consistentize fm/sonic
+- dance suit (expand)
 - possible future features
 	- looper: quantization
 	- vocoder
