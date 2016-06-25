@@ -133,6 +133,7 @@ Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 		}
 		_nameToControl["o"+s]=&_oscillators[i]._output;
 	}
+	_nameToControl["m"]=&_frequencyMultiplier;
 }
 
 void Sonic::evaluate(){

@@ -486,6 +486,17 @@ std::string MultiOut::disconnect(Component& output){
 
 //=====MidiControlled=====//
 MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendControl::SENTINEL)){
+	registerCommand("control_set", "control number <min value> <max value>", [this](std::stringstream& ss){
+		std::string control;
+		int number, min, max;
+		ss>>control>>number>>min>>max;
+		if(!_nameToControl.count(control)) return "error: unknown control";
+		if(number>127) return "error: controller number too high";
+		_controls[number]._min=min;
+		_controls[number]._max=max;
+		_controls[number]._control=_nameToControl[control];
+		return "";
+	});
 	registerCommand("control_listen", "control", [this](std::stringstream& ss)->std::string{
 		std::string s;
 		ss>>s;
@@ -532,12 +543,12 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 		}
 		return "error: unknown control";
 	});
-	registerCommand("control_list", "", [this](std::stringstream& ss){
+	registerCommand("control_list", "", [this](std::stringstream&){
 		std::string result;
 		for(auto i: _nameToControl) result+=i.first+"\n";
 		return result;
 	});
-	registerCommand("control_clear", "", [this](std::stringstream& ss){
+	registerCommand("control_clear", "control", [this](std::stringstream& ss){
 		std::string s;
 		ss>>s;
 		for(auto& i: _controls) if(i._control==_nameToControl[s]){

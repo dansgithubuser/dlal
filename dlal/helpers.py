@@ -13,7 +13,9 @@ def standard_system_functionality(audio, midi=None, test=False):
 			import atexit
 			atexit.register(lambda: audio.finish())
 			print('audio processing going')
-	if test: go()
+	if test:
+		go()
+		raw_to_u8_pcm('raw.txt')
 	else:
 		print('use the go function to start audio processing')
 		if len(sys.argv)>1 and sys.argv[1]=='-g':
@@ -30,7 +32,9 @@ def standard_system_functionality(audio, midi=None, test=False):
 def raw_to_u8_pcm(input_file_name='raw.txt', output_file_name='raw.raw'):
 	with open(input_file_name) as file: samples=file.read().split()
 	with open(output_file_name, 'wb') as file:
-		for sample in samples: file.write(chr(int((float(sample)+1)*63)).encode('utf-8'))
+		for sample in samples:
+			sample=sorted([-1.0, float(sample), 1.0])[1]
+			file.write(chr(int((sample+1)*63)).encode('utf-8'))
 
 def tunefish_path():
 	file_path=os.path.split(os.path.realpath(__file__))[0]

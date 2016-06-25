@@ -64,8 +64,6 @@ file organization
 todo
 ----
 - simple improvements
-	- fm pitch slide (midi command)
-	- lfo (audio -> midi command)
 	- arpeggiator
 	- consistentize fm/sonic
 - dance suit (expand)
