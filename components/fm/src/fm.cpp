@@ -106,10 +106,12 @@ Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 		std::ifstream file(s.c_str());
 		if(!file.good()) return std::string("error: couldn't open file");
 		bool error=false;
+		int line=1;
 		while(std::getline(file, s)){
 			s=command(s);
 			if(isError(s)) error=true;
-			result+=s+"\n";
+			if(s.size()) result+="on line "+std::to_string(line)+": "+s+"\n";
+			++line;
 		}
 		if(error) result="error: a load command failed\n"+result;
 		return result;

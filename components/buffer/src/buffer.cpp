@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 
 #include <SFML/Audio.hpp>
 
@@ -19,6 +20,19 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		std::string s;
 		ss>>s;
 		_clearOnEvaluate=s=="y";
+		return "";
+	});
+	registerCommand("load_raw", "<MIDI note number> <file name>", [this](std::stringstream& ss){
+		unsigned note;
+		ss>>note;
+		std::string fileName;
+		ss>>fileName;
+		std::ifstream file(fileName.c_str());
+		if(!file.good()) return "error: couldn't load file";
+		if(_sounds.size()<note+1) _sounds.resize(note+1);
+		_sounds[note].clear();
+		float f;
+		while(file>>f) _sounds[note].push_back(f);
 		return "";
 	});
 	registerCommand("load_sound", "<MIDI note number> <file name>", [this](std::stringstream& ss){

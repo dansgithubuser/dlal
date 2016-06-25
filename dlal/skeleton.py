@@ -87,7 +87,7 @@ class Component:
 		def captain(command):
 			return lambda *args: self.command(command+' '+' '.join([str(i) for i in args]))
 		for command in commands:
-			setattr(self, command, captain(command))
+			if command not in dir(self): setattr(self, command, captain(command))
 
 	def __del__(self): _skeleton.dlalDemolishComponent(self.component)
 

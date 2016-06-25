@@ -6,16 +6,19 @@ from .skeleton import *
 import sys
 
 def standard_system_functionality(audio, midi=None, test=False):
-	import atexit
 	def go():
 		audio.start()
-		atexit.register(lambda: audio.finish())
-		if not test: print('audio processing going')
-	if not test: print('use the go function to start audio processing')
-	if len(sys.argv)>1 and sys.argv[1]=='-g':
-		print('-g option specified -- starting audio processing')
-		go()
+		if test: audio.finish()
+		else:
+			import atexit
+			atexit.register(lambda: audio.finish())
+			print('audio processing going')
 	if test: go()
+	else:
+		print('use the go function to start audio processing')
+		if len(sys.argv)>1 and sys.argv[1]=='-g':
+			print('-g option specified -- starting audio processing')
+			go()
 	ports=None
 	if midi and not test:
 		ports=[x for x in midi.ports().split('\n') if len(x)]
@@ -81,7 +84,7 @@ def frequency_response(component, duration=10000):
 class SimpleSystem:
 	sample_rate=44100
 	log_2_samples_per_evaluation=6
-	def __init__(self, components, midi_receivers=None, outputs=None, test=False, test_duration=10):
+	def __init__(self, components, midi_receivers=None, outputs=None, test=False, test_duration=10, test_note=0x3c):
 		self.sample_rate=SimpleSystem.sample_rate
 		self.log_2_samples_per_evaluation=SimpleSystem.log_2_samples_per_evaluation
 		self.samples_per_evaluation=1<<self.log_2_samples_per_evaluation
@@ -90,7 +93,7 @@ class SimpleSystem:
 		self.system=System()
 		if not self.test: self.qweboard=Qweboard()
 		self.midi=Component('midi')
-		if self.test: self.midi.midi(0x90, 0x3C, 0x40)
+		if self.test: self.midi.midi(0x90, test_note, 0x40)
 		self.components=components
 		if self.test:
 			self.audio=Component('raw')

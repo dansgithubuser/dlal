@@ -90,12 +90,13 @@ class VgmSetting:
 		return result
 
 class Fm(Component):
-	def __init__(self):
+	def __init__(self, setting=None):
 		Component.__init__(self, 'fm')
 		self.commander=Component('commander')
 		self.commander.connect(self)
 		self.components_to_add=[self.commander, self]
 		self.oscillators=[]
+		if setting: self.load(setting)
 
 	def show_controls(self, title='dlal fm controls'):
 		self.root=tkinter.Tk()

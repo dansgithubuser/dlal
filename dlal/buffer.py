@@ -1,4 +1,7 @@
 from .skeleton import *
+from .helpers import *
+from .fm import *
+from .commander import *
 
 class Buffer(Component):
 	def __init__(self):
@@ -10,6 +13,18 @@ class Buffer(Component):
 				name, extension=os.path.splitext(file)
 				if extension!='.wav': continue
 				self.known_sounds[name]=os.path.join(path, file)
+
+	def render_simple_system(self, note_number, simple_system):
+		assert simple_system.test
+		simple_system.standard_system_functionality()
+		self.load_raw(note_number, 'raw.txt')
+
+	def render_fm_drums(self):
+		self.render_simple_system(0x3c, SimpleSystem([Fm('snare')], test=True, test_duration=250))
+		fm=Fm('badassophone')
+		commander=Commander()
+		for i in range(250): commander.queue_command(fm, 'frequency_multiplier', 0.97**i, edges_to_wait=i)
+		self.render_simple_system(0x3e, SimpleSystem([fm, commander], test=True, test_duration=250))
 
 	def load_sound(self, note_number, file_name):
 		if file_name in self.known_sounds: file_name=self.known_sounds[file_name]
