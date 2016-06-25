@@ -64,7 +64,6 @@ file organization
 todo
 ----
 - simple improvements
-	- drums (buffer sound set)
 	- fm pitch slide (midi command)
 	- lfo (audio -> midi command)
 	- arpeggiator

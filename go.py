@@ -11,7 +11,7 @@ parser.add_argument('--system', '-s', help='which system to run')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
-parser.add_argument('--can', '-c', help='canned commands -- name.options -- use h for help')
+parser.add_argument('--can', '-c', help='canned commands -- use h for help')
 args=parser.parse_args()
 
 #canned commands
