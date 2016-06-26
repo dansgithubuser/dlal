@@ -64,7 +64,6 @@ file organization
 todo
 ----
 - simple improvements
-	- arpeggiator
 	- consistentize fm/sonic
 - dance suit (expand)
 - possible future features
