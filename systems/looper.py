@@ -37,14 +37,14 @@ def add_input():
 	inputs.append(Input())
 
 def add_midi():
-	track=dlal.MidiTrack(inputs[input].midi, dlal.Fm(), period, samples_per_beat)
+	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic(), period, samples_per_beat)
 	tracks.append(track)
 	looper.add(track)
 
 def add_metronome():
-	track=dlal.MidiTrack(inputs[input].midi, dlal.Fm(), period, samples_per_beat)
+	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic(), period, samples_per_beat)
 	track.drumline()
-	track.synth.load(os.path.join(dlal.root, 'components', 'fm', 'settings', 'snare.txt'))
+	track.synth.load(os.path.join(dlal.root, 'components', 'sonic', 'settings', 'snare.txt'))
 	tracks.append(track)
 	looper.add(track)
 

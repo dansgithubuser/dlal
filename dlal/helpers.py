@@ -1,7 +1,7 @@
 from .buffer import *
-from .fm import *
 from .qweboard import *
 from .skeleton import *
+from .sonic import *
 
 import sys
 
@@ -61,7 +61,7 @@ def frequency_response(component, duration=10000):
 	#create
 	system=System()
 	commander=Commander()
-	fm=Fm()
+	sonic=Sonic()
 	buffer=Buffer()
 	raw=Component('raw')
 	#command
@@ -70,17 +70,17 @@ def frequency_response(component, duration=10000):
 	commands=int(duration/1000.0*sample_rate)>>log_2_samples_per_callback
 	commander.queue_resize(commands)
 	for i in range(1, commands):
-		commander.queue_command(fm, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, edges_to_wait=i)
-	fm.midi(0x90, 69, 0x7f)
+		commander.queue_command(sonic, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, edges_to_wait=i)
+	sonic.midi(0x90, 69, 0x7f)
 	buffer.clear_on_evaluate('y')
 	raw.duration(duration)
 	raw.set(sample_rate, log_2_samples_per_callback)
 	raw.peak(sample_rate/20)
 	#add
 	system.add(raw, slot=1)
-	system.add(buffer, commander, fm, component)
+	system.add(buffer, commander, sonic, component)
 	#connect
-	connect(fm, buffer)
+	connect(sonic, buffer)
 	connect(component, buffer, raw)
 	#go
 	raw.start()

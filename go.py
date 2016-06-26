@@ -18,7 +18,7 @@ args=parser.parse_args()
 if args.can:
 	canned_commands={
 		'b': '-s soundboard',
-		'f': '-s fm        ',
+		'f': '-s sonic     ',
 		's': '-s soundfont ',
 		'v': '-s vst       ',
 		'l': '-s looper -i viewer:9088 -i softboard:9089',

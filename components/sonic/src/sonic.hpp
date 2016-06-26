@@ -1,5 +1,5 @@
-#ifndef DLAL_FM_INCLUDED
-#define DLAL_FM_INCLUDED
+#ifndef DLAL_SONIC_INCLUDED
+#define DLAL_SONIC_INCLUDED
 
 #include <skeleton.hpp>
 
@@ -10,7 +10,7 @@ class Sonic:
 {
 	public:
 		Sonic();
-		std::string type() const { return "fm"; }
+		std::string type() const { return "sonic"; }
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }

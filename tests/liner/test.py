@@ -8,15 +8,15 @@ log2SamplesPerCallback=6
 system=dlal.System()
 raw=dlal.Component('raw')
 liner=dlal.Liner(16<<log2SamplesPerCallback, 16<<log2SamplesPerCallback)
-fm=dlal.Fm()
+sonic=dlal.Sonic()
 #command
 raw.set(44100, log2SamplesPerCallback)
 liner.line('z')
 #add
 system.add(raw, slot=1)
-system.add(liner, fm)
+system.add(liner, sonic)
 #connect
-liner.connect(fm)
-fm.connect(raw)
+liner.connect(sonic)
+sonic.connect(raw)
 #start
 raw.start()

@@ -1,6 +1,6 @@
 from .skeleton import *
 from .helpers import *
-from .fm import *
+from .sonic import *
 from .commander import *
 
 class Buffer(Component):
@@ -19,12 +19,12 @@ class Buffer(Component):
 		simple_system.standard_system_functionality()
 		self.load_raw(note_number, 'raw.txt')
 
-	def render_fm_drums(self):
-		self.render_simple_system(0x3c, SimpleSystem([Fm('snare')], test=True, test_duration=250))
-		fm=Fm('badassophone')
+	def render_sonic_drums(self):
+		self.render_simple_system(0x3c, SimpleSystem([Sonic('snare')], test=True, test_duration=250))
+		sonic=Sonic('badassophone')
 		commander=Commander()
-		for i in range(250): commander.queue_command(fm, 'frequency_multiplier', 0.97**i, edges_to_wait=i)
-		self.render_simple_system(0x3e, SimpleSystem([fm, commander], test=True, test_duration=250))
+		for i in range(250): commander.queue_command(sonic, 'frequency_multiplier', 0.97**i, edges_to_wait=i)
+		self.render_simple_system(0x3e, SimpleSystem([sonic, commander], test=True, test_duration=250))
 
 	def load_sound(self, note_number, file_name):
 		if file_name in self.known_sounds: file_name=self.known_sounds[file_name]

@@ -2,12 +2,12 @@
 
 import dlal
 
-fm=dlal.Fm()
+sonic=dlal.Sonic()
 multiplier=dlal.Component('multiplier')
 buffer=dlal.Component('buffer')
 multiplier.set(0.5)
 buffer.periodic_resize(256)
-fm.connect(buffer)
+sonic.connect(buffer)
 multiplier.connect(buffer)
-system=dlal.SimpleSystem([fm, multiplier, buffer], outputs=[buffer], test=True)
+system=dlal.SimpleSystem([sonic, multiplier, buffer], outputs=[buffer], test=True)
 go, ports=system.standard_system_functionality()

@@ -63,8 +63,6 @@ file organization
 
 todo
 ----
-- simple improvements
-	- consistentize fm/sonic
 - dance suit (expand)
 - possible future features
 	- looper: quantization

@@ -32,15 +32,15 @@ del system
 system=dlal.System()
 raw=dlal.Component('raw')
 filei=dlal.Component('filei')
-fm=dlal.Fm()
+sonic=dlal.Sonic()
 #command
 raw.set(sample_rate, log_2_samples_per_callback)
 filei.name('file.txt')
 #add
 system.add(raw, slot=1)
-system.add(filei, fm)
+system.add(filei, sonic)
 #connect
-filei.connect(fm)
-fm.connect(raw)
+filei.connect(sonic)
+sonic.connect(raw)
 #start
 raw.start()

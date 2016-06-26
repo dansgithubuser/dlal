@@ -1,7 +1,7 @@
 import dlal
 
-fm=dlal.Fm()
+sonic=dlal.Sonic()
 lpf=dlal.Component('lpf')
-system=dlal.SimpleSystem([fm, lpf])
-fm.show_controls()
+system=dlal.SimpleSystem([sonic, lpf])
+sonic.show_controls()
 go, ports=system.standard_system_functionality()
