@@ -133,7 +133,9 @@ class Sonic(Component):
 				i=osc.i[int(cmd[2])]
 				i.set(float(cmd[3])**(1.0/osc.exponents[i]))
 
-	def load(self, file_name):
+	def load(self, file_name=None):
+		if not file_name:
+			return os.listdir(os.path.join('..', '..', 'components', 'sonic', 'settings'))
 		if os.path.split(file_name)[1]==file_name:
 			file_name=os.path.join('..', '..', 'components', 'sonic', 'settings', file_name)
 		if file_name[-4:]!='.txt': file_name+='.txt'
