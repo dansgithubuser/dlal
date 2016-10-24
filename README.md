@@ -63,9 +63,10 @@ file organization
 
 todo
 ----
-- dance suit (expand)
-- possible future features
-	- looper: quantization
-	- vocoder
-	- pitch shift component
-	- auto dj
+- midi editor
+	- quantization
+- on reset liner, make sure first note gets played
+- try rtAudio for better linux support
+- vocoder
+- pitch shift component
+- auto dj
