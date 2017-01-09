@@ -23,7 +23,6 @@ dlal remains capable of taking whatever best suits it.
 
 dlal is conservative in its dependencies.
 C++11, Python (2 or 3), and cmake are used to build.
-Audio is built on PortAudio.
 As much as possible, dependencies are kept in-repo and reasonable errors should pop up if a requirement isn't met.
 Despite this, build scripts should be flexible enough to use out-of-repo versions of dependencies.
 
@@ -66,7 +65,6 @@ todo
 - midi editor
 	- quantization
 - on reset liner, make sure first note gets played
-- try rtAudio for better linux support
 - vocoder
 - pitch shift component
 - auto dj

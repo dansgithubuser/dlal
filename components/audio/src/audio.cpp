@@ -4,28 +4,28 @@
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Audio; }
 
-static int paStreamCallback(
-	const void* input,
+static int rtAudioCallback(
 	void* output,
-	unsigned long samples,
-	const PaStreamCallbackTimeInfo* timeInfo,
-	PaStreamCallbackFlags status,
+	void* input,
+	unsigned samples,
+	double time,
+	RtAudioStreamStatus status,
 	void* userData
 ){
+	if(status) input=NULL;
 	dlal::Audio* audio=(dlal::Audio*)userData;
 	audio->_input=(float*)input;
 	audio->_output=(float*)output;
 	std::fill_n(audio->_output, samples, 0.0f);
 	audio->_system->evaluate();
-	return paContinue;
-}
-
-static std::string paError(const PaError& err){
-	Pa_Terminate();
-	std::stringstream ss;
-	ss<<"PortAudio error number: "<<err<<"\n";
-	ss<<"PortAudio error message: "<<Pa_GetErrorText(err);
-	return ss.str();
+	for(int i=samples-1; i>=0; --i){
+		float f=audio->_output[i];
+		if(f<-1.0f) f=-1.0f;
+		else if(f>1.0f) f=1.0f;
+		audio->_output[2*i+0]=f;
+		audio->_output[2*i+1]=f;
+	}
+	return 0;
 }
 
 namespace dlal{
@@ -95,59 +95,31 @@ void Audio::evaluate(){
 }
 
 std::string Audio::start(){
-	PaError err;
-	//initialize
-	err=Pa_Initialize();
-	if(err!=paNoError) return "error: Pa_Initialize failed: "+paError(err);
-	//get wasapi if it exists
-	PaHostApiIndex apiIndex=Pa_GetDefaultHostApi();
-	if(apiIndex<0) return "error: no default host API: "+paError(apiIndex);
-	for(PaHostApiIndex i=0; i<Pa_GetHostApiCount(); ++i)
-		if(Pa_GetHostApiInfo(i)->type==paWASAPI){ apiIndex=i; break; }
-	//input
-	PaStreamParameters inputParameters;
-	inputParameters.device=Pa_GetHostApiInfo(apiIndex)->defaultInputDevice;
-	if(inputParameters.device==paNoDevice)
-		return "error: no default input device: "+paError(err);
-	inputParameters.channelCount=1;
-	inputParameters.sampleFormat=PA_SAMPLE_FORMAT;
-	inputParameters.suggestedLatency=
-		Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
-	inputParameters.hostApiSpecificStreamInfo=NULL;
-	//output
-	PaStreamParameters outputParameters;
-	outputParameters.device=Pa_GetHostApiInfo(apiIndex)->defaultOutputDevice;
-	if(outputParameters.device==paNoDevice)
-		return "error: no default output device: "+paError(err);
-	outputParameters.channelCount=1;
-	outputParameters.sampleFormat=PA_SAMPLE_FORMAT;
-	outputParameters.suggestedLatency=
-		Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-	outputParameters.hostApiSpecificStreamInfo=NULL;
-	//open stream
-	err=Pa_OpenStream(
-		&_paStream,
-		&inputParameters,
-		&outputParameters,
+	if(_rtAudio.getDeviceCount()<1) return "error: no audio devices found";
+	RtAudio::StreamParameters iParams, oParams;
+	iParams.deviceId=_rtAudio.getDefaultInputDevice (); iParams.nChannels=1;
+	oParams.deviceId=_rtAudio.getDefaultOutputDevice(); oParams.nChannels=2;
+	unsigned samples=1<<_log2SamplesPerCallback;
+	try{ _rtAudio.openStream(
+		&oParams,
+		&iParams,
+		RTAUDIO_FLOAT32,
 		_sampleRate,
-		1<<_log2SamplesPerCallback,
-		paNoFlag,
-		paStreamCallback,
+		&samples,
+		rtAudioCallback,
 		this
-	);
-	if(err!=paNoError) return "error: Pa_OpenStream failed: "+paError(err);
-	//start stream
-	err=Pa_StartStream(_paStream);
-	if(err!=paNoError) return "error: Pa_StartStream failed: "+paError(err);
+	); }
+	catch(RtAudioError& e){ return std::string("error: ")+e.getMessage(); }
+	if(samples!=1<<_log2SamplesPerCallback)
+		return "error: couldn't get desired samples per callback";
+	try{ _rtAudio.startStream(); }
+	catch(RtAudioError& e){ return std::string("error: ")+e.getMessage(); }
 	_started=true;
 	return "";
 }
 
 std::string Audio::finish(){
-	PaError err;
-	err=Pa_CloseStream(_paStream);
-	if(err!=paNoError) return "error: "+paError(err);
-	Pa_Terminate();
+	_rtAudio.closeStream();
 	_started=false;
 	return "";
 }

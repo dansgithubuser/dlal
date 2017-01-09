@@ -3,7 +3,7 @@
 
 #include <skeleton.hpp>
 
-#include <portaudio.h>
+#include <RtAudio.h>
 
 namespace dlal{
 
@@ -18,11 +18,10 @@ class Audio: public MultiOut{
 		float* _input;
 		float* _output;
 	private:
-		static const PaSampleFormat PA_SAMPLE_FORMAT=paFloat32;
 		std::string start();
 		std::string finish();
 		unsigned _sampleRate, _log2SamplesPerCallback;
-		PaStream* _paStream;
+		RtAudio _rtAudio;
 		bool _started;
 		unsigned _underflows;
 		#ifdef DLAL_AUDIO_TEST

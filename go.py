@@ -80,8 +80,6 @@ if args.setup:
 		)
 		#tkinter
 		shell('sudo apt-get install --yes --force-yes python-tk')
-		#portaudio (jack) dependencies
-		shell('sudo apt-get install --yes --force-yes libjack-dev jackd')
 		#rtmidi dependencies
 		shell('sudo apt-get install --yes --force-yes libasound2-dev')
 		#cmake
