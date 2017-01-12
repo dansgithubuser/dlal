@@ -164,6 +164,9 @@ void Sonic::midi(const uint8_t* bytes, unsigned size){
 			else
 				_notes[bytes[1]].start(bytes[2]/127.0f, _oscillators);
 			break;
+		case 0xa0:
+			_notes[bytes[1]]._desiredVolume=bytes[2]/127.0f;
+			break;
 		default: break;
 	}
 }
@@ -231,6 +234,7 @@ void Sonic::Note::set(
 void Sonic::Note::start(float volume, const Oscillator* oscillators){
 	for(unsigned i=0; i<OSCILLATORS; ++i) _runners[i].start();
 	_volume=volume;
+	_desiredVolume=volume;
 	_done=false;
 }
 
@@ -239,6 +243,7 @@ void Sonic::Note::stop(){
 }
 
 float Sonic::Note::update(unsigned i, const Oscillator* oscillators, float frequencyMultiplier){
+	_volume=(63*_volume+_desiredVolume)/64;
 	_done&=oscillators[i].update(_runners[i], frequencyMultiplier);
 	float modulatedPhase=_runners[i]._phase;
 	for(unsigned j=0; j<OSCILLATORS; ++j)

@@ -43,7 +43,7 @@ class Sonic:
 				float frequencyMultiplier
 			);
 			Runner _runners[OSCILLATORS];
-			float _volume;
+			float _volume, _desiredVolume;
 			bool _done;
 		};
 		void update();
