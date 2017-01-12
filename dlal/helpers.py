@@ -23,7 +23,7 @@ def standard_system_functionality(audio, midi=None, test=False):
 			go()
 	ports=None
 	if midi and not test:
-		ports=[x for x in midi.ports().split('\n') if len(x)]
+		ports=[x for x in midi.ports().split('\n') if len(x) and 'Midi Through' not in x]
 		if len(ports):
 			print('opening midi port '+ports[0])
 			midi.open(ports[0])
