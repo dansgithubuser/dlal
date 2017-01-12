@@ -88,7 +88,7 @@ if args.setup:
 		shell('sudo ./cmake-3.2.3-Linux-x86_64.sh --skip-license --prefix=/usr/local')
 	elif platform.system()=='Darwin':
 		shell('brew update')
-		shell('sudo brew uninstall --force cmake')
+		shell('brew uninstall --force cmake')
 		shell('brew install cmake')
 	else:
 		print('unrecognized system '+platform.system())

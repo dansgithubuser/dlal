@@ -4,7 +4,7 @@ os:
 dist: trusty
 sudo: required
 install:
-  - sudo python go.py --setup
+  - python go.py --setup
   - export PATH=/usr/local/bin:$PATH
 script: sudo python go.py -t "*"
 notifications:
