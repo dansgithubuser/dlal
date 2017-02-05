@@ -24,6 +24,7 @@ Raw::Raw():
 	registerCommand("duration", "<duration in ms>",
 		[this](std::stringstream& ss){
 			ss>>_duration;
+			if(_system) _maxSample=_duration*unsigned(_sampleRate)/1000;
 			return "";
 		}
 	);

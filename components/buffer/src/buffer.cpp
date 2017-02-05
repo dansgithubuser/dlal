@@ -40,15 +40,17 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		ss>>note;
 		std::string fileName;
 		ss>>fileName;
-		sf::SoundBuffer soundBuffer;
-		if(!soundBuffer.loadFromFile(fileName)) return "error: couldn't load file";
+		sf::InputSoundFile file;
+		if(!file.openFromFile(fileName)) return "error: couldn't open file";
+		std::vector<sf::Int16> samples(file.getSampleCount());
+		file.read(samples.data(), samples.size());
 		if(_sounds.size()<note+1) _sounds.resize(note+1);
 		_sounds[note].clear();
-		_sounds[note].resize(unsigned(soundBuffer.getDuration().asSeconds()*_sampleRate), 0.0f);
+		_sounds[note].resize(unsigned(file.getDuration().asSeconds()*_sampleRate), 0.0f);
 		for(unsigned i=0; i<_sounds[note].size(); ++i){
-			auto j=i*soundBuffer.getSampleRate()/_sampleRate;
-			if(j>=soundBuffer.getSampleCount()) break;
-			_sounds[note][i]=soundBuffer.getSamples()[j]/float(1<<15);
+			auto j=i*file.getSampleRate()/_sampleRate;
+			if(j>=file.getSampleCount()) break;
+			_sounds[note][i]=samples[j]/float(1<<15);
 		}
 		return "";
 	});
@@ -60,6 +62,13 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		float s;
 		while(ss>>s) _sounds[note].push_back(s);
 		return "";
+	});
+	registerCommand("sound_samples", "<MIDI note number>", [this](std::stringstream& ss){
+		unsigned note;
+		ss>>note;
+		std::stringstream tt;
+		tt<<_sounds[note].size();
+		return tt.str();
 	});
 	registerCommand("repeat_sound", "y/n", [this](std::stringstream& ss){
 		std::string s;
@@ -73,6 +82,17 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		std::string s;
 		ss>>s;
 		_pitchSound=s=="y";
+		return "";
+	});
+	registerCommand("save", "<file name>", [this](std::stringstream& ss){
+		std::string fileName;
+		ss>>fileName;
+		sf::OutputSoundFile file;
+		if(!file.openFromFile(fileName, _sampleRate, 1)) return "error: couldn't open file";
+		std::vector<sf::Int16> samples;
+		for(unsigned i=0; i<_audio.size(); ++i)
+			samples.push_back(_audio[i]*((1<<15)-1));
+		file.write(samples.data(), samples.size());
 		return "";
 	});
 }

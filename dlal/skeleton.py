@@ -2,13 +2,7 @@ import ctypes, os, platform
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
 
-_port=9088
 _systems=0
-
-def set_port(port):
-	assert(_systems==0)
-	global _port
-	_port=port
 
 def load(name):
 	def upperfirst(s): return s[0].upper()+s[1:]
@@ -32,7 +26,6 @@ def connect(*args):
 
 _skeleton=load('skeleton')
 _skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
-_skeleton.dlalDyadInit.argtypes=[ctypes.c_int]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
 _skeleton.dlalSetVariable.restype=ctypes.c_void_p
@@ -48,9 +41,9 @@ _skeleton.dlalFree.argtypes=[ctypes.c_void_p]
 class System:
 	def __init__(self, port=9088):
 		global _systems
-		if _systems==0: _skeleton.dlalDyadInit(_port)
+		if _systems==0: _skeleton.dlalDyadInit()
 		_systems+=1
-		self.system=_skeleton.dlalBuildSystem(9088)
+		self.system=_skeleton.dlalBuildSystem(port)
 		assert(self.system)
 
 	def __del__(self):
