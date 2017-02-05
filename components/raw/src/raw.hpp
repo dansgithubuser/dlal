@@ -18,7 +18,7 @@ class Raw: public Component{
 	private:
 		unsigned _sampleRate, _log2SamplesPerCallback;
 		std::vector<float> _audio;
-		unsigned _duration, _sample, _maxSample;
+		uint64_t _duration, _sample, _maxSample;
 		std::string _fileName;
 		std::ofstream _file;
 		bool _peak;

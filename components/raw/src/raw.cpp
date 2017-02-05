@@ -11,7 +11,7 @@ Raw::Raw():
 		_audio.resize(1<<_log2SamplesPerCallback, 0.0f);
 		_file.open(_fileName.c_str());
 		system.set(_sampleRate, _log2SamplesPerCallback);
-		_maxSample=_duration*unsigned(_sampleRate)/1000;
+		_maxSample=_duration*_sampleRate/1000;
 		return "";
 	});
 	registerCommand("set", "sampleRate <log2(samples per callback)>",
@@ -24,7 +24,7 @@ Raw::Raw():
 	registerCommand("duration", "<duration in ms>",
 		[this](std::stringstream& ss){
 			ss>>_duration;
-			if(_system) _maxSample=_duration*unsigned(_sampleRate)/1000;
+			if(_system) _maxSample=_duration*_sampleRate/1000;
 			return "";
 		}
 	);
@@ -45,7 +45,7 @@ Raw::Raw():
 		auto s=_system->check();
 		if(isError(s)) return s;
 		const unsigned samples=1<<_log2SamplesPerCallback;
-		for(unsigned i=0; i<_maxSample; i+=samples) _system->evaluate();
+		for(uint64_t i=0; i<_maxSample; i+=samples) _system->evaluate();
 		return "";
 	});
 	registerCommand("finish", "", [this](std::stringstream& ss){
