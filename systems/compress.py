@@ -1,36 +1,42 @@
 import dlal, os, sys
 
-input_buffer=dlal.Buffer()
+input_file_path=os.environ['DLAL_COMPRESS_INPUT']
+
+input_filea=dlal.Component('filea')
 peak=dlal.Component('peak')
 multiplier=dlal.Component('multiplier')
 peak_buffer=dlal.Buffer()
 output_buffer=dlal.Buffer()
+output_filea=dlal.Component('filea')
 
-input_buffer.connect(peak_buffer)
-input_buffer.connect(output_buffer)
+input_filea.connect(peak_buffer)
+input_filea.connect(output_buffer)
 peak.connect(peak_buffer)
 multiplier.connect(peak_buffer)
 multiplier.connect(output_buffer)
+output_buffer.connect(output_filea)
 
 dlal.SimpleSystem.sample_rate=8000
 system=dlal.SimpleSystem(
-	[input_buffer, peak, multiplier, peak_buffer, output_buffer],
+	[input_filea, peak, multiplier, peak_buffer, output_filea, output_buffer],
+	midi_receivers=[],
 	outputs=[],
 	test=True,
 )
 
-input_buffer.load_sound(0x3c, os.environ['DLAL_COMPRESS_INPUT'])
-samples=dlal.helpers.round_up(int(input_buffer.sound_samples(0x3c)), system.samples_per_evaluation)
+input_filea.open_read(input_file_path)
+samples=dlal.helpers.round_up(int(input_filea.samples()), system.samples_per_evaluation)
 peak.invert_coefficient(1)
 peak.coefficient(0)
 peak_buffer.clear_on_evaluate('y')
-output_buffer.periodic_resize(samples)
+output_buffer.clear_on_evaluate('y')
+x=input_file_path.split('.')
+x[-1]='out.'+x[-1]
+output_filea.open_write('.'.join(x))
 system.audio.duration(1000.0*samples/system.sample_rate)
 
 go, ports=system.standard_system_functionality()
-x=os.environ['DLAL_COMPRESS_INPUT'].split('.')
-x[-1]='out.'+x[-1]
-output_buffer.save('.'.join(x))
+output_filea.open_write()
 
 class Q:
 	def __repr__(self): sys.exit()
