@@ -1,11 +1,13 @@
 #include "raw.hpp"
 
+#include <iostream>
+
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Raw; }
 
 namespace dlal{
 
 Raw::Raw():
-	_sampleRate(0), _duration(10), _sample(0), _fileName("raw.txt"), _peak(false)
+	_sampleRate(0), _duration(10), _sample(0), _fileName("raw.txt"), _doFile(true), _peak(false)
 {
 	addJoinAction([this](System& system){
 		_audio.resize(1<<_log2SamplesPerCallback, 0.0f);
@@ -40,12 +42,32 @@ Raw::Raw():
 		_peak=true;
 		return "";
 	});
-	registerCommand("start", "", [this](std::stringstream& ss)->std::string{
+	registerCommand("set_print", "y/n", [this](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		_print=s=="y";
+		return "";
+	});
+	registerCommand("do_file", "y/n", [this](std::stringstream& ss){
+		std::string s;
+		ss>>s;
+		_doFile=s=="y";
+		return "";
+	});
+	registerCommand("start", "", [this](std::stringstream&)->std::string{
 		if(!_system) return "error: must add before starting";
 		auto s=_system->check();
 		if(isError(s)) return s;
 		const unsigned samples=1<<_log2SamplesPerCallback;
-		for(uint64_t i=0; i<_maxSample; i+=samples) _system->evaluate();
+		int j=0;
+		for(uint64_t i=0; i<_maxSample; i+=samples){
+			if(_print){
+				++j;
+				j%=100;
+				if(!j) std::cout<<i<<"/"<<_maxSample<<"\n";
+			}
+			_system->evaluate();
+		}
 		return "";
 	});
 	registerCommand("finish", "", [this](std::stringstream& ss){
@@ -62,7 +84,7 @@ void Raw::evaluate(){
 			_x.write(_audio[i]);
 			_file<<_x.max(_peakWidth)<<'\n';
 		}
-		else _file<<_audio[i]<<'\n';
+		else if(_doFile) _file<<_audio[i]<<'\n';
 	}
 	_file.flush();
 	std::fill_n(_audio.data(), samples, 0.0f);

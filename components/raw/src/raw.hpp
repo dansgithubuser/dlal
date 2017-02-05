@@ -21,9 +21,11 @@ class Raw: public Component{
 		uint64_t _duration, _sample, _maxSample;
 		std::string _fileName;
 		std::ofstream _file;
+		bool _doFile;
 		bool _peak;
 		unsigned _peakWidth;
 		Ringbuffer<float> _x;
+		bool _print;
 };
 
 }//namespace dlal

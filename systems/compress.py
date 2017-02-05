@@ -17,15 +17,15 @@ multiplier.connect(output_buffer)
 output_buffer.connect(output_filea)
 
 dlal.SimpleSystem.sample_rate=8000
+dlal.SimpleSystem.log_2_samples_per_evaluation=12
 system=dlal.SimpleSystem(
 	[input_filea, peak, multiplier, peak_buffer, output_filea, output_buffer],
 	midi_receivers=[],
 	outputs=[],
-	test=True,
+	raw=True,
 )
 
 input_filea.open_read(input_file_path)
-samples=dlal.helpers.round_up(int(input_filea.samples()), system.samples_per_evaluation)
 peak.invert_coefficient(1)
 peak.coefficient(0)
 peak_buffer.clear_on_evaluate('y')
@@ -33,10 +33,12 @@ output_buffer.clear_on_evaluate('y')
 x=input_file_path.split('.')
 x[-1]='out.'+x[-1]
 output_filea.open_write('.'.join(x))
-system.audio.duration(1000.0*samples/system.sample_rate)
+system.audio.duration(1000.0*int(input_filea.samples())/int(input_filea.sample_rate()))
+system.audio.set_print('y')
+system.audio.do_file('n')
 
 go, ports=system.standard_system_functionality()
-output_filea.open_write()
+output_filea.close_write()
 
 class Q:
 	def __repr__(self): sys.exit()

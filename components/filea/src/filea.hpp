@@ -17,6 +17,7 @@ class Filea: public MultiOut, public SamplesPerEvaluationGetter, public SampleRa
 		std::vector<float> _audio;
 		void* _i;
 		void* _o;
+		void* _buffer;
 };
 
 }//namespace dlal
