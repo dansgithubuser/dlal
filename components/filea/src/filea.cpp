@@ -6,15 +6,18 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Filea; }
 
 namespace dlal{
 
-Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>) {
+Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
+	_volume(1.0f), _desiredVolume(1.0f), _sample(0)
+{
 	_checkAudio=true;
 	addJoinAction([this](System&){
 		_audio.resize(_samplesPerEvaluation);
 		return "";
 	});
 	registerCommand("open_read", "<file name>", [this](std::stringstream& ss){
+		ss>>std::ws;
 		std::string fileName;
-		ss>>fileName;
+		std::getline(ss, fileName);
 		if(_i){
 			delete (sf::InputSoundFile*)_i;
 			_i=nullptr;
@@ -38,8 +41,9 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>) {
 		return ss.str();
 	});
 	registerCommand("open_write", "<file name>", [this](std::stringstream& ss){
+		ss>>std::ws;
 		std::string fileName;
-		ss>>fileName;
+		std::getline(ss, fileName);
 		if(_o){
 			delete (sf::OutputSoundFile*)_o;
 			_o=nullptr;
@@ -57,6 +61,24 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>) {
 		}
 		return "";
 	});
+	registerCommand("fade", "volume <duration in seconds>", [this](std::stringstream& ss){
+		ss>>_desiredVolume;
+		float duration;
+		ss>>duration;
+		_deltaVolume=(_desiredVolume-_volume)/duration/_sampleRate*_samplesPerEvaluation;
+		return "";
+	});
+	registerCommand("loop_crossfade", "<duration in seconds>", [this](std::stringstream& ss){
+		float duration;
+		ss>>duration;
+		sf::Uint64 samples(duration*_sampleRate);
+		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
+		std::vector<sf::Int16> v(samples);
+		file.read(v.data(), samples);
+		_loop_crossfade.resize(samples);
+		for(unsigned i=0; i<samples; ++i) _loop_crossfade[i]=v[i]/float(1<<15);
+		return "";
+	});
 }
 
 Filea::~Filea(){
@@ -65,19 +87,42 @@ Filea::~Filea(){
 	delete (std::vector<sf::Int16>*)_buffer;
 }
 
+static float linear(float a, float b, float bness){
+	return a*(1-bness)+b*bness;
+}
+
 void Filea::evaluate(){
 	std::vector<sf::Int16>& samples=*(std::vector<sf::Int16>*)_buffer;
-	if(_i){
+	if(_volume!=0.0f&&_i){
 		//read from file
 		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
 		auto x=_samplesPerEvaluation*file.getSampleRate()/_sampleRate;
 		if(samples.size()<x) samples.resize(x);
 		std::fill(samples.begin(), samples.end(), 0);
-		file.read(samples.data(), samples.size());
+		if(auto r=file.read(samples.data(), samples.size())<samples.size()){
+			file.seek(_loop_crossfade.size());
+			file.read(samples.data()+r, samples.size()-r);
+		}
 		for(unsigned i=0; i<_samplesPerEvaluation; ++i){
 			auto j=i*file.getSampleRate()/_sampleRate;
 			if(j>=samples.size()) break;
-			_audio[i]=samples[j]/float(1<<15);
+			auto l=_loop_crossfade.size()/2;
+			if(_sample<l){
+				auto k=l+_sample;
+				_audio[i]=_volume*linear(
+					_loop_crossfade[k], samples[j]/float(1<<15), 1.0f*_sample/l
+				);
+			}
+			else if(file.getSampleCount()-_sample<l){
+				auto k=l-(file.getSampleCount()-_sample);
+				_audio[i]=_volume*linear(
+					_loop_crossfade[k], samples[j]/float(1<<15), 1.0f*(file.getSampleCount()-_sample)/l
+				);
+			}
+			else
+				_audio[i]=_volume*samples[j]/float(1<<15);
+			++_sample;
+			_sample%=file.getSampleCount();
 		}
 		//write to outputs
 		add(_audio.data(), _samplesPerEvaluation, _outputs);
@@ -91,6 +136,16 @@ void Filea::evaluate(){
 		file.write(samples.data(), _audio.size());
 		//reset
 		std::fill(_audio.begin(), _audio.end(), 0.0f);
+	}
+	//volume
+	_volume+=_deltaVolume;
+	if(
+		_deltaVolume<0.0f&&_volume<_desiredVolume
+		||
+		_deltaVolume>0.0f&&_volume>_desiredVolume
+	){
+		_volume=_desiredVolume;
+		_deltaVolume=0.0f;
 	}
 }
 

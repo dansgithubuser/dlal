@@ -18,6 +18,9 @@ class Filea: public MultiOut, public SamplesPerEvaluationGetter, public SampleRa
 		void* _i;
 		void* _o;
 		void* _buffer;
+		float _volume, _desiredVolume, _deltaVolume;
+		std::vector<float> _loop_crossfade;
+		uint64_t _sample;
 };
 
 }//namespace dlal
