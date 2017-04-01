@@ -7,7 +7,7 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Filea; }
 namespace dlal{
 
 Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
-	_volume(1.0f), _desiredVolume(1.0f), _sample(0)
+	_volume(1.0f), _desiredVolume(1.0f), _deltaVolume(0.0f), _sample(0)
 {
 	_checkAudio=true;
 	addJoinAction([this](System&){
@@ -59,6 +59,10 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 			delete (sf::OutputSoundFile*)_o;
 			_o=nullptr;
 		}
+		return "";
+	});
+	registerCommand("set_volume", "volume", [this](std::stringstream& ss){
+		ss>>_volume;
 		return "";
 	});
 	registerCommand("fade", "volume <duration in seconds>", [this](std::stringstream& ss){

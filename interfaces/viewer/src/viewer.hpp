@@ -2,6 +2,7 @@
 
 #include <string>
 #include <set>
+#include <list>
 #include <map>
 #include <vector>
 
@@ -29,7 +30,7 @@ class Component{
 		void renderText(sf::RenderWindow&, const sf::Font&);
 		std::string _name, _label;
 		Type _type;
-		float _phase;
+		float _phase, _heat;
 		std::map<std::string, Connection> _connections;
 		std::set<Component*> _connecters;
 		int _x, _y;
@@ -44,6 +45,7 @@ class Viewer{
 	private:
 		void layout();
 		sf::Font _font;
+		std::list<std::string> _reports;
 		std::map<std::string, Component> _nameToComponent;
 		std::vector<std::pair<std::string, std::string>> _pendingConnections;
 		std::map<std::string, std::string> _variables;

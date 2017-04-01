@@ -32,7 +32,9 @@ static void stripToLines(
 
 Component::Component(){}
 
-Component::Component(std::string name, std::string type): _name(name), _phase(-1.0f) {
+Component::Component(std::string name, std::string type):
+	_name(name), _phase(-1.0f), _heat(0.0f)
+{
 	if(type=="audio") _type=AUDIO;
 	else if(type=="buffer") _type=BUFFER;
 	else if(type=="commander") _type=COMMANDER;
@@ -54,10 +56,12 @@ static int decode(char c){
 	return 0;
 }
 
-static void sketch(std::vector<sf::Vertex>& v, const char* s, int x, int y){
+static void sketch(
+	std::vector<sf::Vertex>& v, const char* s, int x, int y, sf::Color color
+){
 	unsigned i=0;
 	while(s[i]!='\0'&&s[i+1]!='\0'){
-		v.push_back(vertex(x+decode(s[i]), y+decode(s[i+1]), colorComponent));
+		v.push_back(vertex(x+decode(s[i]), y+decode(s[i+1]), color));
 		i+=2;
 	}
 }
@@ -73,15 +77,16 @@ static sf::Color heat(const sf::Color& base, float heat){
 void Component::renderLines(sf::VertexArray& v){
 	//self
 	std::vector<sf::Vertex> u;
-	sketch(u, "++-+--+-++", _x, _y);
+	sketch(u, "++-+--+-++", _x, _y, heat(colorComponent, _heat));
+	_heat/=2.0f;
 	stripToLines(u, v);
 	switch(_type){
-		case AUDIO: sketch(u, "=++==--==+", _x, _y); break;
-		case BUFFER: sketch(u, "-<+<+>->", _x, _y); break;
-		case COMMANDER: sketch(u, "--+++--+", _x, _y); break;
-		case LINER: sketch(u, "-=+=", _x, _y); break;
-		case MIDI: sketch(u, "--=++-", _x, _y); break;
-		case NETWORK: sketch(u, "--++", _x, _y); break;
+		case AUDIO    : sketch(u, "=++==--==+", _x, _y, colorComponent); break;
+		case BUFFER   : sketch(u, "-<+<+>->"  , _x, _y, colorComponent); break;
+		case COMMANDER: sketch(u, "--+++--+"  , _x, _y, colorComponent); break;
+		case LINER    : sketch(u, "-=+="      , _x, _y, colorComponent); break;
+		case MIDI     : sketch(u, "--=++-"    , _x, _y, colorComponent); break;
+		case NETWORK  : sketch(u, "--++"      , _x, _y, colorComponent); break;
 		default: break;
 	}
 	stripToLines(u, v);
@@ -189,8 +194,11 @@ void Viewer::process(std::string s){
 			{"command", [&](){
 				ss>>s;
 				if(!_nameToComponent.count(s)) return;
+				_nameToComponent[s]._heat+=0.5f;
 				std::string d;
 				ss>>d;
+				if(!_nameToComponent.count(d)) return;
+				_nameToComponent[d]._heat+=0.5f;
 				if(!_nameToComponent[s]._connections.count(d)) return;
 				_nameToComponent[s]._connections[d]._heat+=0.5f;
 			}},
@@ -214,19 +222,34 @@ void Viewer::process(std::string s){
 			}}
 		};
 		ss>>std::ws;
+		if(s!="edge"&&s!="phase"){
+			_reports.push_back(s);
+			if(_reports.size()>8) _reports.pop_front();
+		}
 		if(handlers.count(s)) handlers[s]();
 	}
 }
 
 void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
-	//variables
+	const float line_space=18.0f;
+	const int text_height=12;
+	const float margin=6.0f;
 	float y=0.0f;
+	//variables
 	for(auto& i: _variables){
 		std::string s=i.first+": "+i.second;
-		sf::Text t(s.c_str(), _font, 12);
-		t.setPosition(6.0f, y);
+		sf::Text t(s.c_str(), _font, text_height);
+		t.setPosition(margin, y);
 		wt.draw(t);
-		y+=18.0f;
+		y+=line_space;
+	}
+	y+=18.0f;
+	//reports
+	for(auto& i: _reports){
+		sf::Text t(i.c_str(), _font, text_height);
+		t.setPosition(margin, y);
+		wt.draw(t);
+		y+=line_space;
 	}
 	//relayout if resized
 	if(wv.getSize().x!=_w||wv.getSize().y!=_h){
