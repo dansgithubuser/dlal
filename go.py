@@ -114,31 +114,39 @@ if args.test:
 	#setup
 	import glob
 	tests=[os.path.realpath(x) for x in glob.glob(os.path.join('tests', args.test))]
-	overall=0
+	overall=True
+	report=[]
 	print('RUNNING TESTS')
 	#loop over tests
 	for test in tests:
-		#run test
-		os.chdir(built_rel_path)
-		r=subprocess.call(['python', os.path.join(test, 'test.py')])
-		os.chdir(file_path)
-		#read result and expected
-		def read(file_name):
-			with open(file_name) as file: contents=file.read()
-			return [float(x) for x in contents.split()]
-		raw=read(os.path.join('build', 'built', 'raw.txt'))
-		expected=read(os.path.join(test, 'expected.txt'))
-		#compare result to expected
-		if len(raw)!=len(expected): r=1
-		else:
-			for i in range(len(raw)):
-				if abs(raw[i]-expected[i])>0.00001:
-					r=1
-		#report
-		overall|=r
-		print('-' if r else '+', os.path.split(test)[1])
+		runs=10
+		successes=0
+		for i in range(runs):
+			#run test
+			os.chdir(built_rel_path)
+			r=subprocess.call(['python', os.path.join(test, 'test.py')])
+			os.chdir(file_path)
+			if not r:
+				#read result and expected
+				def read(file_name):
+					with open(file_name) as file: contents=file.read()
+					return [float(x) for x in contents.split()]
+				raw=read(os.path.join('build', 'built', 'raw.txt'))
+				expected=read(os.path.join(test, 'expected.txt'))
+				#compare result to expected
+				if len(raw)!=len(expected): r=1
+				else:
+					for i in range(len(raw)):
+						if abs(raw[i]-expected[i])>0.00001:
+							r=1
+			#bookkeepping
+			if r: overall=False
+			else: successes+=1
+			print('{}{}'.format('-' if r else '+', os.path.split(test)[1]))
+		report.append('{:3}/{} {}'.format(successes, runs, os.path.split(test)[1]))
 	#finish
-	if overall:
+	for i in report: print(i)
+	if not overall:
 		print('TESTS HAVE FAILED!')
 		sys.exit(-1)
 	print('ALL TESTS SUCCEEDED')

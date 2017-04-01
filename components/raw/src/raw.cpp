@@ -7,7 +7,8 @@ void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Raw; }
 namespace dlal{
 
 Raw::Raw():
-	_sampleRate(0), _duration(10), _sample(0), _fileName("raw.txt"), _doFile(true), _peak(false)
+	_sampleRate(0), _duration(10), _sample(0), _fileName("raw.txt"),
+	_doFile(true), _peak(false), _print(false)
 {
 	addJoinAction([this](System& system){
 		_audio.resize(1<<_log2SamplesPerCallback, 0.0f);
