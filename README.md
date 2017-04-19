@@ -62,6 +62,12 @@ file organization
 
 todo
 ----
+- audio select input and output
+- looper
+	- multiple midi inputs?
+	- other instruments (soundboard)
+	- better visualization (visualize regularity)
+- fix that darn osx crash on travis
 - midi editor
 	- quantization
 - on reset liner, make sure first note gets played
