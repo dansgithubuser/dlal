@@ -28,12 +28,18 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 		_rtMidiIn->setCallback(rtMidiCallback, this);
 		s="";
 		ss>>s;
-		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i)
-			if(_rtMidiIn->getPortName(i).find(s)!=std::string::npos){
+		for(unsigned i=0; i<_rtMidiIn->getPortCount(); ++i){
+			std::string portName=_rtMidiIn->getPortName(i);
+			if(portName.find(s)!=std::string::npos){
 				_rtMidiIn->openPort(i);
+				_portName=portName;
 				return "";
 			}
+		}
 		return "error: couldn't find requested port";
+	});
+	registerCommand("port", "", [this](std::stringstream& ss){
+		return _portName;
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _queue.lockless()?"lockless":"lockfull";

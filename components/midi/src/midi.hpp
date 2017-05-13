@@ -19,6 +19,7 @@ class Midi: public MultiOut{
 		std::string allocate();
 		RtMidiIn* _rtMidiIn;
 		Queue<std::vector<uint8_t>> _queue;
+		std::string _portName;
 };
 
 }//namespace dlal

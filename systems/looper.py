@@ -36,6 +36,16 @@ def add_input():
 	looper.system.set('input {}'.format(len(inputs)), 'port {}'.format(dlal.Qweboard.port))
 	inputs.append(Input())
 
+def scan_for_midi_inputs():
+	open_ports=[i.midi.port() for i in inputs]
+	all_ports=dlal.midi_ports()
+	for port in all_ports:
+		if port in open_ports: continue
+		x=Input()
+		x.midi.open(port)
+		looper.system.set('input {}'.format(len(inputs)), 'port {}'.format(port))
+		inputs.append(x)
+
 def add_midi():
 	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic(), period, samples_per_beat)
 	tracks.append(track)
@@ -127,6 +137,7 @@ def sequence_cancel():
 
 commands=[
 	('F1', (add_input, 'add input')),
+	('F2', (scan_for_midi_inputs, 'scan for midi inputs')),
 	('F5', (add_midi, 'add midi track')),
 	('F6', (add_metronome, 'add metronome midi track')),
 	('F7', (add_audio, 'add audio track')),
@@ -173,9 +184,10 @@ def help():
 	for name, command in commands:
 		print('\t{0}: {1}'.format(name, command[1]))
 
-add_input()
-go, ports=dlal.standard_system_functionality(looper.audio, inputs[0].midi)
+go, ports=dlal.standard_system_functionality(looper.audio)
 
+scan_for_midi_inputs()
+if not len(inputs): add_input()
 for i in 'F5 s d'.split(): commands_dict[i][0]()
 
 help()

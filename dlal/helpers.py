@@ -5,6 +5,9 @@ from .sonic import *
 
 import sys
 
+def midi_ports():
+	return [i for i in Component('midi').ports().split('\n') if len(i) and 'Midi Through' not in i]
+
 def standard_system_functionality(audio, midi=None, raw=False, test=False):
 	def go():
 		audio.start()
@@ -23,7 +26,7 @@ def standard_system_functionality(audio, midi=None, raw=False, test=False):
 			go()
 	ports=None
 	if midi and not (raw or test):
-		ports=[x for x in midi.ports().split('\n') if len(x) and 'Midi Through' not in x]
+		ports=midi_ports()
 		if len(ports):
 			print('opening midi port '+ports[0])
 			midi.open(ports[0])
