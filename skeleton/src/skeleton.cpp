@@ -153,7 +153,7 @@ static void onDestroyed(dyad_Event* e){
 
 static void onError(dyad_Event* e){
 	System* system=(System*)e->udata;
-	std::cerr<<"error: "<<e->msg<<std::endl;
+	std::cerr<<"error: dyad error: "<<e->msg<<std::endl;
 }
 
 static void onAccept(dyad_Event* e){
@@ -211,32 +211,40 @@ static void onTick(dyad_Event* e){
 }
 
 System::System(int port): _reportQueue(8){
-	_dyadNewStream=dyad_newStream;
-	_dyadAddListener=dyad_addListener;
-	_dyadListenEx=dyad_listenEx;
-	std::string r=dyadPauseAnd([&]()->std::string{
-		_server=dyad_newStream();
-		dyad_addListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
-		dyad_addListener(_server, DYAD_EVENT_ERROR  , onError    , this);
-		dyad_addListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
-		dyad_addListener(_server, DYAD_EVENT_TICK   , onTick     , this);
-		if(dyad_listenEx(_server, "0.0.0.0", port, 511)<0)
-			return "error: couldn't listen";
-		return "";
-	});
-	if(r.size()) throw std::runtime_error(r);
+	if(port){
+		_dyadNewStream=dyad_newStream;
+		_dyadAddListener=dyad_addListener;
+		_dyadListenEx=dyad_listenEx;
+		std::string r=dyadPauseAnd([&]()->std::string{
+			_server=dyad_newStream();
+			dyad_addListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
+			dyad_addListener(_server, DYAD_EVENT_ERROR  , onError    , this);
+			dyad_addListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
+			dyad_addListener(_server, DYAD_EVENT_TICK   , onTick     , this);
+			if(dyad_listenEx(_server, "0.0.0.0", port, 511)<0){
+				std::stringstream ss;
+				ss<<"error: constructing System, couldn't listen on port "<<port;
+				return ss.str();
+			}
+			return "";
+		});
+		if(r.size()) throw std::runtime_error(r);
+	}
+	else _server=nullptr;
 }
 
 System::~System(){
-	dyadPauseAnd([this]()->std::string{
-		dyad_close(_server);
-		dyad_removeListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
-		dyad_removeListener(_server, DYAD_EVENT_ERROR  , onError    , this);
-		dyad_removeListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
-		dyad_removeListener(_server, DYAD_EVENT_TICK   , onTick     , this);
-		for(auto i: _streams) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
-		return "";
-	});
+	if(_server){
+		dyadPauseAnd([this]()->std::string{
+			dyad_close(_server);
+			dyad_removeListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
+			dyad_removeListener(_server, DYAD_EVENT_ERROR  , onError    , this);
+			dyad_removeListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
+			dyad_removeListener(_server, DYAD_EVENT_TICK   , onTick     , this);
+			for(auto i: _streams) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
+			return "";
+		});
+	}
 }
 
 std::string System::add(Component& component, unsigned slot, bool queue){
@@ -381,6 +389,10 @@ void Component::addJoinAction(JoinAction j){ _joinActions.push_back(j); }
 
 //=====SamplesPerEvaluationGetter=====//
 SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(): _samplesPerEvaluation(0) {
+	registerCommand("set_samples_per_evaluation", "<sample per evaluation>", [this](std::stringstream& ss){
+		if(ss>>_samplesPerEvaluation) return "";
+		return "error: couldn't read samples per evaluation";
+	});
 	addJoinAction([this](System& system){
 		if(!system._variables.count("samplesPerEvaluation"))
 			return "error: system does not have samplesPerEvaluation";
@@ -441,6 +453,10 @@ bool Periodic::phase(){
 
 //=====SampleRateGetter=====//
 SampleRateGetter::SampleRateGetter(): _sampleRate(0) {
+	registerCommand("set_sample_rate", "<sample rate>", [this](std::stringstream& ss){
+		if(ss>>_sampleRate) return "";
+		return "error: couldn't read sample rate";
+	});
 	addJoinAction([this](System& system){
 		if(!system._variables.count("sampleRate"))
 			return "error: system does not have sampleRate";

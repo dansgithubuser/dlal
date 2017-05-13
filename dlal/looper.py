@@ -28,13 +28,17 @@ class AudioTrack(Pipe):
 		self.multiplier.connect(self.container)
 
 class Looper:
-	def __init__(self, sample_rate=44100, log_2_samples_per_callback=6):
+	def __init__(self, sample_rate=44100, log_2_samples_per_evaluation=6):
+		self.sample_rate=sample_rate
+		self.log_2_samples_per_evaluation=log_2_samples_per_evaluation
 		self.system=System()
 		self.commander=Commander()
 		self.audio=Component('audio')
-		self.audio.set(sample_rate, log_2_samples_per_callback)
+		self.audio.set(sample_rate, log_2_samples_per_evaluation)
 		self.system.add(self.audio, self.commander)
 		self.tracks=[]
+
+	def samples_per_evaluation(self): return 1<<self.log_2_samples_per_evaluation
 
 	def add(self, track):
 		self.commander.queue_add(track)

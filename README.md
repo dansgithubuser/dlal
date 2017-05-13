@@ -64,7 +64,6 @@ todo
 ----
 - audio select input and output
 - looper
-	- other instruments (soundboard)
 	- better visualization (visualize regularity)
 - fix that darn osx crash on travis
 - midi editor

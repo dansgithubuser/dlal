@@ -5,6 +5,7 @@ samples_per_beat=32000
 period=8*2*samples_per_beat
 edges_to_wait=0
 input=0
+synth=0
 track=0
 sequence=None
 
@@ -23,6 +24,28 @@ class Input:
 		looper.commander.queue_connect(self.qweboard, self.midi, enable=True)
 		looper.commander.queue_add(self.qweboard)
 inputs=[]
+
+#synths
+def soundfont():
+	r=dlal.Component('soundfont')
+	r.set_samples_per_evaluation(looper.samples_per_evaluation())
+	r.set_sample_rate(looper.sample_rate)
+	r.load(os.path.join('..', '..', 'components', 'soundfont', 'deps', '32MbGMStereo.sf2'))
+	return r
+
+def soundboard():
+	r=dlal.Buffer()
+	r.render_sonic_drums()
+	r.set_sample_rate(looper.sample_rate)
+	r.load_sounds()
+	return r
+
+synths=[
+	('sonic', lambda: dlal.Sonic()),
+	('soundfont', soundfont),
+	('soundboard', soundboard),
+]
+looper.system.set('synth', synths[synth][0])
 
 #network
 network=dlal.Component('network')
@@ -47,7 +70,7 @@ def scan_for_midi_inputs():
 		inputs.append(x)
 
 def add_midi():
-	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic(), period, samples_per_beat)
+	track=dlal.MidiTrack(inputs[input].midi, synths[synth][1](), period, samples_per_beat)
 	tracks.append(track)
 	looper.add(track)
 
@@ -62,6 +85,18 @@ def add_audio():
 	track=dlal.AudioTrack(looper.audio, period)
 	tracks.append(track)
 	looper.add(track)
+
+def synth_next():
+	global synth
+	if synth+1<len(synths):
+		synth+=1
+		looper.system.set('synth', synths[synth][0])
+
+def synth_prev():
+	global synth
+	if synth>0:
+		synth-=1
+		looper.system.set('synth', synths[synth][0])
 
 def input_next():
 	global input
@@ -141,6 +176,8 @@ commands=[
 	('F5', (add_midi, 'add midi track')),
 	('F6', (add_metronome, 'add metronome midi track')),
 	('F7', (add_audio, 'add audio track')),
+	('h', (synth_next, 'next synth')),
+	('y', (synth_prev, 'prev synth')),
 	('j', (input_next, 'next input')),
 	('u', (input_prev, 'prev input')),
 	('k', (track_next, 'next track')),

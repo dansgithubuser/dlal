@@ -19,6 +19,7 @@ class Soundfont: public SamplesPerEvaluationGetter, public SampleRateGetter, pub
 		bool midiAccepted(){ return true; }
 	private:
 		void destroy();
+		std::string initialize();
 		fluid_settings_t* _settings;
 		fluid_synth_t* _synth;
 		std::vector<float> _l, _r;

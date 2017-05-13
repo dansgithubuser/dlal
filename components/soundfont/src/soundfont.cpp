@@ -7,16 +7,12 @@ namespace dlal{
 Soundfont::Soundfont(): _settings(NULL), _synth(NULL) {
 	_checkAudio=true;
 	addJoinAction([this](System&){
-		destroy();
-		_settings=new_fluid_settings();
-		fluid_settings_setint(_settings, "synth.samplerate", _sampleRate);
-		_synth=new_fluid_synth(_settings);
-		_l.resize(_samplesPerEvaluation);
-		_r.resize(_samplesPerEvaluation);
-		return "";
+		return initialize();
 	});
 	registerCommand("load", "<soundfont file>", [this](std::stringstream& ss){
 		std::string s;
+		s=initialize();
+		if(isError(s)) return s;
 		ss>>s;
 		return std::to_string(fluid_synth_sfload(_synth, s.c_str(), 1));
 	});
@@ -57,6 +53,18 @@ void Soundfont::destroy(){
 	delete_fluid_settings(_settings);
 	_synth=NULL;
 	_settings=NULL;
+}
+
+std::string Soundfont::initialize(){
+	if(_settings) return "";
+	if(!_sampleRate) return "error: sample rate not set";
+	if(!_samplesPerEvaluation) return "error: samples per evaluation not set";
+	_settings=new_fluid_settings();
+	fluid_settings_setint(_settings, "synth.samplerate", _sampleRate);
+	_synth=new_fluid_synth(_settings);
+	_l.resize(_samplesPerEvaluation);
+	_r.resize(_samplesPerEvaluation);
+	return "";
 }
 
 }//namespace dlal

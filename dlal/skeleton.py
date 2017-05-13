@@ -39,9 +39,15 @@ _skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
 _skeleton.dlalFree.argtypes=[ctypes.c_void_p]
 
 class System:
-	def __init__(self, port=9088):
+	def __init__(self, port=None):
 		global _systems
-		if _systems==0: _skeleton.dlalDyadInit()
+		if _systems==0:
+			_skeleton.dlalDyadInit()
+		if port==None:
+			if _systems==0:
+				port=9088
+			else:
+				port=0
 		_systems+=1
 		self.system=_skeleton.dlalBuildSystem(port)
 		assert(self.system)
