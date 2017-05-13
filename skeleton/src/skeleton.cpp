@@ -484,7 +484,7 @@ std::string MultiOut::disconnect(Component& output){
 	return "";
 }
 
-//=====MidiControlled=====//
+//=====MidiControllee=====//
 MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendControl::SENTINEL)){
 	registerCommand("control_set", "control number <min value> <max value>", [this](std::stringstream& ss){
 		std::string control;
@@ -497,7 +497,7 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 		_controls[number]._control=_nameToControl[control];
 		return "";
 	});
-	registerCommand("control_listen", "control", [this](std::stringstream& ss)->std::string{
+	registerCommand("control_listen_start", "control", [this](std::stringstream& ss)->std::string{
 		std::string s;
 		ss>>s;
 		if(_nameToControl.count(s)){
@@ -505,7 +505,10 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 			_listeningControls.clear();
 			return "listening";
 		}
-		else if(_listeningControls.size()){
+		return "error: no such control";
+	});
+	registerCommand("control_listen_set", "", [this](std::stringstream& ss)->std::string{
+		if(_listeningControls.size()){
 			auto a=_listeningControls.begin();
 			int control=a->first;
 			int min=a->second._min;
@@ -525,7 +528,12 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 			_listening=nullptr;
 			return "control "+std::to_string(control)+" range "+std::to_string(min)+".."+std::to_string(max);
 		}
-		else _listening=nullptr;
+		else return "error: nothing to commit";
+		return "";
+	});
+	registerCommand("control_listen_abort", "", [this](std::stringstream& ss)->std::string{
+		_listening=nullptr;
+		_listeningControls.clear();
 		return "";
 	});
 	registerCommand("control_function", "control y[1]..y[n]", [this](std::stringstream& ss){
