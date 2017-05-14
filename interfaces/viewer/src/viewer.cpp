@@ -8,6 +8,8 @@
 #include <cassert>
 
 static const int S=8;
+static const int H=5*S;
+static const int V=5*S;
 
 static const sf::Color colorComponent(0, 128, 0);
 static const sf::Color colorForward(0, 64, 64);
@@ -104,11 +106,17 @@ void Component::renderLines(sf::VertexArray& v){
 			sf::Color cn=heat(colorNormal, i.second._heat);
 			u.push_back(vertex    (_x    , _y+  S, cn));//source
 			if(dy>_y){//destination below
-				sf::Color cf=heat(colorForward, i.second._heat);
-				u.push_back(vertex  (_x-  S, _y+2*S, cf));//diagonal
-				u.push_back(vertex  (_x-  S, dy-3*S, cf));//drop to just above destination
-				u.push_back(vertex  (_x    , dy-2*S, cn));//diagonal
-				u.push_back(vertex  (dx    , dy-2*S, cn));//align horizontally
+				if(dy-_y==V){//directly below
+					u.push_back(vertex(_x    , dy-2*S, cn));//drop to just above destination
+					u.push_back(vertex(dx    , dy-2*S, cn));//align horizontally
+				}
+				else{
+					sf::Color cf=heat(colorForward, i.second._heat);
+					u.push_back(vertex(_x-2*S, _y+2*S, cf));//diagonal
+					u.push_back(vertex(_x-2*S, dy-3*S, cf));//drop to just above destination
+					u.push_back(vertex(_x    , dy-2*S, cn));//diagonal
+					u.push_back(vertex(dx    , dy-2*S, cn));//align horizontally
+				}
 			}
 			else{
 				sf::Color cb=heat(colorBackward, i.second._heat);
@@ -369,7 +377,7 @@ void Viewer::layout(){
 	}
 	//logical coordinates to pixels
 	for(auto& i: _nameToComponent){
-		i.second._x=(i.second._x-layouter.minX+1)*S*4;
-		i.second._y=(i.second._y-layouter.minY+1)*S*5;
+		i.second._x=(i.second._x-layouter.minX+1)*H;
+		i.second._y=(i.second._y-layouter.minY+1)*V;
 	}
 }
