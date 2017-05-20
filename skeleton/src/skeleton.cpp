@@ -1,11 +1,9 @@
 #include "skeleton.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <cstring>
 #include <cstdlib>
 #include <iostream>
-#include <mutex>
 #include <set>
 #include <stdexcept>
 #include <thread>
@@ -137,14 +135,6 @@ void safeAdd(
 			for(unsigned j=0; j<size; ++j) i->audio()[j]+=audio[j];
 }
 
-std::string dyadPauseAnd(std::function<std::string()> f){
-	std::string r;
-	dyadMutex.lock();
-	if(!dyadDone) r=f();
-	dyadMutex.unlock();
-	return r;
-}
-
 //=====System=====//
 static void onDestroyed(dyad_Event* e){
 	System* system=(System*)e->udata;
@@ -210,7 +200,11 @@ static void onTick(dyad_Event* e){
 			dyadWrite(i, (uint8_t*)ss.str().data(), ss.str().size());
 }
 
-System::System(int port): _reportQueue(8){
+System::System(int port):
+	_reportQueue(8),
+	_dyadDone(dyadDone),
+	_dyadMutex(dyadMutex)
+{
 	if(port){
 		_dyadNewStream=dyad_newStream;
 		_dyadAddListener=dyad_addListener;
@@ -328,6 +322,14 @@ int System::dyadListenEx(
 	dyad_Stream* stream, const char* host, int port, int backlog
 ){
 	return _dyadListenEx(stream, host, port, backlog);
+}
+
+std::string System::dyadPauseAnd(std::function<std::string()> f){
+	std::string r;
+	_dyadMutex.lock();
+	if(!_dyadDone) r=f();
+	_dyadMutex.unlock();
+	return r;
 }
 
 //=====Component=====//

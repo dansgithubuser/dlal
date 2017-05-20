@@ -5,11 +5,13 @@
 
 #include <dyad.h>
 
+#include <atomic>
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <sstream>
 
 #ifdef _MSC_VER
@@ -62,8 +64,6 @@ void add(const float* audio, unsigned size, std::vector<Component*>&);
 //add audio to components that have audio
 void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
 
-//pause dyad and do something
-std::string dyadPauseAnd(std::function<std::string()>);
 
 class System{
 	public:
@@ -77,6 +77,7 @@ class System{
 		dyad_Stream* dyadNewStream();
 		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
 		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
+		std::string dyadPauseAnd(std::function<std::string()>);
 		std::vector<dyad_Stream*> _clients;
 		std::vector<dyad_Stream*> _streams;
 		Queue<std::string> _reportQueue;//for system visualization, populated in evaluation
@@ -89,6 +90,8 @@ class System{
 		std::function<dyad_Stream*()> _dyadNewStream;
 		std::function<void(dyad_Stream*, int event, dyad_Callback, void* userData)> _dyadAddListener;
 		std::function<int(dyad_Stream*, const char* host, int port, int backlog)> _dyadListenEx;
+		std::atomic<bool>& _dyadDone;
+		std::recursive_mutex& _dyadMutex;
 		dyad_Stream* _server;
 };
 
