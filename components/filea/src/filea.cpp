@@ -144,9 +144,9 @@ void Filea::evaluate(){
 	//volume
 	_volume+=_deltaVolume;
 	if(
-		_deltaVolume<0.0f&&_volume<_desiredVolume
+		(_deltaVolume<0.0f&&_volume<_desiredVolume)
 		||
-		_deltaVolume>0.0f&&_volume>_desiredVolume
+		(_deltaVolume>0.0f&&_volume>_desiredVolume)
 	){
 		_volume=_desiredVolume;
 		_deltaVolume=0.0f;
