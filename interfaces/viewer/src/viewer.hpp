@@ -37,6 +37,19 @@ class Component{
 		bool _laidout;
 };
 
+class Group{
+	public:
+		Group(const Component&);
+		Group(const std::map<std::string, Component::Connection>&);
+		Group(const std::set<Component*>&);
+		bool similar(const Group&) const;
+		bool adjacent(const Group&) const;
+		void merge(const Group&);
+	private:
+		void sort();
+		std::vector<const Component*> _components;
+};
+
 class Viewer{
 	public:
 		Viewer();

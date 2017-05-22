@@ -7,6 +7,8 @@
 #include <functional>
 #include <cassert>
 
+#include <obvious.hpp>
+
 static const int S=8;
 static const int H=5*S;
 static const int V=5*S;
@@ -138,6 +140,63 @@ void Component::renderText(sf::RenderWindow& w, const sf::Font& font){
 	sf::Text t(_label.c_str(), font, S);
 	t.setPosition(1.0f*_x, 1.0f*_y);
 	w.draw(t);
+}
+
+Group::Group(const Component& component){
+	_components.push_back(&component);
+}
+
+Group::Group(const std::map<std::string, Component::Connection>& map){
+	for(auto i: map) _components.push_back(i.second._component);
+	sort();
+}
+
+Group::Group(const std::set<Component*>& set){
+	for(auto i: set) _components.push_back(i);
+	sort();
+}
+
+bool Group::similar(const Group& other) const{
+	if(_components.size()!=other._components.size()) return false;
+	auto similarInterconnect=[](const Group& a, const Group& ac, const Group& b, const Group& bc){
+		if(ac._components.size()!=bc._components.size()) return false;
+		for(unsigned i=0; i<ac._components.size(); ++i) if(
+			index(ac._components.at(i), a._components)
+			!=
+			index(bc._components.at(i), b._components)
+		) return false;
+		return true;
+	};
+	for(unsigned i=0; i<_components.size(); ++i){
+		auto a=_components.at(i), b=other._components.at(i);
+		if(a->_type!=b->_type) return false;
+		if(!similarInterconnect(*this, Group(a->_connections), other, Group(b->_connections))) return false;
+		if(!similarInterconnect(*this, Group(a->_connecters ), other, Group(b->_connecters ))) return false;
+	}
+	return true;
+}
+
+bool Group::adjacent(const Group& other) const{
+	for(auto i: _components){
+		for(auto j: i->_connections) if(in(j.second._component, other._components)) return true;
+		for(auto j: i->_connecters ) if(in(j                  , other._components)) return true;
+	}
+	return false;
+}
+
+void Group::merge(const Group& other){
+	_components.insert(_components.end(), other._components.begin(), other._components.end());
+}
+
+void Group::sort(){
+	auto compare=[](const Component* a, const Component* b){
+		if(a->_type<b->_type) return true;
+		if(a->_type>b->_type) return false;
+		if(a->_label<b->_label) return true;
+		if(a->_label>b->_label) return false;
+		return a<b;
+	};
+	std::sort(_components.begin(), _components.end(), compare);
 }
 
 Viewer::Viewer(): _w(0), _h(0) {
@@ -341,6 +400,35 @@ void Viewer::layout(){
 	for(auto& i: _nameToComponent)
 		for(auto& j: i.second._connections)
 			j.second._component->_connecters.insert(&i.second);
+	//initial groups
+	std::vector<Group> groups;
+	for(const auto& i: _nameToComponent) groups.push_back(Group(i.second));
+	//refine groups
+	while(true){
+		//only keep groups that are similar to some other group
+		for(unsigned i=0; i<groups.size(); /*nothing*/){
+			bool similar=false;
+			for(unsigned j=0; j<groups.size(); ++j)
+				if(i!=j&&groups.at(i).similar(groups.at(j))){
+					similar=true;
+					break;
+				}
+			if(similar) ++i;
+			else groups.erase(groups.begin()+i);
+		}
+		//merge adjacent groups (initial group ordering ensures this is sensible)
+		bool done=true;
+		for(unsigned i=0; i<groups.size(); ++i)
+			for(unsigned j=i+1; j<groups.size(); /*nothing*/){
+				if(groups.at(i).adjacent(groups.at(j))){
+					groups.at(i).merge(groups.at(j));
+					groups.erase(groups.begin()+j);
+					done=false;
+				}
+				else ++j;
+			}
+		if(done) break;
+	}
 	//find sourcey components
 	std::vector<Component*> sourceys;
 	{
