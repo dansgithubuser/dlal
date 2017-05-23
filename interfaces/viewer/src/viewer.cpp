@@ -147,12 +147,12 @@ Group::Group(const Component& component){
 }
 
 Group::Group(const std::map<std::string, Component::Connection>& map){
-	for(auto i: map) _components.push_back(i.second._component);
+	for(const auto& i: map) _components.push_back(i.second._component);
 	sort();
 }
 
 Group::Group(const std::set<Component*>& set){
-	for(auto i: set) _components.push_back(i);
+	for(const auto& i: set) _components.push_back(i);
 	sort();
 }
 
@@ -177,9 +177,9 @@ bool Group::similar(const Group& other) const{
 }
 
 bool Group::adjacent(const Group& other) const{
-	for(auto i: _components){
-		for(auto j: i->_connections) if(in(j.second._component, other._components)) return true;
-		for(auto j: i->_connecters ) if(in(j                  , other._components)) return true;
+	for(const auto& i: _components){
+		for(const auto& j: i->_connections) if(in(j.second._component, other._components)) return true;
+		for(const auto& j: i->_connecters ) if(in(j                  , other._components)) return true;
 	}
 	return false;
 }
@@ -303,7 +303,7 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	const float margin=6.0f;
 	float y=0.0f;
 	//variables
-	for(auto& i: _variables){
+	for(const auto& i: _variables){
 		std::string s=i.first+": "+i.second;
 		sf::Text t(s.c_str(), _font, text_height);
 		t.setPosition(margin, y);
@@ -312,7 +312,7 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	}
 	y+=18.0f;
 	//reports
-	for(auto& i: _reports){
+	for(const auto& i: _reports){
 		sf::Text t(i.c_str(), _font, text_height);
 		t.setPosition(margin, y);
 		wt.draw(t);
@@ -433,7 +433,7 @@ void Viewer::layout(){
 	std::vector<Component*> sourceys;
 	{
 		auto minConnecters=_nameToComponent.size()+1;
-		for(auto& i: _nameToComponent) minConnecters=std::min(i.second._connecters.size(), minConnecters);
+		for(const auto& i: _nameToComponent) minConnecters=std::min(i.second._connecters.size(), minConnecters);
 		for(auto& i: _nameToComponent) if(i.second._connecters.size()==minConnecters) sourceys.push_back(&i.second);
 	}
 	//find sinks
@@ -441,7 +441,7 @@ void Viewer::layout(){
 	for(auto& i: _nameToComponent) if(i.second._connections.size()==0) sinks.insert(&i.second);
 	//
 	Layouter layouter;
-	for(auto& i: sourceys) layouter.layout(*i, 0, 0);
+	for(const auto& i: sourceys) layouter.layout(*i, 0, 0);
 	while(true){
 		Component* component=NULL;
 		Component* connecter;
@@ -450,7 +450,7 @@ void Viewer::layout(){
 			if(i.second._laidout) continue;
 			if(sinks.count(&i.second)) continue;
 			connecter=NULL;
-			for(auto& j: i.second._connecters) if(j->_laidout){ connecter=j; break; }
+			for(const auto& j: i.second._connecters) if(j->_laidout){ connecter=j; break; }
 			if(connecter){ component=&i.second; break; }
 		}
 		//if there isn't one, we're done, otherwise layout
