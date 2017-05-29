@@ -1,3 +1,7 @@
+//#define LOG_LAYOUT
+//#define LOG_CHECK_LAYOUT
+//#define RENDER_POINTERS
+
 #include "viewer.hpp"
 
 #include <courierCode.hpp>
@@ -6,11 +10,16 @@
 #include <algorithm>
 #include <functional>
 #include <cassert>
+#include <iostream>
 
 #include <obvious.hpp>
 
 static const int S=8;
-static const int H=5*S;
+#ifdef RENDER_POINTERS
+	static const int H=12*S;
+#else
+	static const int H=5*S;
+#endif
 static const int V=5*S;
 
 static const sf::Color colorComponent(0, 128, 0);
@@ -32,6 +41,158 @@ static void stripToLines(
 		v.append(u[i+1]);
 	}
 	u.clear();
+}
+
+/*
+(1) components must have unique (x, y)
+(2) components must have unique x and unique y, except
+	(2.1) components with no connecters may share y with any other component
+	(2.2) components with identical connecters may share y
+	(2.3) components with no connectees may share x with any other component
+	(2.4) components with identical or no connectees other than a chain linking them may share x
+*/
+static bool checkLayout(const std::vector<Component*>& c){
+	if(c.size()<2) return true;
+	for(unsigned i=0; i<c.size(); ++i)
+		for(unsigned j=i+1; j<c.size(); ++j){
+			//(1)
+			if(
+				c.at(i)->_x==c.at(j)->_x
+				&&
+				c.at(i)->_y==c.at(j)->_y
+			){
+				#ifdef LOG_CHECK_LAYOUT
+					std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" overlap\n";
+				#endif
+				return false;
+			}
+			//(2)
+			if(c.at(i)->_y==c.at(j)->_y)
+				if(!c.at(i)->_connecters.empty()&&!c.at(j)->_connecters.empty())//(2.1)
+					if(c.at(i)->_connecters!=c.at(j)->_connecters){//(2.2)
+						#ifdef LOG_CHECK_LAYOUT
+							std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" cannot share y\n";
+						#endif
+						return false;
+					}
+			if(c.at(i)->_x==c.at(j)->_x)
+				if(!c.at(i)->_connections.empty()&&!c.at(j)->_connections.empty()){//(2.3)
+					//(2.4)
+					//get column
+					std::vector<Component*> column;
+					for(auto& k: c) if(k->_x==c.at(i)->_x) column.push_back(k);
+					std::sort(column.begin(), column.end(), [](const Component* a, const Component* b){ return a->_y<b->_y; });
+					//helper for getting connectees
+					auto getConnectees=[](Component* c){
+						return OBVIOUS_TRANSFORM(c->_connections, r.insert(i->second._component), std::set<Component*>());
+					};
+					//get connectees of final element
+					auto connectees=getConnectees(column.back());
+					//go through pairs
+					for(unsigned k=0; k<column.size()-1; ++k){
+						//get connectees other than chain link
+						auto x=getConnectees(column.at(k));
+						if(column.at(k+1)->_y-column.at(k)->_y==1) x.erase(column.at(k+1));
+						//make sure identical or no connectees
+						if(connectees.empty()) connectees=x;
+						else if(!x.empty()&&connectees!=x){
+							#ifdef LOG_CHECK_LAYOUT
+								std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" cannot share x\n";
+							#endif
+							return false;
+						}
+					}
+				}
+		}
+	return true;
+}
+
+static void layout(Component* c, std::vector<Component*>& components){
+	auto getLaidout=[&](){ return OBVIOUS_TRANSFORM(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>()); };
+	int minX=0, minY=0, maxX=0, maxY=0;
+	for(auto& i: getLaidout()){
+		OBVIOUS_MIN(minX, i->_x);
+		OBVIOUS_MIN(minY, i->_y);
+		OBVIOUS_MAX(maxX, i->_x);
+		OBVIOUS_MAX(maxY, i->_y);
+	}
+	c->_laidout=true;
+	auto laidout=getLaidout();
+	//try to stick it directly below a connecter
+	for(auto& i: c->_connecters)
+		if(i->_laidout){
+			c->_x=i->_x;
+			c->_y=i->_y+1;
+			if(checkLayout(laidout)){
+				c->noteLayout("connecter");
+				return;
+			}
+		}
+	//try to stick it directly above a connectee
+	for(auto& i: c->_connections){
+		auto j=i.second._component;
+		if(j->_laidout){
+			c->_x=j->_x;
+			c->_y=j->_y-1;
+			if(checkLayout(laidout)){
+				c->noteLayout("connectee");
+				return;
+			}
+		}
+	}
+	//try to stick it somewhere within the laid-out universe
+	for(int x=minX; x<=maxX; ++x)
+		for(int y=minY; y<=maxY; ++y){
+			c->_x=x;
+			c->_y=y;
+			if(checkLayout(laidout)){
+				c->noteLayout("within");
+				return;
+			}
+		}
+	//try to stick it above a connectee just beyond the universe
+	for(auto& i: c->_connecters)
+		if(i->_laidout){
+			c->_x=maxX+1;
+			c->_y=i->_y+1;
+			if(checkLayout(laidout)){
+				c->noteLayout("connecter-beyond");
+				return;
+			}
+		}
+	//try to stick it below a connectee just beyond the universe
+	for(auto& i: c->_connections){
+		auto j=i.second._component;
+		if(j->_laidout){
+			c->_x=maxX+1;
+			c->_y=j->_y-1;
+			if(checkLayout(laidout)){
+				c->noteLayout("connectee-beyond");
+				return;
+			}
+		}
+	}
+	//try to stick it just beyond the laid-out universe
+	for(int x=minX; x<=maxX+1; ++x)
+		for(int y=minY; y<=maxY+1; ++y){
+			c->_x=x;
+			c->_y=y;
+			if(checkLayout(laidout)){
+				c->noteLayout("beyond");
+				return;
+			}
+		}
+	//
+	for(auto& i: components) std::cout<<i<<": "<<i->_x<<", "<<i->_y<<" "<<(i->_laidout?"laid out":"")<<"\n";
+	throw std::logic_error("couldn't lay out component");
+}
+
+static bool componentCompare(const Component* a, const Component* b){
+	if(a->_type<b->_type) return true;
+	if(a->_type>b->_type) return false;
+	if(a->_label<b->_label) return true;
+	if(a->_label>b->_label) return false;
+	return a->_name<b->_name;
 }
 
 Component::Component(){}
@@ -136,14 +297,34 @@ void Component::renderLines(sf::VertexArray& v){
 }
 
 void Component::renderText(sf::RenderWindow& w, const sf::Font& font){
+	#ifdef RENDER_POINTERS
+	{
+		std::stringstream ss;
+		ss<<this;
+		sf::Text t(ss.str().c_str(), font, S);
+		t.setPosition(1.0f*_x+S, 1.0f*_y+S);
+		w.draw(t);
+	}
+	#endif
 	if(!_label.size()) return;
 	sf::Text t(_label.c_str(), font, S);
 	t.setPosition(1.0f*_x, 1.0f*_y);
 	w.draw(t);
 }
 
-Group::Group(const Component& component){
-	_components.push_back(&component);
+void Component::noteLayout(std::string method){
+	#ifdef LOG_LAYOUT
+		std::cout<<this<<" laid out at ("<<_x<<", "<<_y<<") by "<<method<<" method.\n";
+	#endif
+}
+
+std::ostream& operator<<(std::ostream& o, const Group& g){
+	o<<g._components;
+	return o;
+}
+
+Group::Group(Component* component){
+	_components.push_back(component);
 }
 
 Group::Group(const std::map<std::string, Component::Connection>& map){
@@ -186,17 +367,11 @@ bool Group::adjacent(const Group& other) const{
 
 void Group::merge(const Group& other){
 	_components.insert(_components.end(), other._components.begin(), other._components.end());
+	sort();
 }
 
 void Group::sort(){
-	auto compare=[](const Component* a, const Component* b){
-		if(a->_type<b->_type) return true;
-		if(a->_type>b->_type) return false;
-		if(a->_label<b->_label) return true;
-		if(a->_label>b->_label) return false;
-		return a<b;
-	};
-	std::sort(_components.begin(), _components.end(), compare);
+	std::sort(_components.begin(), _components.end(), componentCompare);
 }
 
 Viewer::Viewer(): _w(0), _h(0) {
@@ -204,10 +379,16 @@ Viewer::Viewer(): _w(0), _h(0) {
 		throw std::runtime_error("couldn't load font");
 }
 
+void Viewer::printLayout() const{
+	std::cout<<"layout:\n";
+	for(auto& i: _nameToComponent) std::cout<<i.second<<": "<<i.second->_x<<", "<<i.second->_y<<" "<<(i.second->_laidout?"laid out":"")<<"\n";
+	std::cout<<"end of layout\n";
+}
+
 void Viewer::process(std::string s){
 	auto connect=[this](std::string s, std::string d){
-		if(_nameToComponent[s]._connections.count(d)) _nameToComponent[s]._connections[d]._on=true;
-		else _nameToComponent[s]._connections[d]=_nameToComponent[d];
+		if(_nameToComponent[s]->_connections.count(d)) _nameToComponent[s]->_connections[d]._on=true;
+		else _nameToComponent[s]->_connections[d]=_nameToComponent[d];
 	};
 	std::stringstream ss(s);
 	while(ss>>s){
@@ -217,7 +398,7 @@ void Viewer::process(std::string s){
 				std::string t;
 				ss>>t;
 				if(!_nameToComponent.count(s)){
-					_nameToComponent[s]=Component(s, t);
+					_nameToComponent[s]=new Component(s, t);
 					for(unsigned i=0; i<_pendingConnections.size(); /*nothing*/){
 						if(_nameToComponent.count(_pendingConnections[i].first)&&_nameToComponent.count(_pendingConnections[i].second)){
 							connect(_pendingConnections[i].first, _pendingConnections[i].second);
@@ -244,8 +425,8 @@ void Viewer::process(std::string s){
 				assert(_nameToComponent.count(s));
 				std::string d;
 				ss>>d;
-				assert(_nameToComponent[s]._connections.count(d));
-				_nameToComponent[s]._connections[d]._on=false;
+				assert(_nameToComponent[s]->_connections.count(d));
+				_nameToComponent[s]->_connections[d]._on=false;
 			}},
 			{"variable", [&](){
 				std::getline(ss, s);
@@ -256,36 +437,36 @@ void Viewer::process(std::string s){
 			{"label", [&](){
 				ss>>s;
 				assert(_nameToComponent.count(s));
-				ss>>_nameToComponent[s]._label;
+				ss>>_nameToComponent[s]->_label;
 			}},
 			{"command", [&](){
 				ss>>s;
 				if(!_nameToComponent.count(s)) return;
-				_nameToComponent[s]._heat+=0.5f;
+				_nameToComponent[s]->_heat+=0.5f;
 				std::string d;
 				ss>>d;
 				if(!_nameToComponent.count(d)) return;
-				_nameToComponent[d]._heat+=0.5f;
-				if(!_nameToComponent[s]._connections.count(d)) return;
-				_nameToComponent[s]._connections[d]._heat+=0.5f;
+				_nameToComponent[d]->_heat+=0.5f;
+				if(!_nameToComponent[s]->_connections.count(d)) return;
+				_nameToComponent[s]->_connections[d]._heat+=0.5f;
 			}},
 			{"midi", [&](){
 				ss>>s;
 				if(!_nameToComponent.count(s)) return;
 				std::string d;
 				ss>>d;
-				if(!_nameToComponent[s]._connections.count(d)) return;
-				_nameToComponent[s]._connections[d]._heat+=0.5f;
+				if(!_nameToComponent[s]->_connections.count(d)) return;
+				_nameToComponent[s]->_connections[d]._heat+=0.5f;
 			}},
 			{"phase", [&](){
 				ss>>s;
 				if(!_nameToComponent.count(s)) return;
-				ss>>_nameToComponent[s]._phase;
+				ss>>_nameToComponent[s]->_phase;
 			}},
 			{"edge", [&](){
 				ss>>s;
 				if(!_nameToComponent.count(s)) return;
-				_nameToComponent[s]._phase=0.0f;
+				_nameToComponent[s]->_phase=0.0f;
 			}}
 		};
 		ss>>std::ws;
@@ -326,83 +507,31 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 	}
 	//components
 	sf::VertexArray v(sf::Lines);
-	for(auto& i: _nameToComponent) i.second.renderLines(v);
+	for(auto& i: _nameToComponent) i.second->renderLines(v);
 	wv.draw(v);
-	for(auto& i: _nameToComponent) i.second.renderText(wv, _font);
+	for(auto& i: _nameToComponent) i.second->renderText(wv, _font);
 }
-
-class Layouter{
-	/*
-	components must have unique (x, y)
-	components must have unique x and unique y, except
-		components with identical connecters may share y
-		a connecter and connectee may share x if the connecter has only that connection
-			connectee must go below connecter
-	*/
-	public:
-		Layouter(): minX(0), minY(0) {}
-
-		void layout(Component& component, int x, int y){
-			//try potential points in an order that emanates in (+x, +y), and prefers horizontal>vertical>diagonal
-			int px, py, rung=0, step=0;
-			bool sense=false;
-			while(true){
-				px=x+(sense?rung-step/2:step/2);
-				py=y+(sense?step/2:rung-step/2);
-				if(
-					!taken.count(Point(px, py))
-					&&(
-						!xToBottom.count(px)
-						||(
-							xToBottom[px]->_connections.size()==1//connecter has only 1 connectee
-							&&xToBottom[px]->_connections.begin()->second._component==&component//connecter connects to connectee
-						)
-					)
-				){
-					if(!yToConnecters.count(py)) break;
-					//these copies need to be made because of some weakass C++ or MSVC bullshit
-					//try it, I dare you
-					//if(*yToConnecters[py]==component._connecters) break;
-					auto a=*yToConnecters[py];
-					auto b=component._connecters;
-					if(a==b) break;
-				}
-				sense=!sense;
-				++step;
-				if(step>rung){ sense=false; step=0; ++rung; }
-			}
-			//assign this spot to the component
-			x=px; y=py;
-			xToBottom[x]=&component;
-			yToConnecters[y]=&component._connecters;
-			taken.insert(Point(x, y));
-			minX=std::min(minX, x);
-			minY=std::min(minY, y);
-			component._x=x;
-			component._y=y;
-			component._laidout=true;
-		};
-
-		typedef std::pair<int, int> Point;
-		std::set<Point> taken;
-		std::map<int, Component*> xToBottom;
-		std::map<int, std::set<Component*>*> yToConnecters;
-		int minX, minY;
-};
 
 void Viewer::layout(){
 	//reset
+	#if defined(LOG_LAYOUT)
+		OBVIOUS_LOUD("starting new layout")
+	#endif
 	for(auto& i: _nameToComponent){
-		i.second._connecters.clear();
-		i.second._laidout=false;
+		i.second->_connecters.clear();
+		i.second->_laidout=false;
 	}
 	//get connecters
 	for(auto& i: _nameToComponent)
-		for(auto& j: i.second._connections)
-			j.second._component->_connecters.insert(&i.second);
+		for(auto& j: i.second->_connections)
+			j.second._component->_connecters.insert(i.second);
 	//initial groups
 	std::vector<Group> groups;
-	for(const auto& i: _nameToComponent) groups.push_back(Group(i.second));
+	{
+		auto components=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
+		std::sort(components.begin(), components.end(), componentCompare);
+		for(auto& i: components) groups.push_back(Group(i));
+	}
 	//refine groups
 	while(true){
 		//only keep groups that are similar to some other group
@@ -429,43 +558,115 @@ void Viewer::layout(){
 			}
 		if(done) break;
 	}
-	//find sourcey components
-	std::vector<Component*> sourceys;
-	{
-		auto minConnecters=_nameToComponent.size()+1;
-		for(const auto& i: _nameToComponent) minConnecters=std::min(i.second._connecters.size(), minConnecters);
-		for(auto& i: _nameToComponent) if(i.second._connecters.size()==minConnecters) sourceys.push_back(&i.second);
+	//remove size-1 groups
+	groups=OBVIOUS_FILTER(groups, i->_components.size()>1);
+	//sort by number of similar groups
+	std::vector<std::vector<Group>> groupings;
+	for(const auto& i: groups){
+		bool fit=false;
+		for(unsigned j=0; j<groupings.size(); ++j)
+			if(i.similar(groupings.at(j).at(0))){
+				groupings.at(j).push_back(i);
+				fit=true;
+				break;
+			}
+		if(!fit) groupings.push_back({i});
 	}
-	//find sinks
-	std::set<Component*> sinks;
-	for(auto& i: _nameToComponent) if(i.second._connections.size()==0) sinks.insert(&i.second);
-	//
-	Layouter layouter;
-	for(const auto& i: sourceys) layouter.layout(*i, 0, 0);
+	std::sort(groupings.begin(), groupings.end(),
+		[](const std::vector<Group>& a, const std::vector<Group>& b){
+			return a.size()>b.size();
+		}
+	);
+	//layout groupings
+	for(auto& grouping: groupings){
+		auto size=grouping.at(0)._components.size();
+		for(unsigned iComponent=0; iComponent<size; ++iComponent){
+			bool done=false;
+			for(int x=0; x<size&&!done; ++x)
+				for(int y=0; y<size&&!done; ++y){
+					for(auto& group: grouping){
+						group._components.at(iComponent)->_x=x;
+						group._components.at(iComponent)->_y=y;
+						group._components.at(iComponent)->_laidout=true;
+					}
+					done=true;
+					for(auto& group: grouping)
+						if(!checkLayout(group._components)) done=false;
+				}
+			if(!done){
+				printLayout();
+				throw std::logic_error("couldn't lay out grouping");
+			}
+		}
+		for(auto& group: grouping)
+			for(auto & component: group._components)
+				component->_laidout=false;
+		for(auto& group: grouping){
+			layout(group);
+		}
+	}
+	//layout
 	while(true){
 		Component* component=NULL;
-		Component* connecter;
-		//try to get an unlaidout nonsink with a laidout connecter
-		for(auto& i: _nameToComponent){
-			if(i.second._laidout) continue;
-			if(sinks.count(&i.second)) continue;
-			connecter=NULL;
-			for(const auto& j: i.second._connecters) if(j->_laidout){ connecter=j; break; }
-			if(connecter){ component=&i.second; break; }
+		auto unlaidout=OBVIOUS_TRANSFORM(_nameToComponent, if(!i->second->_laidout) r.push_back(i->second), std::vector<Component*>());
+		if(unlaidout.empty()) break;
+		//find a component to lay out
+		if(!component) for(auto& i: unlaidout){//has laid-out connecter
+			for(auto& j: i->_connecters) if(j->_laidout){ component=i; break; }
 		}
-		//if there isn't one, we're done, otherwise layout
-		if(!component) break;
-		layouter.layout(*component, connecter->_x, connecter->_y);
-	}
-	//sinks
-	for(auto& i: _nameToComponent){
-		if(i.second._laidout) continue;
-		Component* j=*i.second._connecters.begin();
-		layouter.layout(i.second, j->_x, j->_y);
+		if(!component) for(auto& i: unlaidout){//has laid-out connectee
+			for(auto& j: i->_connections) if(j.second._component->_laidout){ component=i; break; }
+		}
+		if(!component) component=unlaidout.front();//fallback
+		//lay out
+		layout(component);
 	}
 	//logical coordinates to pixels
+	int minX=OBVIOUS_TRANSFORM(_nameToComponent, OBVIOUS_MIN(r, i->second->_x), 0);
+	int minY=OBVIOUS_TRANSFORM(_nameToComponent, OBVIOUS_MIN(r, i->second->_y), 0);
 	for(auto& i: _nameToComponent){
-		i.second._x=(i.second._x-layouter.minX+1)*H;
-		i.second._y=(i.second._y-layouter.minY+1)*V;
+		i.second->_x=(i.second->_x-minX+1)*H;
+		i.second->_y=(i.second->_y-minY+1)*V;
 	}
+}
+
+void Viewer::layout(Group& g){
+	int dX, dY;
+	{
+		int minX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MIN(r, (*i)->_x), 0);
+		int minY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MIN(r, (*i)->_y), 0);
+		int maxX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_x), 0);
+		int maxY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_y), 0);
+		dX=maxX-minX+1;
+		dY=maxY-minY+1;
+	}
+	auto getComponents=[&](){
+		return OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) r.push_back(i->second), std::vector<Component*>());
+	};
+	auto components=getComponents();
+	int minX=OBVIOUS_TRANSFORM(components, OBVIOUS_MIN(r, (*i)->_x), 0);
+	int minY=OBVIOUS_TRANSFORM(components, OBVIOUS_MIN(r, (*i)->_y), 0);
+	int maxX=OBVIOUS_TRANSFORM(components, OBVIOUS_MAX(r, (*i)->_x), 0);
+	int maxY=OBVIOUS_TRANSFORM(components, OBVIOUS_MAX(r, (*i)->_y), 0);
+	for(auto& i: g._components) i->_laidout=true;
+	components=getComponents();
+	for(unsigned x=minX; x<=maxX+dX; x+=dX){
+		for(auto& i: g._components) i->_x+=x;
+		for(unsigned y=minY; y<=maxY+dY; y+=dY){
+			for(auto& i: g._components) i->_y+=y;
+			if(checkLayout(components)){
+				for(auto& i: g._components) i->noteLayout("group");
+				return;
+			}
+			for(auto& i: g._components) i->_y-=y;
+		}
+		for(auto& i: g._components) i->_x-=x;
+	}
+	printLayout();
+	throw std::logic_error("couldn't lay out group");
+}
+
+void Viewer::layout(Component* c){
+	auto x=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
+	::layout(c, x);
 }
