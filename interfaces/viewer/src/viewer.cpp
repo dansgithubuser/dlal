@@ -107,6 +107,16 @@ static bool checkLayout(const std::vector<Component*>& c){
 	return true;
 }
 
+Component* findComponentToLayout(const std::vector<Component*> components){
+	auto unlaidout=OBVIOUS_TRANSFORM(components, if(!(*i)->_laidout) r.push_back(*i), std::vector<Component*>());
+	if(unlaidout.empty()) return nullptr;
+	for(auto& i: unlaidout)//has laid-out connecter
+		for(auto& j: i->_connecters) if(j->_laidout) return i;
+	for(auto& i: unlaidout)//has laid-out connectee
+		for(auto& j: i->_connections) if(j.second._component->_laidout) return i;
+	return unlaidout.front();//fallback
+}
+
 static void layout(Component* c, std::vector<Component*>& components){
 	auto getLaidout=[&](){ return OBVIOUS_TRANSFORM(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>()); };
 	int minX=0, minY=0, maxX=0, maxY=0;
@@ -609,19 +619,10 @@ void Viewer::layout(){
 		}
 	}
 	//layout
+	auto components=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
 	while(true){
-		Component* component=NULL;
-		auto unlaidout=OBVIOUS_TRANSFORM(_nameToComponent, if(!i->second->_laidout) r.push_back(i->second), std::vector<Component*>());
-		if(unlaidout.empty()) break;
-		//find a component to lay out
-		if(!component) for(auto& i: unlaidout){//has laid-out connecter
-			for(auto& j: i->_connecters) if(j->_laidout){ component=i; break; }
-		}
-		if(!component) for(auto& i: unlaidout){//has laid-out connectee
-			for(auto& j: i->_connections) if(j.second._component->_laidout){ component=i; break; }
-		}
-		if(!component) component=unlaidout.front();//fallback
-		//lay out
+		auto component=findComponentToLayout(components);
+		if(!component) break;
 		layout(component);
 	}
 	//logical coordinates to pixels
