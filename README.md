@@ -67,7 +67,6 @@ todo
 		- do a logical layout of the wires and ensure no conflicts
 	- better labeling and wiring
 	- make clicking the mouse do something (show label?)
-	- grouping layout should benefit from component layout heuristics
 	- why does server crash when viewer exits
 - separate release and debug build folders
 - audio select input and output

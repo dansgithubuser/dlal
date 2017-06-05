@@ -34,20 +34,23 @@ void replace(std::string& s, const std::string& a, const std::string& b){
 	}
 }
 
-template<typename T> std::ostream& operator<<(std::ostream& o, const std::vector<T>& v){
+template<typename T> std::ostream& streamContainer(std::ostream& o, const T& t, std::string prefix){
 	//figure out if big or not
 	bool big=false;
 	{
 		std::stringstream ss;
-		for(const auto& i: v) ss<<i<<", ";
+		for(const auto& i: t) ss<<i<<", ";
 		if(in('\n', ss.str())||ss.str().size()>72) big=true;
 	}
 	//meat
-	o<<"{";
+	o<<prefix<<"{";
 	if(big) o<<"\n";
-	for(unsigned i=0; i<v.size(); ++i){
+	bool first=true;
+	for(const auto& i: t){
+		if(!big&&!first) o<<", ";
+		first=false;
 		std::stringstream ss;
-		ss<<v.at(i);
+		ss<<i;
 		std::string s=ss.str();
 		if(big){
 			s="\t"+s;
@@ -55,10 +58,21 @@ template<typename T> std::ostream& operator<<(std::ostream& o, const std::vector
 		}
 		o<<s;
 		if(big) o<<",\n";
-		else if(i!=v.size()-1) o<<", ";
 	}
 	o<<"}";
 	return o;
+}
+
+template<typename T> std::ostream& operator<<(std::ostream& o, const std::vector<T>& c){
+	return streamContainer(o, c, "v");
+}
+
+template<typename T> std::ostream& operator<<(std::ostream& o, const std::set<T>& c){
+	return streamContainer(o, c, "s");
+}
+
+template<typename T> void operator+=(std::set<T>& a, const std::set<T>& b){
+	for(auto& i: b) a.insert(i);
 }
 
 #define OBVIOUS_MIN(X, Y) X=X<Y?X:Y
@@ -73,3 +87,5 @@ template<typename T> std::ostream& operator<<(std::ostream& o, const std::vector
 #define OBVIOUS_FILTER(CONTAINER, PREDICATE) OBVIOUS_TRANSFORM(CONTAINER, if(PREDICATE) r.push_back(*i), decltype(CONTAINER)())
 
 struct Pair{ int x; int y; };
+
+#define MAP_GET(M, I, D) (M.count(I)?M.at(I):D)

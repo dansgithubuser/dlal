@@ -43,16 +43,20 @@ class Component{
 class Group{
 	public:
 		friend std::ostream& operator<<(std::ostream&, const Group&);
+		Group(){}
 		Group(Component*);
 		Group(const std::map<std::string, Component::Connection>&);
 		Group(const std::set<Component*>&);
+		~Group();
 		bool operator<(const Group&) const;
 		bool similar(const Group&) const;
 		bool adjacent(const Group&) const;
 		void merge(const Group&);
+		Group copy() const;
 		std::vector<Component*> _components;
 	private:
 		void sort();
+		bool _copy=false;
 };
 
 class Viewer{
@@ -65,6 +69,7 @@ class Viewer{
 		void layout();
 		void layout(Group&);
 		void layout(Component*);
+		void normalizeCoords();
 		sf::Font _font;
 		std::list<std::string> _reports;
 		std::map<std::string, Component*> _nameToComponent;

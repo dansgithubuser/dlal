@@ -98,6 +98,8 @@ static bool checkLayout(const std::vector<Component*>& c){
 						else if(!x.empty()&&connectees!=x){
 							#ifdef LOG_CHECK_LAYOUT
 								std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" cannot share x\n";
+								std::cout<<"\testablished connectees: "<<connectees<<"\n";
+								std::cout<<"\tconflicting connectees: "<<x<<"\n";
 							#endif
 							return false;
 						}
@@ -160,7 +162,7 @@ static void layout(Component* c, std::vector<Component*>& components){
 				return;
 			}
 		}
-	//try to stick it above a connectee just beyond the universe
+	//try to stick it below a connecter just beyond the universe
 	for(auto& i: c->_connecters)
 		if(i->_laidout){
 			c->_x=maxX+1;
@@ -170,7 +172,7 @@ static void layout(Component* c, std::vector<Component*>& components){
 				return;
 			}
 		}
-	//try to stick it below a connectee just beyond the universe
+	//try to stick it above a connectee just beyond the universe
 	for(auto& i: c->_connections){
 		auto j=i.second._component;
 		if(j->_laidout){
@@ -347,6 +349,10 @@ Group::Group(const std::set<Component*>& set){
 	sort();
 }
 
+Group::~Group(){
+	if(_copy) for(auto& i: _components) delete i;
+}
+
 bool Group::similar(const Group& other) const{
 	if(_components.size()!=other._components.size()) return false;
 	auto similarInterconnect=[](const Group& a, const Group& ac, const Group& b, const Group& bc){
@@ -381,6 +387,22 @@ bool Group::adjacent(const Group& other) const{
 void Group::merge(const Group& other){
 	_components.insert(_components.end(), other._components.begin(), other._components.end());
 	sort();
+}
+
+Group Group::copy() const{
+	Group r;
+	r._copy=true;
+	r=*this;
+	std::map<Component*, Component*> m;
+	for(auto& i: r._components){
+		m[i]=new Component(*i);
+		i=m.at(i);
+	}
+	for(auto& j: r._components){
+		j->_connecters=OBVIOUS_TRANSFORM(j->_connecters, r.insert(MAP_GET(m, *i, *i)), std::set<Component*>());
+		for(auto& i: j->_connections) if(m.count(i.second._component)) i.second._component=m.at(i.second._component);
+	}
+	return r;
 }
 
 void Group::sort(){
@@ -592,29 +614,50 @@ void Viewer::layout(){
 	);
 	//layout groupings
 	for(auto& grouping: groupings){
-		auto size=grouping.at(0)._components.size();
-		for(unsigned iComponent=0; iComponent<size; ++iComponent){
-			bool done=false;
-			for(int x=0; x<size&&!done; ++x)
-				for(int y=0; y<size&&!done; ++y){
-					for(auto& group: grouping){
-						group._components.at(iComponent)->_x=x;
-						group._components.at(iComponent)->_y=y;
-						group._components.at(iComponent)->_laidout=true;
-					}
-					done=true;
-					for(auto& group: grouping)
-						if(!checkLayout(group._components)) done=false;
-				}
-			if(!done){
-				printLayout();
-				throw std::logic_error("couldn't lay out grouping");
+		#if defined(LOG_LAYOUT)
+			std::cout<<"laying out grouping:\n"<<grouping<<"\n";
+		#endif
+		//create a summary group
+		auto summary=grouping.at(0).copy();
+		for(auto& group: grouping)//for each group
+			for(unsigned i=0; i<summary._components.size(); ++i){//for each component
+				auto summaryComponent=summary._components.at(i);
+				auto groupComponent=group._components.at(i);
+				//contribute connectees to summary
+				for(auto& i: groupComponent->_connections)
+					if(
+						!in(i.second._component, group._components)
+						&&
+						!in(i.second._component, OBVIOUS_TRANSFORM(summaryComponent->_connections, r.push_back(i->second._component), std::vector<Component*>()))
+					) summaryComponent->_connections[i.first]=i.second;
+				//contribute connecters to summary
+				for(auto& i: groupComponent->_connecters)
+					if(!in(i, group._components))
+						summaryComponent->_connecters.insert(i);
 			}
+		//layout the summary
+		#if defined(LOG_LAYOUT)
+			std::cout<<"laying out summary: "<<summary._components<<"\n";
+		#endif
+		while(true){
+			auto component=findComponentToLayout(summary._components);
+			if(!component) break;
+			::layout(component, summary._components);
 		}
+		//copy the layout back
+		for(auto& i: grouping)
+			for(unsigned j=0; j<summary._components.size(); ++j){
+				i._components.at(j)->_x=summary._components.at(j)->_x;
+				i._components.at(j)->_y=summary._components.at(j)->_y;
+				i._components.at(j)->_laidout=true;
+			}
 		for(auto& group: grouping)
 			for(auto & component: group._components)
 				component->_laidout=false;
 		for(auto& group: grouping){
+			#if defined(LOG_LAYOUT)
+				std::cout<<"laying out group: "<<group<<"\n";
+			#endif
 			layout(group);
 		}
 	}
@@ -623,54 +666,55 @@ void Viewer::layout(){
 	while(true){
 		auto component=findComponentToLayout(components);
 		if(!component) break;
+		#if defined(LOG_LAYOUT)
+			std::cout<<"laying out component: "<<component<<"\n";
+		#endif
 		layout(component);
 	}
 	//logical coordinates to pixels
-	int minX=OBVIOUS_TRANSFORM(_nameToComponent, OBVIOUS_MIN(r, i->second->_x), 0);
-	int minY=OBVIOUS_TRANSFORM(_nameToComponent, OBVIOUS_MIN(r, i->second->_y), 0);
 	for(auto& i: _nameToComponent){
-		i.second->_x=(i.second->_x-minX+1)*H;
-		i.second->_y=(i.second->_y-minY+1)*V;
+		i.second->_x=(i.second->_x+1)*H;
+		i.second->_y=(i.second->_y+1)*V;
 	}
 }
 
 void Viewer::layout(Group& g){
-	int dX, dY;
-	{
-		int minX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MIN(r, (*i)->_x), 0);
-		int minY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MIN(r, (*i)->_y), 0);
-		int maxX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_x), 0);
-		int maxY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_y), 0);
-		dX=maxX-minX+1;
-		dY=maxY-minY+1;
-	}
-	auto getComponents=[&](){
-		return OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) r.push_back(i->second), std::vector<Component*>());
-	};
-	auto components=getComponents();
-	int minX=OBVIOUS_TRANSFORM(components, OBVIOUS_MIN(r, (*i)->_x), 0);
-	int minY=OBVIOUS_TRANSFORM(components, OBVIOUS_MIN(r, (*i)->_y), 0);
-	int maxX=OBVIOUS_TRANSFORM(components, OBVIOUS_MAX(r, (*i)->_x), 0);
-	int maxY=OBVIOUS_TRANSFORM(components, OBVIOUS_MAX(r, (*i)->_y), 0);
+	//get size of group to use as stride
+	int dX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_x), 0)+1;
+	int dY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_y), 0)+1;
+	//layout in +xy, preferring minimal distance
 	for(auto& i: g._components) i->_laidout=true;
-	components=getComponents();
-	for(unsigned x=minX; x<=maxX+dX; x+=dX){
-		for(auto& i: g._components) i->_x+=x;
-		for(unsigned y=minY; y<=maxY+dY; y+=dY){
+	auto components=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) r.push_back(i->second), std::vector<Component*>());
+	unsigned d=0;
+	while(true){
+		for(unsigned e=0; e<=d; ++e){
+			unsigned x=dX*(d-e);
+			unsigned y=dY*e;
+			for(auto& i: g._components) i->_x+=x;
 			for(auto& i: g._components) i->_y+=y;
 			if(checkLayout(components)){
 				for(auto& i: g._components) i->noteLayout("group");
+				normalizeCoords();
 				return;
 			}
 			for(auto& i: g._components) i->_y-=y;
+			for(auto& i: g._components) i->_x-=x;
 		}
-		for(auto& i: g._components) i->_x-=x;
+		++d;
 	}
-	printLayout();
-	throw std::logic_error("couldn't lay out group");
 }
 
 void Viewer::layout(Component* c){
 	auto x=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
 	::layout(c, x);
+	normalizeCoords();
+}
+
+void Viewer::normalizeCoords(){
+	int minX=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MIN(r, i->second->_x), 0);
+	int minY=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MIN(r, i->second->_y), 0);
+	for(auto& i: _nameToComponent){
+		i.second->_x-=minX;
+		i.second->_y-=minY;
+	}
 }

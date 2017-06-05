@@ -5,15 +5,15 @@
 namespace dlal{
 
 Page::Page(const float* audio, unsigned size, uint64_t evaluation):
-	_type(AUDIO), _audio(audio, audio+size), _evaluation(evaluation)
+	_type(AUDIO), _evaluation(evaluation), _audio(audio, audio+size)
 {}
 
 Page::Page(const uint8_t* midi, unsigned size, uint64_t evaluation):
-	_type(MIDI), _midi(midi, midi+size), _evaluation(evaluation)
+	_type(MIDI), _evaluation(evaluation), _midi(midi, midi+size)
 {}
 
 Page::Page(const std::string& text, uint64_t evaluation):
-	_type(TEXT), _text(text), _evaluation(evaluation)
+	_type(TEXT), _evaluation(evaluation), _text(text)
 {}
 
 Page::Page(std::istream& file){
