@@ -302,13 +302,13 @@ void Component::renderText(sf::RenderWindow& w, const sf::Font& font){
 		std::stringstream ss;
 		ss<<this;
 		sf::Text t(ss.str().c_str(), font, S);
-		t.setPosition(1.0f*_x+S, 1.0f*_y+S);
+		t.setPosition(1.0f*_x, 1.0f*_y+2*S);
 		w.draw(t);
 	}
 	#endif
 	if(!_label.size()) return;
 	sf::Text t(_label.c_str(), font, S);
-	t.setPosition(1.0f*_x, 1.0f*_y);
+	t.setPosition(1.0f*_x, 1.0f*_y+S);
 	w.draw(t);
 }
 
@@ -350,7 +350,10 @@ bool Group::similar(const Group& other) const{
 	};
 	for(unsigned i=0; i<_components.size(); ++i){
 		auto a=_components.at(i), b=other._components.at(i);
-		if(a->_type!=b->_type) return false;
+		auto similarLabels=[](std::string a, std::string b){
+			return a.substr(0, 3)==b.substr(0, 3);
+		};
+		if(!similarLabels(a->_label, b->_label)&&a->_type!=b->_type) return false;
 		if(!similarInterconnect(*this, Group(a->_connections), other, Group(b->_connections))) return false;
 		if(!similarInterconnect(*this, Group(a->_connecters ), other, Group(b->_connecters ))) return false;
 	}

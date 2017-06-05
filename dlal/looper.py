@@ -42,8 +42,8 @@ class Looper:
 
 	def add(self, track):
 		self.commander.queue_add(track)
-		self.commander.queue_command(track.synth    , 'label', len(self.tracks))
-		self.commander.queue_command(track.container, 'label', len(self.tracks))
+		self.commander.queue_command(track.synth    , 'label', 'syn{}'.format(len(self.tracks)))
+		self.commander.queue_command(track.container, 'label', 'ctr{}'.format(len(self.tracks)))
 		self.tracks.append(track)
 
 	def play(self, track, enable, edges_to_wait):
