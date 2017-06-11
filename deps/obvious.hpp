@@ -71,21 +71,83 @@ template<typename T> std::ostream& operator<<(std::ostream& o, const std::set<T>
 	return streamContainer(o, c, "s");
 }
 
-template<typename T> void operator+=(std::set<T>& a, const std::set<T>& b){
-	for(auto& i: b) a.insert(i);
+template<typename T, typename U> struct KeyValuePair{
+	KeyValuePair(const T& t, const U& u): key(t), value(u) {}
+	const T& key;
+	const U& value;
+};
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const KeyValuePair<T, U>& p){
+	return o<<p.key<<": "<<p.value;
 }
 
-#define OBVIOUS_MIN(X, Y) X=X<Y?X:Y
-#define OBVIOUS_MAX(X, Y) X=X>Y?X:Y
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::map<T, U>& c){
+	std::vector<KeyValuePair<T, U>> x;
+	for(const auto& i: c) x.push_back(KeyValuePair<T, U>(i.first, i.second));
+	return streamContainer(o, x, "m");
+}
 
-#define OBVIOUS_TRANSFORM(CONTAINER, F, INITIAL)[&](decltype(CONTAINER) c){\
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::pair<T, U>& p){
+	o<<"("<<p.first<<", "<<p.second<<")";
+	return o;
+}
+
+#define OBVIOUS_PLUS_EQUALS_BASE(CONTAINER1, CONTAINER2, F)\
+	template<typename T> void operator+=(CONTAINER1<T>& r, const CONTAINER2<T>& a){\
+		for(auto& i: a) F;\
+	}
+
+#define OBVIOUS_PLUS_EQUALS_SET(CONTAINER)\
+	OBVIOUS_PLUS_EQUALS_BASE(std::set, CONTAINER, r.insert(i))
+
+#define OBVIOUS_PLUS_EQUALS_VECTOR(CONTAINER)\
+	OBVIOUS_PLUS_EQUALS_BASE(std::vector, CONTAINER, r.push_back(i))
+
+#define OBVIOUS_PLUS_EQUALS(CONTAINER)\
+	OBVIOUS_PLUS_EQUALS_SET(CONTAINER)\
+	OBVIOUS_PLUS_EQUALS_VECTOR(CONTAINER)
+
+OBVIOUS_PLUS_EQUALS(std::set)
+OBVIOUS_PLUS_EQUALS(std::vector)
+
+#define OBVIOUS_MIN(X, Y) (X<Y?X:Y)
+#define OBVIOUS_MAX(X, Y) (X>Y?X:Y)
+
+#define OBVIOUS_MINI(X, Y) X=OBVIOUS_MIN(X, Y)
+#define OBVIOUS_MAXI(X, Y) X=OBVIOUS_MAX(X, Y)
+
+#define OBVIOUS_TRANSFORM(CONTAINER, F, INITIAL)[&](){\
 	auto r=INITIAL;\
-	for(auto i=c.begin(); i!=c.end(); ++i) F;\
+	for(auto i=CONTAINER.begin(); i!=CONTAINER.end(); ++i) F;\
 	return r;\
-}(CONTAINER)
+}()
+
+#define OBVIOUS_BINARY_TRANSFORM(CONTAINER, F, INITIAL)[&](){\
+	auto r=INITIAL;\
+	auto a=CONTAINER.end();\
+	for(auto b=CONTAINER.begin(); b!=CONTAINER.end(); ++b){\
+		if(a!=CONTAINER.end()) F;\
+		a=b;\
+	}\
+	return r;\
+}()
 
 #define OBVIOUS_FILTER(CONTAINER, PREDICATE) OBVIOUS_TRANSFORM(CONTAINER, if(PREDICATE) r.push_back(*i), decltype(CONTAINER)())
 
-struct Pair{ int x; int y; };
+struct Pair{
+	Pair(int x, int y): x(x), y(y) {}
+	bool operator<(const Pair& other) const{
+		if(x<other.x) return true;
+		if(x>other.x) return false;
+		if(y<other.y) return true;
+		return false;
+	}
+	int x, y;
+};
+
+std::ostream& operator<<(std::ostream& o, const Pair& p){
+	return o<<"("<<p.x<<", "<<p.y<<")";
+}
 
 #define MAP_GET(M, I, D) (M.count(I)?M.at(I):D)
+
+#define OBVIOUS_IF(PREDICATE, ACTION) (PREDICATE?((ACTION), 0):0)

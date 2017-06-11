@@ -28,7 +28,7 @@ class Component{
 		};
 		Component();
 		Component(std::string name, std::string type);
-		void renderLines(sf::VertexArray&);
+		void renderLines(std::vector<sf::VertexArray>&);
 		void renderText(sf::RenderWindow&, const sf::Font&);
 		void noteLayout(std::string method);
 		std::string _name, _label;
@@ -68,7 +68,7 @@ class Viewer{
 	private:
 		void layout();
 		void layout(Group&);
-		void layout(Component*);
+		bool layout(Component*);
 		void normalizeCoords();
 		sf::Font _font;
 		std::list<std::string> _reports;

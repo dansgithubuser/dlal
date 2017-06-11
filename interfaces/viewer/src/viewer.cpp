@@ -23,9 +23,9 @@ static const int S=8;
 static const int V=5*S;
 
 static const sf::Color colorComponent(0, 128, 0);
-static const sf::Color colorForward(0, 64, 64);
+static const sf::Color colorForward(64, 64, 0);
 static const sf::Color colorNormal(0, 64, 0);
-static const sf::Color colorBackward(64, 64, 0);
+static const sf::Color colorBackward(0, 64, 64);
 static const sf::Color colorPhase(0, 0, 255);
 
 static sf::Vertex vertex(int x, int y, const sf::Color& color){
@@ -43,69 +43,118 @@ static void stripToLines(
 	u.clear();
 }
 
-/*
-(1) components must have unique (x, y)
-(2) components must have unique x and unique y, except
-	(2.1) components with no connecters may share y with any other component
-	(2.2) components with identical connecters may share y
-	(2.3) components with no connectees may share x with any other component
-	(2.4) components with identical or no connectees other than a chain linking them may share x
-*/
-static bool checkLayout(const std::vector<Component*>& c){
-	if(c.size()<2) return true;
-	for(unsigned i=0; i<c.size(); ++i)
-		for(unsigned j=i+1; j<c.size(); ++j){
-			//(1)
+struct Wire{
+	Wire(){}
+	Wire(Component* connecter, Component* connectee): connecter(connecter), connectee(connectee) {}
+	bool operator<(const Wire& other) const{
+		if(connecter<other.connecter) return true;
+		if(connecter>other.connecter) return false;
+		if(connectee<other.connectee) return true;
+		return false;
+	}
+	Component* connecter;
+	Component* connectee;
+};
+
+std::ostream& operator<<(std::ostream& o, const Wire& w){
+	return o<<w.connecter<<" --> "<<w.connectee;
+}
+
+static bool checkLayout(const std::vector<Component*>& components){
+	auto laidout=OBVIOUS_TRANSFORM(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>());
+	if(laidout.size()<2) return true;
+	//check for overlapping components
+	for(unsigned i=0; i<laidout.size(); ++i)
+		for(unsigned j=i+1; j<laidout.size(); ++j){
 			if(
-				c.at(i)->_x==c.at(j)->_x
+				laidout.at(i)->_x==laidout.at(j)->_x
 				&&
-				c.at(i)->_y==c.at(j)->_y
+				laidout.at(i)->_y==laidout.at(j)->_y
 			){
 				#ifdef LOG_CHECK_LAYOUT
-					std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" overlap\n";
+					std::cout<<"bad layout; "<<laidout.at(i)<<" and "<<laidout.at(j)<<" overlap\n";
 				#endif
 				return false;
 			}
-			//(2)
-			if(c.at(i)->_y==c.at(j)->_y)
-				if(!c.at(i)->_connecters.empty()&&!c.at(j)->_connecters.empty())//(2.1)
-					if(c.at(i)->_connecters!=c.at(j)->_connecters){//(2.2)
-						#ifdef LOG_CHECK_LAYOUT
-							std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" cannot share y\n";
-						#endif
-						return false;
-					}
-			if(c.at(i)->_x==c.at(j)->_x)
-				if(!c.at(i)->_connections.empty()&&!c.at(j)->_connections.empty()){//(2.3)
-					//(2.4)
-					//get column
-					std::vector<Component*> column;
-					for(auto& k: c) if(k->_x==c.at(i)->_x) column.push_back(k);
-					std::sort(column.begin(), column.end(), [](const Component* a, const Component* b){ return a->_y<b->_y; });
-					//helper for getting connectees
-					auto getConnectees=[](Component* c){
-						return OBVIOUS_TRANSFORM(c->_connections, r.insert(i->second._component), std::set<Component*>());
-					};
-					//get connectees of final element
-					auto connectees=getConnectees(column.back());
-					//go through pairs
-					for(unsigned k=0; k<column.size()-1; ++k){
-						//get connectees other than chain link
-						auto x=getConnectees(column.at(k));
-						if(column.at(k+1)->_y-column.at(k)->_y==1) x.erase(column.at(k+1));
-						//make sure identical or no connectees
-						if(connectees.empty()) connectees=x;
-						else if(!x.empty()&&connectees!=x){
-							#ifdef LOG_CHECK_LAYOUT
-								std::cout<<"bad layout; "<<c.at(i)<<" and "<<c.at(j)<<" cannot share x\n";
-								std::cout<<"\testablished connectees: "<<connectees<<"\n";
-								std::cout<<"\tconflicting connectees: "<<x<<"\n";
-							#endif
-							return false;
-						}
-					}
-				}
 		}
+	//figure out wiring layout
+	int minX=0, minY=0, maxX=0, maxY=0;
+	std::map<Pair, std::vector<Wire>> f, b, h;
+	for(const auto& i: laidout){
+		for(const auto& j: i->_connecters) if(j->_laidout){
+			//align vertically
+			if(i->_y>j->_y)//forward
+				for(int y=j->_y+1; y<i->_y; ++y)
+					f[Pair(j->_x, y)].push_back(Wire(j, i));
+			else//backward
+				for(int y=j->_y; y>=i->_y; --y)
+					b[Pair(j->_x, y)].push_back(Wire(j, i));
+			//align horizontally
+			for(int x=OBVIOUS_MIN(i->_x, j->_x); x<=OBVIOUS_MAX(i->_x, j->_x); ++x)
+				h[Pair(x, i->_y)].push_back(Wire(j, i));
+			//max/min
+		}
+		OBVIOUS_MINI(minX, i->_x);
+		OBVIOUS_MINI(minY, i->_y);
+		OBVIOUS_MAXI(maxX, i->_x);
+		OBVIOUS_MAXI(maxY, i->_y);
+	}
+	//simulate future wiring layout
+	for(auto& i: laidout)
+		for(auto& j: i->_connecters) if(!j->_laidout){
+			++maxX; ++maxY;
+			for(int y=maxY; y>=i->_y; --y) b[Pair(maxX, y)].push_back(Wire(j, i));
+			for(int x=maxX; x>=i->_x; --x) h[Pair(x, i->_y)].push_back(Wire(j, i));
+		}
+	//check for ambiguous wiring
+	std::set<Wire> overlapping;
+	int x, y;
+	auto checkWiring=[&](std::map<Pair, std::vector<Wire>> w, std::string type){
+		auto wires=MAP_GET(w, Pair(x, y), std::vector<Wire>());
+		if(!wires.empty()) overlapping+=wires;
+		else{
+			//we desire that overlapping wires
+			//1: have the same connectees for each connecter
+			//2: have the same connecters for each connectee
+			std::map<Component*, std::set<Component*>> m, n;//map connecter to connectees and vice versa
+			for(auto& i: overlapping){
+				m[i.connecter].insert(i.connectee);
+				n[i.connectee].insert(i.connecter);
+			}
+			decltype(m)::iterator ia, ib;
+			if(!OBVIOUS_BINARY_TRANSFORM(m, (r&=a->second==b->second, OBVIOUS_IF(!r, (ia=a, ib=b))), true)){
+				#ifdef LOG_CHECK_LAYOUT
+					std::cout<<"bad layout; ambiguous "<<type<<" wiring at ("<<x<<", "<<y<<")\n";
+					std::cout<<"\tconnecter "<<ia->first<<": connectees "<<ia->second<<"\n";
+					std::cout<<"\tconnecter "<<ib->first<<": connectees "<<ib->second<<"\n";
+				#endif
+				return false;
+			}
+			if(!OBVIOUS_BINARY_TRANSFORM(n, (r&=a->second==b->second, OBVIOUS_IF(!r, (ia=a, ib=b))), true)){
+				#ifdef LOG_CHECK_LAYOUT
+					std::cout<<"bad layout; ambiguous "<<type<<" wiring at ("<<x<<", "<<y<<")\n";
+					std::cout<<"\t connectee "<<ia->first<<": connecters "<<ia->second<<"\n";
+					std::cout<<"\t connectee "<<ib->first<<": connecters "<<ib->second<<"\n";
+				#endif
+				return false;
+			}
+			overlapping.clear();
+		}
+		return true;
+	};
+	for(x=minX; x<=maxX; ++x){//vertical
+		overlapping.clear();
+		for(y=minY; y<=maxY+1; ++y){
+			if(!checkWiring(f, "forward")) return false;
+			if(!checkWiring(b, "backward")) return false;
+		}
+	}
+	for(y=minY; y<=maxY; ++y){//horizontal
+		overlapping.clear();
+		for(x=minX; x<=maxX+2; ++x){
+			if(!checkWiring(h, "horizontal")) return false;
+		}
+	}
 	return true;
 }
 
@@ -119,26 +168,35 @@ Component* findComponentToLayout(const std::vector<Component*> components){
 	return unlaidout.front();//fallback
 }
 
-static void layout(Component* c, std::vector<Component*>& components){
+#ifdef LOG_CHECK_LAYOUT
+	#define LOG_CHECK_LAYOUT_TRYING_COMPONENT std::cout<<"trying "<<c<<" at ("<<c->_x<<", "<<c->_y<<")\n";
+#else
+	#define LOG_CHECK_LAYOUT_TRYING_COMPONENT
+#endif
+
+#define LAYOUT_TRY(METHOD)\
+	LOG_CHECK_LAYOUT_TRYING_COMPONENT\
+		if(checkLayout(components)){\
+			c->noteLayout(METHOD);\
+			return true;\
+		}
+
+static bool layout(Component* c, std::vector<Component*>& components){
 	auto getLaidout=[&](){ return OBVIOUS_TRANSFORM(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>()); };
 	int minX=0, minY=0, maxX=0, maxY=0;
 	for(auto& i: getLaidout()){
-		OBVIOUS_MIN(minX, i->_x);
-		OBVIOUS_MIN(minY, i->_y);
-		OBVIOUS_MAX(maxX, i->_x);
-		OBVIOUS_MAX(maxY, i->_y);
+		OBVIOUS_MINI(minX, i->_x);
+		OBVIOUS_MINI(minY, i->_y);
+		OBVIOUS_MAXI(maxX, i->_x);
+		OBVIOUS_MAXI(maxY, i->_y);
 	}
 	c->_laidout=true;
-	auto laidout=getLaidout();
 	//try to stick it directly below a connecter
 	for(auto& i: c->_connecters)
 		if(i->_laidout){
 			c->_x=i->_x;
 			c->_y=i->_y+1;
-			if(checkLayout(laidout)){
-				c->noteLayout("connecter");
-				return;
-			}
+			LAYOUT_TRY("connecter")
 		}
 	//try to stick it directly above a connectee
 	for(auto& i: c->_connections){
@@ -146,10 +204,7 @@ static void layout(Component* c, std::vector<Component*>& components){
 		if(j->_laidout){
 			c->_x=j->_x;
 			c->_y=j->_y-1;
-			if(checkLayout(laidout)){
-				c->noteLayout("connectee");
-				return;
-			}
+			LAYOUT_TRY("connectee")
 		}
 	}
 	//try to stick it somewhere within the laid-out universe
@@ -157,20 +212,14 @@ static void layout(Component* c, std::vector<Component*>& components){
 		for(int y=minY; y<=maxY; ++y){
 			c->_x=x;
 			c->_y=y;
-			if(checkLayout(laidout)){
-				c->noteLayout("within");
-				return;
-			}
+			LAYOUT_TRY("within")
 		}
 	//try to stick it below a connecter just beyond the universe
 	for(auto& i: c->_connecters)
 		if(i->_laidout){
 			c->_x=maxX+1;
 			c->_y=i->_y+1;
-			if(checkLayout(laidout)){
-				c->noteLayout("connecter-beyond");
-				return;
-			}
+			LAYOUT_TRY("connecter-beyond")
 		}
 	//try to stick it above a connectee just beyond the universe
 	for(auto& i: c->_connections){
@@ -178,10 +227,7 @@ static void layout(Component* c, std::vector<Component*>& components){
 		if(j->_laidout){
 			c->_x=maxX+1;
 			c->_y=j->_y-1;
-			if(checkLayout(laidout)){
-				c->noteLayout("connectee-beyond");
-				return;
-			}
+			LAYOUT_TRY("connectee-beyond")
 		}
 	}
 	//try to stick it just beyond the laid-out universe
@@ -189,14 +235,13 @@ static void layout(Component* c, std::vector<Component*>& components){
 		for(int y=minY; y<=maxY+1; ++y){
 			c->_x=x;
 			c->_y=y;
-			if(checkLayout(laidout)){
-				c->noteLayout("beyond");
-				return;
-			}
+			LAYOUT_TRY("beyond")
 		}
-	//
+	//failure
 	for(auto& i: components) std::cout<<i<<": "<<i->_x<<", "<<i->_y<<" "<<(i->_laidout?"laid out":"")<<"\n";
-	throw std::logic_error("couldn't lay out component");
+	std::cout<<"couldn't lay out component\n";
+	c->_laidout=false;
+	return false;
 }
 
 static bool componentCompare(const Component* a, const Component* b){
@@ -251,12 +296,13 @@ static sf::Color heat(const sf::Color& base, float heat){
 	return result;
 }
 
-void Component::renderLines(sf::VertexArray& v){
+void Component::renderLines(std::vector<sf::VertexArray>& v){
+	v.resize(3, sf::VertexArray(sf::Lines));
 	//self
 	std::vector<sf::Vertex> u;
 	sketch(u, "++-+--+-++", _x, _y, heat(colorComponent, _heat));
 	_heat/=2.0f;
-	stripToLines(u, v);
+	stripToLines(u, v[1]);
 	switch(_type){
 		case AUDIO    : sketch(u, "=++==--==+", _x, _y, colorComponent); break;
 		case BUFFER   : sketch(u, "-<+<+>->"  , _x, _y, colorComponent); break;
@@ -266,43 +312,47 @@ void Component::renderLines(sf::VertexArray& v){
 		case NETWORK  : sketch(u, "--++"      , _x, _y, colorComponent); break;
 		default: break;
 	}
-	stripToLines(u, v);
+	stripToLines(u, v[1]);
 	//phase
 	if(_phase>=0.0f){
 		float x=_x-S+2*S*_phase;
-		v.append(sf::Vertex(sf::Vector2f(x, (float)_y-S), colorPhase));
-		v.append(sf::Vertex(sf::Vector2f(x, (float)_y+S), colorPhase));
+		v[1].append(sf::Vertex(sf::Vector2f(x, (float)_y-S), colorPhase));
+		v[1].append(sf::Vertex(sf::Vector2f(x, (float)_y+S), colorPhase));
 	}
 	//connections
+	std::vector<sf::Vertex> a, b;
 	for(auto& i: _connections){
 		if(i.second._on){
 			auto dx=i.second._component->_x;
 			auto dy=i.second._component->_y;
 			sf::Color cn=heat(colorNormal, i.second._heat);
-			u.push_back(vertex    (_x    , _y+  S, cn));//source
+			u.push_back(vertex        (_x    , _y+  S, cn));//source
 			if(dy>_y){//destination below
 				if(dy-_y==V){//directly below
 					u.push_back(vertex(_x    , dy-2*S, cn));//drop to just above destination
-					u.push_back(vertex(dx    , dy-2*S, cn));//align horizontally
 				}
 				else{
 					sf::Color cf=heat(colorForward, i.second._heat);
-					u.push_back(vertex(_x-2*S, _y+2*S, cf));//diagonal
-					u.push_back(vertex(_x-2*S, dy-3*S, cf));//drop to just above destination
-					u.push_back(vertex(_x    , dy-2*S, cn));//diagonal
-					u.push_back(vertex(dx    , dy-2*S, cn));//align horizontally
+					u.push_back(vertex(_x-  S, _y+2*S, cf));/*diagonal*/
+					u.push_back(vertex(_x-2*S, _y+3*S, cf));/*diagonal*/
+					v[2].append(u.back());
+					u.push_back(vertex(_x-2*S, dy-3*S, cf));/*drop to just above destination*/
+					v[2].append(u.back());
+					u.push_back(vertex(_x-  S, dy-2*S, cn));//diagonal
 				}
 			}
 			else{
 				sf::Color cb=heat(colorBackward, i.second._heat);
-				u.push_back(vertex  (_x+  S, _y+2*S, cn));//diagonal
-				u.push_back(vertex  (_x+2*S, _y+  S, cb));//diagonal
-				u.push_back(vertex  (_x+2*S, dy-  S, cb));//align vertically
-				u.push_back(vertex  (_x+  S, dy-2*S, cn));//diagonal
-				u.push_back(vertex  (dx    , dy-2*S, cn));//align horizontally
+				u.push_back(vertex    (_x+  S, _y+2*S, cn));//diagonal
+				u.push_back(vertex    (_x+2*S, _y+  S, cb));//diagonal
+				v[0].append(u.back());
+				u.push_back(vertex    (_x+2*S, dy-  S, cb));//align vertically
+				v[0].append(u.back());
+				u.push_back(vertex    (_x+  S, dy-2*S, cn));//diagonal
 			}
-			u.push_back(vertex    (dx    , dy-  S, cn));//destination
-			stripToLines(u, v);
+			u.push_back(vertex        (dx    , dy-2*S, cn));//align horizontally
+			u.push_back(vertex        (dx    , dy-  S, cn));//destination
+			stripToLines(u, v[1]);
 		}
 		i.second._heat/=2.0f;
 	}
@@ -541,13 +591,14 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 		layout();
 	}
 	//components
-	sf::VertexArray v(sf::Lines);
+	std::vector<sf::VertexArray> v;
 	for(auto& i: _nameToComponent) i.second->renderLines(v);
-	wv.draw(v);
+	for(auto& i: v) wv.draw(i);
 	for(auto& i: _nameToComponent) i.second->renderText(wv, _font);
 }
 
 void Viewer::layout(){
+	bool failed=false;
 	//reset
 	#if defined(LOG_LAYOUT)
 		OBVIOUS_LOUD("starting new layout")
@@ -639,21 +690,18 @@ void Viewer::layout(){
 		#if defined(LOG_LAYOUT)
 			std::cout<<"laying out summary: "<<summary._components<<"\n";
 		#endif
-		while(true){
+		while(!failed){
 			auto component=findComponentToLayout(summary._components);
 			if(!component) break;
-			::layout(component, summary._components);
+			if(!::layout(component, summary._components)) failed=true;
 		}
+		if(failed) break;
 		//copy the layout back
 		for(auto& i: grouping)
 			for(unsigned j=0; j<summary._components.size(); ++j){
 				i._components.at(j)->_x=summary._components.at(j)->_x;
 				i._components.at(j)->_y=summary._components.at(j)->_y;
-				i._components.at(j)->_laidout=true;
 			}
-		for(auto& group: grouping)
-			for(auto & component: group._components)
-				component->_laidout=false;
 		for(auto& group: grouping){
 			#if defined(LOG_LAYOUT)
 				std::cout<<"laying out group: "<<group<<"\n";
@@ -663,13 +711,20 @@ void Viewer::layout(){
 	}
 	//layout
 	auto components=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
-	while(true){
+	std::sort(components.begin(), components.end(), componentCompare);
+	while(!failed){
 		auto component=findComponentToLayout(components);
 		if(!component) break;
 		#if defined(LOG_LAYOUT)
 			std::cout<<"laying out component: "<<component<<"\n";
 		#endif
-		layout(component);
+		if(!layout(component)) failed=true;
+	}
+	//failure recovery
+	if(failed){
+		int x=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MAXI(r, i->second->_x), 0)+2;
+		int y=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MAXI(r, i->second->_y), 0)+2;
+		for(auto& i: _nameToComponent) if(!i.second->_laidout){ i.second->_x=x++; i.second->_y=y++; }
 	}
 	//logical coordinates to pixels
 	for(auto& i: _nameToComponent){
@@ -680,11 +735,10 @@ void Viewer::layout(){
 
 void Viewer::layout(Group& g){
 	//get size of group to use as stride
-	int dX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_x), 0)+1;
-	int dY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAX(r, (*i)->_y), 0)+1;
+	int dX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAXI(r, (*i)->_x), 0)+1;
+	int dY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAXI(r, (*i)->_y), 0)+1;
 	//layout in +xy, preferring minimal distance
 	for(auto& i: g._components) i->_laidout=true;
-	auto components=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) r.push_back(i->second), std::vector<Component*>());
 	unsigned d=0;
 	while(true){
 		for(unsigned e=0; e<=d; ++e){
@@ -692,7 +746,10 @@ void Viewer::layout(Group& g){
 			unsigned y=dY*e;
 			for(auto& i: g._components) i->_x+=x;
 			for(auto& i: g._components) i->_y+=y;
-			if(checkLayout(components)){
+			#ifdef LOG_CHECK_LAYOUT
+				for(auto& i: g._components) std::cout<<"trying "<<i<<" at ("<<i->_x<<", "<<i->_y<<")\n";
+			#endif
+			if(checkLayout(OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>()))){
 				for(auto& i: g._components) i->noteLayout("group");
 				normalizeCoords();
 				return;
@@ -704,15 +761,16 @@ void Viewer::layout(Group& g){
 	}
 }
 
-void Viewer::layout(Component* c){
+bool Viewer::layout(Component* c){
 	auto x=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
-	::layout(c, x);
+	bool r=::layout(c, x);
 	normalizeCoords();
+	return r;
 }
 
 void Viewer::normalizeCoords(){
-	int minX=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MIN(r, i->second->_x), 0);
-	int minY=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MIN(r, i->second->_y), 0);
+	int minX=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MINI(r, i->second->_x), 0);
+	int minY=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MINI(r, i->second->_y), 0);
 	for(auto& i: _nameToComponent){
 		i.second->_x-=minX;
 		i.second->_y-=minY;

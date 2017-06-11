@@ -63,10 +63,9 @@ file organization
 todo
 ----
 - viewer
-	- reformalize rules of layout to simply keep wires unambiguous
-		- do a logical layout of the wires and ensure no conflicts
-	- better labeling and wiring
+	- better labeling
 	- make clicking the mouse do something (show label?)
+	- don't layout when already-know connection turns on
 	- why does server crash when viewer exits
 - separate release and debug build folders
 - audio select input and output
