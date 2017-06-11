@@ -5,6 +5,13 @@ and it's obvious conceptually
 but it's not necessarily obvious to make into convenient C++...
 */
 
+#include <algorithm>
+#include <iostream>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
 #define OBVIOUS_LOUD(X)\
 	std::cout<<"/===="<<#X<<"====\\\n";\
 	std::cout<<X<<"\n";\
@@ -18,13 +25,17 @@ template<typename T, typename U> bool in(const T& value, const U& container){
 	return index(value, container)!=container.size();
 }
 
+template<typename T, typename U> void erase(const T& value, U& container){
+	container.erase(std::find(container.begin(), container.end(), value));
+}
+
 template<typename T, typename U> std::vector<const T&> keys(const std::map<T, U>& map){
 	std::vector<const T&> result;
 	for(const auto& i: map) result.push_back(i.first);
 	return result;
 }
 
-void replace(std::string& s, const std::string& a, const std::string& b){
+static void replace(std::string& s, const std::string& a, const std::string& b){
 	size_t i=0;
 	while(true){
 		i=s.find(a, i);
@@ -144,7 +155,7 @@ struct Pair{
 	int x, y;
 };
 
-std::ostream& operator<<(std::ostream& o, const Pair& p){
+static std::ostream& operator<<(std::ostream& o, const Pair& p){
 	return o<<"("<<p.x<<", "<<p.y<<")";
 }
 

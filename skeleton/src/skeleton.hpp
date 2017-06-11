@@ -84,6 +84,7 @@ class System{
 		std::vector<std::pair<std::string, std::string>> _reportConnections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
+		dyad_Stream* _server;
 	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;
@@ -92,7 +93,6 @@ class System{
 		std::function<int(dyad_Stream*, const char* host, int port, int backlog)> _dyadListenEx;
 		std::atomic<bool>& _dyadDone;
 		std::recursive_mutex& _dyadMutex;
-		dyad_Stream* _server;
 };
 
 class Component{

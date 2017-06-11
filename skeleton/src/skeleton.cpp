@@ -1,5 +1,7 @@
 #include "skeleton.hpp"
 
+#include <obvious.hpp>
+
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>
@@ -138,7 +140,8 @@ void safeAdd(
 //=====System=====//
 static void onDestroyed(dyad_Event* e){
 	System* system=(System*)e->udata;
-	std::cerr<<"error: server destroyed"<<std::endl;
+	if(e->stream==system->_server) std::cerr<<"error: server destroyed"<<std::endl;
+	else erase(e->stream, system->_clients);
 }
 
 static void onError(dyad_Event* e){
@@ -149,6 +152,8 @@ static void onError(dyad_Event* e){
 static void onAccept(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->_clients.push_back(e->remote);
+	dyad_addListener(e->remote, DYAD_EVENT_DESTROY, onDestroyed, system);
+	dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, system);
 	std::stringstream ss;
 	for(auto i: system->_components) for(auto j: i){
 		ss<<"add "<<componentToStr(j)<<" "<<j->type()<<" ";

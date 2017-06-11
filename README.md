@@ -66,7 +66,6 @@ todo
 	- better labeling
 	- make clicking the mouse do something (show label?)
 	- don't layout when already-know connection turns on
-	- why does server crash when viewer exits
 - separate release and debug build folders
 - audio select input and output
 - midi editor
