@@ -142,8 +142,6 @@ OBVIOUS_PLUS_EQUALS(std::vector)
 	return r;\
 }()
 
-#define OBVIOUS_FILTER(CONTAINER, PREDICATE) OBVIOUS_TRANSFORM(CONTAINER, if(PREDICATE) r.push_back(*i), decltype(CONTAINER)())
-
 struct Pair{
 	Pair(int x, int y): x(x), y(y) {}
 	bool operator<(const Pair& other) const{

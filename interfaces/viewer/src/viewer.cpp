@@ -644,11 +644,9 @@ void Viewer::layout(){
 			}
 		if(done) break;
 	}
-	//remove size-1 groups
-	groups=OBVIOUS_FILTER(groups, i->_components.size()>1);
-	//sort by number of similar groups
+	//only keep size-2 and bigger groups, sort by number of similar groups
 	std::vector<std::vector<Group>> groupings;
-	for(const auto& i: groups){
+	for(const auto& i: groups) if(i._components.size()>1){
 		bool fit=false;
 		for(unsigned j=0; j<groupings.size(); ++j)
 			if(i.similar(groupings.at(j).at(0))){
