@@ -209,10 +209,11 @@ bool Sonic::Oscillator::update(Runner& runner, float frequencyMultiplier) const{
 	return _output==0.0f;
 }
 
-Sonic::Runner::Runner(): _phase(0.0f), _output(0.0f), _volume(0.0f) {}
+Sonic::Runner::Runner(): _phase(0.0f), _output(0.0f) {}
 
-void Sonic::Runner::start(){
+void Sonic::Runner::start(bool done){
 	_stage=ATTACK;
+	if(done) _volume=0.0f;
 }
 
 void Sonic::Runner::phase(float frequencyMultiplier){
@@ -232,7 +233,7 @@ void Sonic::Note::set(
 }
 
 void Sonic::Note::start(float volume, const Oscillator* oscillators){
-	for(unsigned i=0; i<OSCILLATORS; ++i) _runners[i].start();
+	for(unsigned i=0; i<OSCILLATORS; ++i) _runners[i].start(_done);
 	_volume=volume;
 	_desiredVolume=volume;
 	_done=false;

@@ -19,7 +19,7 @@ class Sonic:
 		static const unsigned OSCILLATORS=4;
 		struct Runner{
 			Runner();
-			void start();
+			void start(bool done);
 			void phase(float frequencyMultiplier);
 			enum Stage{ ATTACK, DECAY, SUSTAIN, RELEASE };
 			Stage _stage;
