@@ -62,10 +62,6 @@ file organization
 
 todo
 ----
-- viewer
-	- better labeling
-	- make clicking the mouse do something (show label?)
-	- don't layout when already-know connection turns on
 - audio select input and output
 - midi editor
 	- quantization

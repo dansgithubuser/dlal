@@ -500,8 +500,9 @@ void Viewer::process(std::string s){
 				std::string d;
 				ss>>d;
 				if(_nameToComponent.count(s)&&_nameToComponent.count(d)){
+					auto shouldLayout=!_nameToComponent.at(s)->_connections.count(d);
 					connect(s, d);
-					layout();
+					if(shouldLayout) layout();
 				}
 				else _pendingConnections.push_back(std::pair<std::string, std::string>(s, d));
 			}},
@@ -583,12 +584,6 @@ void Viewer::render(sf::RenderWindow& wv, sf::RenderWindow& wt){
 		t.setPosition(margin, y);
 		wt.draw(t);
 		y+=line_space;
-	}
-	//relayout if resized
-	if(wv.getSize().x!=_w||wv.getSize().y!=_h){
-		_w=wv.getSize().x;
-		_h=wv.getSize().y;
-		layout();
 	}
 	//components
 	std::vector<sf::VertexArray> v;
