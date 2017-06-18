@@ -65,7 +65,6 @@ todo
 - audio select input and output
 - midi editor
 	- quantization
-- on reset liner, make sure first note gets played
 - vocoder
 - pitch shift component
 - auto dj

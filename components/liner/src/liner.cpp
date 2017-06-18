@@ -57,7 +57,7 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 std::string Liner::setPhase(uint64_t phase){
 	Periodic::setPhase(phase);
 	_index=0;
-	while(_index<_line.size()&&_line[_index].sample<=_phase) ++_index;
+	while(_index<_line.size()&&_line[_index].sample<_phase) ++_index;
 	return "";
 }
 
