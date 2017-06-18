@@ -1,8 +1,5 @@
 import dlal, os, sys
 
-samples_per_beat=32000
-
-period=8*2*samples_per_beat
 edges_to_wait=0
 input=0
 synth=0
@@ -10,7 +7,7 @@ track=0
 sequence=None
 
 #looper
-looper=dlal.Looper()
+looper=dlal.Looper(32000, 16)
 looper.system.set('wait', str(edges_to_wait))
 looper.system.set('input', str(input))
 looper.system.set('track', str(track))
@@ -70,19 +67,19 @@ def scan_for_midi_inputs():
 		inputs.append(x)
 
 def add_midi():
-	track=dlal.MidiTrack(inputs[input].midi, synths[synth][1](), period, samples_per_beat)
+	track=dlal.MidiTrack(inputs[input].midi, synths[synth][1]())
 	tracks.append(track)
 	looper.add(track)
 
 def add_metronome():
-	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic(), period, samples_per_beat)
-	track.drumline()
+	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic())
 	track.synth.load(os.path.join(dlal.root, 'components', 'sonic', 'settings', 'snare.txt'))
 	tracks.append(track)
 	looper.add(track)
+	track.drumline()
 
 def add_audio():
-	track=dlal.AudioTrack(looper.audio, period)
+	track=dlal.AudioTrack(looper.audio)
 	tracks.append(track)
 	looper.add(track)
 
@@ -138,6 +135,7 @@ def track_reset_on_midi():
 
 def track_crop():
 	looper.commander.queue_command(tracks[track].container, 'periodic_crop')
+	looper.commander.queue_command(looper.commander, 'periodic_match', tracks[track].container.periodic())
 
 def commander_match():
 	period, phase=tracks[track].container.periodic_get().split()

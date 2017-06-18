@@ -410,6 +410,11 @@ SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(): _samplesPerEvaluation(
 
 //=====Periodic=====//
 Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
+	registerCommand("periodic", "", [this](std::stringstream& ss){
+		std::stringstream tt;
+		tt<<(Periodic*)this;
+		return tt.str();
+	});
 	registerCommand("periodic_resize", "<period in samples>", [this](std::stringstream& ss){
 		uint64_t period;
 		ss>>period;
@@ -428,6 +433,16 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 		uint64_t phase;
 		ss>>phase;
 		auto s=setPhase(phase);
+		if(!isError(s)) _last=0.0f;
+		return s;
+	});
+	registerCommand("periodic_match", "<other periodic>", [this](std::stringstream& ss){
+		void* v;
+		ss>>v;
+		auto other=(Periodic*)v;
+		auto s=resize(other->_period);
+		if(isError(s)) return s;
+		s=setPhase(other->_phase);
 		if(!isError(s)) _last=0.0f;
 		return s;
 	});

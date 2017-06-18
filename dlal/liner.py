@@ -8,11 +8,12 @@ g_notes={
 }
 
 class Liner(Component):
-	def __init__(self, period_in_samples, samples_per_beat):
+	def __init__(self, period_in_samples=0, samples_per_beat=0):
 		Component.__init__(self, 'liner')
-		self.periodic_resize(period_in_samples)
-		self.period_in_samples=period_in_samples
-		self.samples_per_beat=samples_per_beat
+		if period_in_samples:
+			self.periodic_resize(period_in_samples)
+			self.period_in_samples=period_in_samples
+		if samples_per_beat: self.samples_per_beat=samples_per_beat
 
 	def line(self, text):
 		stride=self.samples_per_beat
