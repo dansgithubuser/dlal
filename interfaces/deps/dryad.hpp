@@ -1,6 +1,7 @@
 #include <dyad.h>
 
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -118,6 +119,7 @@ static void onDestroyed(dyad_Event* e){
 }
 
 static void onError(dyad_Event* e){
+	if(strcmp(e->msg, "could not connect to server")==0) return;
 	std::cerr<<"dyad error: "<<e->msg<<"\n";
 }
 
