@@ -62,6 +62,7 @@ file organization
 
 todo
 ----
+- midi component multiplexing
 - audio select input and output
 - midi editor
 	- quantization

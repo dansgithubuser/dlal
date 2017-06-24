@@ -20,6 +20,7 @@ class Input:
 		self.qweboard=dlal.Qweboard()
 		looper.commander.queue_connect(self.qweboard, self.midi, enable=True)
 		looper.commander.queue_add(self.qweboard)
+		looper.commander.queue_add(self.midi)
 inputs=[]
 
 #synths
@@ -150,8 +151,10 @@ def track_match():
 def track_reset():
 	looper.commander.queue_command(tracks[track].container, 'periodic_set_phase', 0, edges_to_wait=edges_to_wait)
 
-def generate_standard_command(function, sense):
-	def command(): function(looper, tracks[track], sense, edges_to_wait)
+def generate_standard_command(function, sense, **kwargs):
+	def command():
+		if 'input' in kwargs: kwargs['input']=inputs[input].midi
+		function(looper, tracks[track], sense, edges_to_wait, **kwargs)
 	return command
 
 def sequence_start():
@@ -187,12 +190,12 @@ commands=[
 	('[', (commander_match, 'match commander to current track')),
 	(']', (track_match, 'match current track to commander')),
 	('f', (track_reset, 'reset track')),
-	('q', (generate_standard_command(dlal.Looper.record, False), 'stop track record')),
-	('a', (generate_standard_command(dlal.Looper.record, True ), 'start track record')),
-	('w', (generate_standard_command(dlal.Looper.play  , False), 'stop track play')),
-	('s', (generate_standard_command(dlal.Looper.play  , True ), 'start track play')),
-	('e', (generate_standard_command(dlal.Looper.replay, False), 'stop track replay')),
-	('d', (generate_standard_command(dlal.Looper.replay, True ), 'start track replay')),
+	('q', (generate_standard_command(dlal.Looper.record, False, input=True), 'stop track record')),
+	('a', (generate_standard_command(dlal.Looper.record, True , input=True), 'start track record')),
+	('w', (generate_standard_command(dlal.Looper.play  , False, input=True), 'stop track play')),
+	('s', (generate_standard_command(dlal.Looper.play  , True , input=True), 'start track play')),
+	('e', (generate_standard_command(dlal.Looper.replay, False            ), 'stop track replay')),
+	('d', (generate_standard_command(dlal.Looper.replay, True             ), 'start track replay')),
 	(',', (sequence_start, 'start sequence')),
 	('.', (sequence_commit, 'commit sequence')),
 	('/', (sequence_cancel, 'cancel sequence')),

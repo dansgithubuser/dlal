@@ -51,11 +51,13 @@ class Looper:
 		self.commander.queue_command(track.container, 'label', 'ctr{}'.format(len(self.tracks)))
 		self.tracks.append(track)
 
-	def play(self, track, enable, edges_to_wait):
-		self.commander.queue_connect(track.input, track.output, edges_to_wait=edges_to_wait, enable=enable)
+	def play(self, track, enable, edges_to_wait, input=None):
+		if input==None: input=track.input
+		self.commander.queue_connect(input, track.output, edges_to_wait=edges_to_wait, enable=enable)
 
-	def record(self, track, enable, edges_to_wait):
-		self.commander.queue_connect(track.input, track.container, edges_to_wait=edges_to_wait, enable=enable)
+	def record(self, track, enable, edges_to_wait, input=None):
+		if input==None: input=track.input
+		self.commander.queue_connect(input, track.container, edges_to_wait=edges_to_wait, enable=enable)
 
 	def replay(self, track, enable, edges_to_wait):
 		self.commander.queue_connect(track.synth, self.audio, edges_to_wait=edges_to_wait, enable=enable)

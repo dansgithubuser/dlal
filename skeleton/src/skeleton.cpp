@@ -247,6 +247,7 @@ System::~System(){
 }
 
 std::string System::add(Component& component, unsigned slot, bool queue){
+	for(auto i: _components) for(auto j: i) if(j==&component) return "error: already added";
 	std::string r=component.join(*this);
 	if(isError(r)) return r;
 	if(_components.size()<=slot) _components.resize(slot+1);
