@@ -41,6 +41,12 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 	registerCommand("port", "", [this](std::stringstream& ss){
 		return _portName;
 	});
+	registerCommand("blacklist", "output <nibbles; [=<>]x for some comparison with x, x for any>", [this](std::stringstream& ss)->std::string{
+		return _blacklist.append(ss);
+	});
+	registerCommand("whitelist", "output <nibbles; [=<>]x for some comparison with x, x for any>", [this](std::stringstream& ss)->std::string{
+		return _whitelist.append(ss);
+	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _queue.lockless()?"lockless":"lockfull";
 	});
@@ -48,17 +54,68 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 
 Midi::~Midi(){ if(_rtMidiIn) delete _rtMidiIn; }
 
+static unsigned getNibble(const std::vector<uint8_t>& bytes, unsigned i){
+	return (bytes.at(i/2)>>(i%2?4:0))&0xf;
+}
+
 void Midi::evaluate(){
 	std::vector<uint8_t> midi;
 	while(_queue.read(midi, true))
-		for(auto output: _outputs){
-			output->midi(midi.data(), midi.size());
-			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(output));
+		for(unsigned i=0; i<_outputs.size(); ++i){
+			if(_blacklist.match(i, midi)&&!_whitelist.match(i, midi)) continue;
+			_outputs.at(i)->midi(midi.data(), midi.size());
+			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(_outputs.at(i)));
 		}
 }
 
 void Midi::midi(const uint8_t* bytes, unsigned size){
 	_queue.write(std::vector<uint8_t>(bytes, bytes+size));
+}
+
+
+std::string Midi::List::append(std::stringstream& ss){
+	unsigned output;
+	ss>>output;
+	if(_.size()<=output) _.resize(output+1);
+	MidiPattern m;
+	auto s=m.populate(ss);
+	if(isError(s)) return s;
+	_.at(output).push_back(m);
+	return "";
+}
+
+bool Midi::List::match(unsigned output, const std::vector<uint8_t>& midi) const{
+	if(output>=_.size()) return false;
+	for(const auto& i: _.at(output)) if(i.match(midi)) return true;
+	return false;
+}
+
+std::string Midi::List::MidiPattern::populate(std::stringstream& ss){
+	std::string s;
+	while(ss>>s){
+		if(std::string("=<>").find(s)!=std::string::npos){
+			unsigned n;
+			ss>>std::hex>>n;
+			_.push_back(std::pair<char, unsigned>(s.at(0), n));
+		}
+		else if(s=="x"){
+			_.push_back(std::pair<char, unsigned>('x', 0));
+		}
+		else return "unknown nibble specification";
+	}
+	return "";
+}
+
+bool Midi::List::MidiPattern::match(const std::vector<uint8_t>& midi) const{
+	for(unsigned i=0; i<_.size(); ++i)
+		switch(_.at(i).first){
+			case 'x': break;
+			case '=': if(getNibble(midi, i)!=_.at(i).second) return false;
+			case '<': if(getNibble(midi, i)>=_.at(i).second) return false;
+			case '>': if(getNibble(midi, i)<=_.at(i).second) return false;
+			default: break;
+		}
+	return true;
 }
 
 std::string Midi::allocate(){

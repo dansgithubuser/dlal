@@ -16,10 +16,25 @@ class Midi: public MultiOut{
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }
 	private:
+		class List{
+			public:
+				std::string append(std::stringstream&);
+				bool match(unsigned output, const std::vector<uint8_t>&) const;
+			private:
+				class MidiPattern{
+					public:
+						std::string populate(std::stringstream&);
+						bool match(const std::vector<uint8_t>&) const;
+					private:
+						std::vector<std::pair<char, unsigned>> _;
+				};
+				std::vector<std::vector<MidiPattern>> _;
+		};
 		std::string allocate();
 		RtMidiIn* _rtMidiIn;
 		Queue<std::vector<uint8_t>> _queue;
 		std::string _portName;
+		List _blacklist, _whitelist;
 };
 
 }//namespace dlal
