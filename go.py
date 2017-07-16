@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os, platform, subprocess, sys
+import glob, os, platform, subprocess, sys
 
 #args
 import argparse
@@ -112,7 +112,6 @@ os.environ['LD_LIBRARY_PATH']=os.path.join(file_path, 'build', 'built')
 #test
 if args.test:
 	#setup
-	import glob
 	tests=[os.path.realpath(x) for x in glob.glob(os.path.join('tests', args.test))]
 	overall=True
 	report=[]
@@ -169,9 +168,18 @@ if args.interface:
 
 #run
 os.chdir(built_rel_path)
-x=['python', '-i']
-if args.system: x+=[os.path.join('..', '..', 'systems', args.system+'.py'), '-g']
-if not args.test: shell(*x)
+invocation=['python', '-i']
+good=True
+if args.system:
+	systems_path=os.path.join('..', '..', 'systems')
+	system_path=os.path.join(systems_path, args.system+'.py')
+	if os.path.exists(system_path): invocation+=[system_path, '-g']
+	else:
+		print('available systems are:')
+		for i in glob.glob(os.path.join('..', '..', 'systems', '*.py')):
+			print(os.path.split(i)[-1][:-3])
+		good=False
+if good and not args.test: shell(*invocation)
 os.chdir(file_path)
 
 #done
