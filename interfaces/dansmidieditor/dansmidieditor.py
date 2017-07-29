@@ -1,10 +1,11 @@
+try: input=raw_input
+except: pass
+
 #=====ensure sdl2 is installed=====#
 try:
 	import sdl2
 except:
 	print('I need to install pysdl2. Enter y if this is OK.')
-	try: input=raw_input
-	except: pass
 	if input()!='y': raise Exception('user disallowed installation of sdl2')
 	import subprocess
 	subprocess.check_call('sudo pip install pysdl2', shell=True)
@@ -20,9 +21,6 @@ window.show()
 renderer=sdl2.ext.Renderer(window)
 
 #=====setup controls=====#
-from controls import Controls
-controls=Controls('dansmidieditor-controls.py')
-
 class Latches:
 	def __init__(self):
 		import collections
@@ -44,19 +42,22 @@ def sym_to_morpheme(sym):
 	import string
 	if sym in [ord(i) for i in string.ascii_letters+string.digits+string.punctuation]: return chr(sym)
 	if sym==27: return 'esc'
+	if sym==13: return 'enter'
 	return '({})'.format(sym)
 
+from config import controls
+
 #=====main loop=====#
-while True:
+while not controls.done:
 	for event in sdl2.ext.get_events():
 		if event.type==sdl2.SDL_QUIT:
 			controls.input('q')
 		elif event.type==sdl2.SDL_KEYDOWN:
 			x=sym_to_morpheme(event.key.keysym.sym)
-			if latches.latch('k'+x): controls.input('+'+x)
+			if latches.latch('k'+x): controls.input('<'+x)
 		elif event.type==sdl2.SDL_KEYUP:
 			x=sym_to_morpheme(event.key.keysym.sym)
-			if latches.unlatch('k'+x): controls.input('-'+x)
+			if latches.unlatch('k'+x): controls.input('>'+x)
 		elif event.type==sdl2.SDL_MOUSEMOTION:
 			controls.input('x{}y{}dx{}dy{}'.format(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel))
 		elif event.type==sdl2.SDL_MOUSEBUTTONDOWN:

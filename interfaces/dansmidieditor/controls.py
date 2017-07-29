@@ -1,15 +1,22 @@
-class Controls:
-	def __init__(self, filename):
-		globals={'controls': None}
-		with open(filename) as file: exec(file.read(), globals)
-		self.controls=globals['controls']
+class AbstractControls:
+	def __init__(self):
 		self.sequence=[]
+		import inspect
+		self.controls=[]
+		for i in dir(self):
+			a=getattr(self, i)
+			if not callable(a): continue
+			if any([j not in inspect.getargspec(a).args for j in ['regex', 'order']]): continue
+			defaults=inspect.getcallargs(a)
+			self.controls.append((defaults['regex'], i, defaults['order']))
+		self.controls=sorted(self.controls, key=lambda i: i[2])
+		self.controls=[i[:2] for i in self.controls]
 
-	def input(self, word, api=None):
+	def input(self, word):
 		self.sequence.append(word)
 		import re
-		for regex, script in self.controls:
-			if re.match(regex, ''.join([' '+i for i in self.sequence])):
-				exec(script)
+		for regex, method in self.controls:
+			m=re.match(regex, ''.join([' '+i for i in self.sequence]))
+			if m:
+				getattr(self, method)()
 				break
-
