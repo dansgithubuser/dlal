@@ -9,6 +9,6 @@ class Controls(AbstractControls):
 
 	def mouse_motion(self, regex=r'.* x.*' , order=  1): self.sequence=self.sequence[:-1]
 	def quit        (self, regex=r'.* q'   , order=  2): self.done=True
-	def reset       (self, regex=r'.* >esc', order=  3): self.sequence=[]
+	def reset       (self, regex=r'.* >Esc', order=  3): self.sequence=[]
 
 controls=Controls()
