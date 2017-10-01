@@ -9,6 +9,7 @@ but it's not necessarily obvious to make into convenient C++...
 #include <iostream>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
