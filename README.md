@@ -64,6 +64,9 @@ todo
 ----
 - audio select input and output
 - midi editor
+	- split sdl2 out into renderer
+	- ctypes sfml?
+	- text rendering
 	- quantization
 - vocoder
 - pitch shift component

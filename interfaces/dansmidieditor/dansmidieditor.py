@@ -1,5 +1,4 @@
-try: input=raw_input
-except: pass
+#!/usr/bin/env python
 
 #=====ensure sdl2 is installed=====#
 try:
@@ -69,7 +68,7 @@ while not controls.done:
 		elif event.type==sdl2.SDL_MOUSEWHEEL:
 			controls.input('w{}'.format(event.wheel.y))
 	renderer.clear()
-	renderer.fill([[0, 0, 10, 20]])
+	controls.view.draw(renderer)
 	renderer.present()
 	window.refresh()
 	time.sleep(0.01)
