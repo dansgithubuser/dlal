@@ -72,13 +72,22 @@ extern "C" {
 		));
 	}
 
+	void draw_vertices(){
+		fBoss->window.draw(fBoss->va);
+		fBoss->va.clear();
+	}
+
+	void text(int x, int y, int h, const char* s){
+		sf::Text t(s, fBoss->font, h);
+		t.setPosition(x, y);
+		fBoss->window.draw(t);
+	}
+
 	int width(){ return fBoss->window.getSize().x; }
 
 	int height(){ return fBoss->window.getSize().y; }
 
 	void display(){
-		fBoss->window.draw(fBoss->va);
 		fBoss->window.display();
-		fBoss->va.clear();
 	}
 }

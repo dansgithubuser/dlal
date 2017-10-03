@@ -9,6 +9,7 @@ class View:
 
 	def draw(self, media):
 		media.clear()
+		media.text(10, 10, 16, 'asdf')
 		for i in self.midi:
 			for j in i:
 				if j.type!='note': continue

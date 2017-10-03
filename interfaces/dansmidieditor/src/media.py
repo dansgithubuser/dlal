@@ -5,9 +5,11 @@ sfml.poll_event.restype=ctypes.c_char_p
 
 def poll_event(): return sfml.poll_event()
 def vertex(x, y, r, g, b, a): sfml.vertex(x, y, r, g, b, a)
+def draw_vertices(): sfml.draw_vertices()
+def text(x, y, h, s): sfml.text(x, y, h, s)
 def width(): return sfml.width()
 def height(): return sfml.height()
-def display(): sfml.display()
+def display(): sfml.draw_vertices(); sfml.display()
 
 def fill(**kwargs):
 	if 'xi' in kwargs:
@@ -36,4 +38,6 @@ def fill(**kwargs):
 	vertex(xf, yi, r, g, b, a)
 	vertex(xf, yf, r, g, b, a)
 
-def clear(): fill(x=0, y=0, w=width(), h=height(), color=(0, 0, 0))
+def clear():
+	fill(x=0, y=0, w=width(), h=height(), color=(0, 0, 0))
+	draw_vertices()

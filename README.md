@@ -64,7 +64,6 @@ todo
 ----
 - audio select input and output
 - midi editor
-	- text rendering
 	- quantization
 - vocoder
 - pitch shift component
