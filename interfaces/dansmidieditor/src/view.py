@@ -4,12 +4,15 @@ sys.path.append(os.path.join(home, '..', '..', '..', 'deps', 'midi'))
 import midi
 
 class View:
-	def __init__(self):
+	def __init__(self, margin=6, text_size=12):
 		self.midi=midi.read(os.path.join(home, '..', '..', '..', 'deps', 'midi', 'trans.mid'))
+		self.text=''
+		self.margin=margin
+		self.text_size=text_size
 
 	def draw(self, media):
 		media.clear()
-		media.text(10, 10, 16, 'asdf')
+		media.text(self.margin, media.height()-self.margin-self.text_size, self.text_size, self.text)
 		for i in self.midi:
 			for j in i:
 				if j.type!='note': continue

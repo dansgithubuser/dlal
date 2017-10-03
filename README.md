@@ -64,6 +64,16 @@ todo
 ----
 - audio select input and output
 - midi editor
+	- load
+	- better displaying
+	- movement
+	- editing
+		- add notes
+		- select notes
+			- delete notes
+			- change notes
+	- controls: nullify sequence when no regex could match?
+	- controls: do all regexes at once?
 	- quantization
 - vocoder
 - pitch shift component
