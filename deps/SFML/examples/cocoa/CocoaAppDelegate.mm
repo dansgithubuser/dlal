@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2015 Marco Antognini (antognini.marco@gmail.com),
+// Copyright (C) 2007-2017 Marco Antognini (antognini.marco@gmail.com),
 //                         Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
@@ -57,7 +57,7 @@ struct SFMLmainWindow
         if (!font.loadFromFile(resPath + "/sansation.ttf"))
             NSLog(@"Couldn't load the font");
 
-        text.setColor(sf::Color::White);
+        text.setFillColor(sf::Color::White);
         text.setFont(font);
     }
 

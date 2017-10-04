@@ -1,7 +1,8 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2015 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2017 Marco Antognini (antognini.marco@gmail.com),
+//                         Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -22,51 +23,46 @@
 //
 ////////////////////////////////////////////////////////////
 
-
 ////////////////////////////////////////////////////////////
-template <typename T>
-inline ScopedXcbPtr<T>::ScopedXcbPtr(T* pointer) :
-m_pointer(pointer)
-{
+// Headers
+////////////////////////////////////////////////////////////
+#include <SFML/Window/Mouse.hpp>
 
-}
+#import <AppKit/AppKit.h>
 
 
 ////////////////////////////////////////////////////////////
-template <typename T>
-inline ScopedXcbPtr<T>::~ScopedXcbPtr()
-{
-    std::free(m_pointer);
-}
+/// Here are defined a few private messages for keyboard
+/// handling in SFOpenGLView.
+///
+////////////////////////////////////////////////////////////
 
+
+@interface SFOpenGLView (keyboard_priv)
 
 ////////////////////////////////////////////////////////////
-template <typename T>
-inline T* ScopedXcbPtr<T>::operator ->() const
-{
-    return m_pointer;
-}
-
+/// \brief Convert a key down/up NSEvent into an SFML key event
+///
+/// The conversion is based on localizedKeys and nonLocalizedKeys functions.
+///
+/// \param event a key event
+///
+/// \return sf::Keyboard::Unknown as Code if the key is unknown
+///
+////////////////////////////////////////////////////////////
++(sf::Event::KeyEvent)convertNSKeyEventToSFMLEvent:(NSEvent*)event;
 
 ////////////////////////////////////////////////////////////
-template <typename T>
-inline T** ScopedXcbPtr<T>::operator &()
-{
-    return &m_pointer;
-}
-
-
+/// \brief Check if the event represent some Unicode text
+///
+/// The event is assumed to be a key down event.
+/// False is returned if the event is either escape or a non text Unicode.
+///
+/// \param event a key down event
+///
+/// \return true if event represents a Unicode character, false otherwise
+///
 ////////////////////////////////////////////////////////////
-template <typename T>
-inline ScopedXcbPtr<T>::operator bool() const
-{
-    return m_pointer != NULL;
-}
++(BOOL)isValidTextUnicode:(NSEvent*)event;
 
-
-////////////////////////////////////////////////////////////
-template <typename T>
-inline T* ScopedXcbPtr<T>::get() const
-{
-    return m_pointer;
-}
+@end

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2015 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2017 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -31,6 +31,7 @@
 #include <SFML/System/Sleep.hpp>
 #include <SFML/System/Err.hpp>
 #include <cstring>
+#include <cassert>
 
 #ifdef _MSC_VER
     #pragma warning(disable: 4355) // 'this' used in base member initializer list
@@ -50,7 +51,8 @@ m_thread            (&SoundRecorder::record, this),
 m_sampleRate        (0),
 m_processingInterval(milliseconds(100)),
 m_isCapturing       (false),
-m_deviceName        (getDefaultDevice())
+m_deviceName        (getDefaultDevice()),
+m_channelCount      (1)
 {
 
 }
@@ -59,7 +61,12 @@ m_deviceName        (getDefaultDevice())
 ////////////////////////////////////////////////////////////
 SoundRecorder::~SoundRecorder()
 {
-    // Nothing to do
+    // This assertion is triggered if the recording is still running while
+    // the object is destroyed. It ensures that stop() is called in the
+    // destructor of the derived class, which makes sure that the recording
+    // thread finishes before the derived object is destroyed. Otherwise a
+    // "pure virtual method called" exception is triggered.
+    assert(!m_isCapturing && "You must call stop() in the destructor of your derived class, so that the recording thread finishes before your object is destroyed.");
 }
 
 
@@ -80,8 +87,11 @@ bool SoundRecorder::start(unsigned int sampleRate)
         return false;
     }
 
-    // Open the capture device for capturing 16 bits mono samples
-    captureDevice = alcCaptureOpenDevice(m_deviceName.c_str(), sampleRate, AL_FORMAT_MONO16, sampleRate);
+    // Determine the recording format
+    ALCenum format = (m_channelCount == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+
+    // Open the capture device for capturing 16 bits samples
+    captureDevice = alcCaptureOpenDevice(m_deviceName.c_str(), sampleRate, format, sampleRate);
     if (!captureDevice)
     {
         err() << "Failed to open the audio capture device with the name: " << m_deviceName << std::endl;
@@ -114,12 +124,15 @@ bool SoundRecorder::start(unsigned int sampleRate)
 ////////////////////////////////////////////////////////////
 void SoundRecorder::stop()
 {
-    // Stop the capturing thread
-    m_isCapturing = false;
-    m_thread.wait();
+    // Stop the capturing thread if there is one
+    if (m_isCapturing)
+    {
+        m_isCapturing = false;
+        m_thread.wait();
 
-    // Notify derived class
-    onStop();
+        // Notify derived class
+        onStop();
+    }
 }
 
 
@@ -171,8 +184,11 @@ bool SoundRecorder::setDevice(const std::string& name)
         m_isCapturing = false;
         m_thread.wait();
 
-        // Open the requested capture device for capturing 16 bits mono samples
-        captureDevice = alcCaptureOpenDevice(name.c_str(), m_sampleRate, AL_FORMAT_MONO16, m_sampleRate);
+        // Determine the recording format
+        ALCenum format = (m_channelCount == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+
+        // Open the requested capture device for capturing 16 bits samples
+        captureDevice = alcCaptureOpenDevice(name.c_str(), m_sampleRate, format, m_sampleRate);
         if (!captureDevice)
         {
             // Notify derived class
@@ -198,6 +214,32 @@ bool SoundRecorder::setDevice(const std::string& name)
 const std::string& SoundRecorder::getDevice() const
 {
     return m_deviceName;
+}
+
+
+////////////////////////////////////////////////////////////
+void SoundRecorder::setChannelCount(unsigned int channelCount)
+{
+    if (m_isCapturing)
+    {
+        err() << "It's not possible to change the channels while recording." << std::endl;
+        return;
+    }
+
+    if (channelCount < 1 || channelCount > 2)
+    {
+        err() << "Unsupported channel count: " << channelCount << " Currently only mono (1) and stereo (2) recording is supported." << std::endl;
+        return;
+    }
+
+    m_channelCount = channelCount;
+}
+
+
+////////////////////////////////////////////////////////////
+unsigned int SoundRecorder::getChannelCount() const
+{
+    return m_channelCount;
 }
 
 
@@ -258,7 +300,7 @@ void SoundRecorder::processCapturedSamples()
     if (samplesAvailable > 0)
     {
         // Get the recorded samples
-        m_samples.resize(samplesAvailable);
+        m_samples.resize(samplesAvailable * getChannelCount());
         alcCaptureSamples(captureDevice, &m_samples[0], samplesAvailable);
 
         // Forward them to the derived class

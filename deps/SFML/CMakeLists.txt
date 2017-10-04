@@ -13,6 +13,9 @@ endmacro()
 # determine whether to create a debug or release build
 sfml_set_option(CMAKE_BUILD_TYPE Release STRING "Choose the type of build (Debug or Release)")
 
+# Suppress Cygwin legacy warning
+set(CMAKE_LEGACY_CYGWIN_WIN32 0)
+
 # set Android specific options
 
 # define the minimum API level to be used
@@ -31,6 +34,8 @@ if(NOT ANDROID_ABI)
     set(ANDROID_ABI armeabi-v7a)
 endif()
 
+#end of Android specific options
+
 # project name
 project(SFML)
 
@@ -39,7 +44,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake)
 
 # setup version numbers
 set(VERSION_MAJOR 2)
-set(VERSION_MINOR 3)
+set(VERSION_MINOR 4)
 set(VERSION_PATCH 2)
 
 # add the SFML header path
@@ -187,15 +192,14 @@ if(SFML_OS_MACOSX)
         endif()
     endif()
 
-    # configure Xcode templates
-    if(CMAKE_OSX_ARCHITECTURES)
-        # maybe multiple arches are present in CMAKE_OSX_ARCHITECTURES
-        # we simply need to replace ';' by ' ' (space) and store the result in XCODE_TEMPLATES_ARCH
-        string(REPLACE ";" " " XCODE_TEMPLATES_ARCH "${CMAKE_OSX_ARCHITECTURES}")
-    else()
-        # no arch was provided to cmake, so we use the default one
-        set(XCODE_TEMPLATES_ARCH "\$(NATIVE_ARCH_ACTUAL)")
+    # only the default architecture (i.e. 64-bit) is supported
+    if(CMAKE_OSX_ARCHITECTURES AND NOT "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
+        message(FATAL_ERROR "Only 64-bit architecture is supported")
+        return()
     endif()
+        
+    # configure Xcode templates
+    set(XCODE_TEMPLATES_ARCH "\$(NATIVE_ARCH_ACTUAL)")
 endif()
 
 if(SFML_OS_LINUX OR SFML_OS_FREEBSD)
@@ -281,7 +285,7 @@ else()
                        COMMAND cp -r ${PROJECT_SOURCE_DIR}/include/SFML/* $<TARGET_FILE_DIR:SFML>/Headers)
 
     # adapt install directory to allow distributing dylibs/frameworks in user's frameworks/application bundle
-    # NOTE: it's not required to link agains SFML.framework
+    # NOTE: it's not required to link against SFML.framework
     set_target_properties(SFML PROPERTIES
                           BUILD_WITH_INSTALL_RPATH 1
                           INSTALL_NAME_DIR "@rpath")

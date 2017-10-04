@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2015 Marco Antognini (antognini.marco@gmail.com),
+// Copyright (C) 2007-2017 Marco Antognini (antognini.marco@gmail.com),
 //                         Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
@@ -32,7 +32,10 @@
 #include <SFML/Window/OSX/WindowImplCocoa.hpp>
 #include <SFML/System/Err.hpp>
 #include <ApplicationServices/ApplicationServices.h>
+#include <algorithm>
 
+#import <SFML/Window/OSX/NSImage+raw.h>
+#import <SFML/Window/OSX/Scaling.h>
 #import <SFML/Window/OSX/SFApplication.h>
 #import <SFML/Window/OSX/SFOpenGLView.h>
 #import <SFML/Window/OSX/SFWindow.h>
@@ -94,6 +97,8 @@
         m_window = nil;
         m_oglView = nil;
         m_requester = 0;
+        m_fullscreen = NO; // assuming this is the case... too hard to handle anyway.
+        m_restoreResize = NO;
 
         // Retain the window for our own use.
         m_window = [window retain];
@@ -144,8 +149,10 @@
         m_window = nil;
         m_oglView = nil;
         m_requester = 0;
+        m_fullscreen = (style & sf::Style::Fullscreen);
+        m_restoreResize = NO;
 
-        if (style & sf::Style::Fullscreen)
+        if (m_fullscreen)
             [self setupFullscreenViewWithMode:mode];
         else
             [self setupWindowWithMode:mode andStyle:style];
@@ -161,6 +168,7 @@
 {
     // Create a screen-sized window on the main display
     sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+    sf::priv::scaleInWidthHeight(desktop, nil);
     NSRect windowRect = NSMakeRect(0, 0, desktop.width, desktop.height);
     m_window = [[SFWindow alloc] initWithContentRect:windowRect
                                            styleMask:NSBorderlessWindowMask
@@ -201,9 +209,11 @@
     }
 
     // Create our OpenGL view size and the view
-    CGFloat x = (desktop.width - mode.width) / 2.0;
-    CGFloat y = (desktop.height - mode.height) / 2.0;
-    NSRect oglRect = NSMakeRect(x, y, mode.width, mode.height);
+    CGFloat width = std::min(mode.width, desktop.width);
+    CGFloat height = std::min(mode.height, desktop.height);
+    CGFloat x = (desktop.width - width) / 2.0;
+    CGFloat y = (desktop.height - height) / 2.0;
+    NSRect oglRect = NSMakeRect(x, y, width, height);
 
     m_oglView = [[SFOpenGLView alloc] initWithFrame:oglRect
                                          fullscreen:YES];
@@ -338,41 +348,66 @@
 }
 
 
-////////////////////////////////////////////////////////////
--(NSPoint)position
+////////////////////////////////////////////////////////
+-(void)setCursorGrabbed:(BOOL)grabbed
 {
-    // First, get the top left corner of the view in its own base system
-    const NSPoint origin = [m_oglView frame].origin;
-    const NSSize  size = [m_oglView frame].size;
-    const NSPoint topLeftCornerOfView = NSMakePoint(origin.x, origin.y + size.height);
-    const NSPoint positionInView = [m_oglView convertPointToBacking:topLeftCornerOfView];
+    // Remove or restore resizeable style if needed
+    BOOL resizeable = [m_window styleMask] & NSResizableWindowMask;
+    if (grabbed && resizeable)
+    {
+        m_restoreResize = YES;
+        NSUInteger newStyle = [m_window styleMask] & ~NSResizableWindowMask;
+        [m_window setStyleMask:newStyle];
+    }
+    else if (!grabbed && m_restoreResize)
+    {
+        m_restoreResize = NO;
+        NSUInteger newStyle = [m_window styleMask] | NSResizableWindowMask;
+        [m_window setStyleMask:newStyle];
+    }
 
-    // Then, convert it to window base system
-    const NSPoint positionInWindow = [m_oglView convertPoint:positionInView toView:nil];
-    // here nil denotes the window containing the view
-
-    // Next, convert it to the screen base system
-    const NSPoint positionInScreen = [[m_oglView window] convertBaseToScreen:positionInWindow];
-
-    // Finally, flip for SFML window coordinate system
-    // Don't forget to discard the title bar !
-    const NSPoint positionInSFML = NSMakePoint(positionInScreen.x,
-                                               ([self screenHeight] - [self titlebarHeight]) - positionInScreen.y);
-
-    return positionInSFML;
+    // Forward to our view
+    [m_oglView setCursorGrabbed:grabbed];
 }
 
 
-////////////////////////////////////////////////////////.
+////////////////////////////////////////////////////////////
+-(NSPoint)position
+{
+    // Note: since 10.7 the conversion API works with NSRect
+    // instead of NSPoint. Therefore we use a NSRect but ignore
+    // its width and height.
+
+    // Position of the bottom-left corner in the different coordinate systems:
+    NSRect corner = [m_oglView frame]; // bottom left; size is ignored
+    NSRect view   = [m_oglView convertRectToBacking:corner];
+    NSRect window = [m_oglView convertRect:view toView:nil];
+    NSRect screen = [[m_oglView window] convertRectToScreen:window];
+
+    // Get the top-left corner in screen coordinates
+    CGFloat x = screen.origin.x;
+    CGFloat y = screen.origin.y + [m_oglView frame].size.height;
+
+    // Flip y-axis (titlebar was already taken into account above)
+    y = [self screenHeight] - y;
+
+    return NSMakePoint(x, y);
+}
+
+
+////////////////////////////////////////////////////////
 -(void)setWindowPositionToX:(int)x Y:(int)y
 {
     NSPoint point = NSMakePoint(x, y);
 
-    // Flip for SFML window coordinate system.
-    point.y = [self screenHeight] - point.y;
+    // Flip for SFML window coordinate system and take titlebar into account
+    point.y = [self screenHeight] - point.y + [self titlebarHeight];
 
     // Place the window.
     [m_window setFrameTopLeftPoint:point];
+
+    // In case the cursor was grabbed we need to update its position
+    [m_oglView updateCursorGrabbed];
 }
 
 
@@ -386,37 +421,57 @@
 ////////////////////////////////////////////////////////
 -(void)resizeTo:(unsigned int)width by:(unsigned int)height
 {
-    // Before resizing, remove resizable mask to be able to resize
-    // beyond the desktop boundaries.
-    NSUInteger styleMask = [m_window styleMask];
-
-    [m_window setStyleMask:styleMask ^ NSResizableWindowMask];
-
-    // Add titlebar height.
-    height += [self titlebarHeight];
-
-    // Corner case: don't set the window height bigger than the screen height
-    // or the view will be resized _later_ without generating a resize event.
-    NSRect screenFrame = [[NSScreen mainScreen] visibleFrame];
-    CGFloat maxVisibleHeight = screenFrame.size.height;
-    if (height > maxVisibleHeight)
+    if (m_fullscreen)
     {
-        height = maxVisibleHeight;
+        // Special case when fullscreen: only resize the opengl view
+        // and make sure the requested size is not bigger than the window.
+        sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+        sf::priv::scaleInWidthHeight(desktop, nil);
 
-        // The size is not the requested one, we fire an event
-        if (m_requester != 0)
-            m_requester->windowResized(width, height - [self titlebarHeight]);
+        width = std::min(width, desktop.width);
+        height = std::min(height, desktop.height);
+
+        CGFloat x = (desktop.width - width) / 2.0;
+        CGFloat y = (desktop.height - height) / 2.0;
+        NSRect oglRect = NSMakeRect(x, y, width, height);
+
+        [m_oglView setFrame:oglRect];
+        [m_oglView setNeedsDisplay:YES];
     }
+    else
+    {
+        // Before resizing, remove resizable mask to be able to resize
+        // beyond the desktop boundaries.
+        NSUInteger styleMask = [m_window styleMask];
 
-    NSRect frame = NSMakeRect([m_window frame].origin.x,
-                              [m_window frame].origin.y,
-                              width,
-                              height);
+        [m_window setStyleMask:styleMask ^ NSResizableWindowMask];
 
-    [m_window setFrame:frame display:YES];
+        // Add titlebar height.
+        height += [self titlebarHeight];
 
-    // And restore the mask
-    [m_window setStyleMask:styleMask];
+        // Corner case: don't set the window height bigger than the screen height
+        // or the view will be resized _later_ without generating a resize event.
+        NSRect screenFrame = [[NSScreen mainScreen] visibleFrame];
+        CGFloat maxVisibleHeight = screenFrame.size.height;
+        if (height > maxVisibleHeight)
+        {
+            height = maxVisibleHeight;
+
+            // The size is not the requested one, we fire an event
+            if (m_requester != 0)
+                m_requester->windowResized(width, height - [self titlebarHeight]);
+        }
+
+        NSRect frame = NSMakeRect([m_window frame].origin.x,
+                                  [m_window frame].origin.y,
+                                  width,
+                                  height);
+
+        [m_window setFrame:frame display:YES];
+
+        // And restore the mask
+        [m_window setStyleMask:styleMask];
+    }
 }
 
 
@@ -487,40 +542,13 @@
               by:(unsigned int)height
             with:(const sf::Uint8*)pixels
 {
-    // Create an empty image representation.
-    NSBitmapImageRep* bitmap =
-    [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:0 // if 0: only allocate memory
-                                            pixelsWide:width
-                                            pixelsHigh:height
-                                         bitsPerSample:8 // The number of bits used to specify
-                                                         // one pixel in a single component of the data.
-                                       samplesPerPixel:4 // 3 if no alpha, 4 with it
-                                              hasAlpha:YES
-                                              isPlanar:NO   // I don't know what it is but it works
-                                        colorSpaceName:NSCalibratedRGBColorSpace
-                                           bytesPerRow:0    // 0 == determine automatically
-                                          bitsPerPixel:0];  // 0 == determine automatically
+    // Load image and set app icon.
+    NSImage* icon = [NSImage imageWithRawData:pixels
+                                      andSize:NSMakeSize(width, height)];
 
-    // Load data pixels.
-    for (unsigned int y = 0; y < height; ++y)
-    {
-        for (unsigned int x = 0; x < width; ++x, pixels+=4)
-        {
-            NSUInteger pixel[4] = { pixels[0], pixels[1], pixels[2], pixels[3] };
-            [bitmap setPixel:pixel atX:x y:y];
-        }
-    }
-
-    // Create an image from the representation.
-    NSImage* icon = [[NSImage alloc] initWithSize:NSMakeSize(width, height)];
-    [icon addRepresentation:bitmap];
-
-    // Set app icon.
     [[SFApplication sharedApplication] setApplicationIconImage:icon];
 
-    // Free up.
     [icon release];
-    [bitmap release];
 }
 
 
@@ -591,3 +619,4 @@
 }
 
 @end
+

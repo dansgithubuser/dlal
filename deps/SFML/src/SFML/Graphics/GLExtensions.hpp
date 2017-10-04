@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2015 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2017 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -101,6 +101,7 @@
     #define GLEXT_glCheckFramebufferStatus            glCheckFramebufferStatusOES
     #define GLEXT_glFramebufferTexture2D              glFramebufferTexture2DOES
     #define GLEXT_glFramebufferRenderbuffer           glFramebufferRenderbufferOES
+    #define GLEXT_glGenerateMipmap                    glGenerateMipmapOES
     #define GLEXT_GL_FRAMEBUFFER                      GL_FRAMEBUFFER_OES
     #define GLEXT_GL_RENDERBUFFER                     GL_RENDERBUFFER_OES
     #define GLEXT_GL_DEPTH_COMPONENT                  GL_DEPTH_COMPONENT16_OES
@@ -111,8 +112,13 @@
     #define GLEXT_GL_INVALID_FRAMEBUFFER_OPERATION    GL_INVALID_FRAMEBUFFER_OPERATION_OES
 
     // Core since 3.0 - EXT_sRGB
-    #define GLEXT_texture_sRGB                        GL_EXT_sRGB
-    #define GLEXT_GL_SRGB8_ALPHA8                     GL_SRGB8_ALPHA8_EXT
+    #ifdef GL_EXT_sRGB
+        #define GLEXT_texture_sRGB                        GL_EXT_sRGB
+        #define GLEXT_GL_SRGB8_ALPHA8                     GL_SRGB8_ALPHA8_EXT
+    #else
+        #define GLEXT_texture_sRGB                        false
+        #define GLEXT_GL_SRGB8_ALPHA8                     0
+    #endif
 
 #else
 
@@ -228,6 +234,7 @@
     #define GLEXT_glCheckFramebufferStatus            glCheckFramebufferStatusEXT
     #define GLEXT_glFramebufferTexture2D              glFramebufferTexture2DEXT
     #define GLEXT_glFramebufferRenderbuffer           glFramebufferRenderbufferEXT
+    #define GLEXT_glGenerateMipmap                    glGenerateMipmapEXT
     #define GLEXT_GL_FRAMEBUFFER                      GL_FRAMEBUFFER_EXT
     #define GLEXT_GL_RENDERBUFFER                     GL_RENDERBUFFER_EXT
     #define GLEXT_GL_COLOR_ATTACHMENT0                GL_COLOR_ATTACHMENT0_EXT

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2015 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2007-2017 Laurent Gomila (laurent@sfml-dev.org)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -40,38 +40,18 @@
 
 namespace
 {
-    sf::Mutex mutex;
+    sf::Mutex idMutex;
+    sf::Mutex maximumSizeMutex;
 
     // Thread-safe unique identifier generator,
     // is used for states cache (see RenderTarget)
     sf::Uint64 getUniqueId()
     {
-        sf::Lock lock(mutex);
+        sf::Lock lock(idMutex);
 
         static sf::Uint64 id = 1; // start at 1, zero is "no texture"
 
         return id++;
-    }
-
-    unsigned int checkMaximumTextureSize()
-    {
-        // Create a temporary context in case the user queries
-        // the size before a GlResource is created, thus
-        // initializing the shared context
-        if (!sf::Context::getActiveContext())
-        {
-            sf::Context context;
-
-            GLint size;
-            glCheck(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &size));
-
-            return static_cast<unsigned int>(size);
-        }
-
-        GLint size;
-        glCheck(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &size));
-
-        return static_cast<unsigned int>(size);
     }
 }
 
@@ -88,6 +68,7 @@ m_sRgb         (false),
 m_isRepeated   (false),
 m_pixelsFlipped(false),
 m_fboAttachment(false),
+m_hasMipmap    (false),
 m_cacheId      (getUniqueId())
 {
 }
@@ -103,6 +84,7 @@ m_sRgb         (copy.m_sRgb),
 m_isRepeated   (copy.m_isRepeated),
 m_pixelsFlipped(false),
 m_fboAttachment(false),
+m_hasMipmap    (false),
 m_cacheId      (getUniqueId())
 {
     if (copy.m_texture)
@@ -116,7 +98,7 @@ Texture::~Texture()
     // Destroy the OpenGL texture
     if (m_texture)
     {
-        ensureGlContext();
+        TransientContextLock lock;
 
         GLuint texture = static_cast<GLuint>(m_texture);
         glCheck(glDeleteTextures(1, &texture));
@@ -155,7 +137,7 @@ bool Texture::create(unsigned int width, unsigned int height)
     m_pixelsFlipped = false;
     m_fboAttachment = false;
 
-    ensureGlContext();
+    TransientContextLock lock;
 
     // Create the OpenGL texture if it doesn't exist yet
     if (!m_texture)
@@ -217,6 +199,8 @@ bool Texture::create(unsigned int width, unsigned int height)
     glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
     m_cacheId = getUniqueId();
 
+    m_hasMipmap = false;
+
     return true;
 }
 
@@ -261,10 +245,6 @@ bool Texture::loadFromImage(const Image& image, const IntRect& area)
         {
             update(image);
 
-            // Force an OpenGL flush, so that the texture will appear updated
-            // in all contexts immediately (solves problems in multi-threaded apps)
-            glCheck(glFlush());
-
             return true;
         }
         else
@@ -286,6 +266,8 @@ bool Texture::loadFromImage(const Image& image, const IntRect& area)
         // Create the texture and upload the pixels
         if (create(rectangle.width, rectangle.height))
         {
+            TransientContextLock lock;
+
             // Make sure that the current texture binding will be preserved
             priv::TextureSaver save;
 
@@ -297,6 +279,9 @@ bool Texture::loadFromImage(const Image& image, const IntRect& area)
                 glCheck(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, i, rectangle.width, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixels));
                 pixels += 4 * width;
             }
+
+            glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
+            m_hasMipmap = false;
 
             // Force an OpenGL flush, so that the texture will appear updated
             // in all contexts immediately (solves problems in multi-threaded apps)
@@ -326,7 +311,7 @@ Image Texture::copyToImage() const
     if (!m_texture)
         return Image();
 
-    ensureGlContext();
+    TransientContextLock lock;
 
     // Make sure that the current texture binding will be preserved
     priv::TextureSaver save;
@@ -417,7 +402,7 @@ void Texture::update(const Uint8* pixels, unsigned int width, unsigned int heigh
 
     if (pixels && m_texture)
     {
-        ensureGlContext();
+        TransientContextLock lock;
 
         // Make sure that the current texture binding will be preserved
         priv::TextureSaver save;
@@ -425,8 +410,14 @@ void Texture::update(const Uint8* pixels, unsigned int width, unsigned int heigh
         // Copy pixels from the given array to the texture
         glCheck(glBindTexture(GL_TEXTURE_2D, m_texture));
         glCheck(glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels));
+        glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
+        m_hasMipmap = false;
         m_pixelsFlipped = false;
         m_cacheId = getUniqueId();
+
+        // Force an OpenGL flush, so that the texture data will appear updated
+        // in all contexts immediately (solves problems in multi-threaded apps)
+        glCheck(glFlush());
     }
 }
 
@@ -461,14 +452,22 @@ void Texture::update(const Window& window, unsigned int x, unsigned int y)
 
     if (m_texture && window.setActive(true))
     {
+        TransientContextLock lock;
+
         // Make sure that the current texture binding will be preserved
         priv::TextureSaver save;
 
         // Copy pixels from the back-buffer to the texture
         glCheck(glBindTexture(GL_TEXTURE_2D, m_texture));
         glCheck(glCopyTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 0, 0, window.getSize().x, window.getSize().y));
+        glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
+        m_hasMipmap = false;
         m_pixelsFlipped = true;
         m_cacheId = getUniqueId();
+
+        // Force an OpenGL flush, so that the texture will appear updated
+        // in all contexts immediately (solves problems in multi-threaded apps)
+        glCheck(glFlush());
     }
 }
 
@@ -482,14 +481,22 @@ void Texture::setSmooth(bool smooth)
 
         if (m_texture)
         {
-            ensureGlContext();
+            TransientContextLock lock;
 
             // Make sure that the current texture binding will be preserved
             priv::TextureSaver save;
 
             glCheck(glBindTexture(GL_TEXTURE_2D, m_texture));
             glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
-            glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
+
+            if (m_hasMipmap)
+            {
+                glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR));
+            }
+            else
+            {
+                glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
+            }
         }
     }
 }
@@ -525,7 +532,7 @@ void Texture::setRepeated(bool repeated)
 
         if (m_texture)
         {
-            ensureGlContext();
+            TransientContextLock lock;
 
             // Make sure that the current texture binding will be preserved
             priv::TextureSaver save;
@@ -562,9 +569,54 @@ bool Texture::isRepeated() const
 
 
 ////////////////////////////////////////////////////////////
+bool Texture::generateMipmap()
+{
+    if (!m_texture)
+        return false;
+
+    TransientContextLock lock;
+
+    // Make sure that extensions are initialized
+    priv::ensureExtensionsInit();
+
+    if (!GLEXT_framebuffer_object)
+        return false;
+
+    // Make sure that the current texture binding will be preserved
+    priv::TextureSaver save;
+
+    glCheck(glBindTexture(GL_TEXTURE_2D, m_texture));
+    glCheck(GLEXT_glGenerateMipmap(GL_TEXTURE_2D));
+    glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR));
+
+    m_hasMipmap = true;
+
+    return true;
+}
+
+
+////////////////////////////////////////////////////////////
+void Texture::invalidateMipmap()
+{
+    if (!m_hasMipmap)
+        return;
+
+    TransientContextLock lock;
+
+    // Make sure that the current texture binding will be preserved
+    priv::TextureSaver save;
+
+    glCheck(glBindTexture(GL_TEXTURE_2D, m_texture));
+    glCheck(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_isSmooth ? GL_LINEAR : GL_NEAREST));
+
+    m_hasMipmap = false;
+}
+
+
+////////////////////////////////////////////////////////////
 void Texture::bind(const Texture* texture, CoordinateType coordinateType)
 {
-    ensureGlContext();
+    TransientContextLock lock;
 
     if (texture && texture->m_texture)
     {
@@ -620,12 +672,21 @@ void Texture::bind(const Texture* texture, CoordinateType coordinateType)
 ////////////////////////////////////////////////////////////
 unsigned int Texture::getMaximumSize()
 {
-    // TODO: Remove this lock when it becomes unnecessary in C++11
-    Lock lock(mutex);
+    Lock lock(maximumSizeMutex);
 
-    static unsigned int size = checkMaximumTextureSize();
+    static bool checked = false;
+    static GLint size = 0;
 
-    return size;
+    if (!checked)
+    {
+        checked = true;
+
+        TransientContextLock lock;
+
+        glCheck(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &size));
+    }
+
+    return static_cast<unsigned int>(size);
 }
 
 
@@ -641,6 +702,7 @@ Texture& Texture::operator =(const Texture& right)
     std::swap(m_isRepeated,    temp.m_isRepeated);
     std::swap(m_pixelsFlipped, temp.m_pixelsFlipped);
     std::swap(m_fboAttachment, temp.m_fboAttachment);
+    std::swap(m_hasMipmap,     temp.m_hasMipmap);
     m_cacheId = getUniqueId();
 
     return *this;
@@ -657,7 +719,7 @@ unsigned int Texture::getNativeHandle() const
 ////////////////////////////////////////////////////////////
 unsigned int Texture::getValidSize(unsigned int size)
 {
-    ensureGlContext();
+    TransientContextLock lock;
 
     // Make sure that extensions are initialized
     priv::ensureExtensionsInit();
