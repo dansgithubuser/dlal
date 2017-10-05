@@ -5,10 +5,12 @@ import midi
 
 class View:
 	def __init__(self, margin=6, text_size=12):
-		self.midi=midi.read(os.path.join(home, '..', '..', '..', 'deps', 'midi', 'trans.mid'))
+		self.midi=[]
 		self.text=''
 		self.margin=margin
 		self.text_size=text_size
+
+	def load(self, path): self.midi=midi.read(path)
 
 	def draw(self, media):
 		media.clear()

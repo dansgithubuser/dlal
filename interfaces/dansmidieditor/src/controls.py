@@ -16,7 +16,9 @@ class AbstractControls:
 		self.sequence.append(word)
 		import re
 		for regex, method in self.controls:
-			m=re.match(regex, ''.join([' '+i for i in self.sequence]))
+			s=''.join([' '+i for i in self.sequence])
+			m=re.match(regex, s)
+			#print(regex, s, 'm' if m else '')
 			if m:
 				getattr(self, method)()
 				break

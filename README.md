@@ -64,7 +64,6 @@ todo
 ----
 - audio select input and output
 - midi editor
-	- load
 	- better displaying
 	- movement
 	- editing
