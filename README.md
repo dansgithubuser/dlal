@@ -65,7 +65,6 @@ todo
 - audio select input and output
 - midi editor
 	- better displaying
-		- sfml lines
 		- staves
 			- indicator that more staves are off-screen
 		- notes on staves

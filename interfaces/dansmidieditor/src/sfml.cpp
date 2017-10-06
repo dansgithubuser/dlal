@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <map>
 #include <string>
 #include <sstream>
 
@@ -41,6 +42,9 @@ struct Boss{
 				case sf::Event::Closed:
 					ss<<"q";
 					break;
+				case sf::Event::Resized:
+					window.setView(sf::View(sf::FloatRect(0, 0, event.size.width, event.size.height)));
+					break;
 				default: break;
 			}
 		}
@@ -64,6 +68,14 @@ extern "C" {
 	}
 
 	const char* poll_event(){ return fBoss->pollEvent(); }
+
+	void set_vertices_type(const char* s){
+		std::map<std::string, sf::PrimitiveType> m={
+			{"triangles", sf::PrimitiveType::Triangles},
+			{"lines"    , sf::PrimitiveType::Lines},
+		};
+		if(m.count(s)) fBoss->va.setPrimitiveType(m.at(s));
+	}
 
 	void vertex(int x, int y, int r, int g, int b, int a){
 		fBoss->va.append(sf::Vertex(
