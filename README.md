@@ -65,6 +65,14 @@ todo
 - audio select input and output
 - midi editor
 	- better displaying
+		- sfml lines
+		- staves
+			- indicator that more staves are off-screen
+		- notes on staves
+			- indicator that more notes are off-screen
+			- clefs
+		- track 0 events
+		- other events
 	- movement
 	- editing
 		- add notes

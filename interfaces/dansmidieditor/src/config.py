@@ -37,21 +37,26 @@ class Controls(AbstractControls):
 		else: r=''.join(self.sequence)
 		return r
 
-	def command(self):
-		command=self.prettied_sequence().split()
-		name=command[0][1:]
+	def command(self, command=None):
+		if not command:
+			command=self.prettied_sequence()
+			command=command.split()
+			name=command[0][1:]
+		else:
+			command=command.split()
+			name=command[0]
 		params=command[1:]
 		if hasattr(self, name):
 			getattr(self, name)(*params)
 			self.reset()
 		else:
 			self.reset()
-			self.view.text='no such command'
+			self.view.text='no such command "{}"'.format(name)
 
 	def load(self, path): self.view.load(path)
 
 	def mouse_motion (self, regex=r'.* x.*'                  , order=  1): self.sequence=self.sequence[:-1]
-	def quit         (self, regex=r'.* q'                    , order=  2): self.done=True
+	def quit         (self, regex=r'.* (q|<.Ctrl <.Shift <q)', order=  2): self.done=True
 	def reset        (self, regex=r'.* >Esc'                 , order=  3): self.sequence=[]; self.mode='normal'; self.show_sequence()
 	def command_start(self, regex=r' <.Shift <;$'            , order=  4): self.mode='command'; self.show_sequence()
 	def command_end  (self, regex=r' <.Shift <;.*>Return'    , order=  5): self.command()
