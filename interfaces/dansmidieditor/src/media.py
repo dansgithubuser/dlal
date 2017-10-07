@@ -7,7 +7,6 @@ def poll_event(): return sfml.poll_event()
 def set_vertices_type(s): sfml.set_vertices_type(s)
 def vertex(x, y, r, g, b, a): sfml.vertex(x, y, r, g, b, a)
 def draw_vertices(): sfml.draw_vertices()
-def text(x, y, h, s): sfml.text(x, y, h, s)
 def width(): return sfml.width()
 def height(): return sfml.height()
 def display(): sfml.draw_vertices(); sfml.display()
@@ -25,6 +24,22 @@ def _xi_yi(**kwargs):
 	if 'y' in kwargs:
 		yi=kwargs['y']
 		yf=yi+kwargs['h']
+	if kwargs.get('right', False):
+		d=xf-xi
+		xi-=d
+		xf-=d
+	if kwargs.get('bottom', False):
+		d=yf-yi
+		yi-=d
+		yf-=d
+	if kwargs.get('middle_x', False):
+		d=(xf-xi)/2
+		xi-=d
+		xf-=d
+	if kwargs.get('middle_y', False):
+		d=(yf-yi)/2
+		yi-=d
+		yf-=d
 	return (xi, yi, xf, yf)
 
 def _color(**kwargs):
@@ -36,6 +51,13 @@ def _color(**kwargs):
 	if   len(c)==3: r, g, b   =c
 	elif len(c)==4: r, g, b, a=c
 	return (r, g, b, a)
+
+def text(s, **kwargs):
+	kwargs['xf']=0
+	kwargs['w' ]=0
+	xi, yi, xf, yf=_xi_yi(**kwargs)
+	r, g, b, a=_color(**kwargs)
+	sfml.text(xi, yi, yf-yi, s, r, g, b, a)
 
 def fill(**kwargs):
 	set_vertices_type('triangles')

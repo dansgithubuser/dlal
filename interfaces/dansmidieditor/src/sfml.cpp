@@ -89,8 +89,9 @@ extern "C" {
 		fBoss->va.clear();
 	}
 
-	void text(int x, int y, int h, const char* s){
+	void text(int x, int y, int h, const char* s, int r, int g, int b, int a){
 		sf::Text t(s, fBoss->font, h);
+		t.setColor(sf::Color(r, g, b, a));
 		t.setPosition(x, y);
 		fBoss->window.draw(t);
 	}

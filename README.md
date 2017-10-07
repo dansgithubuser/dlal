@@ -65,7 +65,6 @@ todo
 - audio select input and output
 - midi editor
 	- better displaying
-		- clefs
 		- indicator that more staves are off-screen
 		- indicator that more notes are off-screen
 		- track 0 events
