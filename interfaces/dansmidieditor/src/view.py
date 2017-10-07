@@ -14,6 +14,10 @@ class View:
 		self.text_size=text_size
 		self.staves=3.9
 		self.ticks=5760
+		#colors
+		self.color_staves =(  0,  16,   0)
+		self.color_octaves=(  0, 128,   0)
+		self.color_notes  =(  0, 128, 128)
 
 	def load(self, path): self.midi=midi.read(path)
 
@@ -70,7 +74,7 @@ class View:
 		for i in range(self.staves_to_draw()):
 			for j in treble:
 				y=self.y_note(i, j)
-				media.line(xi=0, xf=self.w_window, y=y, h=0, color=(0, 64, 0))
+				media.fill(xi=0, xf=self.w_window, y=y, h=self.h_note(), color=self.color_staves)
 		media.draw_vertices()
 		#octaves
 		octaves=[]
@@ -81,8 +85,7 @@ class View:
 				x=self.margin,
 				y=self.y_note(i, treble[-1]+2),
 				h=self.h_note()*2,
-				color=(0, 128, 0),
-				middle_y=True,
+				color=self.color_octaves,
 			)
 		#notes
 		for i in range(self.staves_to_draw()):
@@ -94,8 +97,7 @@ class View:
 					y=self.y_note(i, j.number, octaves[i]),
 					w=self.x_ticks(j.duration),
 					h=self.h_note(),
-					color=(0, 64, 64),
-					middle_y=True,
+					color=self.color_notes,
 				)
 		media.draw_vertices()
 		#text
