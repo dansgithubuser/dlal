@@ -66,7 +66,6 @@ todo
 - midi editor
 	- editing
 		- select notes
-			- delete notes
 			- change notes
 	- octave notation for individual notes and cursor (local big ranges break display)
 	- controls: nullify sequence when no regex could match?

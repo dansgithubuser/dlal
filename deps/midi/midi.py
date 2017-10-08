@@ -285,3 +285,7 @@ def notes_in(midi, track, ticks, duration, number=None, generous=False):
 			if v.ticks+v.duration>ticks+duration: continue#note ends after window ends
 		r.append((track, i))
 	return r
+
+def delete(midi, notes):
+	notes=sorted(notes, key=lambda x: -x[1])
+	for track, i in notes: del midi[track][i]

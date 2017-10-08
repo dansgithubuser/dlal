@@ -102,6 +102,10 @@ class View:
 	def is_selected(self, note):
 		return any([self.midi[i[0]][i[1]]==note for i in self.selected])
 
+	def delete(self):
+		midi.delete(self.midi, self.selected)
+		self.selected=set()
+
 	def staves_to_draw(self):
 		return range(self.staff, self.staff+min(int(self.staves)+1, len(self.midi)-1-self.staff))
 
