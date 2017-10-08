@@ -1,4 +1,5 @@
 import os, sys
+from fractions import Fraction
 home=os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(home, '..', '..', '..', 'deps', 'midi'))
 import midi
@@ -18,8 +19,9 @@ class View:
 		self.duration=5760
 		self.cursor_staff=0
 		self.cursor_note=0
-		self.cursor_ticks=0
-		self.cursor_duration=0
+		self.cursor_ticks=Fraction(0)
+		self.cursor_duration=Fraction(256)
+		self.cursor_duty=Fraction(1)
 		#colors
 		self.color_staves =[  0,  16,   0]
 		self.color_octaves=[  0, 128,   0]
@@ -28,7 +30,7 @@ class View:
 
 	def load(self, path):
 		self.midi=midi.read(path)
-		self.cursor_duration=midi.ticks_per_quarter(self.midi)
+		self.cursor_duration=Fraction(midi.ticks_per_quarter(self.midi))
 
 	def cursor_down(self, amount):
 		self.cursor_staff+=amount
@@ -44,17 +46,35 @@ class View:
 
 	def cursor_right(self, amount):
 		self.cursor_ticks+=self.cursor_duration*amount
-		self.cursor_ticks=max(0, self.cursor_ticks)
+		self.cursor_ticks=max(Fraction(0), self.cursor_ticks)
 		#move left if cursor is left of window
-		self.ticks=min(self.ticks, self.cursor_ticks)
+		self.ticks=min(self.ticks, int(self.cursor_ticks))
 		#move right if cursor is right of window
 		right=self.ticks+self.duration
 		cursor_right=self.cursor_ticks+self.cursor_duration
-		if cursor_right>right: self.ticks+=cursor_right-right
+		if cursor_right>right: self.ticks+=int(cursor_right)-right
 
 	def cursor_left(self, amount): self.cursor_right(-amount)
 
-	def staves_to_draw(self): return range(min(int(self.staves)+1, len(self.midi)-1))
+	def set_duration(self, fraction_of_quarter):
+		self.cursor_duration=Fraction(midi.ticks_per_quarter(self.midi))*fraction_of_quarter
+
+	def add_note(self, number, advance=True):
+		octave=self.calculate_octave(self.cursor_staff)
+		midi.add_note(
+			self.midi,
+			self.cursor_staff+1,
+			int(self.cursor_ticks),
+			int(self.cursor_duration*self.cursor_duty),
+			number+12*octave
+		)
+		if advance: self.skip_note()
+
+	def skip_note(self):
+		self.cursor_ticks+=self.cursor_duration
+
+	def staves_to_draw(self):
+		return range(min(int(self.staves)+1, len(self.midi)-1-self.staff))
 
 	def h_note(self):
 		return int(self.h_window/self.staves/notes_per_staff)
@@ -126,9 +146,9 @@ class View:
 		media.draw_vertices()
 		#cursor
 		media.fill(
-			x=self.x_ticks(self.cursor_ticks-self.ticks),
+			x=self.x_ticks(int(self.cursor_ticks)-self.ticks),
 			y=self.y_note(self.cursor_staff-self.staff, self.cursor_note),
-			w=self.x_ticks(self.cursor_duration),
+			w=self.x_ticks(int(self.cursor_duration)),
 			h=self.h_note(),
 			color=self.color_cursor,
 		)

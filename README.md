@@ -65,15 +65,13 @@ todo
 - audio select input and output
 - midi editor
 	- editing
-		- add notes
 		- select notes
 			- delete notes
 			- change notes
+	- controls: nullify sequence when no regex could match?
 	- hook into system
 	- quantization
 	- niceties
-		- controls: nullify sequence when no regex could match?
-		- indicator that more staves are off-screen
 		- indicator that more notes are off-screen
 		- track 0 events
 		- other events
