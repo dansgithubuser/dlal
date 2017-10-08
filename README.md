@@ -76,7 +76,6 @@ todo
 			- delete notes
 			- change notes
 	- controls: nullify sequence when no regex could match?
-	- controls: do all regexes at once?
 	- quantization
 - vocoder
 - pitch shift component

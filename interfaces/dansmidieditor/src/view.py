@@ -4,7 +4,7 @@ sys.path.append(os.path.join(home, '..', '..', '..', 'deps', 'midi'))
 import midi
 
 treble=[4, 7, 11, 14, 17]
-semitones_per_staff=24
+notes_per_staff=24
 
 class View:
 	def __init__(self, margin=6, text_size=12):
@@ -14,17 +14,34 @@ class View:
 		self.text_size=text_size
 		self.staves=3.9
 		self.ticks=5760
+		self.cursor_staff=0
+		self.cursor_note=0
+		self.cursor_ticks=0
+		self.cursor_duration=0
 		#colors
-		self.color_staves =(  0,  16,   0)
-		self.color_octaves=(  0, 128,   0)
-		self.color_notes  =(  0, 128, 128)
+		self.color_staves =[  0,  16,   0]
+		self.color_octaves=[  0, 128,   0]
+		self.color_notes  =[  0, 128, 128]
+		self.color_cursor =[128,   0, 128, 128]
 
-	def load(self, path): self.midi=midi.read(path)
+	def load(self, path):
+		self.midi=midi.read(path)
+		self.cursor_duration=midi.ticks_per_quarter(self.midi)
+
+	def cursor_down(self, amount):
+		self.cursor_staff+=amount
+
+	def cursor_up(self, amount): self.cursor_down(-amount)
+
+	def cursor_right(self, amount):
+		self.cursor_ticks+=self.cursor_duration*amount
+
+	def cursor_left(self, amount): self.cursor_right(-amount)
 
 	def staves_to_draw(self): return min(int(self.staves)+1, len(self.midi)-1)
 
 	def h_note(self):
-		return int(self.h_window/self.staves/semitones_per_staff)
+		return int(self.h_window/self.staves/notes_per_staff)
 
 	def y_note(self, staff, note, octave=0):
 		y_staff=(staff+1)*self.h_window/self.staves
@@ -100,6 +117,14 @@ class View:
 					color=self.color_notes,
 				)
 		media.draw_vertices()
+		#cursor
+		media.fill(
+			x=self.x_ticks(self.cursor_ticks),
+			y=self.y_note(self.cursor_staff, self.cursor_note),
+			w=self.x_ticks(self.cursor_duration),
+			h=self.h_note(),
+			color=self.color_cursor,
+		)
 		#text
 		media.text(self.text, x=self.margin, y=self.h_window-self.margin, h=self.text_size, bottom=True)
 		#

@@ -21,8 +21,8 @@ class Controls(AbstractControls):
 		self.view=View()
 		self.mode='normal'
 
-	def prettied_sequence(self):
-		if self.mode=='command':
+	def prettied_sequence(self, override_mode=None):
+		if self.mode=='command' or override_mode=='command':
 			shift=False
 			r=''
 			for i in self.sequence:
@@ -36,6 +36,10 @@ class Controls(AbstractControls):
 				else: assert False
 		else: r=''.join(self.sequence)
 		return r
+
+	def reps(self):
+		try: return int(self.prettied_sequence('command')[:-1])
+		except: return 1
 
 	def command(self, command=None):
 		if not command:
@@ -55,11 +59,15 @@ class Controls(AbstractControls):
 
 	def load(self, path): self.view.load(path)
 
-	def mouse_motion (self, regex=r'.* x.*'                  , order=  1): self.sequence=self.sequence[:-1]
-	def quit         (self, regex=r'.* (q|<.Ctrl <.Shift <q)', order=  2): self.done=True
-	def reset        (self, regex=r'.* >Esc'                 , order=  3): self.sequence=[]; self.mode='normal'; self.show_sequence()
-	def command_start(self, regex=r' <.Shift <;$'            , order=  4): self.mode='command'; self.show_sequence()
-	def command_end  (self, regex=r' <.Shift <;.*>Return'    , order=  5): self.command()
+	def mouse_motion (self, regex=r'.* x.*'                  , order=  0): self.sequence=self.sequence[:-1]
+	def down         (self, regex=r'[^;]* >j'                , order= 10): self.view.cursor_down (self.reps()); self.reset()
+	def up           (self, regex=r'[^;]* >k'                , order= 11): self.view.cursor_up   (self.reps()); self.reset()
+	def right        (self, regex=r'[^;]* >l'                , order= 12): self.view.cursor_right(self.reps()); self.reset()
+	def left         (self, regex=r'[^;]* >h'                , order= 13): self.view.cursor_left (self.reps()); self.reset()
+	def quit         (self, regex=r'.* (q|<.Ctrl <q)'        , order= 20): self.done=True
+	def reset        (self, regex=r'.* >Esc'                 , order= 30): self.sequence=[]; self.mode='normal'; self.show_sequence()
+	def command_start(self, regex=r' <.Shift <;$'            , order= 40): self.mode='command'; self.show_sequence()
+	def command_end  (self, regex=r' <.Shift <;.*>Return'    , order= 50): self.command()
 	def backspace    (self, regex=r'.* <Backspace >Backspace', order=990):
 		if self.mode=='command':
 			for i in reversed(range(len(self.sequence)-2)):

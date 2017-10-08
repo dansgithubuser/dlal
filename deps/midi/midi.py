@@ -258,3 +258,8 @@ def write(file_name, song):
 		write_track(file, bytes)
 	file.close()
 	return
+
+#=====helpers=====#
+def ticks_per_quarter(midi):
+	assert midi[0][0].type=='ticks_per_quarter'
+	return midi[0][0].ticks_per_quarter
