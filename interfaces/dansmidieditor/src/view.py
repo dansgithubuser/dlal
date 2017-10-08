@@ -18,19 +18,22 @@ class View:
 		self.ticks=0
 		self.duration=5760
 		self.cursor_staff=0
-		self.cursor_note=0
+		self.cursor_note=60
 		self.cursor_ticks=Fraction(0)
 		self.cursor_duration=Fraction(256)
 		self.cursor_duty=Fraction(1)
+		self.selected=set()
 		#colors
-		self.color_staves =[  0,  16,   0]
-		self.color_octaves=[  0, 128,   0]
-		self.color_notes  =[  0, 128, 128]
-		self.color_cursor =[128,   0, 128, 128]
+		self.color_staves  =[  0,  16,   0]
+		self.color_octaves =[  0, 128,   0]
+		self.color_notes   =[  0, 128, 128]
+		self.color_cursor  =[128,   0, 128, 128]
+		self.color_selected=[255, 255, 255]
 
 	def load(self, path):
 		self.midi=midi.read(path)
 		self.cursor_duration=Fraction(midi.ticks_per_quarter(self.midi))
+		self.cursor_down(0)
 
 	def cursor_down(self, amount):
 		self.cursor_staff+=amount
@@ -41,6 +44,9 @@ class View:
 		#move down if cursor is below window
 		bottom=self.staff+int(self.staves)
 		if self.cursor_staff>=bottom: self.staff+=self.cursor_staff-bottom+1
+		#figure cursor octave
+		self.cursor_note%=12
+		self.cursor_note+=self.calculate_octave(self.cursor_staff)*12
 
 	def cursor_up(self, amount): self.cursor_down(-amount)
 
@@ -55,6 +61,13 @@ class View:
 		if cursor_right>right: self.ticks+=int(cursor_right)-right
 
 	def cursor_left(self, amount): self.cursor_right(-amount)
+
+	def cursor_note_down(self, amount):
+		self.cursor_note-=amount
+		self.cursor_note=max(0, self.cursor_note)
+		self.cursor_note=min(127, self.cursor_note)
+
+	def cursor_note_up(self, amount): self.cursor_note_down(-amount)
 
 	def set_duration(self, fraction_of_quarter):
 		self.cursor_duration=Fraction(midi.ticks_per_quarter(self.midi))*fraction_of_quarter
@@ -73,14 +86,30 @@ class View:
 	def skip_note(self):
 		self.cursor_ticks+=self.cursor_duration
 
+	def select(self):
+		args=[
+			self.midi,
+			self.cursor_staff+1,
+			self.cursor_ticks,
+			self.cursor_duration,
+		]
+		notes=midi.notes_in(*args, number=self.cursor_note)
+		if not notes: notes=midi.notes_in(*args, number=self.cursor_note, generous=True)
+		if not notes: notes=midi.notes_in(*args)
+		if not notes: notes=midi.notes_in(*args, generous=True)
+		for i in notes: self.selected.add(i)
+
+	def is_selected(self, note):
+		return any([self.midi[i[0]][i[1]]==note for i in self.selected])
+
 	def staves_to_draw(self):
-		return range(min(int(self.staves)+1, len(self.midi)-1-self.staff))
+		return range(self.staff, self.staff+min(int(self.staves)+1, len(self.midi)-1-self.staff))
 
 	def h_note(self):
 		return int(self.h_window/self.staves/notes_per_staff)
 
 	def y_note(self, staff, note, octave=0):
-		y_staff=(staff+1)*self.h_window/self.staves
+		y_staff=(staff+1-self.staff)*self.h_window/self.staves
 		return int(y_staff-(note-12*octave)*self.h_note())
 
 	def x_ticks(self, ticks):
@@ -93,7 +122,7 @@ class View:
 		octave=5
 		lo=60
 		hi=60
-		for i in self.midi[1+self.staff+staff]:
+		for i in self.midi[1+staff]:
 			if i.type!='note': continue
 			if not self.endures(i.ticks): break
 			lo=min(lo, i.number)
@@ -121,9 +150,9 @@ class View:
 				media.fill(xi=0, xf=self.w_window, y=y, h=self.h_note(), color=self.color_staves)
 		media.draw_vertices()
 		#octaves
-		octaves=[]
+		octaves={}
 		for i in self.staves_to_draw():
-			octaves.append(self.calculate_octave(i))
+			octaves[i]=self.calculate_octave(i)
 			media.text(
 				self.notate_octave(octaves[i]),
 				x=self.margin,
@@ -133,7 +162,7 @@ class View:
 			)
 		#notes
 		for i in self.staves_to_draw():
-			for j in self.midi[1+self.staff+i]:
+			for j in self.midi[1+i]:
 				if j.type!='note': print(j)
 				if not self.endures(j.ticks): break
 				media.fill(
@@ -141,13 +170,13 @@ class View:
 					y=self.y_note(i, j.number, octaves[i]),
 					w=self.x_ticks(j.duration),
 					h=self.h_note(),
-					color=self.color_notes,
+					color=self.color_selected if self.is_selected(j) else self.color_notes,
 				)
 		media.draw_vertices()
 		#cursor
 		media.fill(
 			x=self.x_ticks(int(self.cursor_ticks)-self.ticks),
-			y=self.y_note(self.cursor_staff-self.staff, self.cursor_note),
+			y=self.y_note(self.cursor_staff, self.cursor_note, octaves[self.cursor_staff]),
 			w=self.x_ticks(int(self.cursor_duration)),
 			h=self.h_note(),
 			color=self.color_cursor,

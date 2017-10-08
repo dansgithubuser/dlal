@@ -271,3 +271,17 @@ def add_event(track, event):
 def add_note(midi, track, ticks, duration, number, channel=None):
 	if channel==None: channel=track-1
 	add_event(midi[track], Event.make('note', ticks, duration, channel, number))
+
+def notes_in(midi, track, ticks, duration, number=None, generous=False):
+	r=[]
+	for i, v in enumerate(midi[track]):
+		if v.ticks>=ticks+duration: break#note starts after window ends
+		if v.type!='note': continue
+		if number and v.number!=number: continue
+		if generous:
+			if v.ticks+v.duration<=ticks: continue#note ends before window starts
+		else:
+			if v.ticks<ticks: continue#note starts before window starts
+			if v.ticks+v.duration>ticks+duration: continue#note ends after window ends
+		r.append((track, i))
+	return r

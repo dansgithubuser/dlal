@@ -73,10 +73,12 @@ class Controls(AbstractControls):
 	def pdb(self): import pdb; pdb.set_trace()
 
 	def mouse_motion (self, regex=r'.* x.*'                  , order=  0): self.sequence=self.sequence[:-1]
-	def down         (self, regex=r'[^;i]* >j'               , order= 10): self.view.cursor_down (self.reps()); self.reset()
-	def up           (self, regex=r'[^;i]* >k'               , order= 11): self.view.cursor_up   (self.reps()); self.reset()
-	def right        (self, regex=r'[^;i]* >l'               , order= 12): self.view.cursor_right(self.reps()); self.reset()
-	def left         (self, regex=r'[^;i]* >h'               , order= 13): self.view.cursor_left (self.reps()); self.reset()
+	def down         (self, regex=r'[^;i]* >j'               , order= 10): self.view.cursor_down     (self.reps()); self.reset()
+	def up           (self, regex=r'[^;i]* >k'               , order= 11): self.view.cursor_up       (self.reps()); self.reset()
+	def right        (self, regex=r'[^;i]* >l'               , order= 12): self.view.cursor_right    (self.reps()); self.reset()
+	def left         (self, regex=r'[^;i]* >h'               , order= 13): self.view.cursor_left     (self.reps()); self.reset()
+	def down_note    (self, regex=r'[^;i]* <.Shift.*>j'      , order= 14): self.view.cursor_note_down(self.reps()); self.reset()
+	def up_note      (self, regex=r'[^;i]* <.Shift.*>k'      , order= 15): self.view.cursor_note_up  (self.reps()); self.reset()
 	def insert       (self, regex=r' <i >i$'                 , order= 20): self.mode='insert'; self.show_sequence()
 	def note_c       (self, regex=r' <i >i <z >z'            , order= 21): self.view.add_note( 0); self.sequence=self.sequence[:2]; self.show_sequence()
 	def note_cs      (self, regex=r' <i >i <s >s'            , order= 22): self.view.add_note( 1); self.sequence=self.sequence[:2]; self.show_sequence()
@@ -91,6 +93,7 @@ class Controls(AbstractControls):
 	def note_bb      (self, regex=r' <i >i <j >j'            , order= 31): self.view.add_note(10); self.sequence=self.sequence[:2]; self.show_sequence()
 	def note_b       (self, regex=r' <i >i <m >m'            , order= 32): self.view.add_note(11); self.sequence=self.sequence[:2]; self.show_sequence()
 	def note_skip    (self, regex=r' <i >i <Space >Space'    , order= 33): self.view.skip_note( ); self.sequence=self.sequence[:2]; self.show_sequence()
+	def select       (self, regex=r' <Return >Return'        , order= 40): self.view.select(); self.reset()
 	def duration     (self, regex=r'[^;i]* >d'               , order= 50): self.view.set_duration(self.fraction(      )); self.reset()
 	def duration_i   (self, regex=r' <i.* >d'                , order= 51): self.view.set_duration(self.fraction(skip=1)); self.sequence=self.sequence[:2]; self.show_sequence()
 	def quit         (self, regex=r'.* (q|<.Ctrl <q)'        , order=120): self.done=True
