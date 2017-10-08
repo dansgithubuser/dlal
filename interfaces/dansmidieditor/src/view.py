@@ -12,8 +12,10 @@ class View:
 		self.text=''
 		self.margin=margin
 		self.text_size=text_size
+		self.staff=0
 		self.staves=3.9
-		self.ticks=5760
+		self.ticks=0
+		self.duration=5760
 		self.cursor_staff=0
 		self.cursor_note=0
 		self.cursor_ticks=0
@@ -30,15 +32,29 @@ class View:
 
 	def cursor_down(self, amount):
 		self.cursor_staff+=amount
+		self.cursor_staff=max(self.cursor_staff, 0)
+		self.cursor_staff=min(self.cursor_staff, len(self.midi)-2)
+		#move up if cursor is above window
+		self.staff=min(self.staff, self.cursor_staff)
+		#move down if cursor is below window
+		bottom=self.staff+int(self.staves)
+		if self.cursor_staff>=bottom: self.staff+=self.cursor_staff-bottom+1
 
 	def cursor_up(self, amount): self.cursor_down(-amount)
 
 	def cursor_right(self, amount):
 		self.cursor_ticks+=self.cursor_duration*amount
+		self.cursor_ticks=max(0, self.cursor_ticks)
+		#move left if cursor is left of window
+		self.ticks=min(self.ticks, self.cursor_ticks)
+		#move right if cursor is right of window
+		right=self.ticks+self.duration
+		cursor_right=self.cursor_ticks+self.cursor_duration
+		if cursor_right>right: self.ticks+=cursor_right-right
 
 	def cursor_left(self, amount): self.cursor_right(-amount)
 
-	def staves_to_draw(self): return min(int(self.staves)+1, len(self.midi)-1)
+	def staves_to_draw(self): return range(min(int(self.staves)+1, len(self.midi)-1))
 
 	def h_note(self):
 		return int(self.h_window/self.staves/notes_per_staff)
@@ -48,15 +64,18 @@ class View:
 		return int(y_staff-(note-12*octave)*self.h_note())
 
 	def x_ticks(self, ticks):
-		return ticks*self.w_window/self.ticks
+		return (ticks)*self.w_window/self.duration
+
+	def endures(self, ticks):
+		return ticks<self.ticks+self.duration
 
 	def calculate_octave(self, staff):
 		octave=5
 		lo=60
 		hi=60
-		for i in self.midi[staff+1]:
+		for i in self.midi[1+self.staff+staff]:
 			if i.type!='note': continue
-			if i.ticks>=self.ticks: break
+			if not self.endures(i.ticks): break
 			lo=min(lo, i.number)
 			hi=max(hi, i.number)
 		top=(octave+2)*12
@@ -71,31 +90,19 @@ class View:
 		if octave<=-1: return '{}vb'.format(1-7*octave)
 		return ''
 
-	def draw_notes_debug(self, media, octaves):
-		for i in range(self.staves_to_draw()):
-			for j in self.midi[i+1]:
-				if j.type!='note': print(j)
-				if j.ticks>=self.ticks: break
-				media.line(
-					xi=self.x_ticks(j.ticks),
-					yi=self.y_note(i, j.number, octaves[i]),
-					xf=self.margin,
-					yf=self.y_note(i, 24),
-				)
-
 	def draw(self, media):
 		media.clear()
 		self.w_window=media.width()
 		self.h_window=media.height()
 		#staves
-		for i in range(self.staves_to_draw()):
+		for i in self.staves_to_draw():
 			for j in treble:
 				y=self.y_note(i, j)
 				media.fill(xi=0, xf=self.w_window, y=y, h=self.h_note(), color=self.color_staves)
 		media.draw_vertices()
 		#octaves
 		octaves=[]
-		for i in range(self.staves_to_draw()):
+		for i in self.staves_to_draw():
 			octaves.append(self.calculate_octave(i))
 			media.text(
 				self.notate_octave(octaves[i]),
@@ -105,12 +112,12 @@ class View:
 				color=self.color_octaves,
 			)
 		#notes
-		for i in range(self.staves_to_draw()):
-			for j in self.midi[i+1]:
+		for i in self.staves_to_draw():
+			for j in self.midi[1+self.staff+i]:
 				if j.type!='note': print(j)
-				if j.ticks>=self.ticks: break
+				if not self.endures(j.ticks): break
 				media.fill(
-					x=self.x_ticks(j.ticks),
+					x=self.x_ticks(j.ticks-self.ticks),
 					y=self.y_note(i, j.number, octaves[i]),
 					w=self.x_ticks(j.duration),
 					h=self.h_note(),
@@ -119,8 +126,8 @@ class View:
 		media.draw_vertices()
 		#cursor
 		media.fill(
-			x=self.x_ticks(self.cursor_ticks),
-			y=self.y_note(self.cursor_staff, self.cursor_note),
+			x=self.x_ticks(self.cursor_ticks-self.ticks),
+			y=self.y_note(self.cursor_staff-self.staff, self.cursor_note),
 			w=self.x_ticks(self.cursor_duration),
 			h=self.h_note(),
 			color=self.color_cursor,
