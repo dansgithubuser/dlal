@@ -10,6 +10,7 @@ notes_per_staff=24
 class View:
 	def __init__(self, margin=6, text_size=12):
 		self.midi=[]
+		self.ticks_per_quarter=256
 		self.text=''
 		self.margin=margin
 		self.text_size=text_size
@@ -20,11 +21,12 @@ class View:
 		self.cursor_staff=0
 		self.cursor_note=60
 		self.cursor_ticks=Fraction(0)
-		self.cursor_duration=Fraction(256)
+		self.cursor_duration=Fraction(self.ticks_per_quarter)
 		self.cursor_duty=Fraction(1)
 		self.selected=set()
 		#colors
-		self.color_staves  =[  0,  16,   0]
+		self.color_staves  =[  0,  32,   0, 128]
+		self.color_quarter =[  4,   4,   4]
 		self.color_octaves =[  0, 128,   0]
 		self.color_notes   =[  0, 128, 128]
 		self.color_cursor  =[128,   0, 128, 128]
@@ -32,7 +34,8 @@ class View:
 
 	def load(self, path):
 		self.midi=midi.read(path)
-		self.cursor_duration=Fraction(midi.ticks_per_quarter(self.midi))
+		self.ticks_per_quarter=midi.ticks_per_quarter(self.midi)
+		self.cursor_duration=Fraction(self.ticks_per_quarter)
 		self.cursor_down(0)
 
 	def cursor_down(self, amount):
@@ -70,7 +73,7 @@ class View:
 	def cursor_note_up(self, amount): self.cursor_note_down(-amount)
 
 	def set_duration(self, fraction_of_quarter):
-		self.cursor_duration=Fraction(midi.ticks_per_quarter(self.midi))*fraction_of_quarter
+		self.cursor_duration=Fraction(self.ticks_per_quarter)*fraction_of_quarter
 
 	def add_note(self, number, advance=True):
 		octave=self.calculate_octave(self.cursor_staff)
@@ -122,7 +125,7 @@ class View:
 		return int(y_staff-(note-12*octave)*self.h_note())
 
 	def x_ticks(self, ticks):
-		return (ticks)*self.w_window/self.duration
+		return (ticks-self.ticks)*self.w_window/self.duration
 
 	def endures(self, ticks):
 		return ticks<self.ticks+self.duration
@@ -152,6 +155,17 @@ class View:
 		media.clear()
 		self.w_window=media.width()
 		self.h_window=media.height()
+		#quarters
+		tph=2*self.ticks_per_quarter
+		for i in range(self.duration/tph+2):
+			media.fill(
+				xi=self.x_ticks((self.ticks/tph+i)*tph),
+				xf=self.x_ticks((self.ticks/tph+i)*tph+self.ticks_per_quarter),
+				yi=0,
+				yf=self.h_window,
+				color=self.color_quarter
+			)
+		media.draw_vertices()
 		#staves
 		for i in self.staves_to_draw():
 			for j in treble:
@@ -175,18 +189,18 @@ class View:
 				if j.type!='note': print(j)
 				if not self.endures(j.ticks): break
 				media.fill(
-					x=self.x_ticks(j.ticks-self.ticks),
+					xi=self.x_ticks(j.ticks),
+					xf=self.x_ticks(j.ticks+j.duration),
 					y=self.y_note(i, j.number, octaves[i]),
-					w=self.x_ticks(j.duration),
 					h=self.h_note(),
 					color=self.color_selected if self.is_selected(j) else self.color_notes,
 				)
 		media.draw_vertices()
 		#cursor
 		media.fill(
-			x=self.x_ticks(int(self.cursor_ticks)-self.ticks),
+			xi=self.x_ticks(int(self.cursor_ticks)),
+			xf=self.x_ticks(int(self.cursor_ticks+self.cursor_duration)),
 			y=self.y_note(self.cursor_staff, self.cursor_note, octaves[self.cursor_staff]),
-			w=self.x_ticks(int(self.cursor_duration)),
 			h=self.h_note(),
 			color=self.color_cursor,
 		)
