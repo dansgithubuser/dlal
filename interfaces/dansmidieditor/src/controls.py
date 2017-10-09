@@ -1,24 +1,105 @@
+import re, types
+
 class AbstractControls:
+	shift_table={
+		'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
+		'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L',
+		'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R',
+		's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X',
+		'y': 'Y', 'z': 'Z',
+		'1': '!', '2': '@', '3': '#', '4': '$', '5': '%',
+		'6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
+		'[': '{', ']': '}', ';': ':', ',': '<', '.': '>',
+		"'": '"', '/': '?', '`': '~', '=': '+', '-': '_',
+		'\\': '|',
+	}
+
+	control_number=0
+
+	def add_control(self, regex, order, mode, body):
+		f='\n'.join([
+			'def {0}(self, regex=r"{1}", order={2}, mode="{3}"):{4}',
+			'self.{0}=types.MethodType({0}, self)',
+		]).format(
+			'control_{}'.format(self.control_number),
+			regex,
+			order,
+			mode,
+			''.join(['\n\t'+i for i in body]),
+		)
+		try: exec(f)
+		except:
+			print('-'*40)
+			print(f)
+			print('-'*40)
+			raise
+		self.control_number+=1
+
+	def configure(self, configuration):
+		mode='normal'
+		order=0
+		regex=None
+		body=[]
+		for line in configuration.splitlines():
+			if not line: continue
+			if line.startswith('\t'): body.append(line[1:]); continue
+			elif body: self.add_control(regex, order, mode, body); body=[]
+			split=line.split()
+			if len(split)==2:
+				command, value=split
+				if command=='mode': mode=value; order=0; continue
+				elif command=='order': order=int(value); continue
+			regex, b=re.match('([^:]*):(.*)', line).groups()
+			if b: self.add_control(regex, order, mode, [b])
+
 	def __init__(self):
 		self.sequence=[]
-		import inspect
-		self.controls=[]
+		import collections, inspect
+		D=collections.defaultdict
+		self.controls=D(lambda: D(list))
 		for i in dir(self):
+			if i.startswith('_'): continue
 			a=getattr(self, i)
 			if not callable(a): continue
-			if any([j not in inspect.getargspec(a).args for j in ['regex', 'order']]): continue
-			defaults=inspect.getcallargs(a)
-			self.controls.append((defaults['regex'], i, defaults['order']))
-		self.controls=sorted(self.controls, key=lambda i: i[2])
-		self.controls=[i[:2] for i in self.controls]
+			if any([j not in inspect.getargspec(a).args for j in ['regex', 'order', 'mode']]): continue
+			try: params=inspect.getcallargs(a)
+			except: continue
+			self.controls[params['order']][params['mode']].append((params['regex'], i))
+		self.controls=[v for k, v in sorted(self.controls.items(), key=lambda k: k)]
+		self.mode='normal'
 
 	def input(self, word):
 		self.sequence.append(word)
-		import re
-		for regex, method in self.controls:
-			s=''.join([' '+i for i in self.sequence])
-			m=re.match(regex, s)
-			#print(regex, s, 'm' if m else '')
-			if m:
-				getattr(self, method)()
-				break
+		def f():
+			for controls_order in self.controls:
+				for mode, controls_order_mode in controls_order.items():
+					if not re.match(mode, self.mode): continue
+					for regex, method in controls_order_mode:
+						s=''.join([' '+i for i in self.sequence])
+						m=re.match(regex, s)
+						#print('{} {} {} {} {}'.format(word, regex, s, method, 'MATCH' if m else ''))
+						if m:
+							getattr(self, method)()
+							return
+		f()
+		self.on_input()
+
+	def on_input(self): pass
+
+	def clear(self): self.sequence=[]
+
+	def reset(self): self.mode='normal'; self.clear()
+
+	def sequence_as_text(self):
+		shift=False
+		r=''
+		for i in self.sequence:
+			c=i[1:]
+			if   i[0]=='<':
+				if c in self.shift_table: r+=shift_table[c] if shift else c
+				elif c=='Space': r+=' '
+				elif c[1:]=='Shift': shift=True#LShift or RShift
+			elif i[0]=='>':
+				if   c[1:]=='Shift': shift=False#LShift or RShift
+			else: assert False
+		return r

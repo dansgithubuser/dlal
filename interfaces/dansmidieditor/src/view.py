@@ -6,7 +6,7 @@ import midi
 
 class View:
 	def __init__(self, margin=6, text_size=12):
-		self.midi=[]
+		self.midi=[[], []]
 		self.ticks_per_quarter=256
 		self.text=''
 		self.margin=margin
@@ -132,14 +132,14 @@ class View:
 		return 24*self.multistaffing
 
 	def h_note(self):
-		return self.h_window/self.staves/self.notes_per_staff()
+		return self.h_window//self.staves//self.notes_per_staff()
 
 	def y_note(self, staff, note, octave=0):
-		y_staff=(staff+1-self.staff)*self.h_window/self.staves
+		y_staff=(staff+1-self.staff)*self.h_window//self.staves
 		return int(y_staff-(note-12*octave)*self.h_note())
 
 	def x_ticks(self, ticks):
-		return (ticks-self.ticks)*self.w_window/self.duration
+		return (ticks-self.ticks)*self.w_window//self.duration
 
 	def endures(self, ticks):
 		return ticks<self.ticks+self.duration
@@ -155,9 +155,9 @@ class View:
 			lo=min(lo, i.number)
 			hi=max(hi, i.number)
 		top=(octave+2)*12
-		if hi>top: octave+=(hi-top+11)/12
+		if hi>top: octave+=(hi-top+11)//12
 		bottom=octave*12
-		if lo<bottom: octave+=(lo-bottom)/12
+		if lo<bottom: octave+=(lo-bottom)//12
 		return octave
 
 	def notate_octave(self, octave):
@@ -172,10 +172,10 @@ class View:
 		self.h_window=media.height()
 		#quarters
 		tph=2*self.ticks_per_quarter
-		for i in range(self.duration/tph+2):
+		for i in range(self.duration//tph+2):
 			media.fill(
-				xi=self.x_ticks((self.ticks/tph+i)*tph),
-				xf=self.x_ticks((self.ticks/tph+i)*tph+self.ticks_per_quarter),
+				xi=self.x_ticks((self.ticks//tph+i)*tph),
+				xf=self.x_ticks((self.ticks//tph+i)*tph+self.ticks_per_quarter),
 				yi=0,
 				yf=self.h_window,
 				color=self.color_quarter
@@ -216,7 +216,7 @@ class View:
 					**kwargs
 				)
 				if j.number-12*octaves[i]>24*self.multistaffing-4: media.fill(
-					h=int(self.h_note()/2),
+					h=int(self.h_note()//2),
 					color=self.color_warning,
 					**kwargs
 				)

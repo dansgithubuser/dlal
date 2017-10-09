@@ -3,7 +3,7 @@ sfml=ctypes.CDLL('../../../build/built/libSfml.so')
 assert sfml.init(640, 480, "Dan's MIDI Editor")==0
 sfml.poll_event.restype=ctypes.c_char_p
 
-def poll_event(): return sfml.poll_event()
+def poll_event(): return sfml.poll_event().decode()
 def set_vertices_type(s): sfml.set_vertices_type(s)
 def vertex(x, y, r, g, b, a): sfml.vertex(x, y, r, g, b, a)
 def draw_vertices(): sfml.draw_vertices()
@@ -59,7 +59,7 @@ def text(s, **kwargs):
 	kwargs['w' ]=0
 	xi, yi, xf, yf=_xi_yi(**kwargs)
 	r, g, b, a=_color(**kwargs)
-	sfml.text(xi, yi, yf-yi, s, r, g, b, a)
+	sfml.text(xi, yi, yf-yi, s.encode(), r, g, b, a)
 
 def fill(**kwargs):
 	set_vertices_type('triangles')
