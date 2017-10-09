@@ -77,6 +77,6 @@ def line(**kwargs):
 	vertex(xi, yi, r, g, b, a)
 	vertex(xf, yf, r, g, b, a)
 
-def clear():
-	fill(x=0, y=0, w=width(), h=height(), color=(0, 0, 0))
+def clear(**kwargs):
+	fill(x=0, y=0, w=width(), h=height(), color=_color(**kwargs))
 	draw_vertices()

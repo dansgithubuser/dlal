@@ -25,12 +25,13 @@ class View:
 		self.cursor_duty=Fraction(1)
 		self.selected=set()
 		#colors
-		self.color_staves  =[  0,  32,   0, 128]
-		self.color_quarter =[  4,   4,   4]
-		self.color_octaves =[  0, 128,   0]
-		self.color_notes   =[  0, 128, 128]
-		self.color_cursor  =[128,   0, 128, 128]
-		self.color_selected=[255, 255, 255]
+		self.color_background=[  0,   0,   0]
+		self.color_staves    =[  0,  32,   0, 128]
+		self.color_quarter   =[  4,   4,   4]
+		self.color_octaves   =[  0, 128,   0]
+		self.color_notes     =[  0, 128, 128]
+		self.color_cursor    =[128,   0, 128, 128]
+		self.color_selected  =[255, 255, 255]
 
 	def load(self, path):
 		self.midi=midi.read(path)
@@ -152,7 +153,7 @@ class View:
 		return ''
 
 	def draw(self, media):
-		media.clear()
+		media.clear(color=self.color_background)
 		self.w_window=media.width()
 		self.h_window=media.height()
 		#quarters
