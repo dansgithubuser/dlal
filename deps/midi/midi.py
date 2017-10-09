@@ -289,3 +289,6 @@ def notes_in(midi, track, ticks, duration, number=None, generous=False):
 def delete(midi, notes):
 	notes=sorted(notes, key=lambda x: -x[1])
 	for track, i in notes: del midi[track][i]
+
+def transpose(midi, notes, amount):
+	for track, i in notes: midi[track][i].number+=amount
