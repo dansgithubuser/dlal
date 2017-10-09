@@ -64,7 +64,7 @@ todo
 ----
 - audio select input and output
 - midi editor
-	- octave notation for individual notes and cursor (local big ranges break display)
+	- multistaves
 	- controls: nullify sequence when no regex could match?
 	- hook into system
 	- quantization

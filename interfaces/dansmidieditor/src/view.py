@@ -27,11 +27,13 @@ class View:
 		#colors
 		self.color_background=[  0,   0,   0]
 		self.color_staves    =[  0,  32,   0, 128]
+		self.color_c_line    =[ 16,  16,  16, 128]
 		self.color_quarter   =[  8,   8,   8]
 		self.color_octaves   =[  0, 128,   0]
 		self.color_notes     =[  0, 128, 128]
 		self.color_cursor    =[128,   0, 128, 128]
 		self.color_selected  =[255, 255, 255]
+		self.color_warning   =[255,   0,   0]
 
 	def load(self, path):
 		self.midi=midi.read(path)
@@ -173,9 +175,11 @@ class View:
 		media.draw_vertices()
 		#staves
 		for i in self.staves_to_draw():
+			h=int(self.h_note())
+			media.fill(xi=0, xf=self.w_window, y=self.y_note(i, 0), h=h, color=self.color_c_line)
 			for j in treble:
 				y=self.y_note(i, j)
-				media.fill(xi=0, xf=self.w_window, y=y, h=int(self.h_note()), color=self.color_staves)
+				media.fill(xi=0, xf=self.w_window, y=y, h=h, color=self.color_staves)
 		media.draw_vertices()
 		#octaves
 		octaves={}
@@ -193,12 +197,20 @@ class View:
 			for j in self.midi[1+i]:
 				if j.type!='note': print(j)
 				if not self.endures(j.ticks): break
+				kwargs={
+					'xi': self.x_ticks(j.ticks),
+					'xf': self.x_ticks(j.ticks+j.duration),
+					'y' : self.y_note(i, j.number, octaves[i]),
+				}
 				media.fill(
-					xi=self.x_ticks(j.ticks),
-					xf=self.x_ticks(j.ticks+j.duration),
-					y=self.y_note(i, j.number, octaves[i]),
 					h=int(self.h_note()),
 					color=self.color_selected if self.is_selected(j) else self.color_notes,
+					**kwargs
+				)
+				if j.number-12*octaves[i]>20: media.fill(
+					h=int(self.h_note()/2),
+					color=self.color_warning,
+					**kwargs
 				)
 		media.draw_vertices()
 		#cursor
