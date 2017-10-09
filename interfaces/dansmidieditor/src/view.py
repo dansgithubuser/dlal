@@ -15,7 +15,7 @@ class View:
 		self.margin=margin
 		self.text_size=text_size
 		self.staff=0
-		self.staves=3.9
+		self.staves=4.0
 		self.ticks=0
 		self.duration=5760
 		self.cursor_staff=0
@@ -27,7 +27,7 @@ class View:
 		#colors
 		self.color_background=[  0,   0,   0]
 		self.color_staves    =[  0,  32,   0, 128]
-		self.color_quarter   =[  4,   4,   4]
+		self.color_quarter   =[  8,   8,   8]
 		self.color_octaves   =[  0, 128,   0]
 		self.color_notes     =[  0, 128, 128]
 		self.color_cursor    =[128,   0, 128, 128]
@@ -63,6 +63,9 @@ class View:
 		right=self.ticks+self.duration
 		cursor_right=self.cursor_ticks+self.cursor_duration
 		if cursor_right>right: self.ticks+=int(cursor_right)-right
+		#figure cursor octave
+		self.cursor_note%=12
+		self.cursor_note+=self.calculate_octave(self.cursor_staff)*12
 
 	def cursor_left(self, amount): self.cursor_right(-amount)
 
@@ -119,7 +122,7 @@ class View:
 		return range(self.staff, self.staff+min(int(self.staves)+1, len(self.midi)-1-self.staff))
 
 	def h_note(self):
-		return int(self.h_window/self.staves/notes_per_staff)
+		return self.h_window/self.staves/notes_per_staff
 
 	def y_note(self, staff, note, octave=0):
 		y_staff=(staff+1-self.staff)*self.h_window/self.staves
@@ -137,6 +140,7 @@ class View:
 		hi=60
 		for i in self.midi[1+staff]:
 			if i.type!='note': continue
+			if i.ticks+i.duration<self.ticks: continue
 			if not self.endures(i.ticks): break
 			lo=min(lo, i.number)
 			hi=max(hi, i.number)
@@ -171,7 +175,7 @@ class View:
 		for i in self.staves_to_draw():
 			for j in treble:
 				y=self.y_note(i, j)
-				media.fill(xi=0, xf=self.w_window, y=y, h=self.h_note(), color=self.color_staves)
+				media.fill(xi=0, xf=self.w_window, y=y, h=int(self.h_note()), color=self.color_staves)
 		media.draw_vertices()
 		#octaves
 		octaves={}
@@ -181,7 +185,7 @@ class View:
 				self.notate_octave(octaves[i]),
 				x=self.margin,
 				y=self.y_note(i, treble[-1]+2),
-				h=self.h_note()*2,
+				h=int(self.h_note()*2),
 				color=self.color_octaves,
 			)
 		#notes
@@ -193,7 +197,7 @@ class View:
 					xi=self.x_ticks(j.ticks),
 					xf=self.x_ticks(j.ticks+j.duration),
 					y=self.y_note(i, j.number, octaves[i]),
-					h=self.h_note(),
+					h=int(self.h_note()),
 					color=self.color_selected if self.is_selected(j) else self.color_notes,
 				)
 		media.draw_vertices()
@@ -202,7 +206,7 @@ class View:
 			xi=self.x_ticks(int(self.cursor_ticks)),
 			xf=self.x_ticks(int(self.cursor_ticks+self.cursor_duration)),
 			y=self.y_note(self.cursor_staff, self.cursor_note, octaves[self.cursor_staff]),
-			h=self.h_note(),
+			h=int(self.h_note()),
 			color=self.color_cursor,
 		)
 		#text

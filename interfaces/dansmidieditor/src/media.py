@@ -12,6 +12,8 @@ def height(): return sfml.height()
 def display(): sfml.draw_vertices(); sfml.display()
 
 def _xi_yi(**kwargs):
+	if 'bounds' in kwargs:
+		xi, yi, xf, yf=kwargs['bounds']
 	if 'xi' in kwargs:
 		xi=kwargs['xi']
 		xf=kwargs['xf']
