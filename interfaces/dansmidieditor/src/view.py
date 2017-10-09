@@ -4,9 +4,6 @@ home=os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(home, '..', '..', '..', 'deps', 'midi'))
 import midi
 
-treble=[4, 7, 11, 14, 17]
-notes_per_staff=24
-
 class View:
 	def __init__(self, margin=6, text_size=12):
 		self.midi=[]
@@ -16,6 +13,7 @@ class View:
 		self.text_size=text_size
 		self.staff=0
 		self.staves=4.0
+		self.multistaffing=1
 		self.ticks=0
 		self.duration=5760
 		self.cursor_staff=0
@@ -81,6 +79,13 @@ class View:
 	def set_duration(self, fraction_of_quarter):
 		self.cursor_duration=Fraction(self.ticks_per_quarter)*fraction_of_quarter
 
+	def more_multistaffing(self, amount):
+		self.multistaffing+=amount
+		self.multistaffing=max(1, self.multistaffing)
+		self.multistaffing=min(6, self.multistaffing)
+
+	def less_multistaffing(self, amount): self.more_multistaffing(-amount)
+
 	def add_note(self, number, advance=True):
 		octave=self.calculate_octave(self.cursor_staff)
 		midi.add_note(
@@ -123,8 +128,11 @@ class View:
 	def staves_to_draw(self):
 		return range(self.staff, self.staff+min(int(self.staves)+1, len(self.midi)-1-self.staff))
 
+	def notes_per_staff(self):
+		return 24*self.multistaffing
+
 	def h_note(self):
-		return self.h_window/self.staves/notes_per_staff
+		return self.h_window/self.staves/self.notes_per_staff()
 
 	def y_note(self, staff, note, octave=0):
 		y_staff=(staff+1-self.staff)*self.h_window/self.staves
@@ -156,7 +164,7 @@ class View:
 		octave-=5
 		if octave>= 1: return '{}va'.format(1+7*octave)
 		if octave<=-1: return '{}vb'.format(1-7*octave)
-		return ''
+		return '-'
 
 	def draw(self, media):
 		media.clear(color=self.color_background)
@@ -174,12 +182,12 @@ class View:
 			)
 		media.draw_vertices()
 		#staves
-		for i in self.staves_to_draw():
-			h=int(self.h_note())
-			media.fill(xi=0, xf=self.w_window, y=self.y_note(i, 0), h=h, color=self.color_c_line)
-			for j in treble:
-				y=self.y_note(i, j)
-				media.fill(xi=0, xf=self.w_window, y=y, h=h, color=self.color_staves)
+		h=int(self.h_note())
+		for m in range(self.multistaffing):
+			for i in self.staves_to_draw():
+				media.fill(xi=0, xf=self.w_window, y=self.y_note(i, 24*m), h=h, color=self.color_c_line)
+				for j in [4, 7, 11, 14, 17]:
+					media.fill(xi=0, xf=self.w_window, y=self.y_note(i, j+24*m), h=h, color=self.color_staves)
 		media.draw_vertices()
 		#octaves
 		octaves={}
@@ -188,7 +196,7 @@ class View:
 			media.text(
 				self.notate_octave(octaves[i]),
 				x=self.margin,
-				y=self.y_note(i, treble[-1]+2),
+				y=self.y_note(i, 24*self.multistaffing-5),
 				h=int(self.h_note()*2),
 				color=self.color_octaves,
 			)
@@ -207,7 +215,7 @@ class View:
 					color=self.color_selected if self.is_selected(j) else self.color_notes,
 					**kwargs
 				)
-				if j.number-12*octaves[i]>20: media.fill(
+				if j.number-12*octaves[i]>24*self.multistaffing-4: media.fill(
 					h=int(self.h_note()/2),
 					color=self.color_warning,
 					**kwargs

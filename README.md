@@ -64,11 +64,11 @@ todo
 ----
 - audio select input and output
 - midi editor
-	- multistaves
 	- controls: nullify sequence when no regex could match?
 	- hook into system
 	- quantization
 	- niceties
+		- many-notes render speed
 		- indicator that more notes are off-screen
 		- track 0 events
 		- other events

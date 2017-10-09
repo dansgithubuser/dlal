@@ -100,6 +100,10 @@ class Controls(AbstractControls):
 	def duration     (self, regex=r'[^;i]* >d'               , order= 50): self.view.set_duration(self.fraction(      )); self.reset()
 	def duration_i   (self, regex=r' <i.* >d'                , order= 51): self.view.set_duration(self.fraction(skip=1)); self.sequence=self.sequence[:2]; self.show_sequence()
 	def delete       (self, regex=r' <Delete >Delete'        , order= 60): self.view.delete(); self.reset()
+	def more_multistaffing(
+	                  self, regex=r'[^;i]* <.Shift.*>s'      , order= 70): self.view.more_multistaffing(self.reps()); self.reset()
+	def less_multistaffing(
+	                  self, regex=r'[^;i]* <.Shift.*>x'      , order= 71): self.view.less_multistaffing(self.reps()); self.reset()
 	def quit         (self, regex=r'.* (q|<.Ctrl <q)'        , order=120): self.done=True
 	def reset        (self, regex=r'.* >Esc'                 , order=130): self.sequence=[]; self.mode='normal'; self.show_sequence()
 	def command_start(self, regex=r' <.Shift <;$'            , order=140): self.mode='command'; self.show_sequence()
