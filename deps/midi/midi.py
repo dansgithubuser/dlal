@@ -1,9 +1,9 @@
 track_header_size=8
 
-def de_delta(bytes, i):
+def read_delta(bytes, i):
 	'''Return (delta, i) where
 delta is the delta ticks encoded starting from bytes[0] and
-i is incremented by the length of the delta time in bytes.'''
+i is incremented by the length of the delta in bytes.'''
 	result=0
 	for i in range(i, i+4):
 		result<<=7
@@ -12,8 +12,8 @@ i is incremented by the length of the delta time in bytes.'''
 	else: raise Exception('delta too big')
 	return (result, i+1)
 
-def se_delta(ticks):
-	'Return the bytes that specify a delta time equal to ticks.'
+def write_delta(ticks):
+	'Return the bytes that specify a delta equal to ticks.'
 	result=[]
 	for i in range(4):
 		byte=ticks&0x7f
@@ -25,7 +25,7 @@ def se_delta(ticks):
 	else: raise Exception('delta too big')
 
 class Pair:
-	'The track unit: a delta-time and MIDI event pair.'
+	'The track unit: a delta and MIDI event pair.'
 	def __init__(self, delta, event):
 		self.delta=delta
 		self.event=event
@@ -35,25 +35,25 @@ def get_pairs(track_chunk):
 track_chunk is assumed to have come from a track chunk produced by chunkitize.'''
 	pairs=[]
 	i=track_header_size
-	command=None
+	status=None
 	while i<len(track_chunk):
-		delta, i=de_delta(track_chunk, i)
+		delta, i=read_delta(track_chunk, i)
 		x=track_chunk[i]
-		if x&0xf0: command=x; i+=1
-		if command&0xf0 in [0x80,0x90,0xa0,0xb0,0xe0]:
+		if x&0xf0: status=x; i+=1
+		if status&0xf0 in [0x80,0x90,0xa0,0xb0,0xe0]:
 			parameters=track_chunk[i:i+2]
 			i+=2
-		elif command&0xf0 in [0xc0,0xd0]:
+		elif status&0xf0 in [0xc0,0xd0]:
 			parameters=track_chunk[i:i+1]
 			i+=1
-		elif command&0xf0==0xf0:
-			if command==0xff:
+		elif status&0xf0==0xf0:
+			if status==0xff:
 				l=2+track_chunk[i+1]
 				parameters=track_chunk[i:i+l]
 				i+=l
 			else:
 				parameters=[]
-		pairs.append(Pair(delta, [command]+parameters))
+		pairs.append(Pair(delta, [status]+parameters))
 	if pairs[-1].event!=[0xff, 0x2f, 0x00]: raise Exception('invalid last command')
 	return pairs
 
@@ -69,19 +69,18 @@ def big_endian_to_unsigned(bytes):
 def chunkitize(bytes):
 	header_length=14
 	header_title=[ord(i) for i in 'MThd']
-	if len(bytes)<header_length: raise Exception('too short')
+	if len(bytes)<header_length: raise Exception('header too short')
 	if bytes[0:len(header_title)]!=header_title: raise(Exception('bad header'))
 	chunks=[bytes[0:header_length]]
 	track_title=[ord(i) for i in 'MTrk']
 	i=header_length
 	global track_header_size
-	while True:
-		if len(bytes)<i+track_header_size: break
-		if bytes[i:i+len(track_title)]!=track_title: raise Exception('track too short')
-		tracklength=big_endian_to_unsigned(bytes[i+4:i+8])
-		if len(bytes)<i+track_header_size+tracklength: raise Exception('bad track header')
-		chunks+=[bytes[i:i+track_header_size+tracklength]]
-		i+=track_header_size+tracklength
+	while len(bytes)>=i+track_header_size:
+		if bytes[i:i+len(track_title)]!=track_title: raise Exception('bad track header')
+		track_size=big_endian_to_unsigned(bytes[i+4:i+8])
+		if len(bytes)<i+track_header_size+track_size: raise Exception('track too long')
+		chunks+=[bytes[i:i+track_header_size+track_size]]
+		i+=track_header_size+track_size
 	if i!=len(bytes): raise Exception('malformed tracks')
 	if big_endian_to_unsigned(bytes[10:12])!=len(chunks)-1: raise Exception('bad size')
 	return chunks
@@ -89,25 +88,25 @@ def chunkitize(bytes):
 class Event:
 	@staticmethod
 	def make(type, ticks, *args):
-		r=Event()
-		r.type=type
-		r.ticks=ticks
+		result=Event()
+		result.type=type
+		result.ticks=ticks
 		if type=='ticks_per_quarter':
-			r.ticks_per_quarter=args[0]
+			result.ticks_per_quarter=args[0]
 		elif type=='tempo':
-			r.us_per_quarter=args[0]
+			result.us_per_quarter=args[0]
 		elif type=='time_sig':
-			r.top=args[0]
-			r.bottom=args[1]
+			result.top=args[0]
+			result.bottom=args[1]
 		elif type=='key_sig':
-			r.sharps=args[0]
-			r.minor=args[1]
+			result.sharps=args[0]
+			result.minor=args[1]
 		elif type=='note':
-			r.duration=args[0]
-			r.channel=args[1]
-			r.number=args[2]
+			result.duration=args[0]
+			result.channel=args[1]
+			result.number=args[2]
 		else: raise Exception('invalid type')
-		return r
+		return result
 
 	def split_note(self):
 		assert self.type=='note'
@@ -193,7 +192,11 @@ def to_big_endian(x, size):
 #Write a MIDI track to a file based on a list of bytes.
 #The track header and end message are appended automatically, so they should not be included in bytes.
 def write_track(file, bytes):
-	bytes=[0, 0xff, 0x01, 0]+bytes+[1, 0xff, 0x2f, 0]#Prepend a text event to match Sibelius 2.
+	#Some idiot midi players ignore the first delta, so start with an empty text event
+	empty_text_event=[0, 0xff, 0x01, 0]
+	if bytes[:4]!=empty_text_event: bytes=empty_text_event+bytes
+	#
+	bytes+=[1, 0xff, 0x2f, 0]
 	track_header=[ord(i) for i in 'MTrk']+to_big_endian(len(bytes), 4)
 	bytes=track_header+bytes
 	file.write(bytearray(bytes))
@@ -213,12 +216,12 @@ def write(file_name, song):
 	ticks_per_quarter=song[0][0].ticks_per_quarter
 	if ticks_per_quarter==0: raise Exception('no ticks per quarter')
 	tracks=len(song)
-	header=[ord(i) for i in 'MThd']+[0, 0, 0, 6, 0, 1, 0, tracks]+to_big_endian(ticks_per_quarter, 2)
+	header=[ord(i) for i in 'MThd']+[0, 0, 0, 6, 0, 1]+to_big_endian(tracks, 2)+to_big_endian(ticks_per_quarter, 2)
 	file.write(bytearray(header))
 	bytes=[]
-	last_time=0
+	last_ticks=0
 	for event in song[0][1:]:
-		bytes+=se_delta(event.ticks-last_time)
+		bytes+=write_delta(event.ticks-last_ticks)
 		if event.type=='tempo':
 			bytes+=[0xff, 0x51, 0x03]
 			bytes+=to_big_endian(event.us_per_quarter, 3)
@@ -231,27 +234,27 @@ def write(file_name, song):
 			if sharps<0: sharps=0x100+sharps
 			bytes+=[sharps, event.minor]
 		else: raise Exception('unhandled event type: {}'.format(event.type))
-		last_time=event.ticks
+		last_ticks=event.ticks
 	write_track(file, bytes)
 	for track in song[1:]:
 		notes=[]
 		for event in track:
 			if event.type=='note': notes+=event.split_note()
 		notes.sort()
-		last_time=0
+		last_ticks=0
 		for i in range(len(notes)):
 			temp=notes[i].ticks
-			notes[i].ticks=notes[i].ticks-last_time
-			last_time=temp
+			notes[i].ticks=notes[i].ticks-last_ticks
+			last_ticks=temp
 		bytes=[]
 		for note in notes:
 			if note.type=='note_on':
-				bytes+=se_delta(note.ticks)
+				bytes+=write_delta(note.ticks)
 				bytes+=[0x90|note.channel]
 				bytes+=[note.number]
 				bytes+=[0x79]
 			elif note.type=='note_off':
-				bytes+=se_delta(note.ticks)
+				bytes+=write_delta(note.ticks)
 				bytes+=[0x80|note.channel]
 				bytes+=[note.number]
 				bytes+=[0]
@@ -273,7 +276,7 @@ def add_note(midi, track, ticks, duration, number, channel=None):
 	add_event(midi[track], Event.make('note', ticks, duration, channel, number))
 
 def notes_in(midi, track, ticks, duration, number=None, generous=False):
-	r=[]
+	result=[]
 	for i, v in enumerate(midi[track]):
 		if v.ticks>=ticks+duration: break#note starts after window ends
 		if v.type!='note': continue
@@ -283,8 +286,8 @@ def notes_in(midi, track, ticks, duration, number=None, generous=False):
 		else:
 			if v.ticks<ticks: continue#note starts before window starts
 			if v.ticks+v.duration>ticks+duration: continue#note ends after window ends
-		r.append((track, i))
-	return r
+		result.append((track, i))
+	return result
 
 def delete(midi, notes):
 	notes=sorted(notes, key=lambda x: -x[1])

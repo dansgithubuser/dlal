@@ -2,6 +2,7 @@
 #define DLAL_LINER_INCLUDED
 
 #include <skeleton.hpp>
+#include <atomiclist.hpp>
 
 #include <vector>
 #include <cstdint>
@@ -18,13 +19,12 @@ class Liner: public MultiOut, public Periodic{
 		std::string setPhase(uint64_t);
 	private:
 		struct Midi{
-			Midi(uint64_t sample, const uint8_t* midi, unsigned size);
 			uint64_t sample;
 			std::vector<uint8_t> midi;
 		};
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
-		std::vector<Midi> _line;
-		unsigned _index;
+		AtomicList<Midi> _line;
+		AtomicList<Midi>::Iterator _iterator;
 		bool _resetOnMidi;
 };
 

@@ -7,6 +7,7 @@ import argparse
 parser=argparse.ArgumentParser(description='interface for developer operations')
 parser.add_argument('--setup', action='store_true', help='install dependencies')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
+parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
@@ -118,7 +119,7 @@ if args.test:
 	print('RUNNING TESTS')
 	#loop over tests
 	for test in tests:
-		runs=10
+		runs=int(args.test_runs)
 		successes=0
 		for i in range(runs):
 			#run test
@@ -138,6 +139,7 @@ if args.test:
 					for i in range(len(raw)):
 						if abs(raw[i]-expected[i])>0.00001:
 							r=1
+			else: print('abnormal return code {}'.format(r))
 			#bookkeepping
 			if r: overall=False
 			else: successes+=1

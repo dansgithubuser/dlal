@@ -65,6 +65,8 @@ todo
 - audio select input and output
 - midi editor
 	- hook into system
+		- "error: already added" when starting looper
+		- segmentation fault when exiting looper
 	- quantization
 	- niceties
 		- controls -- regex list into regex with a bunch of |s
@@ -76,3 +78,4 @@ todo
 - vocoder
 - pitch shift component
 - auto dj
+- upgrade system viewer to editor, build like midi editor
