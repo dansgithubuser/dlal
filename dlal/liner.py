@@ -8,15 +8,15 @@ g_notes={
 }
 
 class Liner(Component):
-	def __init__(self, period_in_samples=0, samples_per_beat=0):
+	def __init__(self, period_in_samples=0, samples_per_quarter=22050):
 		Component.__init__(self, 'liner')
 		if period_in_samples:
 			self.periodic_resize(period_in_samples)
 			self.period_in_samples=period_in_samples
-		if samples_per_beat: self.samples_per_beat=samples_per_beat
+		if samples_per_quarter: self.samples_per_quarter=samples_per_quarter
 
 	def line(self, text):
-		stride=self.samples_per_beat
+		stride=self.samples_per_quarter
 		octave=5
 		sample=0
 		text=text.split()
@@ -38,3 +38,10 @@ class Liner(Component):
 					self.midi_event(sample    , 0x90, note, 0x40)
 					self.midi_event(nextSample, 0x80, note, 0x40)
 				sample=nextSample
+
+	def edit(self):
+		file_name='.liner.tmp.mid'
+		self.save(file_name, self.samples_per_quarter)
+		editor=os.path.join(root, 'interfaces', 'dansmidieditor', 'src', 'dansmidieditor.py')
+		invoke('{} --command "edit {}"'.format(editor, file_name))
+		self.load(file_name, self.samples_per_quarter)

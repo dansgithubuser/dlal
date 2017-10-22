@@ -2,6 +2,10 @@ import ctypes, os, platform
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
 
+def invoke(invocation):
+	import subprocess
+	subprocess.check_call(invocation, shell=True)
+
 _systems=0
 
 def load(name):

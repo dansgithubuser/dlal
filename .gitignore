@@ -3,3 +3,4 @@
 *.swp
 build/built
 raw.txt
+.*.tmp.mid

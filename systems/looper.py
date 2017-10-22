@@ -229,3 +229,9 @@ if not len(inputs): add_input()
 for i in 'F5 s d'.split(): commands_dict[i][0]()
 
 help()
+
+l=looper
+t=l.tracks
+t0=t[0]
+c0=t0.container
+e0=c0.edit

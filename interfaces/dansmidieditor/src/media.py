@@ -1,5 +1,6 @@
-import ctypes
-sfml=ctypes.CDLL('../../../build/built/libSfml.so')
+import ctypes, os
+home=os.path.dirname(os.path.realpath(__file__))
+sfml=ctypes.CDLL(os.path.join(home, '..', '..', '..', 'build', 'built', 'libSfml.so'))
 assert sfml.init(640, 480, "Dan's MIDI Editor")==0
 sfml.poll_event.restype=ctypes.c_char_p
 

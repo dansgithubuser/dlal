@@ -5,7 +5,6 @@ configuration='''
 mode .*
 order -1
 .* x.*: self.sequence=self.sequence[:-1]
-.* (q|<.Ctrl <q): self.done=True
 .* <Backspace >Backspace:
 	if self.mode=='command':
 		for i in reversed(range(len(self.sequence)-2)):
@@ -70,6 +69,11 @@ class Controls(AbstractControls):
 		self.done=False
 		self.view=View()
 		self.shift=False
+		self.command_aliases={
+			'q': 'quit',
+			'e': 'edit',
+			'w': 'write',
+		}
 
 	def reps(self):
 		try: return int(self.sequence_as_text()[:-1])
@@ -86,18 +90,28 @@ class Controls(AbstractControls):
 		except: return Fraction(1)
 
 	def command(self, command=None):
-		if not command:
-			command=self.sequence_as_text()
-			command=command.split()
-			name=command[0]
-		else:
-			command=command.split()
-			name=command[0]
+		if not command: command=self.sequence_as_text()
+		command=command.split()
+		name=command[0]
+		self.force=False
+		if name.endswith('!'): self.force=True; name=name[:-1]
+		name=self.command_aliases.get(name, name)
 		params=command[1:]
 		if hasattr(self, name): getattr(self, name)(*params)
 		else: print('no such command "{}"'.format(name))
 
-	def load(self, path): self.view.load(path)
+	def check_unwritten(self):
+		if self.view.unwritten and not self.force:
+			print('unwritten changes, add ! to override')
+			return False
+		return True
+
+	def quit(self):
+		if self.check_unwritten(): self.done=True
+	def edit(self, path):
+		if self.check_unwritten(): self.view.read(path)
+	def write(self, *args): self.view.write(*args)
+	def wq(self, *args): self.write(*args); self.quit()
 	def pdb(self): import pdb; pdb.set_trace()
 
 	def on_input(self):

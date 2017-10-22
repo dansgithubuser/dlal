@@ -138,11 +138,11 @@ def parse(bytes):
 	ticks_per_quarter=big_endian_to_unsigned(chunks[0][12:14])
 	if ticks_per_quarter==0: raise Exception('invalid ticks per quarter')
 	if big_endian_to_unsigned(chunks[0][8:10])!=1: raise Exception('unhandled file type')
+	track=[Event.make('ticks_per_quarter', 0, ticks_per_quarter)]
+	if len(chunks)<2: return [track]
 	song=[]
-	if len(chunks)<2: return song
 	pairs=get_pairs(chunks[1])
 	ticks=0
-	track=[Event.make('ticks_per_quarter', ticks, ticks_per_quarter)]
 	for pair in pairs:
 		ticks+=pair.delta
 		if pair.event[0]&0xf0==0xf0:
@@ -179,11 +179,11 @@ def parse(bytes):
 #The first track specifies things that correspond to all tracks.
 #The other tracks specify things specific to themselves.
 #Each track is a list of events.
-def read(filename):
+def read(file_name):
 	def to_int(x):
 		if type(x)==str: return ord(x)
 		return int(x)
-	with open(filename, 'rb') as file: bytes=[to_int(i) for i in file.read()]
+	with open(file_name, 'rb') as file: bytes=[to_int(i) for i in file.read()]
 	return parse(bytes)
 
 def to_big_endian(x, size):

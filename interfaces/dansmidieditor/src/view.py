@@ -22,6 +22,7 @@ class View:
 		self.cursor_duration=Fraction(self.ticks_per_quarter)
 		self.cursor_duty=Fraction(1)
 		self.selected=set()
+		self.unwritten=False
 		#colors
 		self.color_background=[  0,   0,   0]
 		self.color_staves    =[  0,  32,   0, 128]
@@ -33,11 +34,19 @@ class View:
 		self.color_selected  =[255, 255, 255]
 		self.color_warning   =[255,   0,   0]
 
-	def load(self, path):
+	def read(self, path):
 		self.midi=midi.read(path)
+		if len(self.midi)==1: self.midi.append([])
 		self.ticks_per_quarter=midi.ticks_per_quarter(self.midi)
 		self.cursor_duration=Fraction(self.ticks_per_quarter)
 		self.cursor_down(0)
+		self.unwritten=False
+		self.path=path
+
+	def write(self, path=None):
+		if not path: path=self.path
+		midi.write(path, self.midi)
+		self.unwritten=False
 
 	def cursor_down(self, amount):
 		self.cursor_staff+=amount
@@ -46,8 +55,8 @@ class View:
 		#move up if cursor is above window
 		self.staff=min(self.staff, self.cursor_staff)
 		#move down if cursor is below window
-		bottom=self.staff+int(self.staves)
-		if self.cursor_staff>=bottom: self.staff+=self.cursor_staff-bottom+1
+		bottom=self.staff+int(self.staves)-1
+		if self.cursor_staff>bottom: self.staff+=self.cursor_staff-bottom
 		#figure cursor octave
 		self.cursor_note%=12
 		self.cursor_note+=self.calculate_octave(self.cursor_staff)*12
@@ -96,6 +105,7 @@ class View:
 			number+12*octave
 		)
 		if advance: self.skip_note()
+		self.unwritten=True
 
 	def skip_note(self):
 		self.cursor_ticks+=self.cursor_duration
@@ -121,9 +131,11 @@ class View:
 	def delete(self):
 		midi.delete(self.midi, self.selected)
 		self.selected=set()
+		self.unwritten=True
 
 	def transpose(self, amount):
 		midi.transpose(self.midi, self.selected, amount)
+		self.unwritten=True
 
 	def staves_to_draw(self):
 		return range(self.staff, self.staff+min(int(self.staves)+1, len(self.midi)-1-self.staff))
@@ -136,7 +148,7 @@ class View:
 
 	def y_note(self, staff, note, octave=0):
 		y_staff=(staff+1-self.staff)*self.h_window//self.staves
-		return int(y_staff-(note-12*octave)*self.h_note())
+		return int(y_staff-(note+1-12*octave)*self.h_note())
 
 	def x_ticks(self, ticks):
 		return (ticks-self.ticks)*self.w_window//self.duration
