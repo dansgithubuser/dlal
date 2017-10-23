@@ -61,7 +61,7 @@ std::ostream& operator<<(std::ostream& o, const Wire& w){
 }
 
 static bool checkLayout(const std::vector<Component*>& components){
-	auto laidout=OBVIOUS_TRANSFORM(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>());
+	auto laidout=OBV_FOR(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>());
 	if(laidout.size()<2) return true;
 	//check for overlapping components
 	for(unsigned i=0; i<laidout.size(); ++i)
@@ -90,14 +90,14 @@ static bool checkLayout(const std::vector<Component*>& components){
 				for(int y=j->_y; y>=i->_y; --y)
 					b[Pair(j->_x, y)].push_back(Wire(j, i));
 			//align horizontally
-			for(int x=OBVIOUS_MIN(i->_x, j->_x); x<=OBVIOUS_MAX(i->_x, j->_x); ++x)
+			for(int x=OBV_MIN(i->_x, j->_x); x<=OBV_MAX(i->_x, j->_x); ++x)
 				h[Pair(x, i->_y)].push_back(Wire(j, i));
 			//max/min
 		}
-		OBVIOUS_MINI(minX, i->_x);
-		OBVIOUS_MINI(minY, i->_y);
-		OBVIOUS_MAXI(maxX, i->_x);
-		OBVIOUS_MAXI(maxY, i->_y);
+		OBV_MINI(minX, i->_x);
+		OBV_MINI(minY, i->_y);
+		OBV_MAXI(maxX, i->_x);
+		OBV_MAXI(maxY, i->_y);
 	}
 	//simulate future wiring layout
 	for(auto& i: laidout)
@@ -122,7 +122,7 @@ static bool checkLayout(const std::vector<Component*>& components){
 				n[i.connectee].insert(i.connecter);
 			}
 			decltype(m)::iterator ia, ib;
-			if(!OBVIOUS_BINARY_TRANSFORM(m, (r&=a->second==b->second, OBVIOUS_IF(!r, (ia=a, ib=b))), true)){
+			if(!OBV_FOR2(m, (r&=a->second==b->second, OBV_IF(!r, (ia=a, ib=b))), true)){
 				#ifdef LOG_CHECK_LAYOUT
 					std::cout<<"bad layout; ambiguous "<<type<<" wiring at ("<<x<<", "<<y<<")\n";
 					std::cout<<"\tconnecter "<<ia->first<<": connectees "<<ia->second<<"\n";
@@ -130,7 +130,7 @@ static bool checkLayout(const std::vector<Component*>& components){
 				#endif
 				return false;
 			}
-			if(!OBVIOUS_BINARY_TRANSFORM(n, (r&=a->second==b->second, OBVIOUS_IF(!r, (ia=a, ib=b))), true)){
+			if(!OBV_FOR2(n, (r&=a->second==b->second, OBV_IF(!r, (ia=a, ib=b))), true)){
 				#ifdef LOG_CHECK_LAYOUT
 					std::cout<<"bad layout; ambiguous "<<type<<" wiring at ("<<x<<", "<<y<<")\n";
 					std::cout<<"\t connectee "<<ia->first<<": connecters "<<ia->second<<"\n";
@@ -159,7 +159,7 @@ static bool checkLayout(const std::vector<Component*>& components){
 }
 
 Component* findComponentToLayout(const std::vector<Component*> components){
-	auto unlaidout=OBVIOUS_TRANSFORM(components, if(!(*i)->_laidout) r.push_back(*i), std::vector<Component*>());
+	auto unlaidout=OBV_FOR(components, if(!(*i)->_laidout) r.push_back(*i), std::vector<Component*>());
 	if(unlaidout.empty()) return nullptr;
 	for(auto& i: unlaidout)//has laid-out connecter
 		for(auto& j: i->_connecters) if(j->_laidout) return i;
@@ -182,13 +182,13 @@ Component* findComponentToLayout(const std::vector<Component*> components){
 		}
 
 static bool layout(Component* c, std::vector<Component*>& components){
-	auto getLaidout=[&](){ return OBVIOUS_TRANSFORM(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>()); };
+	auto getLaidout=[&](){ return OBV_FOR(components, if((*i)->_laidout) r.push_back(*i), std::vector<Component*>()); };
 	int minX=0, minY=0, maxX=0, maxY=0;
 	for(auto& i: getLaidout()){
-		OBVIOUS_MINI(minX, i->_x);
-		OBVIOUS_MINI(minY, i->_y);
-		OBVIOUS_MAXI(maxX, i->_x);
-		OBVIOUS_MAXI(maxY, i->_y);
+		OBV_MINI(minX, i->_x);
+		OBV_MINI(minY, i->_y);
+		OBV_MAXI(maxX, i->_x);
+		OBV_MAXI(maxY, i->_y);
 	}
 	c->_laidout=true;
 	//try to stick it directly below a connecter
@@ -449,7 +449,7 @@ Group Group::copy() const{
 		i=m.at(i);
 	}
 	for(auto& j: r._components){
-		j->_connecters=OBVIOUS_TRANSFORM(j->_connecters, r.insert(MAP_GET(m, *i, *i)), std::set<Component*>());
+		j->_connecters=OBV_FOR(j->_connecters, r.insert(MAP_GET(m, *i, *i)), std::set<Component*>());
 		for(auto& i: j->_connections) if(m.count(i.second._component)) i.second._component=m.at(i.second._component);
 	}
 	return r;
@@ -596,7 +596,7 @@ void Viewer::layout(){
 	bool failed=false;
 	//reset
 	#if defined(LOG_LAYOUT)
-		OBVIOUS_LOUD("starting new layout")
+		OBV_LOUD("starting new layout")
 	#endif
 	for(auto& i: _nameToComponent){
 		i.second->_connecters.clear();
@@ -609,7 +609,7 @@ void Viewer::layout(){
 	//initial groups
 	std::vector<Group> groups;
 	{
-		auto components=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
+		auto components=OBV_FOR(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
 		std::sort(components.begin(), components.end(), componentCompare);
 		for(auto& i: components) groups.push_back(Group(i));
 	}
@@ -672,7 +672,7 @@ void Viewer::layout(){
 					if(
 						!in(i.second._component, group._components)
 						&&
-						!in(i.second._component, OBVIOUS_TRANSFORM(summaryComponent->_connections, r.push_back(i->second._component), std::vector<Component*>()))
+						!in(i.second._component, OBV_FOR(summaryComponent->_connections, r.push_back(i->second._component), std::vector<Component*>()))
 					) summaryComponent->_connections[i.first]=i.second;
 				//contribute connecters to summary
 				for(auto& i: groupComponent->_connecters)
@@ -703,7 +703,7 @@ void Viewer::layout(){
 		}
 	}
 	//layout
-	auto components=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
+	auto components=OBV_FOR(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
 	std::sort(components.begin(), components.end(), componentCompare);
 	while(!failed){
 		auto component=findComponentToLayout(components);
@@ -715,8 +715,8 @@ void Viewer::layout(){
 	}
 	//failure recovery
 	if(failed){
-		int x=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MAXI(r, i->second->_x), 0)+2;
-		int y=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MAXI(r, i->second->_y), 0)+2;
+		int x=OBV_FOR(_nameToComponent, if(i->second->_laidout) OBV_MAXI(r, i->second->_x), 0)+2;
+		int y=OBV_FOR(_nameToComponent, if(i->second->_laidout) OBV_MAXI(r, i->second->_y), 0)+2;
 		for(auto& i: _nameToComponent) if(!i.second->_laidout){ i.second->_x=x++; i.second->_y=y++; }
 	}
 	//logical coordinates to pixels
@@ -728,8 +728,8 @@ void Viewer::layout(){
 
 void Viewer::layout(Group& g){
 	//get size of group to use as stride
-	int dX=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAXI(r, (*i)->_x), 0)+1;
-	int dY=OBVIOUS_TRANSFORM(g._components, OBVIOUS_MAXI(r, (*i)->_y), 0)+1;
+	int dX=OBV_FOR(g._components, OBV_MAXI(r, (*i)->_x), 0)+1;
+	int dY=OBV_FOR(g._components, OBV_MAXI(r, (*i)->_y), 0)+1;
 	//layout in +xy, preferring minimal distance
 	for(auto& i: g._components) i->_laidout=true;
 	unsigned d=0;
@@ -742,7 +742,7 @@ void Viewer::layout(Group& g){
 			#ifdef LOG_CHECK_LAYOUT
 				for(auto& i: g._components) std::cout<<"trying "<<i<<" at ("<<i->_x<<", "<<i->_y<<")\n";
 			#endif
-			if(checkLayout(OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>()))){
+			if(checkLayout(OBV_FOR(_nameToComponent, r.push_back(i->second), std::vector<Component*>()))){
 				for(auto& i: g._components) i->noteLayout("group");
 				normalizeCoords();
 				return;
@@ -755,15 +755,15 @@ void Viewer::layout(Group& g){
 }
 
 bool Viewer::layout(Component* c){
-	auto x=OBVIOUS_TRANSFORM(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
+	auto x=OBV_FOR(_nameToComponent, r.push_back(i->second), std::vector<Component*>());
 	bool r=::layout(c, x);
 	normalizeCoords();
 	return r;
 }
 
 void Viewer::normalizeCoords(){
-	int minX=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MINI(r, i->second->_x), 0);
-	int minY=OBVIOUS_TRANSFORM(_nameToComponent, if(i->second->_laidout) OBVIOUS_MINI(r, i->second->_y), 0);
+	int minX=OBV_FOR(_nameToComponent, if(i->second->_laidout) OBV_MINI(r, i->second->_x), 0);
+	int minY=OBV_FOR(_nameToComponent, if(i->second->_laidout) OBV_MINI(r, i->second->_y), 0);
 	for(auto& i: _nameToComponent){
 		i.second->_x-=minX;
 		i.second->_y-=minY;
