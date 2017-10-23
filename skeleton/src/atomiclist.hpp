@@ -202,4 +202,192 @@ template <typename T> class AtomicList{
 
 }//namespace dlal
 
+#ifdef DLAL_ATOMIC_LIST_TEST
+
+#include <obvious.hpp>
+
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
+#include <thread>
+
+struct DlalAtomicListTest{ DlalAtomicListTest(); };
+
+struct DlalAtomicListTestCanary{
+	DlalAtomicListTestCanary(): alive(nullptr) {}
+	DlalAtomicListTestCanary(int* alive): alive(alive) { ++*alive; }
+	~DlalAtomicListTestCanary(){ if(alive) --*alive; }
+	void operator=(const DlalAtomicListTestCanary& other){
+		if(alive) --*alive;
+		alive=other.alive;
+		if(alive) ++*alive;
+	}
+	int* alive;
+};
+
+DlalAtomicListTest::DlalAtomicListTest(){
+	using namespace dlal;
+	using Canary=DlalAtomicListTestCanary;
+	//basics
+	std::cout<<"basics\n";
+	{
+		//push_back, iteration, clear
+		std::cout<<"push_back, iteration, clear\n";
+		AtomicList<int> l1;
+		for(int i=0; i<3; ++i) l1.push_back(i);
+		{
+			auto it=l1.begin();
+			for(int i=0; i<3; ++i, ++it) EXPECT(*it, i)
+			EXPECT(it, l1.end())
+			EXPECT(it, false)
+		}
+		l1.clear();
+		EXPECT(l1.begin(), false)
+		//ref counting sanity
+		std::cout<<"ref counting sanity\n";
+		{
+			AtomicList<Canary> l;
+			int alive=0;
+			l.push_back(Canary(&alive));
+			EXPECT(*l.begin()->alive, 1);
+			l.clear();
+			l.freshenFree();
+			EXPECT(alive, 0);
+		}
+		//insertion in middle
+		std::cout<<"insertion in middle\n";
+		for(int i=0; i<3; ++i) l1.push_back(i);
+		{
+			auto it=l1.begin();
+			++it;
+			l1.insert(it, 4);
+		}
+		l1.insert(l1.begin(), 5);
+		{
+			auto it=l1.begin();
+			EXPECT(*it, 5); ++it;
+			EXPECT(*it, 0); ++it;
+			EXPECT(*it, 4); ++it;
+			EXPECT(*it, 1); ++it;
+			EXPECT(*it, 2); ++it;
+		}
+		//lockless check
+		std::cout<<"lockless check\n";
+		if(!l1.lockless()) std::cout<<"note: atomic list is not lockless\n";
+	}
+	//ref counting
+	std::cout<<"ref counting\n";
+	{
+		{//list cleared after iterator taken
+			std::cout<<"list cleared after iterator taken\n";
+			AtomicList<Canary> l;
+			int alive[3]={0, 0, 0};
+			for(int i=0; i<3; ++i) l.push_back(Canary(&alive[i]));
+			{
+				auto it=l.begin();
+				l.clear();
+				for(int i=0; i<3; ++i, ++it) EXPECT(*it->alive, 1)
+			}
+			l.freshenFree();
+			for(int i=0; i<3; ++i) EXPECT(alive[i], 0)
+		}
+		{//iterator assign causes free
+			std::cout<<"iterator assign causes free\n";
+			AtomicList<Canary> l;
+			int alive[3]={0, 0, 0};
+			for(int i=0; i<3; ++i) l.push_back(Canary(&alive[i]));
+			auto it=l.begin();
+			l.clear();
+			it=l.begin();
+			l.freshenFree();
+			for(int i=0; i<3; ++i) EXPECT(alive[i], 0)
+		}
+		{//list cleared after head changes
+			std::cout<<"list cleared after head changes\n";
+			AtomicList<Canary> l;
+			int alive[3]={0, 0, 0};
+			for(int i=1; i<3; ++i) l.push_back(Canary(&alive[i]));
+			auto it=l.begin();
+			l.insert(it, Canary(&alive[0]));
+			l.clear();
+			l.freshenFree();
+			EXPECT(alive[0], 0)
+			EXPECT(alive[1], 1)
+			EXPECT(alive[2], 1)
+			it=l.begin();
+			l.freshenFree();
+			EXPECT(alive[0], 0)
+			EXPECT(alive[1], 0)
+			EXPECT(alive[2], 0)
+		}
+	}
+	//stress
+	std::cout<<"stress\n";
+	{
+		AtomicList<int> l(1024);
+		auto repeat=[&](std::function<bool()> f, std::function<bool()> g){
+			const int reps=10000;
+			bool ok=true;
+			auto tf=std::thread([&](){
+				for(int i=0; i<reps&&ok; ++i){
+					if(!f()) ok=false;
+				}
+			});
+			std::atomic<bool> qg(false);
+			auto tg=std::thread([&](){
+				while(!qg&&ok){
+					if(!g()) ok=false;
+				}
+			});
+			tf.join();
+			qg=true;
+			tg.join();
+			EXPECT(ok, true)
+		};
+		srand(time(NULL));
+		//clear or insert while iterating
+		repeat(
+			[&](){//clear or insert
+				l.clear();
+				while(l.freshNodes()<100) std::this_thread::yield;
+				for(int i=0; i<100; ++i){
+					auto it=l.begin();
+					auto it2=l.end();
+					for(int j=rand()%(i+1); j>0; --j){ it2=it; ++it; }
+					if(!it2) l.insert(it, -100*i);
+					else if(!it) l.insert(it, 10000+100*i);
+					else l.insert(it, (*it+*it2)/2);
+				}
+				return true;
+			},
+			[&](){//iterate
+				l.freshen();
+				for(int i=0; i<100; ++i){
+					auto it=l.begin();
+					if(!it) return true;
+					int prev=*it;
+					std::vector<int> v;
+					for(++it; it!=l.end(); ++it){
+						v.push_back(prev);
+						if(*it<prev){
+							v.push_back(*it);
+							for(auto j: v) std::cout<<j<<" ";
+							std::cout<<"\n";
+							return false;
+						}
+						prev=*it;
+					}
+				}
+				return true;
+			}
+		);
+	}
+	//
+	std::cout<<"atomic list test success!\n";
+}
+
+static auto test=DlalAtomicListTest();
+
+#endif//DLAL_ATOMIC_LIST_TEST
+
 #endif
