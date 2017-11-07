@@ -1,5 +1,7 @@
 #include "skeleton.hpp"
 
+#include "atomiclist.hpp"
+
 #include <obvious.hpp>
 
 #include <algorithm>
@@ -103,6 +105,10 @@ char* dlalDisconnect(void* input, void* output){
 }
 
 void dlalFree(void* p){ free(p); }
+
+void dlalTest(){
+	dlal::AtomicList<int>::test();
+}
 
 namespace dlal{
 

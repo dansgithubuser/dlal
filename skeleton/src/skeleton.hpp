@@ -40,6 +40,7 @@ extern "C"{
 	DLAL char* dlalConnect(void* input, void* output);
 	DLAL char* dlalDisconnect(void* input, void* output);
 	DLAL void dlalFree(void* p);
+	DLAL void dlalTest();
 }
 
 namespace dlal{

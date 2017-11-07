@@ -1,3 +1,6 @@
+#ifndef OBVIOUS_HPP_INCLUDED
+#define OBVIOUS_HPP_INCLUDED
+
 /*
 obvious stuff
 in the sense that you obviously want this

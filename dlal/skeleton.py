@@ -109,3 +109,5 @@ class Pipe(Component):
 	def __getitem__(self, i): return self.components_to_add[i]
 
 	def output(self): return self.components_to_add[-1].component
+
+def test(): _skeleton.dlalTest()
