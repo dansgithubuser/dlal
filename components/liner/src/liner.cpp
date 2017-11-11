@@ -105,3 +105,7 @@ void Liner::put(const uint8_t* midi, unsigned size, uint64_t sample){
 }
 
 }//namespace dlal
+
+std::ostream& operator<<(std::ostream& o, const dlal::Liner::Midi& midi){
+	return o<<"{"<<midi.sample<<", "<<midi.midi<<"}";
+}

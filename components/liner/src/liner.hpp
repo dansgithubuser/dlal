@@ -6,11 +6,16 @@
 
 #include <vector>
 #include <cstdint>
+#include <iostream>
 
 namespace dlal{
 
 class Liner: public MultiOut, public Periodic{
 	public:
+		struct Midi{
+			uint64_t sample;
+			std::vector<uint8_t> midi;
+		};
 		Liner();
 		std::string type() const { return "liner"; }
 		void evaluate();
@@ -18,10 +23,6 @@ class Liner: public MultiOut, public Periodic{
 		bool midiAccepted(){ return true; }
 		std::string setPhase(uint64_t);
 	private:
-		struct Midi{
-			uint64_t sample;
-			std::vector<uint8_t> midi;
-		};
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
 		AtomicList<Midi> _line;
 		AtomicList<Midi>::Iterator _iterator;
@@ -29,5 +30,7 @@ class Liner: public MultiOut, public Periodic{
 };
 
 }//namespace dlal
+
+std::ostream& operator<<(std::ostream& o, const dlal::Liner::Midi& midi);
 
 #endif

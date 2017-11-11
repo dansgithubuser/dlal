@@ -380,4 +380,10 @@ template <typename T> class AtomicList{
 
 }//namespace dlal
 
+template<typename T> std::ostream& operator<<(std::ostream& o, const dlal::AtomicList<T>& l){
+	std::vector<T> v;
+	for(auto i=l.begin(); i!=l.end(); ++i) v.push_back(*i);
+	return o<<v;
+}
+
 #endif
