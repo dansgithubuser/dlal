@@ -36,6 +36,7 @@ class Midi{
 					};
 				};
 		};
+		struct Pair{ int delta; std::vector<uint8_t> event; };
 		typedef std::vector<Event> Track;
 
 		Midi(): ticksPerQuarter(256) {}
@@ -52,13 +53,12 @@ class Midi{
 		void write(std::vector<uint8_t>&) const;
 };
 
-struct Pair{ int delta; std::vector<uint8_t> event; };
-
 void splitNotes(Midi::Track&);
-std::vector<Pair> getPairs(Midi::Track);
+std::vector<Midi::Pair> getPairs(Midi::Track);
 
 }//namespace dlal
 
 std::ostream& operator<<(std::ostream& o, const dlal::Midi::Event& event);
+std::ostream& operator<<(std::ostream& o, const dlal::Midi::Pair& pair);
 
 #endif

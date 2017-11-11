@@ -45,8 +45,8 @@ static int readDelta(const Bytes& bytes, unsigned& i){
 
 //Return the pairs in trackChunk in a list.
 //trackChunk is assumed to have come from a track produced by chunkitize.
-static std::vector<Pair> getPairs(const Bytes& trackChunk){
-	std::vector<Pair> pairs;
+static std::vector<Midi::Pair> getPairs(const Bytes& trackChunk){
+	std::vector<Midi::Pair> pairs;
 	unsigned i=TRACK_HEADER_SIZE;
 	uint8_t status=0;
 	while(i<trackChunk.size()){
@@ -71,7 +71,7 @@ static std::vector<Pair> getPairs(const Bytes& trackChunk){
 				break;
 			default: throw std::logic_error("impossible default");
 		}
-		pairs.push_back(Pair{delta, event});
+		pairs.push_back(Midi::Pair{delta, event});
 	}
 	if(pairs.back().event!=Bytes{0xff, 0x2f, 0}) throw std::runtime_error("invalid last command");
 	return pairs;
@@ -293,14 +293,14 @@ void splitNotes(Midi::Track& track){
 	std::sort(track.begin(), track.end());
 }
 
-std::vector<Pair> getPairs(Midi::Track track){
+std::vector<Midi::Pair> getPairs(Midi::Track track){
 	splitNotes(track);
-	std::vector<Pair> result;
+	std::vector<Midi::Pair> result;
 	int last=0;
 	for(const auto& i: track){
 		Bytes written;
 		i.write(written);
-		result.push_back(Pair{i.ticks-last, written});
+		result.push_back(Midi::Pair{i.ticks-last, written});
 		last=i.ticks;
 	}
 	return result;
@@ -335,4 +335,8 @@ std::ostream& operator<<(std::ostream& o, const dlal::Midi::Event& event){
 			o<<"bad";
 			break;
 	}
+}
+
+std::ostream& operator<<(std::ostream& o, const dlal::Midi::Pair& pair){
+	return o<<"{"<<pair.delta<<", "<<pair.event<<"}";
 }
