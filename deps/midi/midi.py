@@ -252,7 +252,7 @@ def write(file_name, song):
 				bytes+=write_delta(note.ticks)
 				bytes+=[0x90|note.channel]
 				bytes+=[note.number]
-				bytes+=[0x79]
+				bytes+=[0x7f]
 			elif note.type=='note_off':
 				bytes+=write_delta(note.ticks)
 				bytes+=[0x80|note.channel]
