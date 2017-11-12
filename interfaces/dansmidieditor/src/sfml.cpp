@@ -43,7 +43,7 @@ struct Boss{
 					ss<<"q";
 					break;
 				case sf::Event::Resized:
-					window.setView(sf::View(sf::FloatRect(0, 0, event.size.width, event.size.height)));
+					window.setView(sf::View(sf::FloatRect(0, 0, (float)event.size.width, (float)event.size.height)));
 					break;
 				default: break;
 			}
@@ -79,7 +79,7 @@ extern "C" {
 
 	void vertex(int x, int y, int r, int g, int b, int a){
 		fBoss->va.append(sf::Vertex(
-			sf::Vector2f(x, y),
+			sf::Vector2f((float)x, (float)y),
 			sf::Color(r, g, b, a)
 		));
 	}
@@ -92,7 +92,7 @@ extern "C" {
 	void text(int x, int y, int h, const char* s, int r, int g, int b, int a){
 		sf::Text t(s, fBoss->font, h);
 		t.setColor(sf::Color(r, g, b, a));
-		t.setPosition(x, y);
+		t.setPosition((float)x, (float)y);
 		fBoss->window.draw(t);
 	}
 

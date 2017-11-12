@@ -14,7 +14,7 @@ class Midi{
 			public:
 				Event(): type(SENTINEL) {}
 				Event(int ticks, const std::vector<uint8_t>& data);
-				bool operator<(Event& other) const { return ticks<other.ticks; }
+				bool operator<(const Event& other) const { return ticks<other.ticks; }
 				void write(std::vector<uint8_t>&) const;
 				enum Type{
 					TEMPO,

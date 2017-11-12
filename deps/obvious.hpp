@@ -228,7 +228,7 @@ template<typename T, typename...Ts> Bytes bytes(T byte, Ts...args){
 }
 
 //=====slices=====//
-template<typename T> struct Slice;
+template<typename T> class Slice;
 
 template<typename T> Slice<T> slice(const std::vector<T>& v){
 	return Slice<T>(v.data(), v.size());

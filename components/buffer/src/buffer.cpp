@@ -42,7 +42,7 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		ss>>fileName;
 		sf::InputSoundFile file;
 		if(!file.openFromFile(fileName)) return "error: couldn't open file";
-		std::vector<sf::Int16> samples(file.getSampleCount());
+		std::vector<sf::Int16> samples((unsigned)file.getSampleCount());
 		file.read(samples.data(), samples.size());
 		if(_sounds.size()<note+1) _sounds.resize(note+1);
 		_sounds[note].clear();
@@ -91,7 +91,7 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		if(!file.openFromFile(fileName, _sampleRate, 1)) return "error: couldn't open file";
 		std::vector<sf::Int16> samples;
 		for(unsigned i=0; i<_audio.size(); ++i)
-			samples.push_back(_audio[i]*((1<<15)-1));
+			samples.push_back(short(_audio[i]*((1<<15)-1)));
 		file.write(samples.data(), samples.size());
 		return "";
 	});

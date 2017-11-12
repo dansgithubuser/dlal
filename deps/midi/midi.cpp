@@ -132,7 +132,7 @@ Midi::Event::Event(int ticks, const std::vector<uint8_t>& data): ticks(ticks) {
 		note=data[1];
 		velocityDown=data[2];
 	}
-	else if(type==0x80||type==0x90&&data[2]==0){
+	else if(type==0x80||(type==0x90&&data[2]==0)){
 		this->type=NOTE_OFF;
 		channel=data[0]&0x0f;
 		note=data[1];
@@ -335,6 +335,7 @@ std::ostream& operator<<(std::ostream& o, const dlal::Midi::Event& event){
 			o<<"bad";
 			break;
 	}
+	return o;
 }
 
 std::ostream& operator<<(std::ostream& o, const dlal::Midi::Pair& pair){

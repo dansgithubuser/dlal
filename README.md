@@ -75,6 +75,7 @@ todo
 		- track 0 events
 		- other events
 		- zoom
+- why is network failing on apple?
 - vocoder
 - pitch shift component
 - auto dj

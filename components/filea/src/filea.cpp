@@ -75,7 +75,7 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 	registerCommand("loop_crossfade", "<duration in seconds>", [this](std::stringstream& ss){
 		float duration;
 		ss>>duration;
-		sf::Uint64 samples(duration*_sampleRate);
+		unsigned samples=(unsigned)(duration*_sampleRate);
 		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
 		std::vector<sf::Int16> v(samples);
 		file.read(v.data(), samples);
@@ -108,19 +108,19 @@ void Filea::evaluate(){
 			file.read(samples.data()+r, samples.size()-r);
 		}
 		for(unsigned i=0; i<_samplesPerEvaluation; ++i){
-			auto j=i*file.getSampleRate()/_sampleRate;
+			unsigned j=i*file.getSampleRate()/_sampleRate;
 			if(j>=samples.size()) break;
 			auto l=_loop_crossfade.size()/2;
 			if(_sample<l){
-				auto k=l+_sample;
+				unsigned k=(unsigned)(l+_sample);
 				_audio[i]=_volume*linear(
 					_loop_crossfade[k], samples[j]/float(1<<15), 1.0f*_sample/l
 				);
 			}
 			else if(file.getSampleCount()-_sample<l){
-				auto k=l-(file.getSampleCount()-_sample);
+				unsigned k=(unsigned)(l-(file.getSampleCount()-_sample));
 				_audio[i]=_volume*linear(
-					_loop_crossfade[k], samples[j]/float(1<<15), 1.0f*(file.getSampleCount()-_sample)/l
+					_loop_crossfade[k], samples[j]/float(1<<15), (1.0f*file.getSampleCount()-_sample)/l
 				);
 			}
 			else
@@ -135,7 +135,7 @@ void Filea::evaluate(){
 		//write to file
 		if(samples.size()<_audio.size()) samples.resize(_audio.size());
 		for(unsigned i=0; i<_audio.size(); ++i)
-			samples[i]=_audio[i]*((1<<15)-1);
+			samples[i]=short(_audio[i]*((1<<15)-1));
 		sf::OutputSoundFile& file=*(sf::OutputSoundFile*)_o;
 		file.write(samples.data(), _audio.size());
 		//reset

@@ -95,7 +95,7 @@ template <typename T> class AtomicList{
 					Node::assign(_head, other._head);
 					_current=other._current;
 				}
-				operator bool() const { return _current; }
+				operator bool() const { return _current?true:false; }
 			private:
 				Iterator(Node* head): _head(head), _current(head) { Node::inc(_head); }
 				Iterator(Node* head, Node* current): _head(head), _current(current) { Node::inc(_head); }
@@ -319,12 +319,12 @@ template <typename T> class AtomicList{
 					tg.join();
 					EXPECT(ok, true)
 				};
-				srand(time(NULL));
+				srand((unsigned)time(NULL));
 				//clear or insert while iterating
 				repeat(
 					[&](){//clear or insert
 						l.clear();
-						while(l.freshNodes()<100) std::this_thread::yield;
+						while(l.freshNodes()<100) std::this_thread::yield();
 						for(int i=0; i<100; ++i){
 							auto it=l.begin();
 							auto it2=l.end();
@@ -363,7 +363,7 @@ template <typename T> class AtomicList{
 
 	private:
 		Node* getFreshNode(){
-			for(auto i=0; i<_pool.size(); ++i){
+			for(unsigned i=0; i<_pool.size(); ++i){
 				auto node=_pool[_poolIndex];
 				if(node->_state==Node::FRESH) return node;
 				++_poolIndex;
