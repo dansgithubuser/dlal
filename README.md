@@ -46,6 +46,7 @@ features
 - soundboarding
 - filtering
 - robot voices
+- MIDI editor
 
 file organization
 -----------------
@@ -63,6 +64,8 @@ file organization
 todo
 ----
 - audio select input and output
+- save and load system
+- why is network failing on apple?
 - midi editor
 	- hook into system
 		- "error: already added" when starting looper
@@ -75,7 +78,6 @@ todo
 		- track 0 events
 		- other events
 		- zoom
-- why is network failing on apple?
 - vocoder
 - pitch shift component
 - auto dj
