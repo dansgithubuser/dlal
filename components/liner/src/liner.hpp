@@ -2,10 +2,10 @@
 #define DLAL_LINER_INCLUDED
 
 #include <skeleton.hpp>
-#include <atomiclist.hpp>
 
-#include <vector>
-#include <cstdint>
+#include <atomiclist.hpp>
+#include <midi.hpp>
+
 #include <iostream>
 
 namespace dlal{
@@ -24,6 +24,8 @@ class Liner: public MultiOut, public Periodic{
 		std::string setPhase(uint64_t);
 	private:
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
+		dlal::Midi getMidi(float samplesPerQuarter) const;
+		std::string putMidi(dlal::Midi, float samplesPerQuarter);
 		AtomicList<Midi> _line;
 		AtomicList<Midi>::Iterator _iterator;
 		bool _resetOnMidi;

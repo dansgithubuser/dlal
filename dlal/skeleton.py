@@ -40,6 +40,8 @@ _skeleton.dlalAdd.restype=ctypes.c_void_p
 _skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 _skeleton.dlalConnect.restype=ctypes.c_void_p
 _skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+_skeleton.dlalSerialize.restype=ctypes.c_void_p
+_skeleton.dlalSerialize.argtypes=[ctypes.c_void_p]
 _skeleton.dlalFree.argtypes=[ctypes.c_void_p]
 
 class System:
@@ -75,6 +77,12 @@ class System:
 		name=name.encode('utf-8')
 		value=value.encode('utf-8')
 		report(_skeleton.dlalSetVariable(self.system, name, value))
+
+	def serialize(self):
+		return report(_skeleton.dlalSerialize(self.system))
+
+	def save(self, file_name='system.state.txt'):
+		with open(file_name, 'w') as file: file.write(self.serialize())
 
 class Component:
 	_libraries={}

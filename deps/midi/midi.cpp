@@ -205,7 +205,7 @@ void Midi::read(std::string fileName){
 	char c;
 	while(file.get(c)) bytes.push_back((uint8_t)c);
 	file.close();
-	parse(bytes);
+	read(bytes);
 }
 
 void Midi::write(std::string fileName) const {
@@ -219,7 +219,7 @@ void Midi::write(std::string fileName) const {
 }
 
 //parse bytes of a MIDI file, populate self
-void Midi::parse(const Bytes& bytes){
+void Midi::read(const Bytes& bytes){
 	std::vector<Bytes> chunks=chunkitize(bytes);
 	ticksPerQuarter=bigEndianToUnsigned(chunks.at(0).begin()+12, 2);
 	if(ticksPerQuarter==0) throw std::runtime_error("invalid ticks per quarter");

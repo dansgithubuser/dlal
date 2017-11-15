@@ -104,6 +104,11 @@ char* dlalDisconnect(void* input, void* output){
 	return toCStr(toComponent(input)->disconnect(*toComponent(output)));
 }
 
+char* dlalSerialize(void* system){
+	using namespace dlal;
+	return toCStr(((System*)system)->serialize());
+}
+
 void dlalFree(void* p){ free(p); }
 
 void dlalTest(){
@@ -116,7 +121,7 @@ Component* toComponent(void* p){ return (Component*)p; }
 
 std::string componentToStr(const Component* component){
 	std::stringstream ss;
-	ss<<(uint64_t)component;
+	ss<<component;
 	return ss.str();
 }
 
@@ -318,6 +323,25 @@ std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
 	return "";
 }
 
+std::string System::serialize() const {
+	std::stringstream ss;
+	ss<<"{\n";
+	ss<<"\"variables\": "<<_variables<<",\n";
+	ss<<"\"component_order\": "<<_components<<",\n";
+	std::map<Component*, std::string> types, components;
+	for(auto i: _components) for(auto j: i){
+		types[j]=j->command("type");//can't call type function directly, causes segfault, not sure how this solves
+		components[j]=j->command("serialize");
+		replace(components[j], "\n", " ");
+		replace(components[j], "\t", " ");
+	}
+	ss<<"\"component_types\": "<<types<<",\n";
+	ss<<"\"components\": "<<components<<",\n";
+	ss<<"\"connections\": "<<_reportConnections<<"\n";
+	ss<<"}\n";
+	return ss.str();
+}
+
 dyad_Stream* System::dyadNewStream(){
 	dyad_Stream* r=_dyadNewStream();
 	_streams.push_back(r);
@@ -355,6 +379,9 @@ Component::Component(): _system(nullptr) {
 		for(auto i: _commands) result+=i.first+" "+i.second.parameters+"\n";
 		return result;
 	});
+	registerCommand("type", "", [this](std::stringstream&){
+		return type();
+	});
 	registerCommand("label", "<label>", [this](std::stringstream& ss){
 		ss>>_label;
 		if(_system){
@@ -369,6 +396,19 @@ Component::Component(): _system(nullptr) {
 		unsigned byte;
 		while(ss>>byte) bytes.push_back(byte);
 		midi(bytes.data(), bytes.size());
+		return "";
+	});
+	registerCommand("serialize", "", [this](std::stringstream&){
+		std::stringstream ss;
+		for(auto i: _commands) if(startsWith(i.first, "serialize_")){
+			std::stringstream ss2;
+			ss<<i.second.command(ss2)<<" ";
+		}
+		return ss.str();
+	});
+	registerCommand("deserialize", "<serialized>", [this](std::stringstream& ss){
+		for(auto i: _commands) if(startsWith(i.first, "deserialize_"))
+			i.second.command(ss);
 		return "";
 	});
 }
@@ -452,6 +492,13 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 		s=setPhase(other->_phase);
 		if(!isError(s)) _last=0.0f;
 		return s;
+	});
+	registerCommand("serialize_periodic", "", [this](std::stringstream& ss){
+		return std::to_string(_period);
+	});
+	registerCommand("deserialize_periodic", "<serialized>", [this](std::stringstream& ss){
+		ss>>_period;
+		return "";
 	});
 }
 

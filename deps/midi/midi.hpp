@@ -45,12 +45,11 @@ class Midi{
 
 		void read(std::string filename);
 		void write(std::string filename) const;
+		void read(const std::vector<uint8_t>&);
+		void write(std::vector<uint8_t>&) const;
 
 		int ticksPerQuarter;
 		std::vector<Track> tracks;
-	private:
-		void parse(const std::vector<uint8_t>&);
-		void write(std::vector<uint8_t>&) const;
 };
 
 void splitNotes(Midi::Track&);

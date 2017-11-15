@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iostream>
 
+#include <obvious.hpp>
+
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Network; }
 
 static void onData(dyad_Event* e){
@@ -53,7 +55,7 @@ Network::Network(): _data(10), _port(9089), _queue(8) {
 			_system->dyadAddListener(server, DYAD_EVENT_ERROR  , onError    , this);
 			_system->dyadAddListener(server, DYAD_EVENT_DESTROY, onDestroyed, this);
 			if(_system->dyadListenEx(server, "0.0.0.0", _port, 511)<0)
-				return "error: couldn't listen";
+				return obvstr("error: couldn't listen to port", _port);
 			return "";
 		});
 	});
@@ -80,6 +82,15 @@ Network::Network(): _data(10), _port(9089), _queue(8) {
 		ss.ignore(1);
 		std::getline(ss, command);
 		_map[key]=dlal::Page(command, 0);
+		return "";
+	});
+	registerCommand("serialize_network", "", [this](std::stringstream&){
+		std::stringstream ss;
+		ss<<_port;
+		return ss.str();
+	});
+	registerCommand("deserialize_network", "<serialized>", [this](std::stringstream& ss){
+		ss>>_port;
 		return "";
 	});
 }

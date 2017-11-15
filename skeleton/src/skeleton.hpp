@@ -39,6 +39,7 @@ extern "C"{
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
 	DLAL char* dlalConnect(void* input, void* output);
 	DLAL char* dlalDisconnect(void* input, void* output);
+	DLAL char* dlalSerialize(void* system);
 	DLAL void dlalFree(void* p);
 	DLAL void dlalTest();
 }
@@ -75,10 +76,13 @@ class System{
 		std::string check();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
+		std::string serialize() const;
+
 		dyad_Stream* dyadNewStream();
 		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
 		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
 		std::string dyadPauseAnd(std::function<std::string()>);
+
 		std::vector<dyad_Stream*> _clients;
 		std::vector<dyad_Stream*> _streams;
 		Queue<std::string> _reportQueue;//for system visualization, populated in evaluation
@@ -86,6 +90,7 @@ class System{
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
 		dyad_Stream* _server;
+
 	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;

@@ -1,7 +1,5 @@
 #include "liner.hpp"
 
-#include "midi.hpp"
-
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Liner; }
 
 namespace dlal{
@@ -25,36 +23,21 @@ Liner::Liner(): _resetOnMidi(false) {
 		}
 	);
 	registerCommand("save", "<file path> <samples per quarter>", [this](std::stringstream& ss){
-		std::string file_path;
-		ss>>file_path;
-		float samples_per_quarter;
-		ss>>samples_per_quarter;
-		dlal::Midi m;
-		uint64_t last=0;
-		for(auto i: _line){
-			auto delta=uint32_t((i.sample-last)/samples_per_quarter*m.ticksPerQuarter);
-			m.append(1, delta, i.midi);
-			last=i.sample;
-		}
-		m.write(file_path);
+		std::string filePath;
+		ss>>filePath;
+		float samplesPerQuarter;
+		ss>>samplesPerQuarter;
+		getMidi(samplesPerQuarter).write(filePath);
 		return "";
 	});
 	registerCommand("load", "<file path> <samples per quarter>", [this](std::stringstream& ss){
-		std::string file_path;
-		ss>>file_path;
-		float samples_per_quarter;
-		ss>>samples_per_quarter;
-		dlal::Midi m;
-		m.read(file_path);
-		int ticks=0;
-		if(m.tracks.size()<2) return "error: no track to read";
-		auto pairs=getPairs(m.tracks[1]);
-		_line.clear();
-		for(auto i: pairs){
-			ticks+=i.delta;
-			_line.push_back(Midi{uint64_t(ticks*samples_per_quarter/m.ticksPerQuarter), i.event});
-		}
-		return "";
+		std::string filePath;
+		ss>>filePath;
+		float samplesPerQuarter;
+		ss>>samplesPerQuarter;
+		dlal::Midi midi;
+		midi.read(filePath);
+		return putMidi(midi, samplesPerQuarter);
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
@@ -63,6 +46,21 @@ Liner::Liner(): _resetOnMidi(false) {
 	registerCommand("reset_on_midi", "", [this](std::stringstream& ss){
 		_resetOnMidi=true;
 		return "";
+	});
+	registerCommand("serialize_liner", "", [this](std::stringstream&){
+		auto midi=getMidi(256);
+		std::vector<uint8_t> bytes;
+		midi.write(bytes);
+		std::stringstream ss;
+		ss<<bytes;
+		return ss.str();
+	});
+	registerCommand("deserialize_liner", "<serialized>", [this](std::stringstream& ss){
+		std::vector<uint8_t> bytes;
+		ss>>bytes;
+		dlal::Midi midi;
+		midi.read(bytes);
+		return putMidi(midi, 256);
 	});
 }
 
@@ -102,6 +100,29 @@ void Liner::put(const uint8_t* midi, unsigned size, uint64_t sample){
 	for(/*nothing*/; i!=_line.end(); ++i) if(i->sample>=sample) break;
 	_line.insert(i, m);
 	if(!_iterator) setPhase(_phase);
+}
+
+Midi Liner::getMidi(float samplesPerQuarter) const {
+	dlal::Midi result;
+	uint64_t last=0;
+	for(auto i: _line){
+		auto delta=uint32_t((i.sample-last)/samplesPerQuarter*result.ticksPerQuarter);
+		result.append(1, delta, i.midi);
+		last=i.sample;
+	}
+	return result;
+}
+
+std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter){
+	int ticks=0;
+	if(midi.tracks.size()<2) return "error: no track to read";
+	auto pairs=getPairs(midi.tracks[1]);
+	_line.clear();
+	for(auto i: pairs){
+		ticks+=i.delta;
+		_line.push_back(Midi{uint64_t(ticks*samplesPerQuarter/midi.ticksPerQuarter), i.event});
+	}
+	return "";
 }
 
 }//namespace dlal

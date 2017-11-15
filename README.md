@@ -65,6 +65,8 @@ todo
 ----
 - audio select input and output
 - save and load system
+	- load system
+	- midi controllee, all components
 - why is network failing on apple?
 - midi editor
 	- hook into system
