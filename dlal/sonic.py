@@ -90,8 +90,8 @@ class VgmSetting:
 		return result
 
 class Sonic(Component):
-	def __init__(self, setting=None):
-		Component.__init__(self, 'sonic')
+	def __init__(self, setting=None, **kwargs):
+		Component.__init__(self, 'sonic', **kwargs)
 		self.commander=Component('commander')
 		self.commander.connect(self)
 		self.components_to_add=[self.commander, self]

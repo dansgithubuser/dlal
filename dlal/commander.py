@@ -1,8 +1,8 @@
 from .skeleton import *
 
 class Commander(Component):
-	def __init__(self):
-		Component.__init__(self, 'commander')
+	def __init__(self, **kwargs):
+		Component.__init__(self, 'commander', **kwargs)
 		self.callback_type=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 		self.library.dlalCommanderCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderCommand.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint]

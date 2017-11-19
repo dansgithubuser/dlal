@@ -204,7 +204,9 @@ template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const
 //=====parsing=====//
 static std::istream& operator>>(std::istream& i, uint8_t& c){
 	unsigned u;
+	auto flags=i.flags();
 	i>>std::hex>>u;
+	i.flags(flags);
 	if(u>0xff) throw std::runtime_error("uint8_t input too big");
 	c=(uint8_t)u;
 	return i;

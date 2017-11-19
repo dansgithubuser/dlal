@@ -382,6 +382,9 @@ Component::Component(): _system(nullptr) {
 	registerCommand("type", "", [this](std::stringstream&){
 		return type();
 	});
+	registerCommand("to_str", "", [this](std::stringstream&){
+		return componentToStr(this);
+	});
 	registerCommand("label", "<label>", [this](std::stringstream& ss){
 		ss>>_label;
 		if(_system){
@@ -419,6 +422,7 @@ std::string Component::command(const std::string& command){
 	ss>>s;
 	if(!_commands.count(s))
 		return "error: "+s+" unrecognized\n"+_commands["help"].command(ss);
+	ss.get();
 	return _commands[s].command(ss);
 }
 

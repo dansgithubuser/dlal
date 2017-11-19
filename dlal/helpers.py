@@ -21,7 +21,7 @@ def standard_system_functionality(audio, midi=None, raw=False, test=False):
 		if test: raw_to_u8_pcm('raw.txt')
 	else:
 		print('use the go function to start audio processing')
-		if len(sys.argv)>1 and sys.argv[1]=='-g':
+		if '-g' in sys.argv:
 			print('-g option specified -- starting audio processing')
 			go()
 	ports=None

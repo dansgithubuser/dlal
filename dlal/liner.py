@@ -8,12 +8,23 @@ g_notes={
 }
 
 class Liner(Component):
-	def __init__(self, period_in_samples=0, samples_per_quarter=22050):
-		Component.__init__(self, 'liner')
+	def __init__(self, period_in_samples=0, samples_per_quarter=22050, from_dict=None, **kwargs):
+		if from_dict:
+			d, component_map=from_dict
+			Component.__init__(self, 'liner', component=component_map[d['component']].transfer_component())
+			if 'samples_per_quarter' in d: self.samples_per_quarter=d['samples_per_quarter']
+			self.period_in_samples=int(self.periodic_get().split()[0])
+			return
+		Component.__init__(self, 'liner', **kwargs)
 		if period_in_samples:
 			self.periodic_resize(period_in_samples)
 			self.period_in_samples=period_in_samples
 		if samples_per_quarter: self.samples_per_quarter=samples_per_quarter
+
+	def to_dict(self):
+		d={'component': self.to_str()}
+		if hasattr(self, 'samples_per_quarter'): d['samples_per_quarter']=self.samples_per_quarter
+		return d
 
 	def line(self, text):
 		stride=self.samples_per_quarter

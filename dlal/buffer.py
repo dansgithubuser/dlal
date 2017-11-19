@@ -4,8 +4,8 @@ from .sonic import *
 from .commander import *
 
 class Buffer(Component):
-	def __init__(self):
-		Component.__init__(self, 'buffer')
+	def __init__(self, **kwargs):
+		Component.__init__(self, 'buffer', **kwargs)
 		self.known_sounds={}
 		import os
 		for path, folders, files in os.walk(os.path.join('..', '..', 'components', 'buffer', 'sounds')):

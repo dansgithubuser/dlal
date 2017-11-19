@@ -1,4 +1,4 @@
-import ctypes, os, platform
+import ctypes, json, os, platform
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
 
@@ -81,18 +81,45 @@ class System:
 	def serialize(self):
 		return report(_skeleton.dlalSerialize(self.system))
 
-	def save(self, file_name='system.state.txt'):
-		with open(file_name, 'w') as file: file.write(self.serialize())
+	def deserialize(self, serialized):
+		state=json.loads(serialized)
+		#variables
+		for name, value in state['variables'].items(): self.set(name, value)
+		#components
+		components={}
+		for name, serialized in state['components'].items():
+			component=Component(state['component_types'][name])
+			component.deserialize(serialized)
+			components[name]=component
+		for slot in state['component_order']:
+			for index, component in enumerate(slot):
+				self.add(components[component], slot=index)
+		#connections
+		for input, output in state['connections']: components[input].connect(components[output])
+		#extra
+		state['map']=components
+		return state
+
+	def save(self, file_name='system.state.txt', extra={}):
+		root=json.loads(self.serialize())
+		root.update(extra)
+		serialized=json.dumps(root, indent=2, sort_keys=True)
+		with open(file_name, 'w') as file: file.write(serialized)
+
+	def load(self, file_name='system.state.txt'):
+		with open(file_name) as file: return self.deserialize(file.read())
 
 class Component:
 	_libraries={}
 
-	def __init__(self, component):
-		if component not in Component._libraries:
-			Component._libraries[component]=load(component)
-			Component._libraries[component].dlalBuildComponent.restype=ctypes.c_void_p
-		self.library=Component._libraries[component]
-		self.component=Component._libraries[component].dlalBuildComponent()
+	def __init__(self, component_type, **kwargs):
+		if component_type not in Component._libraries:
+			Component._libraries[component_type]=load(component_type)
+			Component._libraries[component_type].dlalBuildComponent.restype=ctypes.c_void_p
+		self.library=Component._libraries[component_type]
+		self.component=kwargs.get('component',
+			Component._libraries[component_type].dlalBuildComponent()
+		)
 		self.components_to_add=[self]
 		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
 		def captain(command):
@@ -100,7 +127,13 @@ class Component:
 		for command in commands:
 			if command not in dir(self): setattr(self, command, captain(command))
 
-	def __del__(self): _skeleton.dlalDemolishComponent(self.component)
+	def __del__(self):
+		if self.component!=None: _skeleton.dlalDemolishComponent(self.component)
+
+	def transfer_component(self):
+		result=self.component
+		self.component=None
+		return result
 
 	def command(self, command):
 		command=command.encode('utf-8')
@@ -113,6 +146,7 @@ class Component:
 
 class Pipe(Component):
 	def __init__(self, *args):
+		if not len(args): return
 		self.component=args[0].component
 		self.components_to_add=[x for arg in args for x in arg.components_to_add]
 

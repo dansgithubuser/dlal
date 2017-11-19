@@ -4,8 +4,8 @@ try: import tkinter
 except ImportError: import Tkinter as tkinter
 
 class Fir(Component):
-	def __init__(self):
-		Component.__init__(self, 'fir')
+	def __init__(self, **kwargs):
+		Component.__init__(self, 'fir', **kwargs)
 		self.commander=Component('commander')
 		self.commander.connect(self)
 		self.components_to_add=[self.commander, self]

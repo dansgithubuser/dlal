@@ -9,6 +9,7 @@ parser.add_argument('--setup', action='store_true', help='install dependencies')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run')
+parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments to pass to system (default -g)')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
@@ -23,6 +24,7 @@ if args.can:
 		's': '-s soundfont ',
 		'v': '-s vst       ',
 		'l': '-s looper -i viewer:9088 -i softboard:9089',
+		'll': ['-s', 'looper', '-i', 'viewer:9088', '-i', 'softboard:9089', '--sa', '-l -g'],
 	}
 	canned_options={
 		'r': '-r',
@@ -45,13 +47,16 @@ if args.can:
 		pprint.pprint(canned_commands)
 		sys.exit(-1)
 	command=canned_commands[name]
+	if type(command)==str: command=command.split()
 	for i in options:
 		if i not in canned_options:
 			print('invalid option "{0}" -- valid options are'.format(i))
 			pprint.pprint(canned_options)
 			continue
-		command+=' '+canned_options[i]
-	args=parser.parse_args(command.split())
+		option=canned_options[i]
+		if type(option)==str: option=option.split()
+		command+=option
+	args=parser.parse_args(command)
 
 #helpers
 def shell(*args): p=subprocess.check_call(' '.join(args), shell=True)
@@ -175,7 +180,7 @@ good=True
 if args.system:
 	systems_path=os.path.join('..', '..', 'systems')
 	system_path=os.path.join(systems_path, args.system+'.py')
-	if os.path.exists(system_path): invocation+=[system_path, '-g']
+	if os.path.exists(system_path): invocation+=[system_path]+args.system_arguments.split()
 	else:
 		print('available systems are:')
 		for i in glob.glob(os.path.join('..', '..', 'systems', '*.py')):
