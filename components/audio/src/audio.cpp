@@ -1,6 +1,7 @@
 #include "audio.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Audio; }
 
@@ -28,6 +29,16 @@ static int rtAudioCallback(
 	return 0;
 }
 
+static uint8_t ilog2(int x){
+	int result=-1;
+	while(x){
+		x>>=1;
+		++result;
+	}
+	if(result==-1) throw std::logic_error("input outside domain");
+	return result;
+}
+
 namespace dlal{
 
 Audio::Audio():
@@ -39,7 +50,18 @@ Audio::Audio():
 	#endif
 {
 	_checkAudio=true;
-	addJoinAction([this](System& system){
+	addJoinAction([this](System& system)->std::string{
+		if(
+			!_sampleRate
+			&&
+			system._variables.count("sampleRate")
+			&&
+			system._variables.count("samplesPerEvaluation")
+		){
+			_sampleRate=std::stoi(system._variables.at("sampleRate"));
+			_log2SamplesPerCallback=ilog2(std::stoi(system._variables.at("samplesPerEvaluation")));
+			return "";
+		}
 		return system.set(_sampleRate, _log2SamplesPerCallback);
 	});
 	registerCommand("set", "sampleRate <log2(samples per callback)>",
