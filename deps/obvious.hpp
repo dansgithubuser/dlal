@@ -29,9 +29,13 @@ but it's not necessarily obvious to make into convenient C++...
 
 //=====test stuff=====//
 #define EXPECT(ACTUAL, EXPECTED){\
-	std::stringstream ss;\
-	ss<<__FILE__<<"@"<<__LINE__<<": expected " #ACTUAL " to be "<<(EXPECTED)<<" but got "<<(ACTUAL);\
-	if((EXPECTED)!=(ACTUAL)) throw std::logic_error(ss.str());\
+	auto ACTUAL_VALUE=(ACTUAL);\
+	auto EXPECTED_VALUE=(EXPECTED);\
+	if(EXPECTED_VALUE!=ACTUAL_VALUE){\
+		std::stringstream ss;\
+		ss<<__FILE__<<"@"<<__LINE__<<": expected " #ACTUAL " to be "<<EXPECTED_VALUE<<" but got "<<ACTUAL_VALUE;\
+		throw std::logic_error(ss.str());\
+	}\
 }
 
 //=====typical operations=====//
@@ -78,9 +82,9 @@ static bool startsWith(const std::string& s, const std::string& t){
 }
 
 static std::string read(std::istream& istream, unsigned size){
-	std::string result(size+1, ' ');
-	istream.read(&result[0], size);
-	return result;
+	std::vector<char> result(size+1, '\0');
+	istream.read(result.data(), size);
+	return std::string(result.data());
 }
 
 static std::string peek(std::istream& istream, unsigned size){
@@ -177,18 +181,18 @@ template<typename T> std::ostream& operator<<(std::ostream& o, const std::set<T>
 	return streamContainer(o, c, "s");
 }
 
-template<typename T, typename U> struct KeyValuePair{
-	KeyValuePair(const T& t, const U& u): key(t), value(u) {}
+template<typename T, typename U> struct KeyValuePairConst{
+	KeyValuePairConst(const T& t, const U& u): key(t), value(u) {}
 	const T& key;
 	const U& value;
 };
-template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const KeyValuePair<T, U>& p){
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const KeyValuePairConst<T, U>& p){
 	return o<<serialize(p.key)<<": "<<serialize(p.value);
 }
 
 template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::map<T, U>& c){
-	std::vector<KeyValuePair<T, U>> x;
-	for(const auto& i: c) x.push_back(KeyValuePair<T, U>(i.first, i.second));
+	std::vector<KeyValuePairConst<T, U>> x;
+	for(const auto& i: c) x.push_back(KeyValuePairConst<T, U>(i.first, i.second));
 	return streamContainer(o, x, "", "{", "}");
 }
 
@@ -249,13 +253,16 @@ template<typename T> std::istream& streamContainer(
 ){
 	std::string s;
 	s=read(istream, prefix.size());
-	if(s!=prefix) throw std::runtime_error("container doesn't start with correct prefix");
+	if(s!=prefix) throw std::runtime_error("container prefix is \""+s+"\" instead of \""+prefix+"\"");
 	s=read(istream, 1);
-	if(s!=open) throw std::runtime_error("container doesn't use correct open delimiter");
+	if(s!=open) throw std::runtime_error("container open delimiter is \""+s+"\" instead of \""+open+"\"");
 	while(true){
 		istream>>std::ws;
 		s=peek(istream, 1);
-		if(s==close) break;
+		if(s==close){
+			read(istream, 1);
+			break;
+		}
 		if(s==","){ read(istream, 1); istream>>std::ws; }
 		appendFromSerialized(t, istream);
 	}
@@ -270,6 +277,10 @@ template<typename T> std::istream& operator>>(std::istream& istream, std::set<T>
 	return streamContainer(istream, c, "s");
 }
 
+template<typename T, typename U> struct KeyValuePair{
+	T key;
+	U value;
+};
 template<typename T, typename U> std::istream& operator>>(std::istream& istream, KeyValuePair<T, U>& p){
 	deserialize(p.key, istream);
 	deserialize(": ", istream);
@@ -290,6 +301,17 @@ template<typename T, typename U> std::istream& operator>>(std::istream& istream,
 	deserialize(", ", istream);
 	deserialize(p.second, istream);
 	deserialize(")", istream);
+	return istream;
+}
+
+static std::istream& operator>>(std::istream& istream, const char* cString){
+	std::string string(cString);
+	auto actual=read(istream, string.size());
+	if(actual!=string){
+		std::stringstream ss;
+		ss<<"bad input \""<<actual<<"\" instead of \""<<string<<"\"";
+		throw std::runtime_error(ss.str());
+	}
 	return istream;
 }
 
