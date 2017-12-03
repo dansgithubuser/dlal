@@ -39,18 +39,34 @@ class AbstractControls:
 		mode='normal'
 		order=0
 		regex=None
+		multiline=False
 		body=[]
-		for line in configuration.splitlines():
+		for line_i, line in enumerate(configuration.splitlines()):
 			if not line: continue
-			if line.startswith('\t'): body.append(line[1:]); continue
-			elif body: self.add_control(regex, order, mode, body); body=[]
+			#multiline body
+			if multiline:
+				if line.startswith(' '):
+					body.append(line[1:])
+					continue
+				else:
+					self.add_control(regex, order, mode, body)
+					multiline=False
+					body=[]
+			#command
 			split=line.split()
+			if len(split)==1:
+				command=split[0]
+				if command=='end': continue
 			if len(split)==2:
 				command, value=split
 				if command=='mode': mode=value; order=0; continue
 				elif command=='order': order=int(value); continue
-			regex, b=re.match('([^:]*):(.*)', line).groups()
+			#control
+			match=re.match('([^:]*):(.*)', line)
+			if not match: raise Exception('bad configuration line {}: "{}"'.format(line_i+1, line))
+			regex, b=match.groups()
 			if b: self.add_control(regex, order, mode, [b])
+			else: multiline=True
 
 	def __init__(self):
 		self.sequence=[]
