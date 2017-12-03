@@ -112,7 +112,7 @@ class AbstractControls:
 		for i in self.sequence:
 			c=i[1:]
 			if   i[0]=='<':
-				if c in self.shift_table: r+=shift_table[c] if shift else c
+				if c in self.shift_table: r+=self.shift_table[c] if shift else c
 				elif c=='Space': r+=' '
 				elif c[1:]=='Shift': shift=True#LShift or RShift
 			elif i[0]=='>':

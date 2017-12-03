@@ -263,17 +263,28 @@ def write(file_name, song):
 	return
 
 #=====helpers=====#
+import bisect
+
 def ticks_per_quarter(midi):
 	assert midi[0][0].type=='ticks_per_quarter'
 	return midi[0][0].ticks_per_quarter
 
 def add_event(track, event):
-	import bisect
 	bisect.insort(track, event)
 
 def add_note(midi, track, ticks, duration, number, channel=None):
 	if channel==None: channel=track-1
 	add_event(midi[track], Event.make('note', ticks, duration, channel, number))
+
+def remove_note_backward(midi, track, ticks):
+	event=Event()
+	event.ticks=ticks
+	index=bisect.bisect_left(midi[track], event)-1
+	if index==-1: return
+	note=midi[track][index]
+	if note.ticks>=ticks: return
+	del midi[track][index]
+	return (note.ticks, note.duration)
 
 def notes_in(midi, track, ticks, duration, number=None, generous=False):
 	result=[]

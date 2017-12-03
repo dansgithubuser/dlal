@@ -107,6 +107,10 @@ class View:
 		if advance: self.skip_note()
 		self.unwritten=True
 
+	def backspace(self):
+		result=midi.remove_note_backward(self.midi, self.cursor_staff+1, int(self.cursor_ticks))
+		if result is not None: self.cursor_ticks, self.cursor_duration=result
+
 	def skip_note(self):
 		self.cursor_ticks+=self.cursor_duration
 

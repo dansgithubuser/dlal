@@ -5,19 +5,21 @@ configuration='''
 mode .*
 order -1
 .* x.*: self.sequence=self.sequence[:-1]
-.* <Backspace >Backspace:
- if self.mode=='command':
-  for i in reversed(range(len(self.sequence)-2)):
-   if self.sequence[i][0]=='<': break
-  self.sequence=self.sequence[:i]
- else: self.sequence=self.sequence[:-3]
-end
  <Esc >Esc: self.reset()
 .* <.Shift$: self.shift=True
 .+ >.Shift$: self.shift=False
  >.Shift$: self.shift=False; self.clear()
 order 0
 .* >Esc: self.clear()
+
+mode (?!insert)
+order -1
+.* <Backspace >Backspace:
+ if self.mode=='command':
+  for i in reversed(range(len(self.sequence)-2)):
+   if self.sequence[i][0]=='<': break
+  self.sequence=self.sequence[:i]
+ else: self.sequence=self.sequence[:-3]
 
 mode normal
 order -2
@@ -60,7 +62,8 @@ mode insert
  <j >j:         self.view.add_note(10); self.clear()
  <m >m:         self.view.add_note(11); self.clear()
  <Space >Space: self.view.skip_note( ); self.clear()
- .* >d:         self.view.set_duration(self.fraction(skip=1)); self.clear()
+ .* >d:         self.view.set_duration(self.fraction()); self.clear()
+.* <Backspace >Backspace: self.view.backspace(); self.sequence=self.sequence[:-2]
 '''
 
 class Controls(AbstractControls):
