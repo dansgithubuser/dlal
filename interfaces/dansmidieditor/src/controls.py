@@ -1,4 +1,8 @@
+#coding: utf-8
+
 import re, types
+
+DEBUG=0
 
 class AbstractControls:
 	shift_table={
@@ -17,15 +21,20 @@ class AbstractControls:
 	control_number=0
 
 	def add_control(self, regex, order, mode, body):
+		control_name='control_{}'.format(self.control_number)
+		if DEBUG: print('control_{}: {}'.format(control_name, body))
 		f='\n'.join([
-			'def {0}(self, regex=r"{1}", order={2}, mode="{3}"):{4}',
+			'def {0}(self, regex=r"{1}", order={2}, mode="{3}"):',
+			'	"""{5}"""',
+			'	{4}',
 			'self.{0}=types.MethodType({0}, self)',
 		]).format(
-			'control_{}'.format(self.control_number),
+			control_name,
 			regex,
 			order,
 			mode,
-			''.join(['\n\t'+i for i in body]),
+			'\n\t'.join(body),
+			'\n'.join(body),
 		)
 		try: exec(f)
 		except:
@@ -65,8 +74,9 @@ class AbstractControls:
 			match=re.match('([^:]*):(.*)', line)
 			if not match: raise Exception('bad configuration line {}: "{}"'.format(line_i+1, line))
 			regex, b=match.groups()
-			if b: self.add_control(regex, order, mode, [b])
+			if b: self.add_control(regex, order, mode, [b.strip()])
 			else: multiline=True
+		if body: self.add_control(regex, order, mode, body)
 
 	def __init__(self):
 		self.sequence=[]
@@ -82,6 +92,9 @@ class AbstractControls:
 			except: continue
 			self.controls[params['order']][params['mode']].append((params['regex'], i))
 		self.controls=[v for k, v in sorted(self.controls.items(), key=lambda k: k)]
+		if DEBUG:
+			import pprint
+			for controls_order in self.controls: pprint.pprint(dict(controls_order))
 		self.mode='normal'
 
 	def input(self, word):
@@ -93,9 +106,15 @@ class AbstractControls:
 					for regex, method in controls_order_mode:
 						s=''.join([' '+i for i in self.sequence])
 						m=re.match(regex, s)
-						#print('{} {} {} {} {}'.format(word, regex, s, method, 'MATCH' if m else ''))
+						if DEBUG: print('{} regex◀{}▶ sequence◀{}▶ {} {}'.format(word, regex, s, method, 'MATCH' if m else ''))
 						if m:
-							getattr(self, method)()
+							method=getattr(self, method)
+							try: method()
+							except:
+								print('-'*40)
+								print(method.__doc__)
+								print('-'*40)
+								raise
 							return
 		f()
 		self.on_input()

@@ -1,8 +1,21 @@
-import os, sys
+import copy, os, sys
 from fractions import Fraction
+
 home=os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(home, '..', '..', '..', 'deps', 'midi'))
 import midi
+
+class Cursor:
+	def __init__(self, ticks_per_quarter):
+		self.staff=0
+		self.note=60
+		self.ticks=Fraction(0)
+		self.duration=Fraction(ticks_per_quarter)
+		self.duty=Fraction(1)
+
+	def coincide_note(self, note):
+		self.ticks=Fraction(note.ticks)
+		self.duration=Fraction(note.duration)
 
 class View:
 	def __init__(self, margin=6, text_size=12):
@@ -16,12 +29,11 @@ class View:
 		self.multistaffing=1
 		self.ticks=0
 		self.duration=5760
-		self.cursor_staff=0
-		self.cursor_note=60
-		self.cursor_ticks=Fraction(0)
-		self.cursor_duration=Fraction(self.ticks_per_quarter)
-		self.cursor_duty=Fraction(1)
-		self.selected=set()
+		self.cursor=Cursor(self.ticks_per_quarter)
+		self.deselect()
+		self.unyank()
+		self.visual=Cursor(0)
+		self.visual.active=False
 		self.unwritten=False
 		#colors
 		self.color_background=[  0,   0,   0]
@@ -31,14 +43,16 @@ class View:
 		self.color_octaves   =[  0, 128,   0]
 		self.color_notes     =[  0, 128, 128]
 		self.color_cursor    =[128,   0, 128, 128]
+		self.color_visual    =[255, 255, 255,  64]
 		self.color_selected  =[255, 255, 255]
 		self.color_warning   =[255,   0,   0]
 
+	#persistence
 	def read(self, path):
 		self.midi=midi.read(path)
 		if len(self.midi)==1: self.midi.append([])
 		self.ticks_per_quarter=midi.ticks_per_quarter(self.midi)
-		self.cursor_duration=Fraction(self.ticks_per_quarter)
+		self.cursor.duration=Fraction(self.ticks_per_quarter)
 		self.cursor_down(0)
 		self.unwritten=False
 		self.path=path
@@ -48,46 +62,48 @@ class View:
 		midi.write(path, self.midi)
 		self.unwritten=False
 
+	#cursor
 	def cursor_down(self, amount):
-		self.cursor_staff+=amount
-		self.cursor_staff=max(self.cursor_staff, 0)
-		self.cursor_staff=min(self.cursor_staff, len(self.midi)-2)
+		self.cursor.staff+=amount
+		self.cursor.staff=max(self.cursor.staff, 0)
+		self.cursor.staff=min(self.cursor.staff, len(self.midi)-2)
 		#move up if cursor is above window
-		self.staff=min(self.staff, self.cursor_staff)
+		self.staff=min(self.staff, self.cursor.staff)
 		#move down if cursor is below window
 		bottom=self.staff+int(self.staves)-1
-		if self.cursor_staff>bottom: self.staff+=self.cursor_staff-bottom
+		if self.cursor.staff>bottom: self.staff+=self.cursor.staff-bottom
 		#figure cursor octave
-		self.cursor_note%=12
-		self.cursor_note+=self.calculate_octave(self.cursor_staff)*12
+		self.cursor.note%=12
+		self.cursor.note+=self.calculate_octave(self.cursor.staff)*12
 
 	def cursor_up(self, amount): self.cursor_down(-amount)
 
 	def cursor_right(self, amount):
-		self.cursor_ticks+=self.cursor_duration*amount
-		self.cursor_ticks=max(Fraction(0), self.cursor_ticks)
+		self.cursor.ticks+=self.cursor.duration*amount
+		self.cursor.ticks=max(Fraction(0), self.cursor.ticks)
 		#move left if cursor is left of window
-		self.ticks=min(self.ticks, int(self.cursor_ticks))
+		self.ticks=min(self.ticks, int(self.cursor.ticks))
 		#move right if cursor is right of window
 		right=self.ticks+self.duration
-		cursor_right=self.cursor_ticks+self.cursor_duration
+		cursor_right=self.cursor.ticks+self.cursor.duration
 		if cursor_right>right: self.ticks+=int(cursor_right)-right
 		#figure cursor octave
-		self.cursor_note%=12
-		self.cursor_note+=self.calculate_octave(self.cursor_staff)*12
+		self.cursor.note%=12
+		self.cursor.note+=self.calculate_octave(self.cursor.staff)*12
 
 	def cursor_left(self, amount): self.cursor_right(-amount)
 
 	def cursor_note_down(self, amount):
-		self.cursor_note-=amount
-		self.cursor_note=max(0, self.cursor_note)
-		self.cursor_note=min(127, self.cursor_note)
+		self.cursor.note-=amount
+		self.cursor.note=max(0, self.cursor.note)
+		self.cursor.note=min(127, self.cursor.note)
 
 	def cursor_note_up(self, amount): self.cursor_note_down(-amount)
 
 	def set_duration(self, fraction_of_quarter):
-		self.cursor_duration=Fraction(self.ticks_per_quarter)*fraction_of_quarter
+		self.cursor.duration=Fraction(self.ticks_per_quarter)*fraction_of_quarter
 
+	#window
 	def more_multistaffing(self, amount):
 		self.multistaffing+=amount
 		self.multistaffing=max(1, self.multistaffing)
@@ -95,34 +111,43 @@ class View:
 
 	def less_multistaffing(self, amount): self.more_multistaffing(-amount)
 
+	#notes
 	def add_note(self, number, advance=True):
-		octave=self.calculate_octave(self.cursor_staff)
+		octave=self.calculate_octave(self.cursor.staff)
 		midi.add_note(
 			self.midi,
-			self.cursor_staff+1,
-			int(self.cursor_ticks),
-			int(self.cursor_duration*self.cursor_duty),
+			self.cursor.staff+1,
+			int(self.cursor.ticks),
+			int(self.cursor.duration*self.cursor.duty),
 			number+12*octave
 		)
 		if advance: self.skip_note()
 		self.unwritten=True
 
-	def backspace(self):
-		result=midi.remove_note_backward(self.midi, self.cursor_staff+1, int(self.cursor_ticks))
-		if result is not None: self.cursor_ticks, self.cursor_duration=result
+	def previous_note(self):
+		return midi.previous_note(self.midi, self.cursor.staff+1, int(self.cursor.ticks))
+
+	def remove_note(self, note):
+		if note==None: return
+		return midi.remove_note(note)
+
+	def transpose_note(self, note, amount):
+		if note==None: return
+		midi.transpose_note(note, amount)
 
 	def skip_note(self):
-		self.cursor_ticks+=self.cursor_duration
+		self.cursor.ticks+=self.cursor.duration
 
+	#selection
 	def select(self):
 		args=[
 			self.midi,
-			self.cursor_staff+1,
-			self.cursor_ticks,
-			self.cursor_duration,
+			self.cursor.staff+1,
+			self.cursor.ticks,
+			self.cursor.duration,
 		]
-		notes=midi.notes_in(*args, number=self.cursor_note)
-		if not notes: notes=midi.notes_in(*args, number=self.cursor_note, generous=True)
+		notes=midi.notes_in(*args, number=self.cursor.note)
+		if not notes: notes=midi.notes_in(*args, number=self.cursor.note, generous=True)
 		if not notes: notes=midi.notes_in(*args)
 		if not notes: notes=midi.notes_in(*args, generous=True)
 		for i in notes: self.selected.add(i)
@@ -141,6 +166,67 @@ class View:
 		midi.transpose(self.midi, self.selected, amount)
 		self.unwritten=True
 
+	def get_visual_duration(self):
+		ticks=sorted([
+			self.visual.ticks, self.visual.ticks+self.visual.duration,
+			self.cursor.ticks, self.cursor.ticks+self.cursor.duration,
+		])
+		return ticks[0], ticks[-1]
+
+	def toggle_visual(self):
+		if self.visual.active:
+			start, finish=self.get_visual_duration()
+			notes=midi.notes_in(
+				self.midi,
+				track=min(self.visual.staff, self.cursor.staff)+1,
+				ticks=start,
+				duration=finish-start,
+				track_end=max(self.visual.staff, self.cursor.staff)+1,
+			)
+			for i in notes: self.selected.add(i)
+			self.visual.duration=finish-start
+			self.visual.active=False
+		else:
+			self.visual=copy.deepcopy(self.cursor)
+			self.visual.active=True
+
+	def select(self):
+		args=[
+			self.midi,
+			self.cursor.staff+1,
+			self.cursor.ticks,
+			self.cursor.duration,
+		]
+		notes=midi.notes_in(*args, number=self.cursor.note)
+		if not notes: notes=midi.notes_in(*args, number=self.cursor.note, generous=True)
+		if not notes: notes=midi.notes_in(*args)
+		if not notes: notes=midi.notes_in(*args, generous=True)
+		for i in notes: self.selected.add(i)
+
+	def yank(self):
+		if self.visual.active: self.toggle_visual()
+		self.yanked=self.selected
+		self.deselect()
+
+	def unyank(self): self.yanked=set()
+
+	def put(self):
+		if not self.yanked: return
+		notes=list(self.yanked)
+		start=min([self.midi[track][index].ticks for track, index in notes])
+		for track, index in notes:
+			note=self.midi[track][index]
+			midi.add_note(
+				self.midi,
+				self.cursor.staff+1,
+				self.cursor.ticks-start+note.ticks,
+				note.duration,
+				note.number,
+				note.channel,
+			)
+		self.cursor.ticks+=self.visual.duration
+
+	#drawing
 	def staves_to_draw(self):
 		return range(self.staff, self.staff+min(int(self.staves)+1, len(self.midi)-1-self.staff))
 
@@ -239,12 +325,22 @@ class View:
 		media.draw_vertices()
 		#cursor
 		media.fill(
-			xi=self.x_ticks(int(self.cursor_ticks)),
-			xf=self.x_ticks(int(self.cursor_ticks+self.cursor_duration)),
-			y=self.y_note(self.cursor_staff, self.cursor_note, octaves[self.cursor_staff]),
+			xi=self.x_ticks(int(self.cursor.ticks)),
+			xf=self.x_ticks(int(self.cursor.ticks+self.cursor.duration)),
+			y=self.y_note(self.cursor.staff, self.cursor.note, octaves[self.cursor.staff]),
 			h=int(self.h_note()),
 			color=self.color_cursor,
 		)
+		#visual
+		if self.visual.active:
+			start, finish=self.get_visual_duration()
+			media.fill(
+				xi=self.x_ticks(int(start)),
+				xf=self.x_ticks(int(finish)),
+				y=self.y_note(self.visual.staff, self.notes_per_staff()-1),
+				h=int(self.h_note()*self.notes_per_staff()),
+				color=self.color_visual,
+			)
 		#text
 		media.text(self.text, x=self.margin, y=self.h_window-self.margin, h=self.text_size, bottom=True)
 		#

@@ -4,22 +4,24 @@ from view import View
 configuration='''
 mode .*
 order -1
+.* q: self.command('quit')
+.* <Backspace >Backspace:
+ if self.mode=='command':
+  i=0
+  for i in reversed(range(len(self.sequence)-2)):
+   if self.sequence[i][0]=='<': break
+  self.sequence=self.sequence[:i]
+ else: self.sequence=self.sequence[:-3]
+end
 .* x.*: self.sequence=self.sequence[:-1]
  <Esc >Esc: self.reset()
+.* <LShift >LShift: self.sequence=self.sequence[:-2]; self.shift=False
+.* <RShift >RShift: self.sequence=self.sequence[:-2]; self.shift=False
 .* <.Shift$: self.shift=True
 .+ >.Shift$: self.shift=False
  >.Shift$: self.shift=False; self.clear()
 order 0
 .* >Esc: self.clear()
-
-mode (?!insert)
-order -1
-.* <Backspace >Backspace:
- if self.mode=='command':
-  for i in reversed(range(len(self.sequence)-2)):
-   if self.sequence[i][0]=='<': break
-  self.sequence=self.sequence[:i]
- else: self.sequence=self.sequence[:-3]
 
 mode normal
 order -2
@@ -39,11 +41,13 @@ order 0
  <Return >Return: self.view.select(); self.clear()
 .* >Down:         self.view.transpose(-self.reps()); self.clear()
 .* >Up:           self.view.transpose( self.reps()); self.clear()
-.* >d:            self.view.set_duration(self.fraction()); self.clear()
  <Delete >Delete: self.view.delete(); self.clear()
 .* >s: if self.shift: self.view.more_multistaffing(self.reps()); self.clear()
 .* >x: if self.shift: self.view.less_multistaffing(self.reps()); self.clear()
  <.Shift <;$:     self.mode='command'; self.clear()
+.* >v: self.view.toggle_visual(); self.clear()
+.* >y: self.view.yank(); self.clear()
+.* >p: self.view.put(); self.clear()
 
 mode command
  .*>Return: self.command()
@@ -62,8 +66,16 @@ mode insert
  <j >j:         self.view.add_note(10); self.clear()
  <m >m:         self.view.add_note(11); self.clear()
  <Space >Space: self.view.skip_note( ); self.clear()
- .* >d:         self.view.set_duration(self.fraction()); self.clear()
-.* <Backspace >Backspace: self.view.backspace(); self.sequence=self.sequence[:-2]
+ <PageUp >PageUp:     self.view.transpose_note(self.view.previous_note(),  12); self.clear()
+ <PageDown >PageDown: self.view.transpose_note(self.view.previous_note(), -12); self.clear()
+
+mode (insert|normal)
+.* >d: self.view.set_duration(self.fraction()); self.clear()
+order -2
+.* <.Shift <Backspace >Backspace:
+ note=self.view.remove_note(self.view.previous_note())
+ if note: self.view.cursor.coincide_note(note)
+ self.sequence=self.sequence[:-2]
 '''
 
 class Controls(AbstractControls):
@@ -98,6 +110,7 @@ class Controls(AbstractControls):
 	def command(self, command=None):
 		if not command: command=self.sequence_as_text()
 		command=command.split()
+		if not command: self.reset(); return
 		name=command[0]
 		self.force=False
 		if name.endswith('!'): self.force=True; name=name[:-1]
@@ -112,7 +125,7 @@ class Controls(AbstractControls):
 
 	def check_unwritten(self):
 		if self.view.unwritten and not self.force:
-			self.message('unwritten changes, add ! to override')
+			self.message('unwritten changes, use q! to force quit')
 			return False
 		return True
 

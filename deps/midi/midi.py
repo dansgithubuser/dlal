@@ -122,6 +122,10 @@ class Event:
 		off.number=self.number
 		return [on, off]
 
+	def end_of_note(self):
+		assert self.type=='note'
+		return self.ticks+self.duration
+
 	def __lt__(self, other): return self.ticks<other.ticks
 
 	def __repr__(self):
@@ -276,28 +280,39 @@ def add_note(midi, track, ticks, duration, number, channel=None):
 	if channel==None: channel=track-1
 	add_event(midi[track], Event.make('note', ticks, duration, channel, number))
 
-def remove_note_backward(midi, track, ticks):
+def previous_note(midi, track, ticks):
 	event=Event()
 	event.ticks=ticks
 	index=bisect.bisect_left(midi[track], event)-1
 	if index==-1: return
 	note=midi[track][index]
 	if note.ticks>=ticks: return
-	del midi[track][index]
-	return (note.ticks, note.duration)
+	return midi, track, index
 
-def notes_in(midi, track, ticks, duration, number=None, generous=False):
+def remove_note(note):
+	midi, track, index=note
+	note=midi[track][index]
+	del midi[track][index]
+	return note
+
+def transpose_note(note, amount):
+	midi, track, index=note
+	midi[track][index].number+=amount
+
+def notes_in(midi, track, ticks, duration, number=None, generous=False, track_end=None):
+	if track_end==None: track_end=track
 	result=[]
-	for i, v in enumerate(midi[track]):
-		if v.ticks>=ticks+duration: break#note starts after window ends
-		if v.type!='note': continue
-		if number and v.number!=number: continue
-		if generous:
-			if v.ticks+v.duration<=ticks: continue#note ends before window starts
-		else:
-			if v.ticks<ticks: continue#note starts before window starts
-			if v.ticks+v.duration>ticks+duration: continue#note ends after window ends
-		result.append((track, i))
+	for t in range(track, track_end+1):
+		for i, v in enumerate(midi[t]):
+			if v.ticks>=ticks+duration: break#note starts after window ends
+			if v.type!='note': continue
+			if number and v.number!=number: continue
+			if generous:
+				if v.ticks+v.duration<=ticks: continue#note ends before window starts
+			else:
+				if v.ticks<ticks: continue#note starts before window starts
+				if v.ticks+v.duration>ticks+duration: continue#note ends after window ends
+			result.append((t, i))
 	return result
 
 def delete(midi, notes):
