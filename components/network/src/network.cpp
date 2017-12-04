@@ -26,7 +26,7 @@ static void onData(dyad_Event* e){
 		payload.resize(size);
 		self._data.read(payload.data(), size, true);
 		std::stringstream ss;
-		for(unsigned i=0; i<size; ++i) ss<<payload[i];
+		for(unsigned i=0; i<size; ++i) ss<<(char)payload[i];
 		self.queue(dlal::Page(ss));
 	}
 }
