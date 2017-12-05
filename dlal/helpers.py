@@ -8,7 +8,7 @@ import sys
 def midi_ports():
 	return [i for i in Component('midi').ports().split('\n') if len(i) and 'Midi Through' not in i]
 
-def standard_system_functionality(audio, midi=None, raw=False, test=False):
+def standard_system_functionality(audio, midi=None, raw=False, test=False, args=None):
 	def go():
 		audio.start()
 		if raw or test: audio.finish()
@@ -21,7 +21,7 @@ def standard_system_functionality(audio, midi=None, raw=False, test=False):
 		if test: raw_to_u8_pcm('raw.txt')
 	else:
 		print('use the go function to start audio processing')
-		if '-g' in sys.argv:
+		if args and hasattr(args, 'g') and args.g or '-g' in sys.argv:
 			print('-g option specified -- starting audio processing')
 			go()
 	ports=None

@@ -56,14 +56,14 @@ class AudioTrack(Pipe):
 		return {i: getattr(self, i).to_str() for i in ['input', 'container', 'synth', 'output', 'multiplier']}
 
 class Looper:
-	def __init__(self, samples_per_beat, beats, sample_rate=44100, log_2_samples_per_evaluation=6, load=False):
+	def __init__(self, samples_per_beat, beats, sample_rate=44100, log_2_samples_per_evaluation=6, load=None):
 		self.samples_per_beat=samples_per_beat
 		self.period_in_samples=beats*samples_per_beat
 		self.sample_rate=sample_rate
 		self.log_2_samples_per_evaluation=log_2_samples_per_evaluation
 		self.system=System()
-		if load:
-			extra=self.system.load()
+		if load is not None:
+			extra=self.system.load(load)
 			self.commander=Commander(component=extra['map'][extra['looper_commander']].transfer_component())
 			self.audio=extra['map'][extra['looper_audio']]
 			self.tracks=[track_from_dict(i, extra['map']) for i in extra['looper_tracks']]

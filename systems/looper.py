@@ -1,4 +1,10 @@
-import dlal, os, sys
+import dlal
+import argparse, glob, os, sys
+
+parser=argparse.ArgumentParser()
+parser.add_argument('-g', action='store_true')
+parser.add_argument('-l')
+args=parser.parse_args()
 
 edges_to_wait=0
 input=0
@@ -7,8 +13,12 @@ track=0
 sequence=None
 
 #looper
-if '-l' in sys.argv:
-	looper=dlal.Looper(32000, 16, load=True)
+if args.l:
+	for state in glob.glob(os.path.join('..', '..', 'systems', 'loops', '*.txt')):
+		if os.path.basename(state)[:-4]==args.l:
+			args.l=state
+			break
+	looper=dlal.Looper(32000, 16, load=args.l)
 else:
 	looper=dlal.Looper(32000, 16)
 looper.system.set('wait', str(edges_to_wait))
@@ -226,7 +236,7 @@ def help():
 	for name, command in commands:
 		print('\t{0}: {1}'.format(name, command[1]))
 
-go, ports=dlal.standard_system_functionality(looper.audio)
+go, ports=dlal.standard_system_functionality(looper.audio, args=args)
 
 if '-l' not in sys.argv:
 	scan_for_midi_inputs()

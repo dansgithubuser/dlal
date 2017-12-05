@@ -14,6 +14,7 @@ parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands -- use h for help')
+parser.add_argument('--system-state', '--ss', default='system.state.txt', help='system state to load for canned commands')
 args=parser.parse_args()
 
 #canned commands
@@ -24,7 +25,7 @@ if args.can:
 		's': '-s soundfont ',
 		'v': '-s vst       ',
 		'l': '-s looper -i viewer:9088 -i softboard:9089',
-		'll': ['-s', 'looper', '-i', 'viewer:9088', '-i', 'softboard:9089', '--sa', '-l -g'],
+		'll': ['-s', 'looper', '-i', 'viewer:9088', '-i', 'softboard:9089', '--sa', '-l {} -g'.format(args.system_state)],
 	}
 	canned_options={
 		'r': '-r',
