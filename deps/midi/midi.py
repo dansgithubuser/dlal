@@ -24,11 +24,32 @@ def write_delta(ticks):
 			return result
 	else: raise Exception('delta too big')
 
+def add_etter(instance, name, desired_type, further_check=None):
+	def etter(self, value=None, add=None, sub=None):
+		if sub is not None:
+			if add is not None: raise Exception('value is being both added and subbed')
+			add=-sub
+		if add is not None:
+			if value is not None: raise Exception('value is being both set and accumulated')
+			value=getattr(self, '_'+name, value)+add
+		if value is not None:
+			if type(value)!=desired_type:
+				raise Exception('tried setting {} {} to value of type {}'.format(desired_type, name, type(value)))
+			if further_check:
+				if not further_check(value):
+					raise Exception('further check failed when setting {} to {}'.format(name, value))
+			setattr(self, '_'+name, value)
+		return getattr(self, '_'+name)
+	from types import MethodType
+	setattr(instance, name, MethodType(etter, instance))
+
 class Pair:
 	'The track unit: a delta and MIDI event pair.'
 	def __init__(self, delta, event):
-		self.delta=delta
-		self.event=event
+		add_etter(self, 'delta', int)
+		add_etter(self, 'event', list, further_check=lambda v: all([type(i)==int for i in v]))
+		self.delta(delta)
+		self.event(event)
 
 def get_pairs(track_chunk):
 	'''Return the pairs in track_chunk in a list.
@@ -54,7 +75,7 @@ track_chunk is assumed to have come from a track chunk produced by chunkitize.''
 			else:
 				parameters=[]
 		pairs.append(Pair(delta, [status]+parameters))
-	if pairs[-1].event!=[0xff, 0x2f, 0x00]: raise Exception('invalid last command')
+	if pairs[-1].event()!=[0xff, 0x2f, 0x00]: raise Exception('invalid last command')
 	return pairs
 
 #return an unsigned integer from a big-endian string of bytes
@@ -87,54 +108,76 @@ def chunkitize(bytes):
 
 class Event:
 	@staticmethod
-	def make(type, ticks, *args):
+	def make(event_type, ticks, *args):
 		result=Event()
-		result.type=type
-		result.ticks=ticks
-		if type=='ticks_per_quarter':
-			result.ticks_per_quarter=args[0]
-		elif type=='tempo':
-			result.us_per_quarter=args[0]
-		elif type=='time_sig':
-			result.top=args[0]
-			result.bottom=args[1]
-		elif type=='key_sig':
-			result.sharps=args[0]
-			result.minor=args[1]
-		elif type=='note':
-			result.duration=args[0]
-			result.channel=args[1]
-			result.number=args[2]
+		add_etter(result, 'type', str)
+		add_etter(result, 'ticks', int)
+		result.type(event_type)
+		result.ticks(ticks)
+		if event_type=='ticks_per_quarter':
+			add_etter(result, 'ticks_per_quarter', int)
+			result.ticks_per_quarter(args[0])
+		elif event_type=='tempo':
+			add_etter(result, 'us_per_quarter', int)
+			result.us_per_quarter(args[0])
+		elif event_type=='time_sig':
+			add_etter(result, 'top', int)
+			add_etter(result, 'bottom', int)
+			result.top(args[0])
+			result.bottom(args[1])
+		elif event_type=='key_sig':
+			add_etter(result, 'sharps', int)
+			add_etter(result, 'minor', int)
+			result.sharps(args[0])
+			result.minor(args[1])
+		elif event_type=='note':
+			add_etter(result, 'duration', int)
+			add_etter(result, 'channel', int)
+			add_etter(result, 'number', int)
+			result.duration(args[0])
+			result.channel(args[1])
+			result.number(args[2])
+		elif event_type=='note_on':
+			add_etter(result, 'channel', int)
+			add_etter(result, 'number', int)
+			result.channel(args[0])
+			result.number(args[1])
+		elif event_type=='note_off':
+			add_etter(result, 'channel', int)
+			add_etter(result, 'number', int)
+			result.channel(args[0])
+			result.number(args[1])
 		else: raise Exception('invalid type')
 		return result
 
 	def split_note(self):
-		assert self.type=='note'
-		on=Event()
-		on.type='note_on'
-		on.ticks=self.ticks
-		on.channel=self.channel
-		on.number=self.number
-		off=Event()
-		off.type='note_off'
-		off.ticks=self.ticks+self.duration
-		off.channel=self.channel
-		off.number=self.number
-		return [on, off]
+		assert self._type=='note'
+		return [
+			Event.make('note_on' , self._ticks               , self._channel, self._number),
+			Event.make('note_off', self._ticks+self._duration, self._channel, self._number)
+		]
 
 	def end_of_note(self):
-		assert self.type=='note'
-		return self.ticks+self.duration
+		assert self._type=='note'
+		return self._ticks+self._duration
 
-	def __lt__(self, other): return self.ticks<other.ticks
+	def __lt__(self, other): return self._ticks<other._ticks
 
 	def __repr__(self):
-		attrs=dir(self)
-		attrs=[i for i in attrs if not i.startswith('_')]
-		attrs=[i for i in attrs if i!='type' and i!='ticks']
-		attrs=[i for i in attrs if not callable(getattr(self, i))]
-		attrs=['{}: {}'.format(i, getattr(self, i)) for i in attrs]
-		return '{}({}; {})'.format(self.type, self.ticks, ', '.join(attrs))
+		attrs=[i for i in dir(self) if i in [
+			'_ticks_per_quarter',
+			'_us_per_quarter',
+			'_top',
+			'_bottom',
+			'_sharps',
+			'_minor',
+			'_duration',
+			'_channel',
+			'_number'
+		]]
+		import pdb; pdb.set_trace()
+		attrs=['{}: {}'.format(i[1:], getattr(self, i)) for i in attrs]
+		return '{}({}; {})'.format(self._type, self._ticks, ', '.join(attrs))
 
 #Parse MIDI bytes and return a song
 def parse(bytes):
@@ -148,17 +191,17 @@ def parse(bytes):
 	pairs=get_pairs(chunks[1])
 	ticks=0
 	for pair in pairs:
-		ticks+=pair.delta
-		if pair.event[0]&0xf0==0xf0:
-			if pair.event[0]==0xff:
-				if pair.event[1]==0x51:
-					track+=[Event.make('tempo', ticks, big_endian_to_unsigned(pair.event[3:6]))]
-				elif pair.event[1]==0x58:
-					track+=[Event.make('time_sig', ticks, pair.event[3], 1<<pair.event[4])]
-				elif pair.event[1]==0x59:
-					sharps=pair.event[3]
+		ticks+=pair.delta()
+		if pair.event()[0]&0xf0==0xf0:
+			if pair.event()[0]==0xff:
+				if pair.event()[1]==0x51:
+					track+=[Event.make('tempo', ticks, big_endian_to_unsigned(pair.event()[3:6]))]
+				elif pair.event()[1]==0x58:
+					track+=[Event.make('time_sig', ticks, pair.event()[3], 1<<pair.event()[4])]
+				elif pair.event()[1]==0x59:
+					sharps=pair.event()[3]
 					if sharps&0x80: sharps=(sharps&0x7f)-0x80
-					track+=[Event.make('key_sig', ticks, sharps, pair.event[4])]
+					track+=[Event.make('key_sig', ticks, sharps, pair.event()[4])]
 	song+=[track]
 	for i in range(2, len(chunks)):
 		ticks=0
@@ -166,14 +209,14 @@ def parse(bytes):
 		track=[]
 		for i in range(len(pairs)):
 			pair=pairs[i]
-			ticks+=pair.delta
-			if pair.event[0]&0xf0==0x90 and pair.event[2]!=0:#Note on
+			ticks+=pair.delta()
+			if pair.event()[0]&0xf0==0x90 and pair.event()[2]!=0:#Note on
 				duration=0
 				for j in pairs[i+1:]:
-					duration+=j.delta
-					if j.event[0]&0xf0==0x90 and j.event[2]==0 or j.event[0]&0xf0==0x80:#Note off
-						if pair.event[1]==j.event[1]: break
-				track+=[Event.make('note', ticks, duration, pair.event[0]&0x0f, pair.event[1])]
+					duration+=j.delta()
+					if j.event()[0]&0xf0==0x90 and j.event()[2]==0 or j.event()[0]&0xf0==0x80:#Note off
+						if pair.event()[1]==j.event()[1]: break
+				track+=[Event.make('note', ticks, duration, pair.event()[0]&0x0f, pair.event()[1])]
 		song+=[track]
 	return song
 
@@ -216,51 +259,47 @@ def ilog2(x):
 #Write a MIDI file based on a nicely constructed list.
 def write(file_name, song):
 	file=open(file_name, 'wb')
-	assert song[0][0].type=='ticks_per_quarter'
-	ticks_per_quarter=song[0][0].ticks_per_quarter
-	if ticks_per_quarter==0: raise Exception('no ticks per quarter')
-	tracks=len(song)
-	header=[ord(i) for i in 'MThd']+[0, 0, 0, 6, 0, 1]+to_big_endian(tracks, 2)+to_big_endian(ticks_per_quarter, 2)
+	header=[ord(i) for i in 'MThd']+[0, 0, 0, 6, 0, 1]+to_big_endian(len(song), 2)+to_big_endian(ticks_per_quarter(song), 2)
 	file.write(bytearray(header))
 	bytes=[]
 	last_ticks=0
 	for event in song[0][1:]:
-		bytes+=write_delta(event.ticks-last_ticks)
-		if event.type=='tempo':
+		bytes+=write_delta(event.ticks()-last_ticks)
+		if event.type()=='tempo':
 			bytes+=[0xff, 0x51, 0x03]
-			bytes+=to_big_endian(event.us_per_quarter, 3)
-		elif event.type=='time_sig':
+			bytes+=to_big_endian(event.us_per_quarter(), 3)
+		elif event.type()=='time_sig':
 			bytes+=[0xff, 0x58, 0x04]
-			bytes+=[event.top, ilog2(event.bottom), 24, 8]
-		elif event.type=='key_sig':
+			bytes+=[event.top(), ilog2(event.bottom()), 24, 8]
+		elif event.type()=='key_sig':
 			bytes+=[0xff, 0x59, 0x02]
-			sharps=event.sharps
+			sharps=event.sharps()
 			if sharps<0: sharps=0x100+sharps
-			bytes+=[sharps, event.minor]
-		else: raise Exception('unhandled event type: {}'.format(event.type))
-		last_ticks=event.ticks
+			bytes+=[sharps, event.minor()]
+		else: raise Exception('unhandled event type: {}'.format(event.type()))
+		last_ticks=event.ticks()
 	write_track(file, bytes)
 	for track in song[1:]:
 		notes=[]
 		for event in track:
-			if event.type=='note': notes+=event.split_note()
+			if event.type()=='note': notes+=event.split_note()
 		notes.sort()
 		last_ticks=0
 		for i in range(len(notes)):
-			temp=notes[i].ticks
-			notes[i].ticks=notes[i].ticks-last_ticks
+			temp=notes[i].ticks()
+			notes[i].ticks(sub=last_ticks)
 			last_ticks=temp
 		bytes=[]
 		for note in notes:
-			if note.type=='note_on':
-				bytes+=write_delta(note.ticks)
-				bytes+=[0x90|note.channel]
-				bytes+=[note.number]
+			if note.type()=='note_on':
+				bytes+=write_delta(note.ticks())
+				bytes+=[0x90|note.channel()]
+				bytes+=[note.number()]
 				bytes+=[0x7f]
-			elif note.type=='note_off':
-				bytes+=write_delta(note.ticks)
-				bytes+=[0x80|note.channel]
-				bytes+=[note.number]
+			elif note.type()=='note_off':
+				bytes+=write_delta(note.ticks())
+				bytes+=[0x80|note.channel()]
+				bytes+=[note.number()]
 				bytes+=[0]
 		write_track(file, bytes)
 	file.close()
@@ -270,10 +309,11 @@ def write(file_name, song):
 import bisect
 
 def ticks_per_quarter(midi):
-	assert midi[0][0].type=='ticks_per_quarter'
-	return midi[0][0].ticks_per_quarter
+	assert midi[0][0].type()=='ticks_per_quarter'
+	return midi[0][0].ticks_per_quarter()
 
 def add_event(track, event):
+	assert isinstance(event, Event)
 	bisect.insort(track, event)
 
 def add_note(midi, track, ticks, duration, number, channel=None):
@@ -282,11 +322,11 @@ def add_note(midi, track, ticks, duration, number, channel=None):
 
 def previous_note(midi, track, ticks):
 	event=Event()
-	event.ticks=ticks
+	event._ticks=ticks
 	index=bisect.bisect_left(midi[track], event)-1
 	if index==-1: return
 	note=midi[track][index]
-	if note.ticks>=ticks: return
+	if note.ticks()>=ticks: return
 	return midi, track, index
 
 def remove_note(note):
@@ -297,21 +337,21 @@ def remove_note(note):
 
 def transpose_note(note, amount):
 	midi, track, index=note
-	midi[track][index].number+=amount
+	midi[track][index].number(add=amount)
 
 def notes_in(midi, track, ticks, duration, number=None, generous=False, track_end=None):
 	if track_end==None: track_end=track
 	result=[]
 	for t in range(track, track_end+1):
 		for i, v in enumerate(midi[t]):
-			if v.ticks>=ticks+duration: break#note starts after window ends
-			if v.type!='note': continue
-			if number and v.number!=number: continue
+			if v.ticks()>=ticks+duration: break#note starts after window ends
+			if v.type()!='note': continue
+			if number and v.number()!=number: continue
 			if generous:
-				if v.ticks+v.duration<=ticks: continue#note ends before window starts
+				if v.ticks()+v.duration()<=ticks: continue#note ends before window starts
 			else:
-				if v.ticks<ticks: continue#note starts before window starts
-				if v.ticks+v.duration>ticks+duration: continue#note ends after window ends
+				if v.ticks()<ticks: continue#note starts before window starts
+				if v.ticks()+v.duration()>ticks+duration: continue#note ends after window ends
 			result.append((t, i))
 	return result
 
@@ -320,4 +360,4 @@ def delete(midi, notes):
 	for track, i in notes: del midi[track][i]
 
 def transpose(midi, notes, amount):
-	for track, i in notes: midi[track][i].number+=amount
+	for track, i in notes: midi[track][i].number(add=amount)

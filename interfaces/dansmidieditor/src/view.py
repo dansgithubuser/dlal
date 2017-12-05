@@ -14,8 +14,8 @@ class Cursor:
 		self.duty=Fraction(1)
 
 	def coincide_note(self, note):
-		self.ticks=Fraction(note.ticks)
-		self.duration=Fraction(note.duration)
+		self.ticks=Fraction(note.ticks())
+		self.duration=Fraction(note.duration())
 
 class View:
 	def __init__(self, margin=6, text_size=12):
@@ -213,16 +213,16 @@ class View:
 	def put(self):
 		if not self.yanked: return
 		notes=list(self.yanked)
-		start=min([self.midi[track][index].ticks for track, index in notes])
+		start=min([self.midi[track][index].ticks() for track, index in notes])
 		for track, index in notes:
 			note=self.midi[track][index]
 			midi.add_note(
 				self.midi,
 				self.cursor.staff+1,
-				self.cursor.ticks-start+note.ticks,
-				note.duration,
-				note.number,
-				note.channel,
+				self.cursor.ticks-start+note.ticks(),
+				note.duration(),
+				note.number(),
+				note.channel(),
 			)
 		self.cursor.ticks+=self.visual.duration
 
@@ -251,11 +251,11 @@ class View:
 		lo=60
 		hi=60
 		for i in self.midi[1+staff]:
-			if i.type!='note': continue
-			if i.ticks+i.duration<self.ticks: continue
-			if not self.endures(i.ticks): break
-			lo=min(lo, i.number)
-			hi=max(hi, i.number)
+			if i.type()!='note': continue
+			if i.ticks()+i.duration()<self.ticks: continue
+			if not self.endures(i.ticks()): break
+			lo=min(lo, i.number())
+			hi=max(hi, i.number())
 		top=(octave+2)*12
 		if hi>top: octave+=(hi-top+11)//12
 		bottom=octave*12
@@ -305,19 +305,19 @@ class View:
 		#notes
 		for i in self.staves_to_draw():
 			for j in self.midi[1+i]:
-				if j.type!='note': print(j)
-				if not self.endures(j.ticks): break
+				if j.type()!='note': print(j)
+				if not self.endures(j.ticks()): break
 				kwargs={
-					'xi': self.x_ticks(j.ticks),
-					'xf': self.x_ticks(j.ticks+j.duration),
-					'y' : self.y_note(i, j.number, octaves[i]),
+					'xi': self.x_ticks(j.ticks()),
+					'xf': self.x_ticks(j.ticks()+j.duration()),
+					'y' : self.y_note(i, j.number(), octaves[i]),
 				}
 				media.fill(
 					h=int(self.h_note()),
 					color=self.color_selected if self.is_selected(j) else self.color_notes,
 					**kwargs
 				)
-				if j.number-12*octaves[i]>24*self.multistaffing-4: media.fill(
+				if j.number()-12*octaves[i]>24*self.multistaffing-4: media.fill(
 					h=int(self.h_note()//2),
 					color=self.color_warning,
 					**kwargs
