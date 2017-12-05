@@ -219,7 +219,7 @@ class View:
 			midi.add_note(
 				self.midi,
 				self.cursor.staff+1,
-				self.cursor.ticks-start+note.ticks(),
+				int(self.cursor.ticks-start+note.ticks()),
 				note.duration(),
 				note.number(),
 				note.channel(),
