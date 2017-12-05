@@ -1,5 +1,6 @@
 from controls import AbstractControls
 from view import View
+import re
 
 configuration='''
 mode .*
@@ -94,14 +95,13 @@ class Controls(AbstractControls):
 		self.messaging=False
 
 	def reps(self):
-		try: return int(self.sequence_as_text()[:-1])
+		try: return int(re.match(r'\d+', self.sequence_as_text()).group())
 		except: return 1
 
 	def fraction(self, skip=0):
 		from fractions import Fraction
 		try:
 			s=self.sequence_as_text()[skip:]
-			import re
 			m=re.search('([0-9]+)/([0-9]+)', s)
 			if m: return Fraction(*[int(i) for i in m.groups()])
 			return Fraction(int(s[:-1]), 1)
