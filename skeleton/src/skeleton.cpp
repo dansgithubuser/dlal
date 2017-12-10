@@ -416,14 +416,9 @@ Component::Component(): _system(nullptr) {
 	});
 }
 
-std::string Component::command(const std::string& command){
-	std::stringstream ss(command);
-	std::string s;
-	ss>>s;
-	if(!_commands.count(s))
-		return "error: "+s+" unrecognized\n"+_commands["help"].command(ss);
-	ss.get();
-	return _commands[s].command(ss);
+std::string Component::command(const std::string& s){
+	std::stringstream ss(s);
+	return command(ss);
 }
 
 std::string Component::join(System& system){
@@ -441,6 +436,15 @@ void Component::registerCommand(
 ){
 	if(_commands.count(name)) throw std::logic_error("command "+name+" already exists");
 	_commands[name]={command, parameters};
+}
+
+std::string Component::command(std::stringstream& ss){
+	std::string s;
+	ss>>s;
+	if(!_commands.count(s))
+		return "error: "+s+" unrecognized\n"+_commands["help"].command(ss);
+	ss.get();
+	return _commands[s].command(ss);
 }
 
 void Component::addJoinAction(JoinAction j){ _joinActions.push_back(j); }

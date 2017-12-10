@@ -134,6 +134,7 @@ class Component{
 			const std::string& parameters,
 			Command
 		);
+		std::string command(std::stringstream&);
 		void addJoinAction(JoinAction);
 	private:
 		struct CommandWithParameters{

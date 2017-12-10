@@ -94,6 +94,15 @@ static std::string peek(std::istream& istream, unsigned size){
 	return result;
 }
 
+static bool more(std::istream& istream){
+	auto position=istream.tellg();
+	std::string s;
+	bool result=false;
+	if(istream>>s) result=true;
+	istream.seekg(position);
+	return result;
+}
+
 //=====printing=====//
 template<typename T> void obvstream(std::stringstream& ss, T t){
 	ss<<t;

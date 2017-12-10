@@ -3,6 +3,8 @@
 #include <cmath>
 #include <fstream>
 
+#include <obvious.hpp>
+
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sonic; }
 
 static float wave(float phase){
@@ -101,19 +103,26 @@ Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 		return internal.str();
 	});
 	registerCommand("load", "<file name>", [this](std::stringstream& ss){
-		std::string s, result;
+		std::string s;
 		ss>>s;
 		std::ifstream file(s.c_str());
 		if(!file.good()) return std::string("error: couldn't open file");
+		return command(obvstr("deserialize_sonic", file.rdbuf()));
+	});
+	registerCommand("serialize_sonic", "", [this](std::stringstream&){
+		return command("save i");
+	});
+	registerCommand("deserialize_sonic", "<serialized>", [this](std::stringstream& ss){
+		std::string result;
 		bool error=false;
 		int line=1;
-		while(std::getline(file, s)){
-			s=command(s);
+		while(more(ss)){
+			std::string s=command(ss);
 			if(isError(s)) error=true;
 			if(s.size()) result+="on line "+std::to_string(line)+": "+s+"\n";
 			++line;
 		}
-		if(error) result="error: a load command failed\n"+result;
+		if(error) result="error: deserialize_sonic failed\n"+result;
 		return result;
 	});
 	for(unsigned i=0; i<OSCILLATORS; ++i){
