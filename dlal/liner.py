@@ -8,6 +8,14 @@ g_notes={
 }
 
 class Liner(Component):
+	@staticmethod
+	def from_dict(d, component_map): return Liner(from_dict=(d, component_map))
+
+	def to_dict(self):
+		d={'component': self.to_str()}
+		if hasattr(self, 'samples_per_quarter'): d['samples_per_quarter']=self.samples_per_quarter
+		return d
+
 	def __init__(self, period_in_samples=0, samples_per_quarter=22050, from_dict=None, **kwargs):
 		if from_dict:
 			d, component_map=from_dict
@@ -21,11 +29,6 @@ class Liner(Component):
 			self.periodic_resize(period_in_samples)
 			self.period_in_samples=period_in_samples
 		if samples_per_quarter: self.samples_per_quarter=samples_per_quarter
-
-	def to_dict(self):
-		d={'component': self.to_str()}
-		if hasattr(self, 'samples_per_quarter'): d['samples_per_quarter']=self.samples_per_quarter
-		return d
 
 	def line(self, text):
 		stride=self.samples_per_quarter

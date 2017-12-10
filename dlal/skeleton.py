@@ -112,6 +112,12 @@ class System:
 class Component:
 	_libraries={}
 
+	@staticmethod
+	def from_dict(d, component_map):
+		return component_map[d['component']]
+
+	def to_dict(self): return {'component': self.to_str()}
+
 	def __init__(self, component_type, **kwargs):
 		if component_type not in Component._libraries:
 			Component._libraries[component_type]=load(component_type)
@@ -155,5 +161,17 @@ class Pipe(Component):
 	def __getitem__(self, i): return self.components_to_add[i]
 
 	def output(self): return self.components_to_add[-1].component
+
+def component_to_dict(self, members):
+	result={i: getattr(self, i) for i in members}
+	result={k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
+	return result
+
+def component_from_dict(self, members, d, component_map):
+	for member in members:
+		try: exec('from {} import *').format(d[member]['class'].lower())
+		except ImportError: pass
+		cls=eval(d[member]['class'])
+		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
 
 def test(): _skeleton.dlalTest()

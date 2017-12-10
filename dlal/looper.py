@@ -14,46 +14,40 @@ def track_from_dict(d, component_map):
 	return track
 
 class MidiTrack(Pipe):
+	def to_dict(self): return component_to_dict(self, ['input', 'synth', 'container'])
+
 	def __init__(self, input=None, synth=None, from_dict=None):
 		if from_dict:
 			d, component_map=from_dict
-			for k, v in d['regular_components'].items(): setattr(self, k, component_map[v])
-			self.container=Liner(from_dict=(d['container'], component_map))
+			component_from_dict(self, ['input', 'synth', 'container'], d, component_map)
 		else:
 			self.input=input
 			self.container=Liner()
 			self.synth=synth
-			self.output=synth
 			self.container.connect(self.synth)
+		self.output=synth
 		Pipe.__init__(self, self.input, self.container, self.synth)
-
-	def to_dict(self):
-		return {
-			'regular_components': {i: getattr(self, i).to_str() for i in ['input', 'synth', 'output']},
-			'container': self.container.to_dict(),
-		}
 
 	def drumline(self, text=None, beats=4):
 		if not text: text='S '+str(self.container.samples_per_beat//2)+' z . x . z . . . '
 		self.container.line(text*((self.container.period_in_samples//self.container.samples_per_beat+beats-1)//beats))
 
 class AudioTrack(Pipe):
+	def to_dict(self): return component_to_dict(self, ['input', 'container', 'multiplier'])
+
 	def __init__(self, audio=None, period_in_samples=None, from_dict=None):
 		if from_dict:
 			d, component_map=from_dict
-			for k, v in d.items(): setattr(self, k, component_map[v])
+			component_from_dict(self, ['input', 'container', 'multiplier'], d, component_map)
 		else:
 			self.input=audio
 			self.container=Component('buffer')
-			self.synth=self.container
-			self.output=audio
 			self.multiplier=Component('multiplier')
 			self.container.periodic_resize(period_in_samples)
 			self.multiplier.connect(self.container)
+		self.output=self.input
+		self.synth=self.container
 		Pipe.__init__(self, self.container, self.multiplier)
-
-	def to_dict(self):
-		return {i: getattr(self, i).to_str() for i in ['input', 'container', 'synth', 'output', 'multiplier']}
 
 class Looper:
 	def __init__(self, samples_per_beat, beats, sample_rate=44100, log_2_samples_per_evaluation=6, load=None):
