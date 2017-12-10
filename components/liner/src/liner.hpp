@@ -23,6 +23,7 @@ class Liner: public MultiOut, public Periodic{
 		bool midiAccepted(){ return true; }
 		std::string setPhase(uint64_t);
 	private:
+		void advance(uint64_t phase);
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
 		dlal::Midi getMidi(float samplesPerQuarter) const;
 		std::string putMidi(dlal::Midi, float samplesPerQuarter);

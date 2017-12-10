@@ -65,17 +65,11 @@ Liner::Liner(): _resetOnMidi(false) {
 }
 
 void Liner::evaluate(){
-	//output
-	while(_iterator&&_iterator->sample<=_phase){
-		for(auto output: _outputs){
-			std::vector<uint8_t>& m=_iterator->midi;
-			output->midi(m.data(), m.size());
-			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(output));
-		}
-		++_iterator;
+	advance(_phase);
+	if(phase()){
+		advance(_period);
+		_iterator=_line.begin();
 	}
-	//move forward
-	if(phase()) _iterator=_line.begin();
 }
 
 void Liner::midi(const uint8_t* bytes, unsigned size){
@@ -92,6 +86,17 @@ std::string Liner::setPhase(uint64_t phase){
 	_iterator=_line.begin();
 	while(_iterator&&_iterator->sample<_phase) ++_iterator;
 	return "";
+}
+
+void Liner::advance(uint64_t phase){
+	while(_iterator&&_iterator->sample<=phase){
+		for(auto output: _outputs){
+			std::vector<uint8_t>& m=_iterator->midi;
+			output->midi(m.data(), m.size());
+			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(output));
+		}
+		++_iterator;
+	}
 }
 
 void Liner::put(const uint8_t* midi, unsigned size, uint64_t sample){
@@ -122,6 +127,7 @@ std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter){
 		ticks+=i.delta;
 		_line.push_back(Midi{uint64_t(ticks*samplesPerQuarter/midi.ticksPerQuarter), i.event});
 	}
+	resize(midi.duration()*samplesPerQuarter/midi.ticksPerQuarter);
 	return "";
 }
 

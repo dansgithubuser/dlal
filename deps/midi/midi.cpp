@@ -190,6 +190,11 @@ void Midi::Event::write(std::vector<uint8_t>& written) const {
 	}
 }
 
+int Midi::Event::end() const {
+	if(type==NOTE) return ticks+duration;
+	return ticks;
+}
+
 void Midi::append(unsigned track, int delta, const std::vector<uint8_t>& data){
 	if(tracks.size()<=track) tracks.resize(track+1);
 	int ticks=delta;
@@ -279,6 +284,16 @@ void Midi::write(Bytes& result) const {
 		}//for split events
 		result+=writeTrack(written);
 	}//for tracks
+}
+
+int Midi::duration() const {
+	int result=0;
+	for(auto track: tracks){
+		for(auto event: track){
+			OBV_MAXI(result, event.end());
+		}
+	}
+	return result;
 }
 
 void splitNotes(Midi::Track& track){

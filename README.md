@@ -64,7 +64,6 @@ file organization
 todo
 ----
 - audio select input and output
-- truncate liner after editing
 - save and load system
 	- midi controllee, all components
 - why is network failing on apple?

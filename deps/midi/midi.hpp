@@ -16,6 +16,7 @@ class Midi{
 				Event(int ticks, const std::vector<uint8_t>& data);
 				bool operator<(const Event& other) const { return ticks<other.ticks; }
 				void write(std::vector<uint8_t>&) const;
+				int end() const;
 				enum Type{
 					TEMPO,
 					TIME_SIG,
@@ -47,6 +48,8 @@ class Midi{
 		void write(std::string filename) const;
 		void read(const std::vector<uint8_t>&);
 		void write(std::vector<uint8_t>&) const;
+
+		int duration() const;
 
 		int ticksPerQuarter;
 		std::vector<Track> tracks;
