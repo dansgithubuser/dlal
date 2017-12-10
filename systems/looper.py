@@ -248,6 +248,8 @@ help()
 l=looper
 t=l.tracks
 t0=t[0]
+s0=t0.synth
+sc0=s0.show_controls
 c0=t0.container
 e0=c0.edit
 sa=looper.save

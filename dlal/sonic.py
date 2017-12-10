@@ -90,13 +90,28 @@ class VgmSetting:
 		return result
 
 class Sonic(Component):
-	def __init__(self, setting=None, **kwargs):
-		Component.__init__(self, 'sonic', **kwargs)
-		self.commander=Component('commander')
-		self.commander.connect(self)
+	@staticmethod
+	def from_dict(d, component_map):
+		return Sonic(from_dict=(d, component_map))
+
+	def __init__(self, setting=None, from_dict=None, **kwargs):
+		if from_dict:
+			d, component_map=from_dict
+			Component.__init__(self, 'sonic', component=component_map[d['component']].transfer_component())
+			self.commander=component_map[d['commander']]
+		else:
+			Component.__init__(self, 'sonic', **kwargs)
+			self.commander=Component('commander')
+			self.commander.connect(self)
 		self.components_to_add=[self.commander, self]
 		self.oscillators=[]
 		if setting: self.load(setting)
+
+	def to_dict(self):
+		return {
+			'component': self.to_str(),
+			'commander': self.commander.to_str(),
+		}
 
 	def show_controls(self, title='dlal sonic controls'):
 		self.root=tkinter.Tk()
