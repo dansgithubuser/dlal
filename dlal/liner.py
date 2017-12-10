@@ -14,6 +14,7 @@ class Liner(Component):
 			Component.__init__(self, 'liner', component=component_map[d['component']].transfer_component())
 			if 'samples_per_quarter' in d: self.samples_per_quarter=d['samples_per_quarter']
 			self.period_in_samples=int(self.periodic_get().split()[0])
+			self.periodic_set_phase(0)
 			return
 		Component.__init__(self, 'liner', **kwargs)
 		if period_in_samples:

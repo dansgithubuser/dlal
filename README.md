@@ -64,7 +64,6 @@ file organization
 todo
 ----
 - audio select input and output
-- play immediately after loading
 - truncate liner after editing
 - save and load system
 	- midi controllee, all components
