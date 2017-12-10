@@ -64,6 +64,9 @@ file organization
 todo
 ----
 - audio select input and output
+- audiobro
+	- change tempo
+	- cricket
 - save and load system
 	- midi controllee, all components
 - why is network failing on apple?
