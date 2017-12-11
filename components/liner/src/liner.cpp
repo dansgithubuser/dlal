@@ -48,7 +48,7 @@ Liner::Liner(): _resetOnMidi(false) {
 		return "";
 	});
 	registerCommand("serialize_liner", "", [this](std::stringstream&){
-		auto midi=getMidi(256);
+		auto midi=getMidi(1);
 		std::vector<uint8_t> bytes;
 		midi.write(bytes);
 		std::stringstream ss;
@@ -60,7 +60,7 @@ Liner::Liner(): _resetOnMidi(false) {
 		ss>>bytes;
 		dlal::Midi midi;
 		midi.read(bytes);
-		return putMidi(midi, 256);
+		return putMidi(midi, 1);
 	});
 }
 
@@ -121,6 +121,10 @@ Midi Liner::getMidi(float samplesPerQuarter) const {
 std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter){
 	int ticks=0;
 	if(midi.tracks.size()<2) return "error: no track to read";
+	for(auto i: midi.tracks[0]){
+		if(i.type==dlal::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
+		if(i.ticks) break;
+	}
 	auto pairs=getPairs(midi.tracks[1]);
 	_line.clear();
 	for(auto i: pairs){

@@ -10,7 +10,7 @@
 
 namespace dlal{
 
-class Liner: public MultiOut, public Periodic{
+class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 	public:
 		struct Midi{
 			uint64_t sample;

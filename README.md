@@ -65,8 +65,9 @@ todo
 ----
 - audio select input and output
 - audiobro
-	- change tempo
 	- cricket
+	- drums
+	- reverb
 - save and load system
 	- midi controllee, all components
 - why is network failing on apple?
