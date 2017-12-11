@@ -155,6 +155,7 @@ class Controls(AbstractControls):
 					if callable(getattr(self, i)) and i.startswith('command_'): print(i[8:])
 			else: print('no such help topic "{}"'.format(args[0]))
 		return 'see terminal for details'
+	def command_tempo(self, quarters_per_minute): self.view.add_tempo(float(quarters_per_minute))
 
 	#callback
 	def on_input(self):

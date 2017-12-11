@@ -175,7 +175,6 @@ class Event:
 			'_channel',
 			'_number'
 		]]
-		import pdb; pdb.set_trace()
 		attrs=['{}: {}'.format(i[1:], getattr(self, i)) for i in attrs]
 		return '{}({}; {})'.format(self._type, self._ticks, ', '.join(attrs))
 

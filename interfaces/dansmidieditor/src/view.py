@@ -5,6 +5,8 @@ home=os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(home, '..', '..', '..', 'deps', 'midi'))
 import midi
 
+us_per_minute=60.0*1000**2
+
 class Cursor:
 	def __init__(self, ticks_per_quarter):
 		self.staff=0
@@ -35,13 +37,14 @@ class View:
 		self.visual=Cursor(0)
 		self.visual.active=False
 		self.unwritten=False
+		self.banner_h=40
 		#colors
 		self.color_background=[  0,   0,   0]
 		self.color_staves    =[  0,  32,   0, 128]
 		self.color_c_line    =[ 16,  16,  16, 128]
 		self.color_quarter   =[  8,   8,   8]
-		self.color_octaves   =[  0, 128,   0]
 		self.color_notes     =[  0, 128, 128]
+		self.color_other     =[  0, 128,   0]
 		self.color_cursor    =[128,   0, 128, 128]
 		self.color_visual    =[255, 255, 255,  64]
 		self.color_selected  =[255, 255, 255]
@@ -138,6 +141,14 @@ class View:
 	def skip_note(self):
 		self.cursor.ticks+=self.cursor.duration
 
+	#other midi events
+	def add_tempo(self, quarters_per_minute):
+		us_per_quarter=us_per_minute/quarters_per_minute
+		midi.add_event(
+			self.midi[0],
+			midi.Event.make('tempo', int(self.cursor.ticks), int(us_per_quarter)),
+		)
+
 	#selection
 	def select(self):
 		args=[
@@ -233,12 +244,15 @@ class View:
 	def notes_per_staff(self):
 		return 24*self.multistaffing
 
+	def h_staves(self):
+		return self.h_window-self.banner_h
+
 	def h_note(self):
-		return self.h_window//self.staves//self.notes_per_staff()
+		return self.h_staves()//self.staves//self.notes_per_staff()
 
 	def y_note(self, staff, note, octave=0):
-		y_staff=(staff+1-self.staff)*self.h_window//self.staves
-		return int(y_staff-(note+1-12*octave)*self.h_note())
+		y_staff=(staff+1-self.staff)*self.h_staves()//self.staves
+		return int(self.banner_h+y_staff-(note+1-12*octave)*self.h_note())
 
 	def x_ticks(self, ticks):
 		return (ticks-self.ticks)*self.w_window//self.duration
@@ -300,29 +314,53 @@ class View:
 				x=self.margin,
 				y=self.y_note(i, 24*self.multistaffing-5),
 				h=int(self.h_note()*2),
-				color=self.color_octaves,
+				color=self.color_other,
 			)
 		#notes
 		for i in self.staves_to_draw():
 			for j in self.midi[1+i]:
-				if j.type()!='note': print(j)
 				if not self.endures(j.ticks()): break
-				kwargs={
-					'xi': self.x_ticks(j.ticks()),
-					'xf': self.x_ticks(j.ticks()+j.duration()),
-					'y' : self.y_note(i, j.number(), octaves[i]),
-				}
-				media.fill(
-					h=int(self.h_note()),
-					color=self.color_selected if self.is_selected(j) else self.color_notes,
-					**kwargs
-				)
-				if j.number()-12*octaves[i]>24*self.multistaffing-4: media.fill(
-					h=int(self.h_note()//2),
-					color=self.color_warning,
-					**kwargs
-				)
+				if j.type()=='note':
+					kwargs={
+						'xi': self.x_ticks(j.ticks()),
+						'xf': self.x_ticks(j.ticks()+j.duration()),
+						'y' : self.y_note(i, j.number(), octaves[i]),
+					}
+					media.fill(
+						h=int(self.h_note()),
+						color=self.color_selected if self.is_selected(j) else self.color_notes,
+						**kwargs
+					)
+					if j.number()-12*octaves[i]>24*self.multistaffing-4: media.fill(
+						h=int(self.h_note()//2),
+						color=self.color_warning,
+						**kwargs
+					)
+				else: print(j)
 		media.draw_vertices()
+		#other events
+		for i in self.midi[0]:
+			text=None
+			y=0
+			if i.type()=='tempo':
+				text='q={}'.format(int(us_per_minute/i.us_per_quarter()))
+				y=10
+			elif i.type()=='time_sig':
+				text='{}/{}'.format(i.top(), i.bottom())
+				y=20
+			elif i.type()=='key_sig':
+				def tonic(sharps, minor):
+					return [
+						'Cb', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#'
+					][7+sharps+(3 if minor else 0)]
+				text='{}{}'.format(
+					tonic(i.sharps(), i.minor()),
+					'-' if i.minor() else '+'
+				)
+				y=30
+			elif i.type()=='ticks_per_quarter': pass
+			else: text=str(i)
+			if text: media.text(text, x=self.x_ticks(i.ticks()), y=y, h=10, color=self.color_other)
 		#cursor
 		media.fill(
 			xi=self.x_ticks(int(self.cursor.ticks)),
