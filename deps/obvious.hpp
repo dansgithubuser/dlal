@@ -126,6 +126,9 @@ static std::ostream& operator<<(std::ostream& o, uint8_t c){
 }
 
 //-----container printing-----//
+template<typename T> std::ostream& operator<<(std::ostream& o, const std::vector<T>& c);
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::pair<T, U>& p);
+
 template<
 	typename T,
 	typename std::enable_if<!std::is_pointer<T>::value, int>::type=0
