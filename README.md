@@ -70,7 +70,6 @@ todo
 	- reverb
 - save and load system
 	- midi controllee, all components
-- why is network failing on apple?
 - midi editor
 	- hook into system
 		- "error: already added" when starting looper
