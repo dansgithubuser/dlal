@@ -1,6 +1,10 @@
 from .skeleton import *
 
 class Commander(Component):
+	@staticmethod
+	def from_dict(d, component_map):
+		return Commander(component=component_map[d['component']].transfer_component())
+
 	def __init__(self, **kwargs):
 		Component.__init__(self, 'commander', **kwargs)
 		self.callback_type=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
@@ -14,7 +18,7 @@ class Commander(Component):
 		self.library.dlalCommanderDisconnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, self.callback_type]
-		self.commands=[]
+		self.commands=[]#to prevent python from garbage-collecting callbacks sent c-side
 
 	def queue_command(self, component, *args, **kwargs):
 		edges_to_wait=kwargs.get('edges_to_wait', 0)

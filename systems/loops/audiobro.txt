@@ -64,6 +64,25 @@
       "0x55b9d0ebc5a0"
     ]
   ], 
+  "inputs": [
+    {
+      "midi": "0x55b9d0f167a8", 
+      "qweboard": {
+        "commander": {
+          "class": "Commander", 
+          "dict": {
+            "component": "0x55b9d0f53158"
+          }
+        }, 
+        "network": {
+          "class": "Component", 
+          "dict": {
+            "component": "0x55b9d0f8b980"
+          }
+        }
+      }
+    }
+  ], 
   "looper_audio": "0x55b9d0ebc5a0", 
   "looper_commander": "0x55b9d0e687e8", 
   "looper_tracks": [

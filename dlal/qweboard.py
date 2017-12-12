@@ -3,13 +3,20 @@ from .skeleton import *
 
 class Qweboard(Pipe):
 	port=9120
-	def __init__(self):
-		self.network=Component('network')
-		self.commander=Commander()
+
+	def to_dict(self): return component_to_dict(self, ['network', 'commander'])
+
+	def __init__(self, from_dict=None):
+		if from_dict:
+			d, component_map=from_dict
+			component_from_dict(self, ['network', 'commander'], d, component_map)
+		else:
+			self.network=Component('network')
+			self.commander=Commander()
+			self.network.connect(self.commander)
+			self.network.port(Qweboard.port)
+			Qweboard.port+=1
 		Pipe.__init__(self, self.network, self.commander)
-		self.network.connect(self.commander)
-		self.network.port(Qweboard.port)
-		Qweboard.port+=1
 		self.octave=5
 		def octavate(o):
 			self.octave+=o

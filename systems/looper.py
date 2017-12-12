@@ -28,13 +28,29 @@ looper.system.set('sequence', 'none')
 
 #inputs
 class Input:
-	def __init__(self):
-		self.midi=dlal.Component('midi')
-		self.qweboard=dlal.Qweboard()
-		looper.commander.queue_connect(self.qweboard, self.midi, enable=True)
-		looper.commander.queue_add(self.qweboard)
-		looper.commander.queue_add(self.midi)
+	def to_dict(self): return {
+		'midi': self.midi.to_str(),
+		'qweboard' : self.qweboard.to_dict(),
+	}
+
+	def __init__(self, from_dict=None):
+		if from_dict:
+			d, component_map=from_dict
+			self.midi=component_map[d['midi']]
+			self.qweboard=dlal.Qweboard(from_dict=(d['qweboard'], component_map))
+		else:
+			self.midi=dlal.Component('midi')
+			self.qweboard=dlal.Qweboard()
+			looper.commander.queue_connect(self.qweboard, self.midi, enable=True)
+			looper.commander.queue_add(self.qweboard)
+			looper.commander.queue_add(self.midi)
+
 inputs=[]
+if args.l:
+	inputs=[
+		Input(from_dict=(d, looper.loaded_state['map']))
+		for d in looper.loaded_state['inputs']
+	]
 
 #synths
 def soundfont():
@@ -65,8 +81,6 @@ if '-l' not in sys.argv:
 	looper.system.add(network)
 
 #commands
-tracks=[]
-
 def add_input():
 	looper.system.set('input {}'.format(len(inputs)), 'port {}'.format(dlal.Qweboard.port))
 	inputs.append(Input())
@@ -83,19 +97,16 @@ def scan_for_midi_inputs():
 
 def add_midi():
 	track=dlal.MidiTrack(inputs[input].midi, synths[synth][1]())
-	tracks.append(track)
 	looper.add(track)
 
 def add_metronome():
 	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic())
 	track.synth.load(os.path.join(dlal.root, 'components', 'sonic', 'settings', 'snare.txt'))
-	tracks.append(track)
 	looper.add(track)
 	track.drumline()
 
 def add_audio():
 	track=dlal.AudioTrack(looper.audio)
-	tracks.append(track)
 	looper.add(track)
 
 def synth_next():
@@ -124,7 +135,7 @@ def input_prev():
 
 def track_next():
 	global track
-	if track+1<len(tracks):
+	if track+1<len(looper.tracks):
 		track+=1
 		looper.system.set('track', str(track))
 
@@ -146,29 +157,29 @@ def wait_less():
 		looper.system.set('wait', str(edges_to_wait))
 
 def track_reset_on_midi():
-	looper.commander.queue_command(tracks[track].container, 'reset_on_midi')
+	looper.commander.queue_command(looper.tracks[track].container, 'reset_on_midi')
 
 def track_crop():
-	looper.commander.queue_command(tracks[track].container, 'periodic_crop')
-	looper.commander.queue_command(looper.commander, 'periodic_match', tracks[track].container.periodic())
+	looper.commander.queue_command(looper.tracks[track].container, 'periodic_crop')
+	looper.commander.queue_command(looper.commander, 'periodic_match', looper.tracks[track].container.periodic())
 
 def commander_match():
-	period, phase=tracks[track].container.periodic_get().split()
+	period, phase=looper.tracks[track].container.periodic_get().split()
 	looper.commander.queue_command(looper.commander, 'periodic_resize', period)
 	looper.commander.queue_command(looper.commander, 'periodic_set_phase', phase)
 
 def track_match():
 	period, phase=looper.commander.periodic_get().split()
-	looper.commander.queue_command(tracks[track].container, 'periodic_resize', period)
-	looper.commander.queue_command(tracks[track].container, 'periodic_set_phase', phase)
+	looper.commander.queue_command(looper.tracks[track].container, 'periodic_resize', period)
+	looper.commander.queue_command(looper.tracks[track].container, 'periodic_set_phase', phase)
 
 def track_reset():
-	looper.commander.queue_command(tracks[track].container, 'periodic_set_phase', 0, edges_to_wait=edges_to_wait)
+	looper.commander.queue_command(looper.tracks[track].container, 'periodic_set_phase', 0, edges_to_wait=edges_to_wait)
 
 def generate_standard_command(function, sense, **kwargs):
 	def command():
 		if 'input' in kwargs: kwargs['input']=inputs[input].midi
-		function(looper, tracks[track], sense, edges_to_wait, **kwargs)
+		function(looper, looper.tracks[track], sense, edges_to_wait, **kwargs)
 	return command
 
 def sequence_start():
@@ -238,12 +249,15 @@ def help():
 
 go, ports=dlal.standard_system_functionality(looper.audio, args=args)
 
-if '-l' not in sys.argv:
+if not args.l:
 	scan_for_midi_inputs()
 	if not len(inputs): add_input()
 	for i in 'F5 s d'.split(): commands_dict[i][0]()
 
 help()
+
+def save(file_name='system.state.txt'):
+	looper.save(file_name, {'inputs': [input.to_dict() for input in inputs]})
 
 l=looper
 t=l.tracks
@@ -252,4 +266,3 @@ s0=t0.synth
 sc0=s0.show_controls
 c0=t0.container
 e0=c0.edit
-sa=looper.save

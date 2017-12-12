@@ -25,7 +25,7 @@ class MidiTrack(Pipe):
 			self.container=Liner()
 			self.synth=synth
 			self.container.connect(self.synth)
-		self.output=synth
+		self.output=self.synth
 		Pipe.__init__(self, self.input, self.container, self.synth)
 
 	def drumline(self, text=None, beats=4):
@@ -57,10 +57,11 @@ class Looper:
 		self.log_2_samples_per_evaluation=log_2_samples_per_evaluation
 		self.system=System()
 		if load is not None:
-			extra=self.system.load(load)
-			self.commander=Commander(component=extra['map'][extra['looper_commander']].transfer_component())
-			self.audio=extra['map'][extra['looper_audio']]
-			self.tracks=[track_from_dict(i, extra['map']) for i in extra['looper_tracks']]
+			self.loaded_state=self.system.load(load)
+			component_map=self.loaded_state['map']
+			self.commander=Commander(component=component_map[self.loaded_state['looper_commander']].transfer_component())
+			self.audio=component_map[self.loaded_state['looper_audio']]
+			self.tracks=[track_from_dict(i, component_map) for i in self.loaded_state['looper_tracks']]
 		else:
 			self.commander=Commander()
 			self.commander.periodic_resize(samples_per_beat*beats)
@@ -69,12 +70,13 @@ class Looper:
 			self.system.add(self.audio, self.commander)
 			self.tracks=[]
 
-	def save(self, file_name='system.state.txt'):
-		self.system.save(file_name, {
+	def save(self, file_name='system.state.txt', extra={}):
+		extra.update({
 			'looper_commander': self.commander.to_str(),
 			'looper_audio': self.audio.to_str(),
 			'looper_tracks': [track_to_dict(i) for i in self.tracks],
 		})
+		self.system.save(file_name, extra)
 
 	def samples_per_evaluation(self): return 1<<self.log_2_samples_per_evaluation
 
