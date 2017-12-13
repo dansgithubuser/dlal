@@ -65,7 +65,6 @@ todo
 ----
 - audio select input and output
 - audiobro
-	- cricket
 	- drums
 	- reverb
 - save and load system

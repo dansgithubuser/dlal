@@ -6,6 +6,8 @@
 
 #include <SFML/Audio.hpp>
 
+#include <obvious.hpp>
+
 void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Buffer; }
 
 namespace dlal{
@@ -93,6 +95,15 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		for(unsigned i=0; i<_audio.size(); ++i)
 			samples.push_back(short(_audio[i]*((1<<15)-1)));
 		file.write(samples.data(), samples.size());
+		return "";
+	});
+	registerCommand("serialize_buffer", "", [this](std::stringstream&){
+		std::stringstream ss;
+		ss<<_sounds;
+		return ss.str();
+	});
+	registerCommand("deserialize_buffer", "<serialized>", [this](std::stringstream& ss){
+		ss>>_sounds;
 		return "";
 	});
 }
