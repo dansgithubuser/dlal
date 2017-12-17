@@ -13,7 +13,11 @@ namespace dlal{
 class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 	public:
 		struct Midi{
+			Midi(){}
+			Midi(uint64_t sample, std::vector<uint8_t> midi): sample(sample), midi(midi) {}
+			Midi(uint64_t sample, float sampleRemainder, std::vector<uint8_t> midi): sample(sample), sampleRemainder(sampleRemainder), midi(midi) {}
 			uint64_t sample;
+			float sampleRemainder=0.0f;
 			std::vector<uint8_t> midi;
 		};
 		Liner();
@@ -25,10 +29,11 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 	private:
 		void advance(uint64_t phase);
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
-		dlal::Midi getMidi(float samplesPerQuarter) const;
+		dlal::Midi getMidi() const;
 		std::string putMidi(dlal::Midi, float samplesPerQuarter);
 		AtomicList<Midi> _line;
 		AtomicList<Midi>::Iterator _iterator;
+		float _samplesPerQuarter=22050.0f;
 		bool _resetOnMidi;
 };
 

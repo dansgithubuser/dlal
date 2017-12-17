@@ -56,7 +56,7 @@ class Liner(Component):
 
 	def edit(self):
 		file_name='.liner.tmp.mid'
-		self.save(file_name, self.samples_per_quarter)
+		self.save(file_name)
 		editor=os.path.join(root, 'interfaces', 'dansmidieditor', 'src', 'dansmidieditor.py')
 		invoke('{} --command "edit {}"'.format(editor, file_name))
 		self.load(file_name, self.samples_per_quarter)

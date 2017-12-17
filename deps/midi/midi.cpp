@@ -195,11 +195,16 @@ int Midi::Event::end() const {
 	return ticks;
 }
 
-void Midi::append(unsigned track, int delta, const std::vector<uint8_t>& data){
+void Midi::append(unsigned track, int delta, const Midi::Event& event){
 	if(tracks.size()<=track) tracks.resize(track+1);
 	int ticks=delta;
 	if(tracks.at(track).size()) ticks+=tracks.at(track).back().ticks;
-	tracks.at(track).push_back(Event(ticks, data));
+	tracks.at(track).push_back(event);
+	tracks.at(track).back().ticks=ticks;
+}
+
+void Midi::append(unsigned track, int delta, const std::vector<uint8_t>& data){
+	append(track, delta, Event(0, data));
 }
 
 void Midi::read(std::string fileName){

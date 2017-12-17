@@ -66,7 +66,6 @@ todo
 - audio select input and output
 
 - audiobro
-	- liner operate on midi
 	- drums
 	- reverb
 - "error: already added" when starting looper

@@ -22,15 +22,13 @@ Liner::Liner(): _resetOnMidi(false) {
 			return "";
 		}
 	);
-	registerCommand("save", "<file path> <samples per quarter>", [this](std::stringstream& ss){
+	registerCommand("save", "<file path>", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
-		float samplesPerQuarter;
-		ss>>samplesPerQuarter;
-		getMidi(samplesPerQuarter).write(filePath);
+		getMidi().write(filePath);
 		return "";
 	});
-	registerCommand("load", "<file path> <samples per quarter>", [this](std::stringstream& ss){
+	registerCommand("load", "<file path> [<samples per quarter>]", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
 		float samplesPerQuarter;
@@ -48,19 +46,19 @@ Liner::Liner(): _resetOnMidi(false) {
 		return "";
 	});
 	registerCommand("serialize_liner", "", [this](std::stringstream&){
-		auto midi=getMidi(1);
+		auto midi=getMidi();
 		std::vector<uint8_t> bytes;
 		midi.write(bytes);
 		std::stringstream ss;
-		ss<<bytes;
+		ss<<_sampleRate<<" "<<bytes<<" "<<_samplesPerQuarter;
 		return ss.str();
 	});
 	registerCommand("deserialize_liner", "<serialized>", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
-		ss>>bytes;
+		ss>>_sampleRate>>" ">>bytes>>" ">>_samplesPerQuarter;
 		dlal::Midi midi;
 		midi.read(bytes);
-		return putMidi(midi, 1);
+		return putMidi(midi, _samplesPerQuarter);
 	});
 }
 
@@ -100,20 +98,23 @@ void Liner::advance(uint64_t phase){
 }
 
 void Liner::put(const uint8_t* midi, unsigned size, uint64_t sample){
-	Midi m{sample, std::vector<uint8_t>(midi, midi+size)};
+	Midi m(sample, std::vector<uint8_t>(midi, midi+size));
 	auto i=_line.begin();
 	for(/*nothing*/; i!=_line.end(); ++i) if(i->sample>=sample) break;
 	_line.insert(i, m);
 	if(!_iterator) setPhase(_phase);
 }
 
-Midi Liner::getMidi(float samplesPerQuarter) const {
+Midi Liner::getMidi() const {
 	dlal::Midi result;
+	result.append(0, 0, dlal::Midi::Event().setTempo(int(_samplesPerQuarter*1e6/_sampleRate)));
 	uint64_t last=0;
+	float lastRemainder=0.0f;
 	for(auto i: _line){
-		auto delta=uint32_t((i.sample-last)/samplesPerQuarter*result.ticksPerQuarter);
+		auto delta=uint32_t((i.sample+i.sampleRemainder-last-lastRemainder)/_samplesPerQuarter*result.ticksPerQuarter+0.5f);
 		result.append(1, delta, i.midi);
 		last=i.sample;
+		lastRemainder=i.sampleRemainder;
 	}
 	return result;
 }
@@ -125,13 +126,18 @@ std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter){
 		if(i.type==dlal::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
 		if(i.ticks) break;
 	}
+	_samplesPerQuarter=samplesPerQuarter;
 	auto pairs=getPairs(midi.tracks[1]);
 	_line.clear();
+	float latestSample=0.0f;
 	for(auto i: pairs){
 		ticks+=i.delta;
-		_line.push_back(Midi{uint64_t(ticks*samplesPerQuarter/midi.ticksPerQuarter), i.event});
+		auto sample=ticks*samplesPerQuarter/midi.ticksPerQuarter;
+		auto sampleI=uint64_t(sample);
+		_line.push_back(Midi(sampleI, sample-sampleI, i.event));
+		if(sample>latestSample) latestSample=sample;
 	}
-	resize(midi.duration()*samplesPerQuarter/midi.ticksPerQuarter);
+	resize(latestSample);
 	return "";
 }
 

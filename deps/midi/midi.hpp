@@ -12,11 +12,20 @@ class Midi{
 	public:
 		class Event{
 			public:
-				Event(): type(SENTINEL) {}
+				Event(){}
+				Event(int ticks): ticks(ticks) {}
 				Event(int ticks, const std::vector<uint8_t>& data);
+
 				bool operator<(const Event& other) const { return ticks<other.ticks; }
+
+				Event& setTempo(int _){ type=TEMPO; usPerQuarter=_; return *this; }
+				Event& setTimeSig(uint8_t t, uint8_t b){ type=TIME_SIG; timeSigTop=t; timeSigBottom=b; return *this; }
+				Event& setKeySig(int s, bool m){ type=KEY_SIG; sharps=s; minor=m; return *this; }
+				Event& setNote(int d, uint8_t n, uint8_t vd, uint8_t vu){ type=NOTE; duration=d; note=n; velocityDown=vd; velocityUp=vu; return *this; }
+
 				void write(std::vector<uint8_t>&) const;
 				int end() const;
+
 				enum Type{
 					TEMPO,
 					TIME_SIG,
@@ -24,9 +33,10 @@ class Midi{
 					NOTE, NOTE_ON, NOTE_OFF,
 					SENTINEL,
 				};
-				Type type;
+
+				Type type=SENTINEL;
 				int ticks;
-				uint8_t channel;
+				uint8_t channel=0;
 				union{
 					int usPerQuarter;//tempo
 					struct{ uint8_t timeSigTop, timeSigBottom; };//time_sig
@@ -42,6 +52,7 @@ class Midi{
 
 		Midi(): ticksPerQuarter(256) {}
 
+		void append(unsigned track, int delta, const Event& event);
 		void append(unsigned track, int delta, const std::vector<uint8_t>& data);
 
 		void read(std::string filename);
