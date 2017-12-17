@@ -23,6 +23,8 @@ end
  >.Shift$: self.shift=False; self.clear()
 order 0
 .* >Esc: self.clear()
+order 1
+ >: self.clear()
 
 mode normal
 order -2
@@ -49,6 +51,7 @@ order 0
 .* >v: self.view.toggle_visual(); self.clear()
 .* >y: self.view.yank(); self.clear()
 .* >p: self.view.put(); self.clear()
+ <.Shift <i$: self.view.info(); self.clear()
 
 mode command
  .*>Return: self.command()
