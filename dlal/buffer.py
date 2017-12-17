@@ -4,6 +4,10 @@ from .sonic import *
 from .commander import *
 
 class Buffer(Component):
+	@staticmethod
+	def from_dict(d, component_map):
+		return Buffer(component=component_map[d['component']].transfer_component())
+
 	def __init__(self, **kwargs):
 		Component.__init__(self, 'buffer', **kwargs)
 		self.known_sounds={}
