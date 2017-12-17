@@ -238,7 +238,7 @@ class View:
 		self.cursor.ticks+=self.visual.duration
 
 	def info(self):
-		for track, index in self.selected: print(self.midi[track][index])
+		for track, index in sorted(list(self.selected)): print(self.midi[track][index])
 
 	#drawing
 	def staves_to_draw(self):
