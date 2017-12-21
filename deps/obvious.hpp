@@ -126,7 +126,17 @@ static std::ostream& operator<<(std::ostream& o, uint8_t c){
 }
 
 //-----container printing-----//
+template<typename T, typename U> struct KeyValuePairConst{
+	KeyValuePairConst(const T& t, const U& u): key(t), value(u) {}
+	const T& key;
+	const U& value;
+};
+
 template<typename T> std::ostream& operator<<(std::ostream& o, const std::vector<T>& c);
+template<typename T> std::ostream& operator<<(std::ostream& o, const std::set<T>& c);
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::pair<T, U>& p);
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const KeyValuePairConst<T, U>& p);
+template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::map<T, U>& c);
 template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const std::pair<T, U>& p);
 
 template<
@@ -193,11 +203,6 @@ template<typename T> std::ostream& operator<<(std::ostream& o, const std::set<T>
 	return streamContainer(o, c, "s");
 }
 
-template<typename T, typename U> struct KeyValuePairConst{
-	KeyValuePairConst(const T& t, const U& u): key(t), value(u) {}
-	const T& key;
-	const U& value;
-};
 template<typename T, typename U> std::ostream& operator<<(std::ostream& o, const KeyValuePairConst<T, U>& p){
 	return o<<serialize(p.key)<<": "<<serialize(p.value);
 }
@@ -225,6 +230,18 @@ static std::istream& operator>>(std::istream& i, uint8_t& c){
 }
 
 //-----container parsing-----//
+template<typename T, typename U> struct KeyValuePair{
+	T key;
+	U value;
+};
+
+template<typename T> std::istream& operator>>(std::istream& istream, std::vector<T>& c);
+template<typename T> std::istream& operator>>(std::istream& istream, std::set<T>& c);
+template<typename T, typename U> std::istream& operator>>(std::istream& istream, KeyValuePair<T, U>& p);
+template<typename T, typename U> std::istream& operator>>(std::istream& istream, std::map<T, U>& c);
+template<typename T, typename U> std::istream& operator>>(std::istream& istream, std::pair<T, U>& p);
+static std::istream& operator>>(std::istream& istream, const char* cString);
+
 template<typename T> std::istream& deserialize(T& t, std::istream& istream){
 	return istream>>t;
 }
@@ -291,10 +308,6 @@ template<typename T> std::istream& operator>>(std::istream& istream, std::set<T>
 	return streamContainer(istream, c, "s");
 }
 
-template<typename T, typename U> struct KeyValuePair{
-	T key;
-	U value;
-};
 template<typename T, typename U> std::istream& operator>>(std::istream& istream, KeyValuePair<T, U>& p){
 	deserialize(p.key, istream);
 	deserialize(": ", istream);
