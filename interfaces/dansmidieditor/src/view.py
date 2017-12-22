@@ -21,8 +21,7 @@ class Cursor:
 
 class View:
 	def __init__(self, margin=6, text_size=12):
-		self.midi=[[], []]
-		self.ticks_per_quarter=256
+		self.midi=midi.empty_midi()
 		self.text=''
 		self.margin=margin
 		self.text_size=text_size
@@ -31,7 +30,7 @@ class View:
 		self.multistaffing=1
 		self.ticks=0
 		self.duration=5760
-		self.cursor=Cursor(self.ticks_per_quarter)
+		self.cursor=Cursor(self.ticks_per_quarter())
 		self.deselect()
 		self.unyank()
 		self.visual=Cursor(0)
@@ -50,12 +49,13 @@ class View:
 		self.color_selected  =[255, 255, 255]
 		self.color_warning   =[255,   0,   0]
 
+	def ticks_per_quarter(self): return midi.ticks_per_quarter(self.midi)
+
 	#persistence
 	def read(self, path):
 		self.midi=midi.read(path)
 		if len(self.midi)==1: self.midi.append([])
-		self.ticks_per_quarter=midi.ticks_per_quarter(self.midi)
-		self.cursor.duration=Fraction(self.ticks_per_quarter)
+		self.cursor.duration=Fraction(self.ticks_per_quarter())
 		self.cursor_down(0)
 		self.unwritten=False
 		self.path=path
@@ -104,7 +104,7 @@ class View:
 	def cursor_note_up(self, amount): self.cursor_note_down(-amount)
 
 	def set_duration(self, fraction_of_quarter):
-		self.cursor.duration=Fraction(self.ticks_per_quarter)*fraction_of_quarter
+		self.cursor.duration=Fraction(self.ticks_per_quarter())*fraction_of_quarter
 
 	#window
 	def more_multistaffing(self, amount):
@@ -290,11 +290,11 @@ class View:
 		self.w_window=media.width()
 		self.h_window=media.height()
 		#quarters
-		tph=2*self.ticks_per_quarter
+		tph=2*self.ticks_per_quarter()
 		for i in range(self.duration//tph+2):
 			media.fill(
 				xi=self.x_ticks((self.ticks//tph+i)*tph),
-				xf=self.x_ticks((self.ticks//tph+i)*tph+self.ticks_per_quarter),
+				xf=self.x_ticks((self.ticks//tph+i)*tph+self.ticks_per_quarter()),
 				yi=0,
 				yf=self.h_window,
 				color=self.color_quarter

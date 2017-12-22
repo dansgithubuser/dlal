@@ -307,6 +307,9 @@ def write(file_name, song):
 #=====helpers=====#
 import bisect
 
+def empty_midi(staves=1, ticks_per_quarter=360):
+	return [[Event.make('ticks_per_quarter', 0, ticks_per_quarter)]]+[[] for i in range(staves)]
+
 def ticks_per_quarter(midi):
 	assert midi[0][0].type()=='ticks_per_quarter'
 	return midi[0][0].ticks_per_quarter()
