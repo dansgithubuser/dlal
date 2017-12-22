@@ -52,13 +52,13 @@ class View:
 	def ticks_per_quarter(self): return midi.ticks_per_quarter(self.midi)
 
 	#persistence
-	def read(self, path):
+	def read(self, path, remember=True):
 		self.midi=midi.read(path)
 		if len(self.midi)==1: self.midi.append([])
 		self.cursor.duration=Fraction(self.ticks_per_quarter())
 		self.cursor_down(0)
 		self.unwritten=False
-		self.path=path
+		if remember: self.path=path
 
 	def write(self, path=None):
 		if not path: path=self.path

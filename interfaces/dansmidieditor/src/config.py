@@ -142,6 +142,8 @@ class Controls(AbstractControls):
 		if self.check_unwritten(): self.done=True
 	def command_edit(self, path):
 		if self.check_unwritten(): self.view.read(path)
+	def command_load(self, path):
+		if self.check_unwritten(): self.view.read(path, remember=False)
 	def command_write(self, *args): self.view.write(*args)
 	def command_wq(self, *args): self.command_write(*args); self.command_quit()
 	def command_pdb(self): import pdb; pdb.set_trace()
