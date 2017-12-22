@@ -70,6 +70,7 @@ todo
 	- reverb
 - "error: already added" when starting looper
 - segmentation fault when exiting looper
+	- crash.txt?
 - upgrade system viewer to editor, build like midi editor
 
 - save and load system

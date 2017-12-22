@@ -1,0 +1,289 @@
+$ ./go.py -c ll.r
+use the go function to start audio processing
+-g option specified -- starting audio processing
+0x5558aefd6900: 0, 3 laid out
+0x5558aefd67e0: 1, 1 laid out
+0x5558aefd70b0: 0, 4 laid out
+0x5558aefd6e70: 1, 0 laid out
+0x5558aefd7340: 0, 1 laid out
+0x5558aefd5330: 120, 41 
+0x5558aefd6a70: 0, 2 laid out
+0x5558aefd7180: 0, 0 laid out
+0x5558aefd6f90: 1, 3 laid out
+0x5558aefd5450: 1, 2 laid out
+0x5558aefd6ca0: 2, 5 laid out
+couldn't lay out component
+0x5558aefd6900: 0, 3 laid out
+0x5558aefd67e0: 0, 5 laid out
+0x5558aefd70b0: 0, 4 laid out
+0x5558aefd6e70: 1, 0 laid out
+0x5558aefd7340: 0, 1 laid out
+0x5558aefd5330: 160, 281 
+0x5558aefd6a70: 0, 2 laid out
+0x5558aefd7180: 0, 0 laid out
+0x5558aefd6f90: 1, 3 laid out
+0x5558aefd5450: 1, 2 laid out
+0x5558aefd6ca0: 2, 6 laid out
+couldn't lay out component
+audio processing going
+functions:
+	help: print this help
+qweboard commands:
+	F1: add input
+	F2: scan for midi inputs
+	F5: add midi track
+	F6: add metronome midi track
+	F7: add audio track
+	h: next synth
+	y: prev synth
+	j: next input
+	u: prev input
+	k: next track
+	i: prev track
+	l: wait more
+	o: wait less
+	Return: reset track on midi
+	Space: crop track
+	[: match commander to current track
+	]: match current track to commander
+	f: reset track
+	q: stop track record
+	a: start track record
+	w: stop track play
+	s: start track play
+	e: stop track replay
+	d: start track replay
+	,: start sequence
+	.: commit sequence
+	/: cancel sequence
+>>> exit()
+*** Error in `python': corrupted double-linked list: 0x00005639aacce440 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6(+0x790cb)[0x7f9466fe10cb]
+/lib/x86_64-linux-gnu/libc.so.6(+0x81123)[0x7f9466fe9123]
+/lib/x86_64-linux-gnu/libc.so.6(+0x82f80)[0x7f9466feaf80]
+/lib/x86_64-linux-gnu/libc.so.6(cfree+0x4c)[0x7f9466feed8c]
+python(+0xeb5d8)[0x5639a8da15d8]
+python(PyDict_SetItem+0x468)[0x5639a8d8cda8]
+python(_PyModule_Clear+0x143)[0x5639a8deee43]
+python(PyImport_Cleanup+0x28f)[0x5639a8deea3f]
+python(Py_Finalize+0x93)[0x5639a8dec6b3]
+python(Py_Exit+0x8)[0x5639a8e12118]
+python(+0x15959d)[0x5639a8e0f59d]
+python(PyErr_PrintEx+0x36)[0x5639a8e0ee86]
+python(PyRun_InteractiveOneFlags+0x1b6)[0x5639a8d390a7]
+python(PyRun_InteractiveLoopFlags+0xc6)[0x5639a8d38dde]
+python(+0x65267)[0x5639a8d1b267]
+python(Py_Main+0x48f)[0x5639a8d8a02f]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf1)[0x7f9466f883f1]
+python(_start+0x2a)[0x5639a8d89a8a]
+======= Memory map: ========
+5639a8cb6000-5639a8fd8000 r-xp 00000000 08:05 1440049                    /usr/bin/python2.7
+5639a91d8000-5639a91da000 r--p 00322000 08:05 1440049                    /usr/bin/python2.7
+5639a91da000-5639a9250000 rw-p 00324000 08:05 1440049                    /usr/bin/python2.7
+5639a9250000-5639a9274000 rw-p 00000000 00:00 0 
+5639aab3e000-5639aaeb1000 rw-p 00000000 00:00 0                          [heap]
+7f943c000000-7f943c021000 rw-p 00000000 00:00 0 
+7f943c021000-7f9440000000 ---p 00000000 00:00 0 
+7f9450000000-7f9450021000 rw-p 00000000 00:00 0 
+7f9450021000-7f9454000000 ---p 00000000 00:00 0 
+7f9455e64000-7f9455e65000 ---p 00000000 00:00 0 
+7f9455e65000-7f9456665000 rw-p 00000000 00:00 0 
+7f9458cbd000-7f9458cbe000 ---p 00000000 00:00 0 
+7f9458cbe000-7f94594be000 rw-p 00000000 00:00 0 
+7f94594be000-7f94594c4000 r-xp 00000000 08:05 1571498                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_pcm_pulse.so
+7f94594c4000-7f94596c3000 ---p 00006000 08:05 1571498                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_pcm_pulse.so
+7f94596c3000-7f94596c4000 r--p 00005000 08:05 1571498                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_pcm_pulse.so
+7f94596c4000-7f94596c5000 rw-p 00006000 08:05 1571498                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_pcm_pulse.so
+7f94596c5000-7f945970a000 r-xp 00000000 08:05 921547                     /home/zuon/Desktop/repos/dlal/build/built/libMidi.so
+7f945970a000-7f945990a000 ---p 00045000 08:05 921547                     /home/zuon/Desktop/repos/dlal/build/built/libMidi.so
+7f945990a000-7f945990c000 r--p 00045000 08:05 921547                     /home/zuon/Desktop/repos/dlal/build/built/libMidi.so
+7f945990c000-7f945990d000 rw-p 00047000 08:05 921547                     /home/zuon/Desktop/repos/dlal/build/built/libMidi.so
+7f945990d000-7f9459946000 r-xp 00000000 08:05 921554                     /home/zuon/Desktop/repos/dlal/build/built/libNetwork.so
+7f9459946000-7f9459b45000 ---p 00039000 08:05 921554                     /home/zuon/Desktop/repos/dlal/build/built/libNetwork.so
+7f9459b45000-7f9459b47000 r--p 00038000 08:05 921554                     /home/zuon/Desktop/repos/dlal/build/built/libNetwork.so
+7f9459b47000-7f9459b48000 rw-p 0003a000 08:05 921554                     /home/zuon/Desktop/repos/dlal/build/built/libNetwork.so
+7f9459b48000-7f9459b7e000 r-xp 00000000 08:05 921183                     /home/zuon/Desktop/repos/dlal/build/built/libCommander.so
+7f9459b7e000-7f9459d7e000 ---p 00036000 08:05 921183                     /home/zuon/Desktop/repos/dlal/build/built/libCommander.so
+7f9459d7e000-7f9459d80000 r--p 00036000 08:05 921183                     /home/zuon/Desktop/repos/dlal/build/built/libCommander.so
+7f9459d80000-7f9459d81000 rw-p 00038000 08:05 921183                     /home/zuon/Desktop/repos/dlal/build/built/libCommander.so
+7f9459d81000-7f9459d88000 r-xp 00000000 08:05 1444854                    /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.7
+7f9459d88000-7f9459f88000 ---p 00007000 08:05 1444854                    /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.7
+7f9459f88000-7f9459f89000 r--p 00007000 08:05 1444854                    /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.7
+7f9459f89000-7f9459f8a000 rw-p 00008000 08:05 1444854                    /usr/lib/x86_64-linux-gnu/libvorbisfile.so.3.3.7
+7f9459f8a000-7f9459fd5000 r-xp 00000000 08:05 918183                     /home/zuon/Desktop/repos/dlal/build/built/libBuffer.so
+7f9459fd5000-7f945a1d5000 ---p 0004b000 08:05 918183                     /home/zuon/Desktop/repos/dlal/build/built/libBuffer.so
+7f945a1d5000-7f945a1d7000 r--p 0004b000 08:05 918183                     /home/zuon/Desktop/repos/dlal/build/built/libBuffer.so
+7f945a1d7000-7f945a1d8000 rw-p 0004d000 08:05 918183                     /home/zuon/Desktop/repos/dlal/build/built/libBuffer.so
+7f945a1d8000-7f945a220000 r-xp 00000000 08:05 921558                     /home/zuon/Desktop/repos/dlal/build/built/libLiner.so
+7f945a220000-7f945a420000 ---p 00048000 08:05 921558                     /home/zuon/Desktop/repos/dlal/build/built/libLiner.so
+7f945a420000-7f945a422000 r--p 00048000 08:05 921558                     /home/zuon/Desktop/repos/dlal/build/built/libLiner.so
+7f945a422000-7f945a423000 rw-p 0004a000 08:05 921558                     /home/zuon/Desktop/repos/dlal/build/built/libLiner.so
+7f945a423000-7f945a462000 r-xp 00000000 08:05 918180                     /home/zuon/Desktop/repos/dlal/build/built/libSonic.so
+7f945a462000-7f945a662000 ---p 0003f000 08:05 918180                     /home/zuon/Desktop/repos/dlal/build/built/libSonic.so
+7f945a662000-7f945a664000 r--p 0003f000 08:05 918180                     /home/zuon/Desktop/repos/dlal/build/built/libSonic.so
+7f945a664000-7f945a665000 rw-p 00041000 08:05 918180                     /home/zuon/Desktop/repos/dlal/build/built/libSonic.so
+7f945a665000-7f945a66a000 r-xp 00000000 08:05 1571495                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_ctl_pulse.so
+7f945a66a000-7f945a869000 ---p 00005000 08:05 1571495                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_ctl_pulse.so
+7f945a869000-7f945a86a000 r--p 00004000 08:05 1571495                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_ctl_pulse.so
+7f945a86a000-7f945a86b000 rw-p 00005000 08:05 1571495                    /usr/lib/x86_64-linux-gnu/alsa-lib/libasound_module_ctl_pulse.so
+7f945a86b000-7f945a895000 r-xp 00000000 08:05 1444850                    /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.8
+7f945a895000-7f945aa95000 ---p 0002a000 08:05 1444850                    /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.8
+7f945aa95000-7f945aa96000 r--p 0002a000 08:05 1444850                    /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.8
+7f945aa96000-7f945aa97000 rw-p 0002b000 08:05 1444850                    /usr/lib/x86_64-linux-gnu/libvorbis.so.0.4.8
+7f945aa97000-7f945aa9e000 r-xp 00000000 08:05 1444564                    /usr/lib/x86_64-linux-gnu/libogg.so.0.8.2
+7f945aa9e000-7f945ac9e000 ---p 00007000 08:05 1444564                    /usr/lib/x86_64-linux-gnu/libogg.so.0.8.2
+7f945ac9e000-7f945ac9f000 r--p 00007000 08:05 1444564                    /usr/lib/x86_64-linux-gnu/libogg.so.0.8.2
+7f945ac9f000-7f945aca0000 rw-p 00008000 08:05 1444564                    /usr/lib/x86_64-linux-gnu/libogg.so.0.8.2
+7f945aca0000-7f945acb2000 r-xp 00000000 08:05 528353                     /lib/x86_64-linux-gnu/libgpg-error.so.0.19.1
+7f945acb2000-7f945aeb2000 ---p 00012000 08:05 528353                     /lib/x86_64-linux-gnu/libgpg-error.so.0.19.1
+7f945aeb2000-7f945aeb3000 r--p 00012000 08:05 528353                     /lib/x86_64-linux-gnu/libgpg-error.so.0.19.1
+7f945aeb3000-7f945aeb4000 rw-p 00013000 08:05 528353                     /lib/x86_64-linux-gnu/libgpg-error.so.0.19.1
+7f945aeb4000-7f945af26000 r-xp 00000000 08:05 528429                     /lib/x86_64-linux-gnu/libpcre.so.3.13.3
+7f945af26000-7f945b125000 ---p 00072000 08:05 528429                     /lib/x86_64-linux-gnu/libpcre.so.3.13.3
+7f945b125000-7f945b126000 r--p 00071000 08:05 528429                     /lib/x86_64-linux-gnu/libpcre.so.3.13.3
+7f945b126000-7f945b127000 rw-p 00072000 08:05 528429                     /lib/x86_64-linux-gnu/libpcre.so.3.13.3
+7f945b127000-7f945b13e000 r-xp 00000000 08:05 564340                     /lib/x86_64-linux-gnu/libresolv-2.24.so
+7f945b13e000-7f945b33e000 ---p 00017000 08:05 564340                     /lib/x86_64-linux-gnu/libresolv-2.24.so
+7f945b33e000-7f945b33f000 r--p 00017000 08:05 564340                     /lib/x86_64-linux-gnu/libresolv-2.24.so
+7f945b33f000-7f945b340000 rw-p 00018000 08:05 564340                     /lib/x86_64-linux-gnu/libresolv-2.24.so
+7f945b340000-7f945b342000 rw-p 00000000 00:00 0 
+7f945b342000-7f945b3cf000 r-xp 00000000 08:05 1444852                    /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.11
+7f945b3cf000-7f945b5ce000 ---p 0008d000 08:05 1444852                    /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.11
+7f945b5ce000-7f945b5ea000 r--p 0008c000 08:05 1444852                    /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.11
+7f945b5ea000-7f945b5eb000 rw-p 000a8000 08:05 1444852                    /usr/lib/x86_64-linux-gnu/libvorbisenc.so.2.0.11
+7f945b5eb000-7f945b65e000 r-xp 00000000 08:05 1443708                    /usr/lib/x86_64-linux-gnu/libFLAC.so.8.3.0
+7f945b65e000-7f945b85e000 ---p 00073000 08:05 1443708                    /usr/lib/x86_64-linux-gnu/libFLAC.so.8.3.0
+7f945b85e000-7f945b85f000 r--p 00073000 08:05 1443708                    /usr/lib/x86_64-linux-gnu/libFLAC.so.8.3.0
+7f945b85f000-7f945b860000 rw-p 00074000 08:05 1443708                    /usr/lib/x86_64-linux-gnu/libFLAC.so.8.3.0
+7f945b860000-7f945b876000 r-xp 00000000 08:05 564301                     /lib/x86_64-linux-gnu/libnsl-2.24.so
+7f945b876000-7f945ba75000 ---p 00016000 08:05 564301                     /lib/x86_64-linux-gnu/libnsl-2.24.so
+7f945ba75000-7f945ba76000 r--p 00015000 08:05 564301                     /lib/x86_64-linux-gnu/libnsl-2.24.so
+7f945ba76000-7f945ba77000 rw-p 00016000 08:05 564301                     /lib/x86_64-linux-gnu/libnsl-2.24.so
+7f945ba77000-7f945ba79000 rw-p 00000000 00:00 0 
+7f945ba79000-7f945bb80000 r-xp 00000000 08:05 554617                     /lib/x86_64-linux-gnu/libgcrypt.so.20.1.2
+7f945bb80000-7f945bd7f000 ---p 00107000 08:05 554617                     /lib/x86_64-linux-gnu/libgcrypt.so.20.1.2
+7f945bd7f000-7f945bd81000 r--p 00106000 08:05 554617                     /lib/x86_64-linux-gnu/libgcrypt.so.20.1.2
+7f945bd81000-7f945bd88000 rw-p 00108000 08:05 554617                     /lib/x86_64-linux-gnu/libgcrypt.so.20.1.2
+7f945bd88000-7f945bdaa000 r-xp 00000000 08:05 528368                     /lib/x86_64-linux-gnu/liblzma.so.5.0.0
+7f945bdaa000-7f945bfa9000 ---p 00022000 08:05 528368                     /lib/x86_64-linux-gnu/liblzma.so.5.0.0
+7f945bfa9000-7f945bfaa000 r--p 00021000 08:05 528368                     /lib/x86_64-linux-gnu/liblzma.so.5.0.0
+7f945bfaa000-7f945bfab000 rw-p 00022000 08:05 528368                     /lib/x86_64-linux-gnu/liblzma.so.5.0.0
+7f945c000000-7f945c021000 rw-p 00000000 00:00 0 
+7f945c021000-7f9460000000 ---p 00000000 00:00 0 
+7f946002e000-7f9460051000 r-xp 00000000 08:05 528454                     /lib/x86_64-linux-gnu/libselinux.so.1
+7f9460051000-7f9460250000 ---p 00023000 08:05 528454                     /lib/x86_64-linux-gnu/libselinux.so.1
+7f9460250000-7f9460251000 r--p 00022000 08:05 528454                     /lib/x86_64-linux-gnu/libselinux.so.1
+7f9460251000-7f9460252000 rw-p 00023000 08:05 528454                     /lib/x86_64-linux-gnu/libselinux.so.1
+7f9460252000-7f9460254000 rw-p 00000000 00:00 0 
+7f9460254000-7f9460259000 r-xp 00000000 08:05 1443848                    /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+7f9460259000-7f9460458000 ---p 00005000 08:05 1443848                    /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+7f9460458000-7f9460459000 r--p 00004000 08:05 1443848                    /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+7f9460459000-7f946045a000 rw-p 00005000 08:05 1443848                    /usr/lib/x86_64-linux-gnu/libasyncns.so.0.3.1
+7f946045a000-7f94604ba000 r-xp 00000000 08:05 1439945                    /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.25
+7f94604ba000-7f94606ba000 ---p 00060000 08:05 1439945                    /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.25
+7f94606ba000-7f94606bc000 r--p 00060000 08:05 1439945                    /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.25
+7f94606bc000-7f94606bd000 rw-p 00062000 08:05 1439945                    /usr/lib/x86_64-linux-gnu/libsndfile.so.1.0.25
+7f94606bd000-7f94606c1000 rw-p 00000000 00:00 0 
+7f94606c1000-7f94606c9000 r-xp 00000000 08:05 528482                     /lib/x86_64-linux-gnu/libwrap.so.0.7.6
+7f94606c9000-7f94608c8000 ---p 00008000 08:05 528482                     /lib/x86_64-linux-gnu/libwrap.so.0.7.6
+7f94608c8000-7f94608c9000 r--p 00007000 08:05 528482                     /lib/x86_64-linux-gnu/libwrap.so.0.7.6
+7f94608c9000-7f94608ca000 rw-p 00008000 08:05 528482                     /lib/x86_64-linux-gnu/libwrap.so.0.7.6
+7f94608ca000-7f94608cb000 rw-p 00000000 00:00 0 
+7f94608cb000-7f946094d000 r-xp 00000000 08:05 543795                     /lib/x86_64-linux-gnu/libsystemd.so.0.16.0
+7f946094d000-7f9460950000 r--p 00081000 08:05 543795                     /lib/x86_64-linux-gnu/libsystemd.so.0.16.0
+7f9460950000-7f9460951000 rw-p 00084000 08:05 543795                     /lib/x86_64-linux-gnu/libsystemd.so.0.16.0
+7f9460951000-7f9460952000 rw-p 00000000 00:00 0 
+7f9460952000-7f946099c000 r-xp 00000000 08:05 528044                     /lib/x86_64-linux-gnu/libdbus-1.so.3.14.7
+7f946099c000-7f9460b9c000 ---p 0004a000 08:05 528044                     /lib/x86_64-linux-gnu/libdbus-1.so.3.14.7
+7f9460b9c000-7f9460b9d000 r--p 0004a000 08:05 528044                     /lib/x86_64-linux-gnu/libdbus-1.so.3.14.7
+7f9460b9d000-7f9460b9e000 rw-p 0004b000 08:05 528044                     /lib/x86_64-linux-gnu/libdbus-1.so.3.14.7
+7f9460b9e000-7f9460c1a000 r-xp 00000000 08:05 1570938                    /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-9.0.so
+7f9460c1a000-7f9460e19000 ---p 0007c000 08:05 1570938                    /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-9.0.so
+7f9460e19000-7f9460e1a000 r--p 0007b000 08:05 1570938                    /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-9.0.so
+7f9460e1a000-7f9460e1b000 rw-p 0007c000 08:05 1570938                    /usr/lib/x86_64-linux-gnu/pulseaudio/libpulsecommon-9.0.so
+7f9460e1b000-7f9460e25000 r-xp 00000000 08:05 528362                     /lib/x86_64-linux-gnu/libjson-c.so.3.0.0
+7f9460e25000-7f9461024000 ---p 0000a000 08:05 528362                     /lib/x86_64-linux-gnu/libjson-c.so.3.0.0
+7f9461024000-7f9461025000 r--p 00009000 08:05 528362                     /lib/x86_64-linux-gnu/libjson-c.so.3.0.0
+7f9461025000-7f9461026000 rw-p 0000a000 08:05 528362                     /lib/x86_64-linux-gnu/libjson-c.so.3.0.0
+7f9461026000-7f9461074000 r-xp 00000000 08:05 1441636                    /usr/lib/x86_64-linux-gnu/libpulse.so.0.20.0
+7f9461074000-7f9461274000 ---p 0004e000 08:05 1441636                    /usr/lib/x86_64-linux-gnu/libpulse.so.0.20.0
+7f9461274000-7f9461275000 r--p 0004e000 08:05 1441636                    /usr/lib/x86_64-linux-gnu/libpulse.so.0.20.0
+7f9461275000-7f9461276000 rw-p 0004f000 08:05 1441636                    /usr/lib/x86_64-linux-gnu/libpulse.so.0.20.0
+7f9461478000-7f946147f000 r-xp 00000000 08:05 564342                     /lib/x86_64-linux-gnu/librt-2.24.so
+7f946147f000-7f946167e000 ---p 00007000 08:05 564342                     /lib/x86_64-linux-gnu/librt-2.24.so
+7f946167e000-7f946167f000 r--p 00006000 08:05 564342                     /lib/x86_64-linux-gnu/librt-2.24.so
+7f946167f000-7f9461680000 rw-p 00007000 08:05 564342                     /lib/x86_64-linux-gnu/librt-2.24.so
+7f9461680000-7f946177d000 r-xp 00000000 08:05 1443840                    /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+7f946177d000-7f946197d000 ---p 000fd000 08:05 1443840                    /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+7f946197d000-7f9461984000 r--p 000fd000 08:05 1443840                    /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+7f9461984000-7f9461985000 rw-p 00104000 08:05 1443840                    /usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+7f9461985000-7f94619d0000 r-xp 00000000 08:05 918167                     /home/zuon/Desktop/repos/dlal/build/built/libAudio.so
+7f94619d0000-7f9461bcf000 ---p 0004b000 08:05 918167                     /home/zuon/Desktop/repos/dlal/build/built/libAudio.so
+7f9461bcf000-7f9461bd1000 r--p 0004a000 08:05 918167                     /home/zuon/Desktop/repos/dlal/build/built/libAudio.so
+7f9461bd1000-7f9461bd2000 rw-p 0004c000 08:05 918167                     /home/zuon/Desktop/repos/dlal/build/built/libAudio.so
+7f9461d33000-7f9461d73000 rw-p 00000000 00:00 0 
+7f9461d73000-7f9461d74000 ---p 00000000 00:00 0 
+7f9461d74000-7f9462675000 rw-p 00000000 00:00 0 
+7f9462675000-7f94626a6000 r-xp 00000000 08:05 1444622                    /usr/lib/x86_64-linux-gnu/libpng16.so.16.25.0
+7f94626a6000-7f94628a5000 ---p 00031000 08:05 1444622                    /usr/lib/x86_64-linux-gnu/libpng16.so.16.25.0
+7f94628a5000-7f94628a6000 r--p 00030000 08:05 1444622                    /usr/lib/x86_64-linux-gnu/libpng16.so.16.25.0
+7f94628a6000-7f94628a7000 rw-p 00031000 08:05 1444622                    /usr/lib/x86_64-linux-gnu/libpng16.so.16.25.0
+7f94628a7000-7f94628ac000 r-xp 00000000 08:05 1443776                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7f94628ac000-7f9462aab000 ---p 00005000 08:05 1443776                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7f9462aab000-7f9462aac000 r--p 00004000 08:05 1443776                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7f9462aac000-7f9462aad000 rw-p 00005000 08:05 1443776                    /usr/lib/x86_64-linux-gnu/libXdmcp.so.6.0.0
+7f9462aad000-7f9462aaf000 r-xp 00000000 08:05 1443765                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7f9462aaf000-7f9462caf000 ---p 00002000 08:05 1443765                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7f9462caf000-7f9462cb0000 r--p 00002000 08:05 1443765                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7f9462cb0000-7f9462cb1000 rw-p 00003000 08:05 1443765                    /usr/lib/x86_64-linux-gnu/libXau.so.6.0.0
+7f9462cb1000-7f9462cc2000 r-xp 00000000 08:05 1443778                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7f9462cc2000-7f9462ec1000 ---p 00011000 08:05 1443778                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7f9462ec1000-7f9462ec2000 r--p 00010000 08:05 1443778                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7f9462ec2000-7f9462ec3000 rw-p 00011000 08:05 1443778                    /usr/lib/x86_64-linux-gnu/libXext.so.6.4.0
+7f9462ec3000-7f9462eea000 r-xp 00000000 08:05 599383                     /lib/x86_64-linux-gnu/libexpat.so.1.6.2
+7f9462eea000-7f94630ea000 ---p 00027000 08:05 599383                     /lib/x86_64-linux-gnu/libexpat.so.1.6.2
+7f94630ea000-7f94630ec000 r--p 00027000 08:05 599383                     /lib/x86_64-linux-gnu/libexpat.so.1.6.2
+7f94630ec000-7f94630ed000 rw-p 00029000 08:05 599383                     /lib/x86_64-linux-gnu/libexpat.so.1.6.2
+7f94630ed000-7f94630f6000 r-xp 00000000 08:05 1443798                    /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+7f94630f6000-7f94632f5000 ---p 00009000 08:05 1443798                    /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+7f94632f5000-7f94632f6000 r--p 00008000 08:05 1443798                    /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+7f94632f6000-7f94632f7000 rw-p 00009000 08:05 1443798                    /usr/lib/x86_64-linux-gnu/libXrender.so.1.3.0
+7f94632f7000-7f946339e000 r-xp 00000000 08:05 1448794                    /usr/lib/x86_64-linux-gnu/libfreetype.so.6.12.3
+7f946339e000-7f946359d000 ---p 000a7000 08:05 1448794                    /usr/lib/x86_64-linux-gnu/libfreetype.so.6.12.3
+7f946359d000-7f94635a3000 r--p 000a6000 08:05 1448794                    /usr/lib/x86_64-linux-gnu/libfreetype.so.6.12.3
+7f94635a3000-7f94635a4000 rw-p 000ac000 08:05 1448794                    /usr/lib/x86_64-linux-gnu/libfreetype.so.6.12.3
+7f94635a4000-7f94635c5000 r-xp 00000000 08:05 1444943                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7f94635c5000-7f94637c4000 ---p 00021000 08:05 1444943                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7f94637c4000-7f94637c5000 r--p 00020000 08:05 1444943                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7f94637c5000-7f94637c6000 rw-p 00021000 08:05 1444943                    /usr/lib/x86_64-linux-gnu/libxcb.so.1.1.0
+7f94637c6000-7f94637c8000 r-xp 00000000 08:05 1443800                    /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+7f94637c8000-7f94639c8000 ---p 00002000 08:05 1443800                    /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+7f94639c8000-7f94639c9000 r--p 00002000 08:05 1443800                    /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+7f94639c9000-7f94639ca000 rw-p 00003000 08:05 1443800                    /usr/lib/x86_64-linux-gnu/libXss.so.1.0.0
+7f94639ca000-7f9463a07000 r-xp 00000000 08:05 1444131                    /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.9.0
+7f9463a07000-7f9463c06000 ---p 0003d000 08:05 1444131                    /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.9.0
+7f9463c06000-7f9463c08000 r--p 0003c000 08:05 1444131                    /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.9.0
+7f9463c08000-7f9463c0d000 rw-p 0003e000 08:05 1444131                    /usr/lib/x86_64-linux-gnu/libfontconfig.so.1.9.0
+7f9463c0d000-7f9463c21000 r-xp 00000000 08:05 1443784                    /usr/lib/x86_64-linux-gnu/libXft.so.2.3.2
+7f9463c21000-7f9463e20000 ---p 00014000 08:05 1443784                    /usr/lib/x86_64-linux-gnu/libXft.so.2.3.2
+7f9463e20000-7f9463e21000 r--p 00013000 08:05 1443784                    /usr/lib/x86_64-linux-gnu/libXft.so.2.3.2
+7f9463e21000-7f9463e22000 rw-p 00014000 08:05 1443784                    /usr/lib/x86_64-linux-gnu/libXft.so.2.3.2
+7f9463e22000-7f9463f57000 r-xp 00000000 08:05 1443761                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7f9463f57000-7f9464156000 ---p 00135000 08:05 1443761                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7f9464156000-7f9464157000 r--p 00134000 08:05 1443761                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7f9464157000-7f946415b000 rw-p 00135000 08:05 1443761                    /usr/lib/x86_64-linux-gnu/libX11.so.6.3.0
+7f946415b000-7f94642fb000 r-xp 00000000 08:05 1456615                    /usr/lib/x86_64-linux-gnu/libtcl8.6.so
+7f94642fb000-7f94644fb000 ---p 001a0000 08:05 1456615                    /usr/lib/x86_64-linux-gnu/libtcl8.6.so
+7f94644fb000-7f9464509000 r--p 001a0000 08:05 1456615                    /usr/lib/x86_64-linux-gnu/libtcl8.6.so
+7f9464509000-7f946450a000 rw-p 001ae000 08:05 1456615                    /usr/lib/x86_64-linux-gnu/libtcl8.6.so
+7f946450a000-7f946450b000 rw-p 00000000 00:00 0 
+7f946450b000-7f946464a000 r-xp 00000000 08:05 1456854                    /usr/lib/x86_64-linux-gnu/libtk8.6.soAborted (core dumped)
+Traceback (most recent call last):
+  File "./go.py", line 190, in <module>
+    if good and not args.test: shell(*invocation)
+  File "./go.py", line 63, in shell
+    def shell(*args): p=subprocess.check_call(' '.join(args), shell=True)
+  File "/usr/lib/python2.7/subprocess.py", line 541, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command 'python -i ../../systems/looper.py -l system.state.txt -g' returned non-zero exit status 134
