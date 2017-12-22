@@ -156,6 +156,14 @@ Midi::Event::Event(int ticks, const std::vector<uint8_t>& data): ticks(ticks) {
 	}
 }
 
+bool Midi::Event::operator<(const Event& other) const {
+	if(ticks==other.ticks){
+		if(type==NOTE_OFF&&other.type==NOTE_ON) return true;
+		if(type==NOTE_ON&&other.type==NOTE_OFF) return false;
+	}
+	return ticks<other.ticks;
+}
+
 static uint8_t ilog2(int x){
 	int result=-1;
 	while(x){
@@ -246,25 +254,27 @@ void Midi::read(const Bytes& bytes){
 		}
 		//conglomerate note on and off
 		std::map<uint8_t, Event*> notes;
-		for(auto j=track.begin(); j<track.end(); /*nothing*/){
-			if(j->type==Event::NOTE_ON){
-				if(notes.count(j->note)){
-					track.erase(j);
-					continue;
-				}
+		auto tryPromoteNote=[&notes](const Event& terminator){
+			if(!notes.count(terminator.note)) return;
+			auto& note=*notes.at(terminator.note);
+			note.type=Event::NOTE;
+			note.duration=terminator.ticks-note.ticks;
+			note.velocityUp=terminator.velocityUp;
+			notes.erase(terminator.note);
+		};
+		for(auto j=track.begin(); j<track.end(); /*nothing*/) switch(j->type){
+			case Event::NOTE_ON:
+				tryPromoteNote(*j);
 				notes[j->note]=&*j;
-			}
-			if(j->type==Event::NOTE_OFF){
-				if(notes.count(j->note)){
-					auto& note=*notes.at(j->note);
-					note.type=Event::NOTE;
-					note.duration=j->ticks-note.ticks;
-					note.velocityUp=j->velocityUp;
-					notes.erase(j->note);
-				}
+				++j;
+				break;
+			case Event::NOTE_OFF:
+				tryPromoteNote(*j);
 				track.erase(j);
-			}
-			else ++j;
+				break;
+			default:
+				++j;
+				break;
 		}
 		tracks.push_back(track);
 	}

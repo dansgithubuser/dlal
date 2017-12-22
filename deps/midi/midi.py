@@ -161,7 +161,11 @@ class Event:
 		assert self._type=='note'
 		return self._ticks+self._duration
 
-	def __lt__(self, other): return self._ticks<other._ticks
+	def __lt__(self, other):
+		if self._ticks==other._ticks:
+			if self._type=='note_off' and other._type=='note_on': return True
+			if self._type=='note_on' and other._type=='note_off': return False
+		return self._ticks<other._ticks
 
 	def __repr__(self):
 		attrs=[i for i in dir(self) if i in [
@@ -363,3 +367,6 @@ def delete(midi, notes):
 
 def transpose(midi, notes, amount):
 	for track, i in notes: midi[track][i].number(add=amount)
+
+def deserialize_bytes(serialized):
+	return [int(i[:2], 16) for i in serialized.split()]

@@ -66,8 +66,13 @@ todo
 - audio select input and output
 
 - audiobro
-	- drums
 	- reverb
+	- piano
+	- vibrato
+	- pitch slide
+	- long-term commander
+	- render to file
+	- new ideas
 - "error: already added" when starting looper
 - segmentation fault when exiting looper
 	- crash.txt?
@@ -84,6 +89,7 @@ todo
 		- track 0 events
 		- other events
 		- zoom
+		- horizontal scale shouldn't change when ticks per quarter does
 - vocoder
 - pitch shift component
 - auto dj

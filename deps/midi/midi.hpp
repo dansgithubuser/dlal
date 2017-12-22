@@ -16,7 +16,7 @@ class Midi{
 				Event(int ticks): ticks(ticks) {}
 				Event(int ticks, const std::vector<uint8_t>& data);
 
-				bool operator<(const Event& other) const { return ticks<other.ticks; }
+				bool operator<(const Event& other) const;
 
 				Event& setTempo(int _){ type=TEMPO; usPerQuarter=_; return *this; }
 				Event& setTimeSig(uint8_t t, uint8_t b){ type=TIME_SIG; timeSigTop=t; timeSigBottom=b; return *this; }
@@ -50,7 +50,7 @@ class Midi{
 		struct Pair{ int delta; std::vector<uint8_t> event; };
 		typedef std::vector<Event> Track;
 
-		Midi(): ticksPerQuarter(256) {}
+		Midi(): ticksPerQuarter(360) {}
 
 		void append(unsigned track, int delta, const Event& event);
 		void append(unsigned track, int delta, const std::vector<uint8_t>& data);
