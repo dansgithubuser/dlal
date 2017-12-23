@@ -78,6 +78,12 @@ todo
 	- crash.txt?
 - upgrade system viewer to editor, build like midi editor
 
+- radio (load a bunch of sounds and select between them)
+- bunch of simple components
+	- adsr
+	- sine
+	- look to analog synths for examples
+
 - save and load system
 	- midi controllee, all components
 - midi editor
