@@ -78,8 +78,9 @@ todo
 - radio (load a bunch of sounds and select between them)
 - bunch of simple components
 	- adsr
-	- sine
-	- look to analog synths for examples
+	- sine, triangle, square, saw, noise
+	- enough to make a bassline, snare, bass drum, chords, cymbal
+	- look to modular synths for examples
 
 - save and load system
 	- midi controllee, all components
