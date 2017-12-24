@@ -246,11 +246,9 @@ System::System(int port):
 System::~System(){
 	if(_server){
 		dyadPauseAnd([this]()->std::string{
+			for(auto i: _clients) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
 			dyad_close(_server);
-			dyad_removeListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
-			dyad_removeListener(_server, DYAD_EVENT_ERROR  , onError    , this);
-			dyad_removeListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
-			dyad_removeListener(_server, DYAD_EVENT_TICK   , onTick     , this);
+			dyad_removeAllListeners(_server, DYAD_EVENT_NULL);
 			for(auto i: _streams) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
 			return "";
 		});
