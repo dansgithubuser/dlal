@@ -65,6 +65,7 @@ todo
 ----
 - audio select input and output
 
+- upgrade system viewer to editor, build like midi editor
 - audiobro
 	- reverb
 	- piano
@@ -73,8 +74,6 @@ todo
 	- long-term commander
 	- render to file
 	- new ideas
-- "error: already added" when starting looper
-- upgrade system viewer to editor, build like midi editor
 
 - radio (load a bunch of sounds and select between them)
 - bunch of simple components
