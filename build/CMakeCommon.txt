@@ -17,6 +17,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 endif()
 
 include_directories("${cmake_common_dir}/../deps")
+include_directories("${cmake_common_dir}/../deps/obvious/cpp")
 add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_WINSOCK_DEPRECATED_NO_WARNINGS)
 
 function(component_src output)
