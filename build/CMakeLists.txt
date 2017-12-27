@@ -14,6 +14,7 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/installed)
 danssfml()
 
 add_subdirectory(../skeleton/build skeleton)
+add_subdirectory(../deps/dansmidieditor/build dansmidieditor)
 
 file(GLOB components ../components/*)
 foreach(i ${components})
