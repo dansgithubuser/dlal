@@ -18,5 +18,5 @@ set(output Viewer)
 footer(${output} "executable")
 
 #=====linking=====#
-sfml()
+danssfml()
 target_link_libraries(${output} sfml-system sfml-window sfml-graphics)

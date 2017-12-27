@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+
+include("${CMAKE_CURRENT_LIST_DIR}/../deps/danssfml/CMakeHelpers.txt")
+
 if(POLICY CMP0042)
 	cmake_policy(SET CMP0042 NEW)
 endif()
@@ -63,15 +66,4 @@ endfunction()
 function(standard_component output)
 	component_src(${output})
 	footer(${output})
-endfunction()
-
-function(sfml)
-	if(NOT TARGET sfml-system)
-		set(BUILD_SHARED_LIBS_OUTER "${BUILD_SHARED_LIBS}")
-		set(BUILD_SHARED_LIBS OFF)
-		add_subdirectory("${cmake_common_dir}/../deps/SFML" "${CMAKE_CURRENT_BINARY_DIR}/SFML")
-		set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_OUTER}")
-		include_directories("${cmake_common_dir}/../deps/SFML/include")
-		add_definitions(-DSFML_STATIC)
-	endif()
 endfunction()

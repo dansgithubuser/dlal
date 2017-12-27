@@ -11,7 +11,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/installed)
 
-sfml()
+danssfml()
 
 add_subdirectory(../skeleton/build skeleton)
 
