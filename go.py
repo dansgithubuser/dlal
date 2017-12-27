@@ -60,7 +60,10 @@ if args.can:
 	args=parser.parse_args(command)
 
 #helpers
-def shell(*args): p=subprocess.check_call(' '.join(args), shell=True)
+def shell(*args):
+	invocation=' '.join(args)
+	print('invoking `{}` in {}'.format(invocation, os.getcwd()))
+	subprocess.check_call(invocation, shell=True)
 
 #current directory
 file_path=os.path.split(os.path.realpath(__file__))[0]
@@ -109,6 +112,7 @@ if not args.run_only:
 	os.chdir(built_rel_path)
 	preamble=''
 	generator=''
+	shell('cmake --version')
 	shell(preamble, 'cmake', generator, '-DBUILD_SHARED_LIBS=ON', '-DCMAKE_BUILD_TYPE='+config, '..')
 	shell(preamble, 'cmake --build . --config '+config+' --target install')
 	import shutil
