@@ -114,7 +114,14 @@ if not args.run_only:
 	generator=''
 	shell(preamble, 'cmake', generator, '-DBUILD_SHARED_LIBS=ON', '-DCMAKE_BUILD_TYPE='+config, '..')
 	shell(preamble, 'cmake --build . --config '+config+' --target install')
-	shell(preamble, 'cmake --build . --config '+config+' --target post-install')
+	import shutil
+	for path, folders, files in os.walk('installed'):
+		for file in files:
+			if file in ['openal32.dll']:
+				src=os.path.join(path, file)
+				dst=os.path.join(file)
+				print('{} ---> {}'.format(os.path.abspath(src), os.path.abspath(dst)))
+				shutil.copyfile(src, dst)
 	os.chdir(file_path)
 
 #library path

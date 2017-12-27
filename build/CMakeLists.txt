@@ -28,8 +28,3 @@ foreach(i ${interfaces})
 		add_subdirectory("${i}/build" "${bin}_bin")
 	endif()
 endforeach()
-
-add_custom_target(post-install
-	COMMAND python post-install.py ${CMAKE_BINARY_DIR} installed
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
