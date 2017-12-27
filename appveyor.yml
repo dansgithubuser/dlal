@@ -1,1 +1,1 @@
-build_script: python go.py --get-submodules -t "*"
+build_script: python go.py -t "*"

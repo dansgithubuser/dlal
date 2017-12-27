@@ -6,7 +6,6 @@ import glob, os, platform, subprocess, sys
 import argparse
 parser=argparse.ArgumentParser(description='interface for developer operations')
 parser.add_argument('--setup', action='store_true', help='install dependencies')
-parser.add_argument('--get-submodules', action='store_true')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run')
@@ -103,11 +102,9 @@ if args.setup:
 		sys.exit(-1)
 	sys.exit(0)
 
-if args.get_submodules:
-	shell('git submodule update --init --recursive')
-
 #build
 if not args.run_only:
+	shell('git submodule update --init --recursive')
 	if not os.path.exists(built_rel_path): os.makedirs(built_rel_path)
 	os.chdir(built_rel_path)
 	preamble=''
