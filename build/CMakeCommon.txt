@@ -21,8 +21,12 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 	add_compile_options(/EHsc)
 endif()
 
-include_directories("${cmake_common_dir}/../deps")
-include_directories("${cmake_common_dir}/../deps/obvious/cpp")
+include_directories(
+	"${cmake_common_dir}/../deps"
+	"${cmake_common_dir}/../deps/obvious/cpp"
+	"${cmake_common_dir}/../deps/dryad/dyad/src"
+	"${cmake_common_dir}/../deps/dryad"
+)
 add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_WINSOCK_DEPRECATED_NO_WARNINGS)
 
 function(component_src output)
@@ -46,11 +50,10 @@ endfunction()
 
 function(footer output)
 	if(NOT TARGET SkeletonObject)
-		include_directories("${cmake_common_dir}/../skeleton/deps/dyad/src")
 		add_library(SkeletonObject OBJECT
 			"${cmake_common_dir}/../skeleton/src/skeleton.cpp"
 			"${cmake_common_dir}/../skeleton/src/page.cpp"
-			"${cmake_common_dir}/../skeleton/deps/dyad/src/dyad.c"
+			"${cmake_common_dir}/../deps/dryad/dyad/src/dyad.c"
 		)
 		set_property(TARGET SkeletonObject PROPERTY CXX_STANDARD 11)
 	endif()

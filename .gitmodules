@@ -10,3 +10,6 @@
 [submodule "deps/dansmidieditor"]
 	path = deps/dansmidieditor
 	url = https://github.com/dansgithubuser/dansmidieditor
+[submodule "deps/dryad"]
+	path = deps/dryad
+	url = https://github.com/dansgithubuser/dryad
