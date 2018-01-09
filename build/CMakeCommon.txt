@@ -9,6 +9,8 @@ endif()
 
 set(cmake_common_dir ${CMAKE_CURRENT_LIST_DIR})
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
+
 macro(danssfml)
 	include("${cmake_common_dir}/../deps/danssfml/CMakeInclude.txt")
 endmacro()
