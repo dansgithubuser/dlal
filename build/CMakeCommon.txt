@@ -21,6 +21,12 @@ endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
 	add_compile_options(/EHsc)
+	add_definitions(
+		-D_SCL_SECURE_NO_WARNINGS
+		-D_CRT_SECURE_NO_WARNINGS
+		-D_WINSOCK_DEPRECATED_NO_WARNINGS
+		-DNOMINMAX
+	)
 endif()
 
 include_directories(
@@ -29,7 +35,6 @@ include_directories(
 	"${cmake_common_dir}/../deps/dryad/dyad/src"
 	"${cmake_common_dir}/../deps/dryad"
 )
-add_definitions(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_WINSOCK_DEPRECATED_NO_WARNINGS)
 
 function(component_src output)
 	#include
