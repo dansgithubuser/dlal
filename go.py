@@ -24,8 +24,8 @@ if args.can:
 		'f': '-s sonic     ',
 		's': '-s soundfont ',
 		'v': '-s vst       ',
-		'l': '-s looper -i viewer:9088 -i softboard:9089',
-		'll': ['-s', 'looper', '-i', 'viewer:9088', '-i', 'softboard:9089', '--sa', '-l {} -g'.format(args.system_state)],
+		'l': '-s looper -i editor:9088 -i softboard:9089',
+		'll': ['-s', 'looper', '-i', 'softboard:9089', '-i', 'editor:9088', '--sa', '-l {} -g'.format(args.system_state)],
 	}
 	canned_options={
 		'r': '-r',
@@ -178,6 +178,9 @@ if args.interface:
 				import re
 				if re.match(name.lower()+r'(\.exe)?$', file.lower()):
 					return os.path.join(root, file)
+		py=os.path.join('..', '..', 'interfaces', name, 'src', name+'.py')
+		if os.path.exists(py): return py
+		raise Exception("couldn't find binary for interface {}".format(name))
 	for i in args.interface:
 		name, port=i.split(':')
 		os.chdir(built_rel_path)

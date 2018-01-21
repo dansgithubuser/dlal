@@ -1,0 +1,7 @@
+include(../../../build/CMakeCommon.txt)
+set(src "${CMAKE_CURRENT_SOURCE_DIR}/../src/editor.cpp")
+footer(Editor)
+set(DANS_SFML_WRAPPER_NO_MODULE ON)
+set(DANS_SFML_WRAPPER_STATIC ON)
+add_subdirectory(../../../deps/danssfml/wrapper DansSfmlWrapper)
+target_link_libraries(Editor DansSfmlWrapperStatic)

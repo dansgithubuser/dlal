@@ -66,6 +66,9 @@ todo
 - audio select input and output
 
 - upgrade system viewer to editor, build like midi editor
+	- move multiple
+	- add/remove components
+	- save/load
 - audiobro
 	- reverb
 	- piano
