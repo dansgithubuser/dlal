@@ -1,17 +1,19 @@
-import ctypes, json, os, platform
+import ctypes
+import json
+import os
+import platform
+import subprocess
+import sys
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
+sys.path.append(os.path.join(root, 'deps', 'obvious'))
+
+import obvious
 
 def invoke(invocation):
-	import subprocess
 	subprocess.check_call(invocation, shell=True)
 
 _systems=0
-
-def load(name):
-	def upperfirst(s): return s[0].upper()+s[1:]
-	if platform.system()!='Windows': name='lib'+upperfirst(name)+'.so'
-	return ctypes.CDLL(name)
 
 def report(text):
 	t=ctypes.cast(text, ctypes.c_char_p).value.decode('utf-8')
@@ -28,7 +30,7 @@ def connect(*args):
 		if len(result): result+='\n'
 	return result
 
-_skeleton=load('skeleton')
+_skeleton=obvious.load_lib('Skeleton')
 _skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
 _skeleton.dlalBuildSystem.restype=ctypes.c_void_p
 _skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
@@ -120,7 +122,7 @@ class Component:
 
 	def __init__(self, component_type, **kwargs):
 		if component_type not in Component._libraries:
-			Component._libraries[component_type]=load(component_type)
+			Component._libraries[component_type]=obvious.load_lib(component_type.capitalize())
 			Component._libraries[component_type].dlalBuildComponent.restype=ctypes.c_void_p
 		self.library=Component._libraries[component_type]
 		self.component=kwargs.get('component',
