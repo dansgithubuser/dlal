@@ -49,6 +49,7 @@ namespace dlal{
 
 Network::Network(): _data(10), _port(9089), _queue(8) {
 	addJoinAction([this](System&)->std::string{
+		dlalSetVariable(_system, (componentToStr(this)+".port").c_str(), std::to_string(_port).c_str());
 		return _system->dyadPauseAnd([this]()->std::string{
 			dyad_Stream* server=_system->dyadNewStream();
 			_system->dyadAddListener(server, DYAD_EVENT_ACCEPT , onAccept   , this);
