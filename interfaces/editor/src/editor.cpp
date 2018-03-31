@@ -137,7 +137,7 @@ struct Variable{
 	int _x, _y;
 };
 
-dryad::Client* fClient;
+dryad::Client* fClient=nullptr;
 std::string fString;
 std::string fText;
 std::map<std::string, Variable> fVariables;
@@ -155,10 +155,12 @@ extern "C" {
 	}
 
 	const char* editor_dryad_read(){
+		if(!fClient) return nullptr;
 		return fClient->readSizedString(fString)?fString.c_str():"";
 	}
 
 	int editor_dryad_times_disconnected(){
+		if(!fClient) return -1;
 		return fClient->timesDisconnected();
 	}
 
