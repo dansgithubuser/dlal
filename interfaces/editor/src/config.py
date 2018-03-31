@@ -20,7 +20,10 @@ end
  )
  self.sequence=self.sequence[:-1]
 end
- <Esc >Esc: self.reset()
+ <Esc >Esc:
+ self.reset()
+ self.cpp.editor_deselect()
+end
 .* <LShift >LShift: self.sequence=self.sequence[:-2]; self.shift=False
 .* <RShift >RShift: self.sequence=self.sequence[:-2]; self.shift=False
 .* <.Shift$: self.shift=True

@@ -8,6 +8,20 @@
 
 static const int SZ=8;
 
+struct Object{
+	void moveTo(int x, int y){
+		_xRaw=x;
+		_yRaw=y;
+		_x=x/SZ*SZ;
+		_y=y/SZ*SZ;
+	}
+	void moveBy(int x, int y){
+		moveTo(_xRaw+x, _yRaw+y);
+	}
+	virtual bool contains(int x, int y) const =0;
+	int _x, _y, _xRaw, _yRaw;
+};
+
 struct Connection;
 struct Component;
 
@@ -22,26 +36,15 @@ struct Connection{
 	float _commandHeat=0.0f, _midiHeat=0.0f;
 };
 
-struct Component{
+struct Component: public Object {
 	Component(){}
-	Component(std::string type, int x, int y){ init(type, x, y); }
 
-	void init(std::string type, int x, int y){
+	void set(std::string type, int x, int y){
 		_type=type;
-		_x=x;
-		_y=y;
+		moveTo(x, y);
 	}
 
-	void dialpad(std::string pattern, sf::VertexArray& va) const {
-		for(size_t i=0; i<pattern.size()-1; ++i){
-			int xi=(std::stoi(obvstr(pattern[i+0]))-1)%3;
-			int yi=(std::stoi(obvstr(pattern[i+0]))-1)/3;
-			int xf=(std::stoi(obvstr(pattern[i+1]))-1)%3;
-			int yf=(std::stoi(obvstr(pattern[i+1]))-1)/3;
-			va.append(sf::Vertex(sf::Vector2f(_x+SZ*xi, _y+SZ*yi), sf::Color(0, 128, 0)));
-			va.append(sf::Vertex(sf::Vector2f(_x+SZ*xf, _y+SZ*yf), sf::Color(0, 128, 0)));
-		}
-	}
+	void dialpad(std::string pattern, sf::VertexArray& va) const;
 
 	void draw(sf::VertexArray& va){
 		dans_sfml_wrapper_text_draw(_x+2*SZ+2, _y, SZ, _label.c_str(), 0, 128, 0, 255);
@@ -65,13 +68,7 @@ struct Component{
 
 	bool contains(int x, int y) const { return _x<x&&x<_x+2*SZ&&_y<y&&y<_y+2*SZ; }
 
-	void move(int x, int y){
-		_x=x/SZ*SZ;
-		_y=y/SZ*SZ;
-	}
-
 	std::string _type;
-	int _x, _y;
 	std::map<std::string, Connection> _connections;
 	float _phase=0.0f;
 	std::string _label;
@@ -112,28 +109,40 @@ void Connection::draw(sf::VertexArray& va){
 	}
 }
 
-struct Variable{
+struct Variable: public Object {
 	Variable(){}
 	Variable(std::string name, std::string value):
 		_name(name), _value(value) {}
 
-	void draw() const {
-		dans_sfml_wrapper_text_draw(_x, _y, SZ, text().c_str(), 255, 255, 255, 255);
-	}
+	void draw() const;
 
 	bool contains(int x, int y) const {
 		return _x<x&&x<_x+dans_sfml_wrapper_text_width(SZ, text().c_str())&&_y<y&&y<_y+SZ;
 	}
 
-	void move(int x, int y){
-		_x=x/SZ*SZ;
-		_y=y/SZ*SZ;
-	}
-
 	std::string text() const { return obvstr(_name, ": ", _value); }
 
 	std::string _name, _value;
-	int _x, _y;
+};
+
+struct Button{
+	bool pressed=false;
+	int x, y;
+	int xTo(int newX){
+		int dx=newX-x;
+		x=newX;
+		return dx;
+	}
+	int yTo(int newY){
+		int dy=newY-y;
+		y=newY;
+		return dy;
+	}
+	void press(int newX, int newY){
+		x=newX;
+		y=newY;
+		pressed=true;
+	}
 };
 
 dryad::Client* fClient=nullptr;
@@ -141,8 +150,24 @@ std::string fString;
 std::string fText;
 std::map<std::string, Variable> fVariables;
 std::map<std::string, Component> fComponents;
-auto fComponentBeingDragged=fComponents.end();
-auto fVariableBeingDragged=fVariables.end();
+Button fButtons[2];
+std::vector<Object*> fSelected;
+
+void Component::dialpad(std::string pattern, sf::VertexArray& va) const {
+	auto color=sf::Color(0, in(this, fSelected)?255:128, 0);
+	for(size_t i=0; i<pattern.size()-1; ++i){
+		int xi=(std::stoi(obvstr(pattern[i+0]))-1)%3;
+		int yi=(std::stoi(obvstr(pattern[i+0]))-1)/3;
+		int xf=(std::stoi(obvstr(pattern[i+1]))-1)%3;
+		int yf=(std::stoi(obvstr(pattern[i+1]))-1)/3;
+		va.append(sf::Vertex(sf::Vector2f(_x+SZ*xi, _y+SZ*yi), color));
+		va.append(sf::Vertex(sf::Vector2f(_x+SZ*xf, _y+SZ*yf), color));
+	}
+}
+
+void Variable::draw() const {
+	dans_sfml_wrapper_text_draw(_x, _y, SZ, text().c_str(), 0, in(this, fSelected)?255:128, 0, 255);
+}
 
 extern "C" {
 	void editor_init(const char* host, int port){
@@ -170,27 +195,28 @@ extern "C" {
 	void editor_button(int button, int pressed, int x, int y){
 		if(button==0){
 			if(pressed){
-				for(auto i=fComponents.begin(); i!=fComponents.end(); ++i) if(i->second.contains(x, y)){
-					fComponentBeingDragged=i;
+				fButtons[0].press(x, y);
+				std::vector<Object*> objects;
+				for(auto& i: fComponents) objects.push_back(&i.second);
+				for(auto& i: fVariables) objects.push_back(&i.second);
+				for(auto i: objects) if(i->contains(x, y)&&!in(i, fSelected)){
+					fSelected.push_back(i);
 					break;
 				}
-				if(fComponentBeingDragged==fComponents.end())
-					for(auto i=fVariables.begin(); i!=fVariables.end(); ++i) if(i->second.contains(x, y)){
-						fVariableBeingDragged=i;
-						break;
-					}
 			}
-			else{
-				fComponentBeingDragged=fComponents.end();
-				fVariableBeingDragged=fVariables.end();
-			}
+			else fButtons[0].pressed=false;
 		}
 	}
 
 	void editor_move(int x, int y){
-		if(fComponentBeingDragged!=fComponents.end()) fComponentBeingDragged->second.move(x, y);
-		if(fVariableBeingDragged!=fVariables.end()) fVariableBeingDragged->second.move(x, y);
+		if(fButtons[0].pressed){
+			int dx=fButtons[0].xTo(x);
+			int dy=fButtons[0].yTo(y);
+			for(auto i: fSelected) i->moveBy(dx, dy);
+		}
 	}
+
+	void editor_deselect(){ fSelected.clear(); }
 
 	void editor_draw(){
 		gDansSfmlWrapperBoss->window.clear();
@@ -208,14 +234,14 @@ extern "C" {
 	void variable_set(const char* name, const char* value){
 		if(fVariables.count(name)) fVariables.at(name)._value=value;
 		else{
-			auto v=Variable(name, value);
-			v.move(400, SZ*fVariables.size());
+			Variable v(name, value);
+			v.moveTo(400, SZ*fVariables.size());
 			fVariables[name]=v;
 		}
 	}
 
 	void component_new(const char* name, const char* type, int x, int y){
-		fComponents[name].init(type, x, y);
+		fComponents[name].set(type, x, y);
 	}
 
 	void component_label(const char* name, const char* label){
