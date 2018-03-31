@@ -1,6 +1,7 @@
 #include "page.hpp"
 
 #include <cstring>
+#include <iostream>
 
 namespace dlal{
 
@@ -82,8 +83,9 @@ void Page::dispatch(
 			break;
 		case Page::TEXT:
 			for(auto output: outputs){
-				output->command(_text);
+				std::string result=output->command(_text);
 				component._system->_reportQueue.write((std::string)"command "+componentToStr(&component)+" "+componentToStr(output));
+				if(result.size()) std::cerr<<result<<std::endl;
 			}
 			break;
 	}
