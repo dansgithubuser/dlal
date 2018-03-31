@@ -19,6 +19,11 @@ class Commander(Component):
 		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, self.callback_type]
 		self.commands=[]#to prevent python from garbage-collecting callbacks sent c-side
+		self.novel_components=[]
+		def queue_add(text):
+			_, type=text.decode('utf-8').split()
+			self.queue_add(type)
+		self.register_command('queue_add', queue_add)
 
 	def queue_command(self, component, *args, **kwargs):
 		edges_to_wait=kwargs.get('edges_to_wait', 0)
@@ -33,11 +38,15 @@ class Commander(Component):
 		slot=kwargs.get('slot', 0)
 		edges_to_wait=kwargs.get('edges_to_wait', 0)
 		result=''
+		def add(component):
+			return report(self.library.dlalCommanderAdd(self.component, component, slot, edges_to_wait))
 		for arg in args:
-			for c in arg.components_to_add:
-				result+=report(self.library.dlalCommanderAdd(
-					self.component, c.component, slot, edges_to_wait
-				))
+			if type(arg) in [str, unicode]:
+				component=Component(arg)
+				self.novel_components.append(component)
+				result+=add(component.component)
+			else:
+				for c in arg.components_to_add: result+=add(c.component)
 			if len(result): result+='\n';
 		return result
 
