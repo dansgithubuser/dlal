@@ -44,8 +44,7 @@ struct Component{
 	}
 
 	void draw(sf::VertexArray& va){
-		std::string s=obvstr(_type, " ", _label);
-		dans_sfml_wrapper_text_draw(_x+2*SZ, _y, SZ, s.c_str(), 255, 255, 255, 255);
+		dans_sfml_wrapper_text_draw(_x+2*SZ+2, _y, SZ, _label.c_str(), 0, 128, 0, 255);
 		dialpad("79317", va);
 		std::map<std::string, std::string> sketches={
 			{"audio", "24862"},
