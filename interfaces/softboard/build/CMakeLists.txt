@@ -9,9 +9,8 @@ include_directories(
 set(src "${CMAKE_CURRENT_SOURCE_DIR}/../src/main.cpp")
 
 #=====products=====#
-set(output Softboard)
-footer(${output} "executable")
+footer(Softboard "executable")
 
 #=====linking=====#
 danssfml()
-target_link_libraries(${output} sfml-system sfml-window sfml-graphics)
+target_link_libraries(Softboard sfml-system sfml-window sfml-graphics)

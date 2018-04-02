@@ -1,4 +1,5 @@
 #include <dryad.hpp>
+#include <page.hpp>
 #include <wrapper.hpp>
 
 #include <map>
@@ -147,6 +148,10 @@ struct Button{
 	}
 };
 
+template<typename K, typename V> struct DeleterMap: public std::map<K, V> {
+	~DeleterMap(){ for(auto i: *this) delete i.second; }
+};
+
 dryad::Client* fClient=nullptr;
 std::string fString;
 std::string fText;
@@ -154,6 +159,7 @@ std::map<std::string, Variable> fVariables;
 std::map<std::string, Component> fComponents;
 Button fButtons[2];
 std::vector<Object*> fSelected;
+DeleterMap<std::string, dryad::Client*> fTies;
 
 void Component::dialpad(std::string pattern, sf::VertexArray& va) const {
 	auto color=sf::Color(0, in(this, fSelected)?255:128, 0);
@@ -169,6 +175,20 @@ void Component::dialpad(std::string pattern, sf::VertexArray& va) const {
 
 void Variable::draw() const {
 	dans_sfml_wrapper_text_draw(_x, _y, SZ, text().c_str(), 0, in(this, fSelected)?255:128, 0, 255);
+}
+
+Component* getSelectedComponent(){
+	if(!fClient) throw std::logic_error("not initialized");
+	Component* result;
+	if(
+		fSelected.size()!=1
+		||
+		!(result=dynamic_cast<Component*>(fSelected.at(0)))
+	){
+		std::cerr<<"must select a single component";
+		return nullptr;
+	}
+	return result;
 }
 
 extern "C" {
@@ -231,6 +251,21 @@ extern "C" {
 		for(const auto& i: fVariables) i.second.draw();
 		dans_sfml_wrapper_text_draw(SZ, gDansSfmlWrapperBoss->window.getSize().y-SZ, SZ, fText.c_str(), 255, 255, 255, 255);
 		gDansSfmlWrapperBoss->window.display();
+	}
+
+	void editor_push(const char* command){
+		auto component=getSelectedComponent();
+		if(!component) return;
+		if(component->_type!="network"){
+			std::cerr<<"can only push to network components\n";
+			return;
+		}
+		auto name=component->_name;
+		if(!fTies.count(name))
+			fTies[name]=new dryad::Client(fClient->ip(), std::stoi(fVariables.at(name+".port")._value));
+		std::stringstream ss;
+		dlal::Page(command, 0).toFile(ss);
+		fTies.at(name)->writeSizedString(ss.str());
 	}
 
 	void variable_set(const char* name, const char* value){

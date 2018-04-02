@@ -1,5 +1,6 @@
 from controls import AbstractControls
 import re
+import shlex
 
 configuration=r'''
 mode .*
@@ -66,18 +67,18 @@ class Controls(AbstractControls):
 
 	def command(self, command=None):
 		if not command: command=self.sequence_as_text()
-		command=command.split()
+		command=shlex.split(command)
 		if not command: self.reset(); return
 		name=command[0]
-		self.force=False
-		if name.endswith('!'): self.force=True; name=name[:-1]
 		name=self.command_aliases.get(name, name)
 		command_name='command_'+name
 		params=command[1:]
 		if hasattr(self, command_name):
-			result=getattr(self, command_name)(*params)
-			if type(result)==str: self.message(result)
-			else: self.reset()
+			try:
+				result=getattr(self, command_name)(*params)
+				if type(result)==str: self.message(result)
+				else: self.reset()
+			except Exception as e: print(e)
 		else: self.message('no such command "{}"'.format(name))
 
 	def message(self, message):
@@ -101,6 +102,7 @@ class Controls(AbstractControls):
 					if callable(getattr(self, i)) and i.startswith('command_'): print(i[8:])
 			else: print('no such help topic "{}"'.format(args[0]))
 		return 'see terminal for details'
+	def command_push(self, command): self.cpp.editor_push(command)
 
 	#callback
 	def on_input(self):
