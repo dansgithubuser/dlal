@@ -39,7 +39,8 @@ struct Connection{
 struct Component: public Object {
 	Component(){}
 
-	void set(std::string type, int x, int y){
+	void set(std::string name, std::string type, int x, int y){
+		_name=name;
 		_type=type;
 		moveTo(x, y);
 	}
@@ -68,6 +69,7 @@ struct Component: public Object {
 
 	bool contains(int x, int y) const { return _x<x&&x<_x+2*SZ&&_y<y&&y<_y+2*SZ; }
 
+	std::string _name;
 	std::string _type;
 	std::map<std::string, Connection> _connections;
 	float _phase=0.0f;
@@ -241,7 +243,7 @@ extern "C" {
 	}
 
 	void component_new(const char* name, const char* type, int x, int y){
-		fComponents[name].set(type, x, y);
+		fComponents[name].set(name, type, x, y);
 	}
 
 	void component_label(const char* name, const char* label){
