@@ -66,8 +66,12 @@ todo
 - audio select input and output
 
 - upgrade system viewer to editor, build like midi editor
-	- add/remove components
+	- UI add components
+	- UI right click component to toggle connect
 	- save/load
+	- remove components
+	- UI remove components
+	- scroll
 - audiobro
 	- reverb
 	- piano
