@@ -67,6 +67,8 @@ todo
 
 - upgrade system viewer to editor, build like midi editor
 	- UI add components
+		- move non-draw-code to python
+		- clean up c++
 	- UI right click component to toggle connect
 	- save/load
 	- remove components

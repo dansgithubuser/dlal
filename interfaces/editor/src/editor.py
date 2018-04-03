@@ -23,7 +23,8 @@ controls=Controls(cpp)
 media.set_sfml(cpp)
 media.init(title='Editor')
 
-cpp.editor_init(sys.argv[1], int(sys.argv[2]))
+component_types=' '.join(sorted(os.listdir(os.path.join(HOME, '..', '..', '..', 'components'))))
+cpp.editor_init(sys.argv[1], int(sys.argv[2]), component_types)
 
 class Parser:
 	def __init__(self, s):
