@@ -163,26 +163,6 @@ struct Variable: public Object {
 	std::string _name, _value;
 };
 
-struct Button{
-	bool pressed=false;
-	int x, y;
-	int xTo(int newX){
-		int dx=newX-x;
-		x=newX;
-		return dx;
-	}
-	int yTo(int newY){
-		int dy=newY-y;
-		y=newY;
-		return dy;
-	}
-	void press(int newX, int newY){
-		x=newX;
-		y=newY;
-		pressed=true;
-	}
-};
-
 template<typename K, typename V> struct DeleterMap: public std::map<K, V> {
 	~DeleterMap(){ for(auto i: *this) delete i.second; }
 };
@@ -192,7 +172,6 @@ std::string fString;
 std::string fText;
 std::map<std::string, Variable> fVariables;
 std::map<std::string, Component> fComponents;
-Button fButtons[2];
 std::vector<Object*> fSelected;
 DeleterMap<std::string, dryad::Client*> fTies;
 std::vector<Component> fAddables;
@@ -258,41 +237,6 @@ extern "C" {
 
 	void editor_push(const char* command);
 
-	void editor_button(int button, int pressed, int x, int y){
-		if(button==0){
-			if(pressed){
-				fButtons[0].press(x, y);
-				if(x>dans_sfml_wrapper_width()-ADDABLES_WIDTH){
-					for(const auto& i: fAddables) if(i.contains(x, y)){
-						editor_push(obvstr("queue_add ", i._type).c_str());
-						break;
-					}
-				}
-				else{
-					std::vector<Object*> objects;
-					for(auto& i: fComponents) objects.push_back(&i.second);
-					for(auto& i: fVariables) objects.push_back(&i.second);
-					for(auto i: objects) if(i->contains(x, y)&&!in(i, fSelected)){
-						fSelected.push_back(i);
-						break;
-					}
-				}
-			}
-			else fButtons[0].pressed=false;
-		}
-	}
-
-	void editor_move(int x, int y){
-		if(fButtons[0].pressed){
-			int dx=fButtons[0].xTo(x);
-			int dy=fButtons[0].yTo(y);
-			if(x>dans_sfml_wrapper_width()-ADDABLES_WIDTH) fAddablesScrollY+=dy;
-			else for(auto i: fSelected) i->moveBy(dx, dy);
-		}
-	}
-
-	void editor_deselect(){ fSelected.clear(); }
-
 	void editor_draw(){
 		//clear
 		gDansSfmlWrapperBoss->window.clear();
@@ -344,6 +288,39 @@ extern "C" {
 		fTies.at(name)->writeSizedString(ss.str());
 	}
 
+	int addables_width(){ return ADDABLES_WIDTH; }
+
+	void* addable_at(int x, int y){
+		for(auto& i: fAddables) if(i.contains(x, y)) return &i;
+		return nullptr;
+	}
+
+	void addables_scroll(int dy){
+		fAddablesScrollY+=dy;
+	}
+
+	void* object_at(int x, int y){
+		std::vector<Object*> objects;
+		for(auto& i: fComponents) objects.push_back(&i.second);
+		for(auto& i: fVariables) objects.push_back(&i.second);
+		for(auto& i: objects) if(i->contains(x, y)) return i;
+		return nullptr;
+	}
+
+	void object_move_by(Object* object, int dx, int dy){
+		object->moveBy(dx, dy);
+	}
+
+	void selection_add(Object* object){
+		if(!in(object, fSelected)) fSelected.push_back(object);
+	}
+
+	void selection_clear(){ fSelected.clear(); }
+
+	int selection_size(){ return fSelected.size(); }
+
+	void* selection_at_index(int i){ return fSelected.at(i); }
+
 	void variable_set(const char* name, const char* value){
 		if(fVariables.count(name)) fVariables.at(name)._value=value;
 		else{
@@ -364,6 +341,10 @@ extern "C" {
 	void component_phase(const char* name, float phase){
 		if(!fComponents.count(name)) return;
 		fComponents.at(name)._phase=phase;
+	}
+
+	const char* component_type(Object* component){
+		return dynamic_cast<Component*>(component)->_type.c_str();
 	}
 
 	void connection_new(const char* src, const char* dst){
