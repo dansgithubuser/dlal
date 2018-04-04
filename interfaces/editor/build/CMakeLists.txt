@@ -6,7 +6,10 @@ include_directories(
 )
 
 #=====source=====#
-set(src "${CMAKE_CURRENT_SOURCE_DIR}/../src/editor.cpp")
+set(src
+	"${CMAKE_CURRENT_SOURCE_DIR}/../src/editor.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../src/connection.cpp"
+)
 
 #=====products=====#
 footer(Editor)
