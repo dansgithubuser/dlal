@@ -113,6 +113,13 @@ class Controls(AbstractControls):
 					object=self.cpp.object_at(x, y)
 					if object: self.cpp.selection_add(object)
 			else: self.buttons[0].release()
+		elif button==1:
+			if pressed:
+				connector=self.cpp.selection_component()
+				connectee=self.cpp.object_at(x, y)
+				if connector and connectee:
+					self.cpp.connection_toggle(connector, connectee)
+					self.cpp.selection_clear()
 
 	def move(self, x, y):
 		if self.buttons[0].pressed:

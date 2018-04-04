@@ -23,17 +23,6 @@ DeleterMap<std::string, dryad::Client*> fTies;
 std::vector<Component> fAddables;
 int fAddablesScrollX=0, fAddablesScrollY=0;
 
-Component* getSelectedComponent(){
-	if(!fClient) throw std::logic_error("not initialized");
-	Component* result;
-	if(
-		fSelected.size()!=1
-		||
-		!(result=dynamic_cast<Component*>(fSelected.at(0)))
-	) return nullptr;
-	return result;
-}
-
 extern "C" {
 	void editor_init(const char* host, int port, const char* componentTypes){
 		fClient=new dryad::Client(host, port);
@@ -64,8 +53,6 @@ extern "C" {
 		fText=s;
 	}
 
-	void editor_push(const char* command);
-
 	void editor_draw(){
 		//clear
 		gDansSfmlWrapperBoss->window.clear();
@@ -89,24 +76,19 @@ extern "C" {
 	}
 
 	void editor_push(const char* command){
-		auto component=getSelectedComponent();
-		if(!component){
-			for(auto& i: fComponents) if(
-				i.second._type=="network"&&
-				i.second._connections.size()==1&&
-				i.second._connections.begin()->second._dst->_type=="commander"&&
-				i.second._connections.begin()->second._dst->_connections.size()==0
-			){
-				component=&i.second;
-				break;
-			}
-			if(!component){
-				std::cerr<<"must select a single network component (couldn't find an appropriate one automatically)\n";
-				return;
-			}
+		if(!fClient) throw std::logic_error("not initialized");
+		Component* component=nullptr;
+		for(auto& i: fComponents) if(
+			i.second._type=="network"&&
+			i.second._connections.size()==1&&
+			i.second._connections.begin()->second._dst->_type=="commander"&&
+			i.second._connections.begin()->second._dst->_connections.size()==0
+		){
+			component=&i.second;
+			break;
 		}
-		if(component->_type!="network"){
-			std::cerr<<"can only push to network components\n";
+		if(!component){
+			std::cerr<<"couldn't find an appropriate network component\n";
 			return;
 		}
 		auto name=component->_name;
@@ -150,6 +132,13 @@ extern "C" {
 
 	void* selection_at_index(int i){ return fSelected.at(i); }
 
+	void* selection_component(){
+		if(fSelected.size()!=1) return nullptr;
+		auto result=fSelected.at(0);
+		if(!dynamic_cast<Component*>(result)) return nullptr;
+		return result;
+	}
+
 	void variable_set(const char* name, const char* value){
 		if(fVariables.count(name)) fVariables.at(name)._value=value;
 		else{
@@ -176,6 +165,10 @@ extern "C" {
 		return dynamic_cast<Component*>(component)->_type.c_str();
 	}
 
+	const char* component_name(Object* component){
+		return dynamic_cast<Component*>(component)->_name.c_str();
+	}
+
 	void connection_new(const char* src, const char* dst){
 		fComponents[src];
 		fComponents[dst];
@@ -197,5 +190,21 @@ extern "C" {
 		if(!fComponents.count(src)) return;
 		if(!fComponents.at(src)._connections.count(dst)) return;
 		fComponents.at(src)._connections.at(dst)._midiHeat=1.0f;
+	}
+
+	void connection_toggle(Object* connectorObject, Object* connecteeObject){
+		Component* connector=dynamic_cast<Component*>(connectorObject);
+		Component* connectee=dynamic_cast<Component*>(connecteeObject);
+		bool connected=false;
+		for(auto& i: connector->_connections)
+			if(i.second._dst==connectee){
+				connected=true;
+				break;
+			}
+		editor_push(obvstr(
+			connected?"queue_disconnect":"queue_connect",
+			connector->_name,
+			connectee->_name
+		).c_str());
 	}
 }

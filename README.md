@@ -66,7 +66,6 @@ todo
 - audio select input and output
 
 - upgrade system viewer to editor, build like midi editor
-	- UI right click component to toggle connect
 	- save/load
 	- remove components
 	- UI remove components

@@ -22,8 +22,12 @@ cpp.object_at.restype=ctypes.c_void_p
 cpp.object_move_by.argtypes=[ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
 cpp.selection_add.argtypes=[ctypes.c_void_p]
 cpp.selection_at_index.restype=ctypes.c_void_p
+cpp.selection_component.restype=ctypes.c_void_p
 cpp.component_type.restype=ctypes.c_char_p
 cpp.component_type.argtypes=[ctypes.c_void_p]
+cpp.component_name.restype=ctypes.c_char_p
+cpp.component_name.argtypes=[ctypes.c_void_p]
+cpp.connection_toggle.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
 
 controls=Controls(cpp)
 
