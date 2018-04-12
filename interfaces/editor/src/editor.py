@@ -16,7 +16,6 @@ import obvious
 
 cpp=obvious.load_lib('Editor')
 cpp.editor_dryad_read.restype=ctypes.c_char_p
-cpp.editor_set_text.argtypes=[ctypes.c_char_p]
 cpp.addable_at.restype=ctypes.c_void_p
 cpp.object_at.restype=ctypes.c_void_p
 cpp.object_move_by.argtypes=[ctypes.c_void_p, ctypes.c_int, ctypes.c_int]

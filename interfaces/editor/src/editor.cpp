@@ -6,6 +6,7 @@
 #include <page.hpp>
 #include <wrapper.hpp>
 
+#include <fstream>
 #include <map>
 #include <string>
 
@@ -97,6 +98,14 @@ extern "C" {
 		std::stringstream ss;
 		dlal::Page(command, 0).toFile(ss);
 		fTies.at(name)->writeSizedString(ss.str());
+	}
+
+	void editor_save(const char* file_name){
+		std::ofstream file(file_name);
+		file<<fVariables.size()<<"\n";
+		for(auto& i: fVariables) file<<i.second._x<<" "<<i.second._y<<"\n";
+		file<<fComponents.size()<<"\n";
+		for(auto& i: fComponents) file<<i.second._x<<" "<<i.second._y<<"\n";
 	}
 
 	int addables_width(){ return ADDABLES_WIDTH; }
