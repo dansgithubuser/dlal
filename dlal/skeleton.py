@@ -42,6 +42,8 @@ _skeleton.dlalAdd.restype=ctypes.c_void_p
 _skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 _skeleton.dlalConnect.restype=ctypes.c_void_p
 _skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+_skeleton.dlalSystem.restype=ctypes.c_void_p
+_skeleton.dlalSystem.argtypes=[ctypes.c_void_p]
 _skeleton.dlalSerialize.restype=ctypes.c_void_p
 _skeleton.dlalSerialize.argtypes=[ctypes.c_void_p]
 _skeleton.dlalFree.argtypes=[ctypes.c_void_p]
@@ -151,6 +153,8 @@ class Component:
 		return report(_skeleton.dlalConnect(self.output(), output.component))
 
 	def output(self): return self.component
+
+	def system(self): return _skeleton.dlalSystem(self.component)
 
 class Pipe(Component):
 	def __init__(self, *args):

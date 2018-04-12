@@ -104,6 +104,11 @@ char* dlalDisconnect(void* input, void* output){
 	return toCStr(toComponent(input)->disconnect(*toComponent(output)));
 }
 
+void* dlalSystem(void* component){
+	using namespace dlal;
+	return toComponent(component)->_system;
+}
+
 char* dlalSerialize(void* system){
 	using namespace dlal;
 	return toCStr(((System*)system)->serialize());
