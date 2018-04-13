@@ -73,6 +73,10 @@ void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
 }
 
+void* dlalComponentWithName(void* system, const char* name){
+	return ((dlal::System*)system)->_nameToComponent.at(name);
+}
+
 char* dlalSetVariable(void* system, const char* name, const char* value){
 	if(std::string(name ).find('\n')!=std::string::npos)
 		return dlal::toCStr("error: name cannot contain newline");
@@ -120,14 +124,16 @@ void dlalTest(){
 	dlal::AtomicList<int>::test();
 }
 
+std::ostream& operator<<(std::ostream& ostream, const dlal::Component* component){
+	return ostream<<componentToStr(component);
+}
+
 namespace dlal{
 
 Component* toComponent(void* p){ return (Component*)p; }
 
 std::string componentToStr(const Component* component){
-	std::stringstream ss;
-	ss<<component;
-	return ss.str();
+	return component->_name;
 }
 
 char* toCStr(const std::string& s){
@@ -270,6 +276,7 @@ std::string System::add(Component& component, unsigned slot, bool queue){
 		_componentsToAdd[slot].push_back(&component);
 	}
 	else _components[slot].push_back(&component);
+	_nameToComponent[component._name]=&component;
 	_reportQueue.write("add "+componentToStr(&component)+" "+component.type());
 	return "";
 }

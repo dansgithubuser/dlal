@@ -1,4 +1,5 @@
 from .skeleton import *
+from .skeleton import _skeleton
 
 class Commander(Component):
 	@staticmethod
@@ -67,13 +68,16 @@ class Commander(Component):
 			f=self.library.dlalCommanderConnect
 		else:
 			f=self.library.dlalCommanderDisconnect
+		def componentify(arg, connectee):
+			if type(arg) in [str, unicode]:
+				return _skeleton.dlalComponentWithName(self.system(), arg)
+			return arg.output() if connectee else arg.component
 		for i in range(len(args)-1):
-			if type(args[i+0]) in [str, unicode]: connector=ctypes.c_void_p(int(args[i+0], 16))
-			else: connector=args[i+0].output()
-			if type(args[i+1]) in [str, unicode]: connectee=ctypes.c_void_p(int(args[i+1], 16))
-			else: connectee=args[i+1].component
 			result+=report(f(
-				self.component, connector, connectee, edges_to_wait
+				self.component,
+				componentify(args[i  ], True ),
+				componentify(args[i+1], False),
+				edges_to_wait
 			))
 			if len(result): result+='\n'
 		return result

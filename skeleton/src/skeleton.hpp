@@ -24,12 +24,16 @@
 #endif
 
 #define DLAL_BUILD_COMPONENT_DEFINITION(COMPONENT)\
-	void* dlalBuildComponent(){ return (dlal::Component*)new dlal::COMPONENT; }
+	void* dlalBuildComponent(const char* name){\
+		auto component=new dlal::COMPONENT;\
+		component->_name=name;\
+		return (dlal::Component*)component;\
+	}
 
 extern "C"{
 	//each component implements this
 	//return a new instance casted to dlal::Component*
-	DLAL void* dlalBuildComponent();
+	DLAL void* dlalBuildComponent(const char* name);
 
 	//implemented by skeleton
 	DLAL void dlalDemolishComponent(void* component);
@@ -37,6 +41,7 @@ extern "C"{
 	DLAL void dlalDyadShutdown();
 	DLAL void* dlalBuildSystem(int port);
 	DLAL void dlalDemolishSystem(void* system);
+	DLAL void* dlalComponentWithName(void* system, const char* name);
 	DLAL char* dlalSetVariable(void* system, const char* name, const char* value);
 	DLAL char* dlalCommand(void* component, const char* command);
 	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
@@ -81,6 +86,7 @@ class System{
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string serialize() const;
+		Component* componentWithName(const char* name);
 
 		dyad_Stream* dyadNewStream();
 		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
@@ -93,6 +99,7 @@ class System{
 		std::vector<std::pair<std::string, std::string>> _reportConnections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
+		std::map<std::string, Component*> _nameToComponent;
 		dyad_Stream* _server;
 
 	private:
@@ -129,6 +136,7 @@ class Component{
 		virtual bool hasAudio(){ return false; }
 
 		System* _system;
+		std::string _name;
 		std::string _label;
 	protected:
 		typedef std::function<std::string(std::stringstream&)> Command;

@@ -30,12 +30,28 @@ def connect(*args):
 		if len(result): result+='\n'
 	return result
 
+class Namer:
+	def __init__(self): self.number=0
+
+	def register_name(self, name):
+		try:
+			number=int(name[1:])
+			self.number=max(number, self.number)
+		except: pass
+
+	def name(self):
+		self.number+=1
+		return 'c{}'.format(self.number)
+
+_namer=Namer()
+
 _skeleton=obvious.load_lib('Skeleton')
 obvious.set_ffi_types(_skeleton.dlalDemolishComponent, None, ctypes.c_void_p)
 obvious.set_ffi_types(_skeleton.dlalDyadInit)
 obvious.set_ffi_types(_skeleton.dlalDyadShutdown)
 obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p, int)
 obvious.set_ffi_types(_skeleton.dlalDemolishSystem, None, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalComponentWithName, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalSetVariable, ctypes.c_void_p, ctypes.c_void_p, str, str)
 obvious.set_ffi_types(_skeleton.dlalCommand, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalAdd, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint)
@@ -72,7 +88,7 @@ class System:
 		for arg in args:
 			for c in arg.components_to_add:
 				result+=report(_skeleton.dlalAdd(self.system, c.component, slot))
-			if len(result): result+='\n';
+			if len(result): result+='\n'
 		return result
 
 	def set(self, name, value):
@@ -90,7 +106,7 @@ class System:
 		#components
 		components={}
 		for name, serialized in state['components'].items():
-			component=Component(state['component_types'][name])
+			component=Component(state['component_types'][name], name=name)
 			component.deserialize(serialized)
 			components[name]=component
 		for slot in state['component_order']:
@@ -124,9 +140,11 @@ class Component:
 		if component_type not in Component._libraries:
 			Component._libraries[component_type]=obvious.load_lib(component_type.capitalize())
 			Component._libraries[component_type].dlalBuildComponent.restype=ctypes.c_void_p
+			Component._libraries[component_type].dlalBuildComponent.argtypes=[ctypes.c_char_p]
 		self.library=Component._libraries[component_type]
+		name=kwargs.get('name', _namer.name())
 		self.component=kwargs.get('component',
-			Component._libraries[component_type].dlalBuildComponent()
+			Component._libraries[component_type].dlalBuildComponent(name)
 		)
 		self.components_to_add=[self]
 		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
