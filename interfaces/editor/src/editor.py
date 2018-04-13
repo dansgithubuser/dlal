@@ -15,18 +15,40 @@ import media
 import obvious
 
 cpp=obvious.load_lib('Editor')
-cpp.editor_dryad_read.restype=ctypes.c_char_p
-cpp.addable_at.restype=ctypes.c_void_p
-cpp.object_at.restype=ctypes.c_void_p
-cpp.object_move_by.argtypes=[ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
-cpp.selection_add.argtypes=[ctypes.c_void_p]
-cpp.selection_at_index.restype=ctypes.c_void_p
-cpp.selection_component.restype=ctypes.c_void_p
-cpp.component_type.restype=ctypes.c_char_p
-cpp.component_type.argtypes=[ctypes.c_void_p]
-cpp.component_name.restype=ctypes.c_char_p
-cpp.component_name.argtypes=[ctypes.c_void_p]
-cpp.connection_toggle.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
+#editor
+obvious.set_ffi_types(cpp.editor_init, None, str, int, str)
+obvious.set_ffi_types(cpp.editor_finish)
+obvious.set_ffi_types(cpp.editor_dryad_read, str)
+obvious.set_ffi_types(cpp.editor_dryad_times_disconnected, int)
+obvious.set_ffi_types(cpp.editor_set_text, None, str)
+obvious.set_ffi_types(cpp.editor_draw)
+obvious.set_ffi_types(cpp.editor_push, None, str)
+obvious.set_ffi_types(cpp.editor_save, None, str)
+#addable
+obvious.set_ffi_types(cpp.addables_width, ctypes.c_int)
+obvious.set_ffi_types(cpp.addable_at, ctypes.c_void_p, int, int)
+obvious.set_ffi_types(cpp.addables_scroll, None, int)
+#object
+obvious.set_ffi_types(cpp.object_at, ctypes.c_void_p, int, int)
+obvious.set_ffi_types(cpp.object_move_by, None, ctypes.c_void_p, int, int)
+#selection
+obvious.set_ffi_types(cpp.selection_add, None, ctypes.c_void_p)
+obvious.set_ffi_types(cpp.selection_clear)
+obvious.set_ffi_types(cpp.selection_size, int)
+obvious.set_ffi_types(cpp.selection_at_index, ctypes.c_void_p, int)
+obvious.set_ffi_types(cpp.selection_component, ctypes.c_void_p)
+#component
+obvious.set_ffi_types(cpp.component_new, None, str, str, int, int)
+obvious.set_ffi_types(cpp.component_label, None, str, str)
+obvious.set_ffi_types(cpp.component_phase, None, str, ctypes.c_float)
+obvious.set_ffi_types(cpp.component_type, str, ctypes.c_void_p)
+obvious.set_ffi_types(cpp.component_name, str, ctypes.c_void_p)
+#connection
+obvious.set_ffi_types(cpp.connection_new, None, str, str)
+obvious.set_ffi_types(cpp.connection_del, None, str, str)
+obvious.set_ffi_types(cpp.connection_command, None, str, str)
+obvious.set_ffi_types(cpp.connection_midi, None, str, str)
+obvious.set_ffi_types(cpp.connection_toggle, None, ctypes.c_void_p, ctypes.c_void_p)
 
 controls=Controls(cpp)
 

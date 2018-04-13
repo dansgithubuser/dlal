@@ -31,22 +31,20 @@ def connect(*args):
 	return result
 
 _skeleton=obvious.load_lib('Skeleton')
-_skeleton.dlalDemolishComponent.argtypes=[ctypes.c_void_p]
-_skeleton.dlalBuildSystem.restype=ctypes.c_void_p
-_skeleton.dlalDemolishSystem.argtypes=[ctypes.c_void_p]
-_skeleton.dlalSetVariable.restype=ctypes.c_void_p
-_skeleton.dlalSetVariable.argtypes=[ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-_skeleton.dlalCommand.restype=ctypes.c_void_p
-_skeleton.dlalCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p]
-_skeleton.dlalAdd.restype=ctypes.c_void_p
-_skeleton.dlalAdd.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
-_skeleton.dlalConnect.restype=ctypes.c_void_p
-_skeleton.dlalConnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p]
-_skeleton.dlalSystem.restype=ctypes.c_void_p
-_skeleton.dlalSystem.argtypes=[ctypes.c_void_p]
-_skeleton.dlalSerialize.restype=ctypes.c_void_p
-_skeleton.dlalSerialize.argtypes=[ctypes.c_void_p]
-_skeleton.dlalFree.argtypes=[ctypes.c_void_p]
+obvious.set_ffi_types(_skeleton.dlalDemolishComponent, None, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalDyadInit)
+obvious.set_ffi_types(_skeleton.dlalDyadShutdown)
+obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p, int)
+obvious.set_ffi_types(_skeleton.dlalDemolishSystem, None, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalSetVariable, ctypes.c_void_p, ctypes.c_void_p, str, str)
+obvious.set_ffi_types(_skeleton.dlalCommand, ctypes.c_void_p, ctypes.c_void_p, str)
+obvious.set_ffi_types(_skeleton.dlalAdd, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint)
+obvious.set_ffi_types(_skeleton.dlalConnect, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalDisconnect, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalSystem, ctypes.c_void_p, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalSerialize, ctypes.c_void_p, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalFree, None, ctypes.c_void_p)
+obvious.set_ffi_types(_skeleton.dlalTest)
 
 class System:
 	def __init__(self, port=None):
