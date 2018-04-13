@@ -21,7 +21,7 @@
 #include <stdexcept>
 #include <thread>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Vst; }
+DLAL_BUILD_COMPONENT_DEFINITION(Vst)
 
 namespace dlal{
 

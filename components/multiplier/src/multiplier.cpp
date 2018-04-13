@@ -1,6 +1,6 @@
 #include "multiplier.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Multiplier; }
+DLAL_BUILD_COMPONENT_DEFINITION(Multiplier)
 
 namespace dlal{
 

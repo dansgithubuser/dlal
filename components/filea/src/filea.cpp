@@ -2,7 +2,7 @@
 
 #include <SFML/Audio.hpp>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Filea; }
+DLAL_BUILD_COMPONENT_DEFINITION(Filea)
 
 namespace dlal{
 

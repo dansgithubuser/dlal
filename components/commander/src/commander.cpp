@@ -3,7 +3,7 @@
 #include <cmath>
 #include <iostream>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Commander; }
+DLAL_BUILD_COMPONENT_DEFINITION(Commander)
 
 static dlal::Commander* toCommander(void* p){
 	return (dlal::Commander*)((dlal::Component*)p)->derived();

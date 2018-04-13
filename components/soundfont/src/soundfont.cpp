@@ -1,6 +1,6 @@
 #include <soundfont.hpp>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Soundfont; }
+DLAL_BUILD_COMPONENT_DEFINITION(Soundfont)
 
 namespace dlal{
 

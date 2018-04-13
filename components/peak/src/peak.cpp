@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Peak; }
+DLAL_BUILD_COMPONENT_DEFINITION(Peak)
 
 namespace dlal{
 

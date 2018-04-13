@@ -6,7 +6,7 @@
 
 #include <obvious.hpp>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Network; }
+DLAL_BUILD_COMPONENT_DEFINITION(Network)
 
 static void onData(dyad_Event* e){
 	auto& self=*(dlal::Network*)e->udata;

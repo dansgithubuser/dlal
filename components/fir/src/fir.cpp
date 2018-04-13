@@ -10,7 +10,7 @@ typedef std::complex<real_type> complex_type;
 #define __USE_SQUARE_BRACKETS_FOR_ELEMENT_ACCESS_OPERATOR
 #include <simple_fft/fft.h>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Fir; }
+DLAL_BUILD_COMPONENT_DEFINITION(Fir)
 
 namespace dlal{
 

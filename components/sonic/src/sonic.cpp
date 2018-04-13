@@ -5,7 +5,7 @@
 
 #include <obvious.hpp>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Sonic; }
+DLAL_BUILD_COMPONENT_DEFINITION(Sonic)
 
 static float wave(float phase){
 	return sin(phase*2*3.14159f);

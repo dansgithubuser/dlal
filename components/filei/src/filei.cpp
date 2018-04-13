@@ -1,6 +1,6 @@
 #include "filei.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Filei; }
+DLAL_BUILD_COMPONENT_DEFINITION(Filei)
 
 namespace dlal{
 

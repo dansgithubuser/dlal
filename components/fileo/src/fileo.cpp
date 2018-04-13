@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Fileo; }
+DLAL_BUILD_COMPONENT_DEFINITION(Fileo)
 
 namespace dlal{
 

@@ -1,6 +1,6 @@
 #include "converter.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Converter; }
+DLAL_BUILD_COMPONENT_DEFINITION(Converter)
 
 namespace dlal{
 

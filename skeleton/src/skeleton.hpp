@@ -23,6 +23,9 @@
 	#define DLAL
 #endif
 
+#define DLAL_BUILD_COMPONENT_DEFINITION(COMPONENT)\
+	void* dlalBuildComponent(){ return (dlal::Component*)new dlal::COMPONENT; }
+
 extern "C"{
 	//each component implements this
 	//return a new instance casted to dlal::Component*

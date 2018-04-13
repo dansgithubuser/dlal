@@ -1,6 +1,6 @@
 #include "lpf.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Lpf; }
+DLAL_BUILD_COMPONENT_DEFINITION(Lpf)
 
 namespace dlal{
 

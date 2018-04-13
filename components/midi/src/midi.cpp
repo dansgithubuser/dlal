@@ -1,6 +1,6 @@
 #include "midi.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Midi; }
+DLAL_BUILD_COMPONENT_DEFINITION(Midi)
 
 static void rtMidiCallback(
 	double delta, std::vector<unsigned char>* message, void* userData

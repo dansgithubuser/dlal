@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Audio; }
+DLAL_BUILD_COMPONENT_DEFINITION(Audio)
 
 static int rtAudioCallback(
 	void* output,

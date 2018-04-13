@@ -1,6 +1,6 @@
 #include "liner.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Liner; }
+DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
 namespace dlal{
 

@@ -8,7 +8,7 @@
 
 #include <obvious.hpp>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Buffer; }
+DLAL_BUILD_COMPONENT_DEFINITION(Buffer)
 
 namespace dlal{
 

@@ -1,6 +1,6 @@
 #include "arpeggiator.hpp"
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Arpeggiator; }
+DLAL_BUILD_COMPONENT_DEFINITION(Arpeggiator)
 
 namespace dlal{
 

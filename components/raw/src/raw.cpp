@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-void* dlalBuildComponent(){ return (dlal::Component*)new dlal::Raw; }
+DLAL_BUILD_COMPONENT_DEFINITION(Raw)
 
 namespace dlal{
 
