@@ -109,6 +109,13 @@ extern "C" {
 		;
 	}
 
+	void editor_load(const char* fileName){
+		std::map<std::string, CartesianPair<int>> vPairs, cPairs;
+		std::ifstream(fileName)>>vPairs>>cPairs;
+		for(auto& i: vPairs) fVariables [i.first].moveTo(i.second.x, i.second.y);
+		for(auto& i: cPairs) fComponents[i.first].moveTo(i.second.x, i.second.y);
+	}
+
 	int addables_width(){ return ADDABLES_WIDTH; }
 
 	void* addable_at(int x, int y){
@@ -159,7 +166,8 @@ extern "C" {
 	}
 
 	void component_new(const char* name, const char* type, int x, int y){
-		fComponents[name].set(name, type, x, y);
+		if(fComponents.count(name)) fComponents.at(name)._type=type;//component was previously loaded
+		else fComponents[name].set(name, type, x, y);
 	}
 
 	void component_label(const char* name, const char* label){
