@@ -100,12 +100,13 @@ extern "C" {
 		fTies.at(name)->writeSizedString(ss.str());
 	}
 
-	void editor_save(const char* file_name){
-		std::ofstream file(file_name);
-		file<<fVariables.size()<<"\n";
-		for(auto& i: fVariables) file<<i.second._x<<" "<<i.second._y<<"\n";
-		file<<fComponents.size()<<"\n";
-		for(auto& i: fComponents) file<<i.second._x<<" "<<i.second._y<<"\n";
+	void editor_save(const char* fileName){
+		typedef CartesianPair<int> Pair;
+		typedef std::map<std::string, Pair> Map;
+		std::ofstream(fileName)
+			<<OBV_FOR(fVariables , r[i->first]=Pair(i->second._x, i->second._y), Map())
+			<<OBV_FOR(fComponents, r[i->first]=Pair(i->second._x, i->second._y), Map())
+		;
 	}
 
 	int addables_width(){ return ADDABLES_WIDTH; }

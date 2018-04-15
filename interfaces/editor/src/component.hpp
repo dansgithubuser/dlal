@@ -9,8 +9,6 @@
 #include <map>
 #include <string>
 
-#include <obvious.hpp>
-
 struct Component: public Object {
 	Component(){}
 
@@ -26,10 +24,10 @@ struct Component: public Object {
 		auto color=sf::Color(0, bright?255:64, selected?255:0);
 		for(size_t i=0; i<pattern.size()-1; ++i){
 			if(pattern[i+1]=='-'){ ++i; continue; }
-			int xi=(std::stoi(obvstr(pattern[i+0]))-1)%3;
-			int yi=(std::stoi(obvstr(pattern[i+0]))-1)/3;
-			int xf=(std::stoi(obvstr(pattern[i+1]))-1)%3;
-			int yf=(std::stoi(obvstr(pattern[i+1]))-1)/3;
+			int xi=(std::stoi(pattern.substr(i+0, 1))-1)%3;
+			int yi=(std::stoi(pattern.substr(i+0, 1))-1)/3;
+			int xf=(std::stoi(pattern.substr(i+1, 1))-1)%3;
+			int yf=(std::stoi(pattern.substr(i+1, 1))-1)/3;
 			va.append(sf::Vertex(sf::Vector2f(mouseX()+SZ*xi, mouseY()+SZ*yi), color));
 			va.append(sf::Vertex(sf::Vector2f(mouseX()+SZ*xf, mouseY()+SZ*yf), color));
 		}

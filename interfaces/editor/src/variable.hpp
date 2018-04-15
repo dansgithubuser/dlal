@@ -26,7 +26,7 @@ struct Variable: public Object {
 			this->mouseY()<mouseY&&mouseY<this->mouseY()+SZ;
 	}
 
-	std::string text() const { return obvstr(_name, ": ", _value); }
+	std::string text() const { return _name+": "+_value; }
 
 	std::string _name, _value;
 };
