@@ -8,7 +8,6 @@ class Commander(Component):
 
 	def __init__(self, **kwargs):
 		Component.__init__(self, 'commander', **kwargs)
-		self.callback_type=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 		self.library.dlalCommanderCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderCommand.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint]
 		self.library.dlalCommanderAdd.restype=ctypes.c_void_p
@@ -18,7 +17,7 @@ class Commander(Component):
 		self.library.dlalCommanderDisconnect.restype=ctypes.c_void_p
 		self.library.dlalCommanderDisconnect.argtypes=[ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint]
 		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_void_p
-		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, self.callback_type]
+		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, TextCallback]
 		self.commands=[]#to prevent python from garbage-collecting callbacks sent c-side
 		self.novel_components=[]
 		def queue_add(text):
@@ -83,7 +82,7 @@ class Commander(Component):
 		return result
 
 	def register_command(self, name, command):
-		command=self.callback_type(command)
+		command=TextCallback(command)
 		self.commands.append(command)
 		return report(
 			self.library.dlalCommanderRegisterCommand(

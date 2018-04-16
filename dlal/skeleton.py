@@ -62,6 +62,8 @@ obvious.set_ffi_types(_skeleton.dlalSerialize, ctypes.c_void_p, ctypes.c_void_p)
 obvious.set_ffi_types(_skeleton.dlalFree, None, ctypes.c_void_p)
 obvious.set_ffi_types(_skeleton.dlalTest)
 
+TextCallback=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+
 class System:
 	def __init__(self, port=None):
 		global _systems

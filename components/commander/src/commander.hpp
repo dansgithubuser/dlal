@@ -6,10 +6,6 @@
 #include <atomic>
 #include <vector>
 
-namespace dlal{
-	typedef void (*TextCallback)(char*);
-}
-
 extern "C"{
 	DLAL char* dlalCommanderCommand(
 		void* commander, void* component, const char* command, unsigned edgesToWait

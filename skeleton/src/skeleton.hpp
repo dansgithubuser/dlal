@@ -30,6 +30,10 @@
 		return (dlal::Component*)component;\
 	}
 
+namespace dlal{
+	typedef void (*TextCallback)(char*);
+}
+
 extern "C"{
 	//each component implements this
 	//return a new instance casted to dlal::Component*
