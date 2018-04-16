@@ -65,7 +65,6 @@ todo
 ----
 - audio select input and output
 
-- saving audiobro results in different system state
 - upgrade system viewer to editor, build like midi editor
 	- save/load
 	- remove components
@@ -89,6 +88,7 @@ todo
 
 - save and load system
 	- midi controllee, all components
+- investigate audio clicking (buffer underflow, right?)
 - midi editor
 	- quantization
 	- niceties
@@ -99,6 +99,7 @@ todo
 		- other events
 		- zoom
 		- horizontal scale shouldn't change when ticks per quarter does
+
 - vocoder
 - pitch shift component
 - auto dj

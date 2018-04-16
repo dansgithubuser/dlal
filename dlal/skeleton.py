@@ -109,8 +109,8 @@ class System:
 			component=Component(state['component_types'][name], name=name)
 			component.deserialize(serialized)
 			components[name]=component
-		for slot in state['component_order']:
-			for index, component in enumerate(slot):
+		for index, slot in enumerate(state['component_order']):
+			for component in slot:
 				self.add(components[component], slot=index)
 		#connections
 		for input, output in state['connections']: components[input].connect(components[output])
