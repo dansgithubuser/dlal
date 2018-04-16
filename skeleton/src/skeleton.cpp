@@ -159,6 +159,24 @@ void safeAdd(
 			for(unsigned j=0; j<size; ++j) i->audio()[j]+=audio[j];
 }
 
+bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss){
+	uint8_t sizeBytes[4];
+	if(!data.read(sizeBytes, 4, false)) return false;
+	uint32_t size=
+		(sizeBytes[0]<<0x00)|
+		(sizeBytes[1]<<0x08)|
+		(sizeBytes[2]<<0x10)|
+		(sizeBytes[3]<<0x18)
+	;
+	if(!data.read(nullptr, size, false)) return false;
+	data.read(nullptr, 4, true);
+	std::vector<uint8_t> payload;
+	payload.resize(size);
+	data.read(payload.data(), size, true);
+	for(unsigned i=0; i<size; ++i) ss<<(char)payload[i];
+	return true;
+}
+
 //=====System=====//
 static void onDestroyed(dyad_Event* e){
 	System* system=(System*)e->udata;

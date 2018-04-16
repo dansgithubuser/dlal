@@ -75,6 +75,8 @@ void add(const float* audio, unsigned size, std::vector<Component*>&);
 //add audio to components that have audio
 void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
 
+//convert data to a stringstream
+bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss);
 
 class System{
 	public:

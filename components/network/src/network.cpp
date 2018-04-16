@@ -10,25 +10,9 @@ DLAL_BUILD_COMPONENT_DEFINITION(Network)
 
 static void onData(dyad_Event* e){
 	auto& self=*(dlal::Network*)e->udata;
-	for(int i=0; i<e->size; ++i) self._data.write(e->data[i]);
-	while(true){
-		uint8_t sizeBytes[4];
-		if(!self._data.read(sizeBytes, 4, false)) return;
-		uint32_t size=
-			(sizeBytes[0]<<0x00)|
-			(sizeBytes[1]<<0x08)|
-			(sizeBytes[2]<<0x10)|
-			(sizeBytes[3]<<0x18)
-		;
-		if(!self._data.read(nullptr, size, false)) return;
-		self._data.read(nullptr, 4, true);
-		static std::vector<uint8_t> payload;
-		payload.resize(size);
-		self._data.read(payload.data(), size, true);
-		std::stringstream ss;
-		for(unsigned i=0; i<size; ++i) ss<<(char)payload[i];
-		self.queue(dlal::Page(ss));
-	}
+	self._data.write((uint8_t*)e->data, e->size);
+	std::stringstream ss;
+	while(dlal::dataToStringstream(self._data, ss)) self.queue(dlal::Page(ss));
 }
 
 static void onDestroyed(dyad_Event* e){
