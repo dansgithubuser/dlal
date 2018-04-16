@@ -1,8 +1,9 @@
 #ifndef DLAL_QUEUE_INCLUDED
 #define DLAL_QUEUE_INCLUDED
 
-#include <vector>
+#include <algorithm>
 #include <atomic>
+#include <vector>
 
 namespace dlal{
 
@@ -19,14 +20,30 @@ template <typename T> class Queue{
 
 		bool lockless(){ return _r.is_lock_free(); }
 
-		bool read(T& t, bool next){ return read(&t, 1, next); }
+		bool read(T& t, bool next){
+			unsigned r=_r.load(std::memory_order_relaxed);
+			unsigned w=_w.load(std::memory_order_consume);
+			if(r==w) return false;
+			t=_v[r];
+			if(next) _r.store((r+1)&_mask, std::memory_order_release);
+			return true;
+		}
 
 		bool read(T* t, unsigned size, bool next){
 			unsigned r=_r.load(std::memory_order_relaxed);
 			unsigned w=_w.load(std::memory_order_consume);
 			unsigned x=w>=r?w:w+_v.size();
 			if(x<r+size) return false;
-			if(t) for(unsigned i=0; i<size; ++i) t[i]=_v[(r+i)&_mask];
+			if(t){
+				auto z=_v.size()-r;
+				if(size<z){
+					std::copy(_v.data()+r, _v.data()+r+size, t);
+				}
+				else{
+					std::copy(_v.data()+r, _v.data()+_v.size(), t  );
+					std::copy(_v.data()  , _v.data()+size-z   , t+z);
+				}
+			}
 			if(next) _r.store((r+size)&_mask, std::memory_order_release);
 			return true;
 		}
@@ -37,6 +54,27 @@ template <typename T> class Queue{
 			if((w+1&_mask)==r) return false;
 			_v[w]=t;
 			_w.store(w+1&_mask, std::memory_order_release);
+			return true;
+		}
+
+		bool write(const T* t, unsigned size){
+			unsigned w=_w.load(std::memory_order_relaxed);
+			unsigned r=_r.load(std::memory_order_consume);
+			if(r<=w){
+				if(size>=_v.size()-(w-r)) return false;
+			}
+			else{
+				if(w+size>=r) return false;
+			}
+			if(w+size>_v.size()){
+				auto z=_v.size()-w;
+				std::copy(t  , t+z   , _v.data()+w);
+				std::copy(t+z, t+size, _v.data()  );
+			}
+			else{
+				std::copy(t, t+size, _v.data()+w);
+			}
+			_w.store(w+size&_mask, std::memory_order_release);
 			return true;
 		}
 
