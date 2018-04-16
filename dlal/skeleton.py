@@ -75,7 +75,10 @@ class System:
 			else:
 				port=0
 		_systems+=1
-		self.system=_skeleton.dlalBuildSystem(port)
+		def handler(command):
+			print('python side handling system command {}'.format(command))
+		self.handler=TextCallback(handler)
+		self.system=_skeleton.dlalBuildSystem(port, self.handler)
 		assert(self.system)
 
 	def __del__(self):

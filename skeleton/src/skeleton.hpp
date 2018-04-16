@@ -31,7 +31,7 @@
 	}
 
 namespace dlal{
-	typedef void (*TextCallback)(char*);
+	typedef void (*TextCallback)(const char*);
 }
 
 extern "C"{
@@ -43,7 +43,7 @@ extern "C"{
 	DLAL void dlalDemolishComponent(void* component);
 	DLAL void dlalDyadInit();
 	DLAL void dlalDyadShutdown();
-	DLAL void* dlalBuildSystem(int port);
+	DLAL void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler);
 	DLAL void dlalDemolishSystem(void* system);
 	DLAL void* dlalComponentWithName(void* system, const char* name);
 	DLAL char* dlalSetVariable(void* system, const char* name, const char* value);
@@ -84,7 +84,7 @@ bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss);
 
 class System{
 	public:
-		System(int port=9088);
+		System(int port=9088, TextCallback pythonCallback=nullptr);
 		~System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
@@ -108,6 +108,7 @@ class System{
 		std::map<std::string, Component*> _nameToComponent;
 		dyad_Stream* _server;
 		Queue<uint8_t> _data;
+		TextCallback _pythonHandler;
 
 	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;

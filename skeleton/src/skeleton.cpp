@@ -61,8 +61,8 @@ void dlalDyadShutdown(){
 	dyadMutex.unlock();
 }
 
-void* dlalBuildSystem(int port){
-	try{ return new dlal::System(port); }
+void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler){
+	try{ return new dlal::System(port, pythonHandler); }
 	catch(const std::exception& e){
 		std::cerr<<e.what()<<"\n";
 		return NULL;
@@ -193,13 +193,8 @@ static void onData(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->_data.write((uint8_t*)e->data, e->size);
 	std::stringstream ss;
-	while(dataToStringstream(system->_data, ss)){
-		std::string command;
-		ss>>command;
-		auto commands=std::map<std::string, std::function<void(std::stringstream&)>>{
-		};
-		if(commands.count(command)) commands.at(command)(ss);
-	}
+	while(dataToStringstream(system->_data, ss))
+		system->_pythonHandler(ss.str().c_str());
 }
 
 static void onAccept(dyad_Event* e){
@@ -259,9 +254,10 @@ static void onTick(dyad_Event* e){
 			dyadWrite(i, (uint8_t*)ss.str().data(), ss.str().size());
 }
 
-System::System(int port):
+System::System(int port, TextCallback pythonHandler):
 	_reportQueue(8),
 	_data(10),
+	_pythonHandler(pythonHandler),
 	_dyadDone(dyadDone),
 	_dyadMutex(dyadMutex)
 {
