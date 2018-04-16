@@ -103,6 +103,7 @@ class System{
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
 		dyad_Stream* _server;
+		Queue<uint8_t> _data;
 
 	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;

@@ -189,11 +189,25 @@ static void onError(dyad_Event* e){
 	std::cerr<<"error: dyad error: "<<e->msg<<std::endl;
 }
 
+static void onData(dyad_Event* e){
+	System* system=(System*)e->udata;
+	system->_data.write((uint8_t*)e->data, e->size);
+	std::stringstream ss;
+	while(dataToStringstream(system->_data, ss)){
+		std::string command;
+		ss>>command;
+		auto commands=std::map<std::string, std::function<void(std::stringstream&)>>{
+		};
+		if(commands.count(command)) commands.at(command)(ss);
+	}
+}
+
 static void onAccept(dyad_Event* e){
 	System* system=(System*)e->udata;
 	system->_clients.push_back(e->remote);
 	dyad_addListener(e->remote, DYAD_EVENT_DESTROY, onDestroyed, system);
 	dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, system);
+	dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, system);
 	std::stringstream ss;
 	for(auto i: system->_components) for(auto j: i){
 		ss<<"add "<<componentToStr(j)<<" "<<j->type()<<" ";
@@ -247,6 +261,7 @@ static void onTick(dyad_Event* e){
 
 System::System(int port):
 	_reportQueue(8),
+	_data(10),
 	_dyadDone(dyadDone),
 	_dyadMutex(dyadMutex)
 {
