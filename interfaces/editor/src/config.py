@@ -156,6 +156,8 @@ class Controls(AbstractControls):
 		self.cpp.editor_save(file_name+'.editor')
 	def command_edit(self, file_name):
 		self.cpp.editor_load(file_name+'.editor')
+	def command_name(self):
+		self.cpp.editor_name()
 
 	#callback
 	def on_input(self):

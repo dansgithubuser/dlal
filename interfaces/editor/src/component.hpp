@@ -39,9 +39,10 @@ struct Component: public Object {
 			mouseX()+2*SZ+2, mouseY(),
 			SZ, _label.c_str(), 0, 128, 0, 255
 		);
-		if(type) dans_sfml_wrapper_text_draw(
+		if(type) _message=_type;
+		dans_sfml_wrapper_text_draw(
 			mouseX()+2*SZ+2, mouseY()+SZ,
-			SZ, _type.c_str(), 0, 128, 0, 255
+			SZ, _message.c_str(), 0, 128, 0, 255
 		);
 		dialpad("79317", va, selected);
 		std::map<std::string, std::string> sketches={
@@ -81,11 +82,16 @@ struct Component: public Object {
 			this->mouseY()<mouseY&&mouseY<this->mouseY()+2*SZ;
 	}
 
+	void name(){
+		_message=_name;
+	}
+
 	std::string _name;
 	std::string _type;
 	std::map<std::string, Connection> _connections;
 	float _phase=0.0f;
 	std::string _label;
+	std::string _message;
 };
 
 #endif

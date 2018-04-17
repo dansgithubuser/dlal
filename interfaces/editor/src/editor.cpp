@@ -116,6 +116,14 @@ extern "C" {
 		for(auto& i: cPairs) fComponents[i.first].moveTo(i.second.x, i.second.y);
 	}
 
+	void editor_name(){
+		for(auto& i: fSelected){
+			auto component=dynamic_cast<Component*>(i);
+			if(!component) continue;
+			component->name();
+		}
+	}
+
 	int addables_width(){ return ADDABLES_WIDTH; }
 
 	void* addable_at(int x, int y){
