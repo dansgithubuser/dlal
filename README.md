@@ -67,9 +67,11 @@ todo
 
 - upgrade system viewer to editor, build like midi editor
 	- save/load
+		- save/load editor upon load of system
 	- remove components
 	- UI remove components
 	- scroll
+	- load system, bootstrap system (system commands)
 - audiobro
 	- reverb
 	- piano
