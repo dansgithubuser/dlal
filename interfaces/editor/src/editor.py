@@ -145,6 +145,10 @@ while not controls.done:
 			elif operation=='edge':
 				name=parser.get()
 				cpp.component_phase(name, ctypes.c_float(0))
+			elif operation=='save':
+				pass
+			elif operation=='load':
+				pass
 			else: raise Exception('unknown operation "{}"'.format(operation))
 	cpp.editor_draw()
 	time.sleep(0.01)

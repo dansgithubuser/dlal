@@ -68,8 +68,6 @@ todo
 - upgrade system viewer to editor, build like midi editor
 	- save/load
 		- save/load editor upon load of system
-			- report save on System::serialize
-			- report load on System.deserialize
 			- editor save on save report
 			- editor load on load report
 	- remove components

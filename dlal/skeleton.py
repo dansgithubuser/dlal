@@ -129,9 +129,13 @@ class System:
 		root.update(extra)
 		serialized=json.dumps(root, indent=2, sort_keys=True)
 		with open(file_name, 'w') as file: file.write(serialized)
+		self._report('save '+os.path.abspath(file_name))
 
 	def load(self, file_name='system.state.txt'):
+		self._report('load '+os.path.abspath(file_name))
 		with open(file_name) as file: return self.deserialize(file.read())
+
+	def _report(self, report): _skeleton.dlalReport(self.system, report)
 
 class Component:
 	_libraries={}
