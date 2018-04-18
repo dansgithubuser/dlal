@@ -112,8 +112,10 @@ extern "C" {
 	void editor_load(const char* fileName){
 		std::map<std::string, CartesianPair<int>> vPairs, cPairs;
 		std::ifstream(fileName)>>vPairs>>cPairs;
-		for(auto& i: vPairs) fVariables [i.first].moveTo(i.second.x, i.second.y);
-		for(auto& i: cPairs) fComponents[i.first].moveTo(i.second.x, i.second.y);
+		for(auto& i: vPairs)
+			fVariables [i.first].name(i.first).moveTo(i.second.x, i.second.y);
+		for(auto& i: cPairs)
+			fComponents[i.first].name(i.first).moveTo(i.second.x, i.second.y);
 	}
 
 	void editor_name(){
@@ -166,11 +168,10 @@ extern "C" {
 
 	void variable_set(const char* name, const char* value){
 		if(fVariables.count(name)) fVariables.at(name)._value=value;
-		else{
-			Variable v(name, value);
-			v.moveTo(400, SZ*fVariables.size());
-			fVariables[name]=v;
-		}
+		else fVariables[name]
+			.name(name)
+			.value(value)
+			.moveTo(400, SZ*fVariables.size());
 	}
 
 	void component_new(const char* name, const char* type, int x, int y){

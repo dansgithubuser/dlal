@@ -10,7 +10,7 @@
 #include <string>
 
 struct Component: public Object {
-	Component(){}
+	Component& name(std::string s){ _name=s; return *this; }
 
 	Component& set(std::string name, std::string type, int x, int y, int* dx=nullptr, int* dy=nullptr){
 		_name=name;

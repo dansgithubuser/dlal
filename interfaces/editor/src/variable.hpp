@@ -11,9 +11,8 @@
 #include <obvious.hpp>
 
 struct Variable: public Object {
-	Variable(){}
-	Variable(std::string name, std::string value):
-		_name(name), _value(value) {}
+	Variable& name(std::string s){ _name=s; return *this; }
+	Variable& value(std::string s){ _value=s; return *this; }
 
 	void draw(bool selected) const {
 		dans_sfml_wrapper_text_draw(mouseX(), mouseY(), SZ, text().c_str(), 0, 255, selected?255:0, 255);
