@@ -31,4 +31,8 @@ struct Variable: public Object {
 	std::string _name, _value;
 };
 
+std::ostream& operator<<(std::ostream& o, const Variable& v){
+	return o<<v.text();
+}
+
 #endif
