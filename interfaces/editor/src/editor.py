@@ -73,6 +73,9 @@ class Parser:
 			self.i+=1
 		return result
 
+	def get_n(self, n, delimiter=' '):
+		return [self.get(delimiter) for i in range(n)]
+
 	def done(self):
 		self.skip()
 		return self.i==len(self.s)
@@ -108,40 +111,32 @@ while not controls.done:
 		while not parser.done():
 			operation=parser.get()
 			if operation=='add':
-				name=parser.get()
-				type=parser.get()
+				name, type=parser.get_n(2)
 				components[name]=Component(name, type)
 			elif operation=='remove':
 				name=parser.get()
 				del components[name]
 			elif operation=='label':
-				name=parser.get()
-				label=parser.get()
+				name, label=parser.get_n(2)
 				cpp.component_label(name, label)
 			elif operation=='connect':
-				src=parser.get()
-				dst=parser.get()
+				src, dst=parser.get_n(2)
 				cpp.connection_new(src, dst)
 			elif operation=='disconnect':
-				src=parser.get()
-				dst=parser.get()
+				src, dst=parser.get_n(2)
 				cpp.connection_del(src, dst)
 			elif operation=='variable':
-				name=parser.get('\n')
-				value=parser.get('\n')
+				name, value=parser.get_n(2, '\n')
 				cpp.variable_set(name, value)
 			elif operation=='command':
-				src=parser.get()
-				dst=parser.get()
+				src, dst=parser.get_n(2)
 				cpp.connection_command(src, dst)
 			elif operation=='midi':
-				src=parser.get()
-				dst=parser.get()
+				src, dst=parser.get_n(2)
 				cpp.connection_midi(src, dst)
 			elif operation=='phase':
-				name=parser.get()
-				phase=ctypes.c_float(float(parser.get()))
-				cpp.component_phase(name, phase)
+				name, phase=parser.get_n(2)
+				cpp.component_phase(name, ctypes.c_float(float(phase)))
 			elif operation=='edge':
 				name=parser.get()
 				cpp.component_phase(name, ctypes.c_float(0))
