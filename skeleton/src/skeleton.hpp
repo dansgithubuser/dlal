@@ -24,42 +24,19 @@
 #endif
 
 #define DLAL_BUILD_COMPONENT_DEFINITION(COMPONENT)\
-	void* dlalBuildComponent(const char* name){\
-		auto component=new dlal::COMPONENT;\
-		component->_name=name;\
-		return (dlal::Component*)component;\
+	extern "C" {\
+		void* dlalBuildComponent(const char* name){\
+			auto component=new dlal::COMPONENT;\
+			component->_name=name;\
+			return (dlal::Component*)component;\
+		}\
 	}
-
-namespace dlal{
-	typedef void (*TextCallback)(const char*);
-}
-
-extern "C"{
-	//each component implements this
-	//return a new instance casted to dlal::Component*
-	DLAL void* dlalBuildComponent(const char* name);
-
-	//implemented by skeleton
-	DLAL void dlalDemolishComponent(void* component);
-	DLAL void dlalDyadInit();
-	DLAL void dlalDyadShutdown();
-	DLAL void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler);
-	DLAL void dlalDemolishSystem(void* system);
-	DLAL void* dlalComponentWithName(void* system, const char* name);
-	DLAL char* dlalSetVariable(void* system, const char* name, const char* value);
-	DLAL char* dlalCommand(void* component, const char* command);
-	DLAL char* dlalAdd(void* system, void* component, unsigned slot);
-	DLAL char* dlalConnect(void* input, void* output);
-	DLAL char* dlalDisconnect(void* input, void* output);
-	DLAL void* dlalSystem(void* component);
-	DLAL char* dlalSerialize(void* system);
-	DLAL void dlalFree(void* p);
-	DLAL void dlalTest();
-}
 
 namespace dlal{
 
 class Component;
+
+typedef void (*TextCallback)(const char*);
 
 //cast to Component
 Component* toComponent(void*);

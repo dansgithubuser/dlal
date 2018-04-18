@@ -12,10 +12,6 @@
 #include <stdexcept>
 #include <thread>
 
-void dlalDemolishComponent(void* component){
-	delete dlal::toComponent(component);
-}
-
 static void atPanic(const char* message){
 	std::cerr<<message<<"\n";
 	throw std::runtime_error(message);
@@ -34,6 +30,12 @@ static void dyadWrite(dyad_Stream* stream, const uint8_t* data, uint32_t size){
 static std::atomic<bool> dyadDone;
 static std::thread dyadThread;
 static std::recursive_mutex dyadMutex;
+
+extern "C" {
+
+void dlalDemolishComponent(void* component){
+	delete dlal::toComponent(component);
+}
 
 void dlalDyadInit(){
 	dyadMutex.lock();
@@ -116,6 +118,8 @@ void dlalFree(void* p){ free(p); }
 void dlalTest(){
 	dlal::AtomicList<int>::test();
 }
+
+}//extern "C"
 
 std::ostream& operator<<(std::ostream& ostream, const dlal::Component* component){
 	return ostream<<componentToStr(component);
