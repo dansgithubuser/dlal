@@ -76,6 +76,7 @@ class System{
 		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
 		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
 		std::string dyadPauseAnd(std::function<std::string()>);
+		void dyadWrite(std::string);
 
 		std::vector<dyad_Stream*> _clients;
 		std::vector<dyad_Stream*> _streams;

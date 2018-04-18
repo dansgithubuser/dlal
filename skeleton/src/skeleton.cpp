@@ -246,9 +246,7 @@ static void onTick(dyad_Event* e){
 				}
 		}
 	}
-	if(ss.str().size())
-		for(auto i: system->_clients)
-			dyadWrite(i, (uint8_t*)ss.str().data(), ss.str().size());
+	if(ss.str().size()) system->dyadWrite(ss.str());
 }
 
 System::System(int port, TextCallback pythonHandler):
@@ -412,6 +410,13 @@ std::string System::dyadPauseAnd(std::function<std::string()> f){
 	if(!_dyadDone) r=f();
 	_dyadMutex.unlock();
 	return r;
+}
+
+void System::dyadWrite(std::string s){
+	dyadMutex.lock();
+	for(auto i: _clients)
+		::dyadWrite(i, (uint8_t*)s.data(), s.size());
+	dyadMutex.unlock();
 }
 
 //=====Component=====//
