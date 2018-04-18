@@ -110,40 +110,40 @@ while not controls.done:
 		parser=Parser(s)
 		while not parser.done():
 			operation=parser.get()
-			if operation=='add':
+			def add():
 				name, type=parser.get_n(2)
 				components[name]=Component(name, type)
-			elif operation=='remove':
+			def remove():
 				name=parser.get()
 				del components[name]
-			elif operation=='label':
+			def label():
 				name, label=parser.get_n(2)
 				cpp.component_label(name, label)
-			elif operation=='connect':
+			def connect():
 				src, dst=parser.get_n(2)
 				cpp.connection_new(src, dst)
-			elif operation=='disconnect':
+			def disconnect():
 				src, dst=parser.get_n(2)
 				cpp.connection_del(src, dst)
-			elif operation=='variable':
+			def variable():
 				name, value=parser.get_n(2, '\n')
 				cpp.variable_set(name, value)
-			elif operation=='command':
+			def command():
 				src, dst=parser.get_n(2)
 				cpp.connection_command(src, dst)
-			elif operation=='midi':
+			def midi():
 				src, dst=parser.get_n(2)
 				cpp.connection_midi(src, dst)
-			elif operation=='phase':
+			def phase():
 				name, phase=parser.get_n(2)
 				cpp.component_phase(name, ctypes.c_float(float(phase)))
-			elif operation=='edge':
+			def edge():
 				name=parser.get()
 				cpp.component_phase(name, ctypes.c_float(0))
-			elif operation=='save':
+			def save():
 				pass
-			elif operation=='load':
+			def load():
 				pass
-			else: raise Exception('unknown operation "{}"'.format(operation))
+			eval(operation)()
 	cpp.editor_draw()
 	time.sleep(0.01)
