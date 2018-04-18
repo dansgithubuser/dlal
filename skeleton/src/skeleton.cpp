@@ -78,14 +78,7 @@ void* dlalComponentWithName(void* system, const char* name){
 }
 
 char* dlalSetVariable(void* system, const char* name, const char* value){
-	if(std::string(name ).find('\n')!=std::string::npos)
-		return dlal::toCStr("error: name cannot contain newline");
-	if(std::string(value).find('\n')!=std::string::npos)
-		return dlal::toCStr("error: value cannot contain newline");
-	dlal::System* s=(dlal::System*)system;
-	s->_variables[name]=value;
-	s->_reportQueue.write((std::string)"variable "+name+"\n"+value+"\n");
-	return dlal::toCStr("");
+	return dlal::toCStr(((dlal::System*)system)->setVariable(name, value));
 }
 
 char* dlalCommand(void* component, const char* command){
@@ -359,6 +352,16 @@ std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
 		return "error: system already has samplesPerEvaluation";
 	_variables["sampleRate"]=std::to_string(sampleRate);
 	_variables["samplesPerEvaluation"]=std::to_string(1<<log2SamplesPerCallback);
+	return "";
+}
+
+std::string System::setVariable(std::string name, std::string value){
+	if(std::string(name ).find('\n')!=std::string::npos)
+		return "error: name cannot contain newline";
+	if(std::string(value).find('\n')!=std::string::npos)
+		return "error: value cannot contain newline";
+	_variables[name]=value;
+	_reportQueue.write("variable "+name+"\n"+value+"\n");
 	return "";
 }
 

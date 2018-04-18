@@ -91,6 +91,7 @@ class System{
 		std::string check();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
+		std::string setVariable(std::string name, std::string value);
 		std::string serialize() const;
 		Component* componentWithName(const char* name);
 
