@@ -128,6 +128,7 @@ while not controls.done:
 			def variable():
 				name, value=parser.get_n(2, '\n')
 				cpp.variable_set(name, value)
+				if name=='system.load': cpp.editor_load(value+'.editor')
 			def command():
 				src, dst=parser.get_n(2)
 				cpp.connection_command(src, dst)
@@ -143,9 +144,6 @@ while not controls.done:
 			def save():
 				file_name=parser.get()
 				cpp.editor_save(file_name+'.editor')
-			def load():
-				file_name=parser.get()
-				cpp.editor_load(file_name+'.editor')
 			eval(operation)()
 	cpp.editor_draw()
 	time.sleep(0.01)
