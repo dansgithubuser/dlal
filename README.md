@@ -66,10 +66,6 @@ todo
 - audio select input and output
 
 - upgrade system viewer to editor, build like midi editor
-	- save/load
-		- save/load editor upon load of system
-			- editor save on save report
-			- editor load on load report
 	- remove components
 	- UI remove components
 	- scroll

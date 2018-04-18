@@ -141,9 +141,11 @@ while not controls.done:
 				name=parser.get()
 				cpp.component_phase(name, ctypes.c_float(0))
 			def save():
-				pass
+				file_name=parser.get()
+				cpp.editor_save(file_name+'.editor')
 			def load():
-				pass
+				file_name=parser.get()
+				cpp.editor_load(file_name+'.editor')
 			eval(operation)()
 	cpp.editor_draw()
 	time.sleep(0.01)
