@@ -75,6 +75,12 @@ void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
 }
 
+void dlalReport(void* system, const char* report){
+	dyadMutex.lock();
+	((dlal::System*)system)->dyadWrite(report);
+	dyadMutex.unlock();
+}
+
 void* dlalComponentWithName(void* system, const char* name){
 	return ((dlal::System*)system)->_nameToComponent.at(name);
 }
