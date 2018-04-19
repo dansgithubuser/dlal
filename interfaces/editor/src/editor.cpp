@@ -93,16 +93,15 @@ extern "C" {
 			component=&i.second;
 			break;
 		}
-		if(!component){
-			std::cerr<<"couldn't find an appropriate network component\n";
-			return;
-		}
-		auto name=component->_name;
-		if(!fTies.count(name))
-			fTies[name]=new dryad::Client(fClient->ip(), std::stoi(fVariables.at(name+".port")._value));
 		std::stringstream ss;
 		dlal::Page(command, 0).toFile(ss);
-		fTies.at(name)->writeSizedString(ss.str());
+		if(component){
+			auto name=component->_name;
+			if(!fTies.count(name))
+				fTies[name]=new dryad::Client(fClient->ip(), std::stoi(fVariables.at(name+".port")._value));
+			fTies.at(name)->writeSizedString(ss.str());
+		}
+		else fClient->writeSizedString(ss.str());
 	}
 
 	void editor_save(const char* fileName){
