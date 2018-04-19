@@ -182,7 +182,14 @@ if args.interface:
 		if os.path.exists(py): return py
 		raise Exception("couldn't find binary for interface {}".format(name))
 	for i in args.interface:
-		name, port=i.split(':')
+		if ':' in i:
+			name, port=i.split(':')
+		else:
+			name=i
+			port=str({
+				'editor': 9088,
+				'softboard': 9120,
+			}[name])
 		os.chdir(built_rel_path)
 		invocation=find_binary(name)+' 127.0.0.1 '+port
 		if platform.system()=='Windows': os.system('start '+invocation)
