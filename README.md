@@ -88,7 +88,6 @@ todo
 
 - save and load system
 	- midi controllee, all components
-- investigate audio clicking (buffer underflow, right?)
 - midi editor
 	- quantization
 	- niceties

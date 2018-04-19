@@ -150,7 +150,7 @@
     "input": "0", 
     "input 0": "port 9120", 
     "sampleRate": "44100", 
-    "samplesPerEvaluation": "64", 
+    "samplesPerEvaluation": "128",
     "sequence": "none", 
     "synth": "sonic", 
     "track": "0", 

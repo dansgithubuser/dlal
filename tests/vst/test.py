@@ -3,6 +3,7 @@
 import dlal
 
 vst=dlal.Component('vst')
+dlal.SimpleSystem.log_2_samples_per_evaluation=6
 system=dlal.SimpleSystem([vst], test=True)
 vst.load(dlal.tunefish_path())
 #Travis and AppVeyor don't have screens or something...

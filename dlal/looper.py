@@ -50,7 +50,7 @@ class AudioTrack(Pipe):
 		Pipe.__init__(self, self.container, self.multiplier)
 
 class Looper:
-	def __init__(self, samples_per_beat, beats, sample_rate=44100, log_2_samples_per_evaluation=6, load=None):
+	def __init__(self, samples_per_beat, beats, sample_rate=44100, log_2_samples_per_evaluation=7, load=None):
 		self.samples_per_beat=samples_per_beat
 		self.period_in_samples=beats*samples_per_beat
 		self.sample_rate=sample_rate

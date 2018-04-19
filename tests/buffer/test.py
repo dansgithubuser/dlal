@@ -8,6 +8,7 @@ lfo=dlal.Buffer()
 multiplier=dlal.Component('multiplier')
 lfo.connect(buffer)
 multiplier.connect(buffer)
+dlal.SimpleSystem.log_2_samples_per_evaluation=6
 system=dlal.SimpleSystem(
 	[pitcher, buffer, lfo, multiplier],
 	midi_receivers=[],

@@ -90,7 +90,7 @@ def frequency_response(component, duration=10000):
 
 class SimpleSystem:
 	sample_rate=44100
-	log_2_samples_per_evaluation=6
+	log_2_samples_per_evaluation=7
 	def __init__(self, components, midi_receivers=None, outputs=None,
 		raw=False, test=False, test_duration=10, test_note=0x3c
 	):

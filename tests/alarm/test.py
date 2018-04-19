@@ -7,6 +7,7 @@ converter=dlal.Component('converter')
 sonic=dlal.Sonic()
 lfo.connect(converter)
 converter.connect(sonic)
+dlal.SimpleSystem.log_2_samples_per_evaluation=6
 system=dlal.SimpleSystem([lfo, converter, sonic], outputs=[sonic], test=True)
 lfo.lfo(system.sample_rate)
 lfo.midi(0x90, 0, 0x40)
