@@ -138,6 +138,7 @@ class Controls(AbstractControls):
 	#commands
 	def command_quit(self): self.done=True
 	def command_pdb(self): import pdb; pdb.set_trace()
+	def command_eval(self, expression): return str(eval(expression))
 	def command_help(self, *args):
 		if len(args)==0:
 			print('help with what?')
