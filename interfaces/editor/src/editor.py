@@ -25,6 +25,8 @@ obvious.set_ffi_types(cpp.editor_set_text, None, str)
 obvious.set_ffi_types(cpp.editor_draw)
 obvious.set_ffi_types(cpp.editor_push, None, str)
 obvious.set_ffi_types(cpp.editor_save, None, str)
+obvious.set_ffi_types(cpp.editor_load, None, str)
+obvious.set_ffi_types(cpp.editor_name)
 #addable
 obvious.set_ffi_types(cpp.addables_width, ctypes.c_int)
 obvious.set_ffi_types(cpp.addable_at, ctypes.c_void_p, int, int)
@@ -38,6 +40,8 @@ obvious.set_ffi_types(cpp.selection_clear)
 obvious.set_ffi_types(cpp.selection_size, int)
 obvious.set_ffi_types(cpp.selection_at_index, ctypes.c_void_p, int)
 obvious.set_ffi_types(cpp.selection_component, ctypes.c_void_p)
+#variable
+obvious.set_ffi_types(cpp.variable_set, None, str, str)
 #component
 obvious.set_ffi_types(cpp.component_new, None, str, str, int, int)
 obvious.set_ffi_types(cpp.component_label, None, str, str)
