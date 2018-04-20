@@ -87,8 +87,7 @@ extern "C" {
 		for(auto& i: fComponents) if(
 			i.second._type=="network"&&
 			i.second._connections.size()==1&&
-			i.second._connections.begin()->second._dst->_type=="commander"&&
-			i.second._connections.begin()->second._dst->_connections.size()==0
+			i.second._connections.begin()->second._dst->_type=="commander"
 		){
 			component=&i.second;
 			break;
