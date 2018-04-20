@@ -58,6 +58,7 @@ struct Component: public Object {
 			{"liner", "46"},
 			{"lpf", "71289"},
 			{"midi", "427-829-26"},
+			{"midichlorian", "14863-28"},
 			{"multiplier", "73-19"},
 			{"network", "715893"},
 			{"peak", "729"},
