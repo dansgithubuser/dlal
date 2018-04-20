@@ -4,7 +4,7 @@ DLAL_BUILD_COMPONENT_DEFINITION(Arpeggiator)
 
 namespace dlal{
 
-Arpeggiator::Arpeggiator(): _i(0), _evaluation(0), _evaluationsPerNote(50.0f){
+Arpeggiator::Arpeggiator(): _i(0), _evaluation(0), _evaluationsPerNote(25.0f){
 	_checkMidi=true;
 	registerCommand("set", "<evaluations per note>", [this](std::stringstream& ss){
 		ss>>_evaluationsPerNote;
