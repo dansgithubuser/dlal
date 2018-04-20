@@ -46,7 +46,7 @@ if args.can:
 	if name not in canned_commands:
 		print('invalid command -- valid commands are')
 		pprint.pprint(canned_commands)
-		sys.exit(-1)
+		sys.exit(1)
 	command=canned_commands[name]
 	if type(command)==str: command=command.split()
 	for i in options:
@@ -102,7 +102,7 @@ if args.setup:
 		shell('brew install cmake')
 	else:
 		print('unrecognized system '+platform.system())
-		sys.exit(-1)
+		sys.exit(1)
 	sys.exit(0)
 
 #build
@@ -167,7 +167,7 @@ if args.test:
 	for i in report: print(i)
 	if not overall:
 		print('TESTS HAVE FAILED!')
-		sys.exit(-1)
+		sys.exit(1)
 	print('ALL TESTS SUCCEEDED')
 
 #interfaces
