@@ -85,7 +85,8 @@ class Controls(AbstractControls):
 
 	def command(self, command=None):
 		if not command: command=self.sequence_as_text()
-		command=shlex.split(command)
+		try: command=shlex.split(command)
+		except: self.reset; return
 		if not command: self.reset(); return
 		name=command[0]
 		name=self.command_aliases.get(name, name)
