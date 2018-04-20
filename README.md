@@ -65,14 +65,9 @@ todo
 ----
 - audio select input and output
 
-- upgrade system viewer to editor, build like midi editor
-	- remove components
-	- UI remove components
-	- scroll
-	- load system, bootstrap system (system commands)
-	- snap components when not being dragged
-	- hide uninteresting variables
-	- place new components/variables in consistent spot, draw that spot
+- save and load system
+	- midi controllee, all components
+
 - audiobro
 	- reverb
 	- piano
@@ -88,9 +83,15 @@ todo
 	- sine, triangle, square, saw, noise
 	- enough to make a bassline, snare, bass drum, chords, cymbal
 	- look to modular synths for examples
+- upgrade system viewer to editor, build like midi editor
+	- remove components
+	- UI remove components
+	- scroll
+	- load system, bootstrap system (system commands)
+	- snap components when not being dragged
+	- hide uninteresting variables
+	- place new components/variables in consistent spot, draw that spot
 
-- save and load system
-	- midi controllee, all components
 - midi editor
 	- quantization
 	- niceties
