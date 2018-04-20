@@ -33,11 +33,11 @@ static std::recursive_mutex dyadMutex;
 
 extern "C" {
 
-void dlalDemolishComponent(void* component){
+DLAL void dlalDemolishComponent(void* component){
 	delete dlal::toComponent(component);
 }
 
-void dlalDyadInit(){
+DLAL void dlalDyadInit(){
 	dyadMutex.lock();
 	dyad_atPanic(atPanic);
 	dyad_init();
@@ -55,7 +55,7 @@ void dlalDyadInit(){
 	dyadMutex.unlock();
 }
 
-void dlalDyadShutdown(){
+DLAL void dlalDyadShutdown(){
 	dyadDone=true;
 	dyadThread.join();
 	dyadMutex.lock();
@@ -63,7 +63,7 @@ void dlalDyadShutdown(){
 	dyadMutex.unlock();
 }
 
-void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler){
+DLAL void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler){
 	try{ return new dlal::System(port, pythonHandler); }
 	catch(const std::exception& e){
 		std::cerr<<e.what()<<"\n";
@@ -71,57 +71,57 @@ void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler){
 	}
 }
 
-void dlalDemolishSystem(void* system){
+DLAL void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
 }
 
-void dlalReport(void* system, const char* report){
+DLAL void dlalReport(void* system, const char* report){
 	dyadMutex.lock();
 	((dlal::System*)system)->dyadWrite(report);
 	dyadMutex.unlock();
 }
 
-void* dlalComponentWithName(void* system, const char* name){
+DLAL void* dlalComponentWithName(void* system, const char* name){
 	return ((dlal::System*)system)->_nameToComponent.at(name);
 }
 
-char* dlalSetVariable(void* system, const char* name, const char* value){
+DLAL char* dlalSetVariable(void* system, const char* name, const char* value){
 	return dlal::toCStr(((dlal::System*)system)->setVariable(name, value));
 }
 
-char* dlalCommand(void* component, const char* command){
+DLAL char* dlalCommand(void* component, const char* command){
 	using namespace dlal;
 	return toCStr(toComponent(component)->command(command));
 }
 
-char* dlalAdd(void* system, void* component, unsigned slot){
+DLAL char* dlalAdd(void* system, void* component, unsigned slot){
 	using namespace dlal;
 	return toCStr(((System*)system)->add(*toComponent(component), slot));
 }
 
-char* dlalConnect(void* input, void* output){
+DLAL char* dlalConnect(void* input, void* output){
 	using namespace dlal;
 	return toCStr(toComponent(input)->connect(*toComponent(output)));
 }
 
-char* dlalDisconnect(void* input, void* output){
+DLAL char* dlalDisconnect(void* input, void* output){
 	using namespace dlal;
 	return toCStr(toComponent(input)->disconnect(*toComponent(output)));
 }
 
-void* dlalSystem(void* component){
+DLAL void* dlalSystem(void* component){
 	using namespace dlal;
 	return toComponent(component)->_system;
 }
 
-char* dlalSerialize(void* system){
+DLAL char* dlalSerialize(void* system){
 	using namespace dlal;
 	return toCStr(((System*)system)->serialize());
 }
 
-void dlalFree(void* p){ free(p); }
+DLAL void dlalFree(void* p){ free(p); }
 
-void dlalTest(){
+DLAL void dlalTest(){
 	dlal::AtomicList<int>::test();
 }
 

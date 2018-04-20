@@ -25,7 +25,7 @@
 
 #define DLAL_BUILD_COMPONENT_DEFINITION(COMPONENT)\
 	extern "C" {\
-		void* dlalBuildComponent(const char* name){\
+		DLAL void* dlalBuildComponent(const char* name){\
 			auto component=new dlal::COMPONENT;\
 			component->_name=name;\
 			return (dlal::Component*)component;\
