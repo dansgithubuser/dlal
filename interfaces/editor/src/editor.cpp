@@ -114,11 +114,16 @@ extern "C" {
 
 	void editor_load(const char* fileName){
 		std::map<std::string, CartesianPair<int>> vPairs, cPairs;
-		std::ifstream(fileName)>>vPairs>>cPairs;
-		for(auto& i: vPairs)
-			fVariables [i.first].name(i.first).moveTo(i.second.x, i.second.y);
-		for(auto& i: cPairs)
-			fComponents[i.first].name(i.first).moveTo(i.second.x, i.second.y);
+		try{
+			std::ifstream(fileName)>>vPairs>>cPairs;
+			for(auto& i: vPairs)
+				fVariables [i.first].name(i.first).moveTo(i.second.x, i.second.y);
+			for(auto& i: cPairs)
+				fComponents[i.first].name(i.first).moveTo(i.second.x, i.second.y);
+		}
+		catch(...){
+			editor_set_text("couldn't load");
+		}
 	}
 
 	void editor_name(){
