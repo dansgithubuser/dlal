@@ -79,11 +79,13 @@ todo
 
 - radio (load a bunch of sounds and select between them)
 - bunch of simple components
+	- midi clock, midi divider, midi logic gate
 	- adsr
 	- sine, triangle, square, saw, noise
 	- enough to make a bassline, snare, bass drum, chords, cymbal
 	- look to modular synths for examples
 - upgrade system viewer to editor, build like midi editor
+	- queue and commit changes
 	- remove components
 	- UI remove components
 	- scroll
