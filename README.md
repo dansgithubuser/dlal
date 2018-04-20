@@ -70,6 +70,9 @@ todo
 	- UI remove components
 	- scroll
 	- load system, bootstrap system (system commands)
+	- snap components when not being dragged
+	- hide uninteresting variables
+	- place new components/variables in consistent spot, draw that spot
 - audiobro
 	- reverb
 	- piano
