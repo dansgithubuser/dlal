@@ -4,6 +4,7 @@ import os
 import platform
 import subprocess
 import sys
+import weakref
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
 sys.path.append(os.path.join(root, 'deps', 'obvious'))
@@ -76,11 +77,22 @@ class System:
 			else:
 				port=0
 		_systems+=1
+		weak_self=weakref.ref(self)
 		def handler(command):
-			print('python side handling system command {}'.format(command))
+			command=command.split()
+			if len(command)<4: return
+			if command[0]!='2': return
+			def queue_add():
+				component=Component(command[4])
+				weak_self().novel_components[component.to_str()]=component
+				weak_self().add(component)
+			eval(command[3])()
 		self.handler=TextCallback(handler)
 		self.system=_skeleton.dlalBuildSystem(port, self.handler)
 		assert(self.system)
+		self.novel_components={}
+		self.set('sampleRate', 44100)
+		self.set('samplesPerEvaluation', 128)
 
 	def __del__(self):
 		_skeleton.dlalDemolishSystem(self.system)
@@ -99,7 +111,7 @@ class System:
 
 	def set(self, name, value):
 		name=name.encode('utf-8')
-		value=value.encode('utf-8')
+		value=str(value).encode('utf-8')
 		report(_skeleton.dlalSetVariable(self.system, name, value))
 
 	def serialize(self):

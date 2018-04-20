@@ -354,10 +354,6 @@ void System::evaluate(){
 std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
 	if(!sampleRate||!log2SamplesPerCallback)
 		return "error: must set sample rate and log2 samples per callback";
-	if(_variables.count("sampleRate"))
-		return "error: system already has sampleRate";
-	if(_variables.count("samplesPerEvaluation"))
-		return "error: system already has samplesPerEvaluation";
 	_variables["sampleRate"]=std::to_string(sampleRate);
 	_variables["samplesPerEvaluation"]=std::to_string(1<<log2SamplesPerCallback);
 	return "";
