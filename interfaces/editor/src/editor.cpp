@@ -45,6 +45,11 @@ extern "C" {
 		return fClient->readSizedString(fString)?fString.c_str():"";
 	}
 
+	int editor_dryad_times_connected(){
+		if(!fClient) return -1;
+		return fClient->timesConnected();
+	}
+
 	int editor_dryad_times_disconnected(){
 		if(!fClient) return -1;
 		return fClient->timesDisconnected();

@@ -19,6 +19,7 @@ cpp=obvious.load_lib('Editor')
 obvious.set_ffi_types(cpp.editor_init, None, str, int, str)
 obvious.set_ffi_types(cpp.editor_finish)
 obvious.set_ffi_types(cpp.editor_dryad_read, str)
+obvious.set_ffi_types(cpp.editor_dryad_times_connected, int)
 obvious.set_ffi_types(cpp.editor_dryad_times_disconnected, int)
 obvious.set_ffi_types(cpp.editor_set_text, None, str)
 obvious.set_ffi_types(cpp.editor_draw)
@@ -105,6 +106,7 @@ while not controls.done:
 		controls.input(event)
 	if cpp.editor_dryad_times_disconnected(): break
 	while True:
+		if not cpp.editor_dryad_times_connected(): break
 		s=cpp.editor_dryad_read()
 		if not s: break
 		parser=Parser(s)
