@@ -76,8 +76,6 @@ class Controls(AbstractControls):
 		self.command_aliases={
 			'q': 'quit',
 			'h': 'help',
-			'w': 'write',
-			'e': 'edit',
 			'c': 'command',
 		}
 		self.messaging=False
@@ -155,10 +153,6 @@ class Controls(AbstractControls):
 			else: print('no such help topic "{}"'.format(args[0]))
 		return 'see terminal for details'
 	def command_push(self, command): self.cpp.editor_push(command)
-	def command_write(self, file_name):
-		self.cpp.editor_save(file_name+'.editor')
-	def command_edit(self, file_name):
-		self.cpp.editor_load(file_name+'.editor')
 	def command_name(self):
 		self.cpp.editor_name()
 	def command_command(self, *args):
