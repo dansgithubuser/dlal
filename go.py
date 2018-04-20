@@ -11,6 +11,7 @@ parser.add_argument('--test-runs', '--tr', help='custom number of runs for testi
 parser.add_argument('--system', '-s', help='which system to run')
 parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments to pass to system (default -g)')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
+parser.add_argument('--interface-iterate', '--ii', action='store_true', help='run interfaces sequentially, then exit')
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands -- use h for help')
@@ -192,9 +193,12 @@ if args.interface:
 			}[name])
 		os.chdir(built_rel_path)
 		invocation=find_binary(name)+' 127.0.0.1 '+port
-		if platform.system()=='Windows': os.system('start '+invocation)
-		else: subprocess.Popen(invocation, shell=True)
+		if args.interface_iterate: shell(invocation)
+		else:
+			if platform.system()=='Windows': os.system('start '+invocation)
+			else: subprocess.Popen(invocation, shell=True)
 		os.chdir(file_path)
+if args.interface_iterate: sys.exit()
 
 #run
 os.chdir(built_rel_path)
