@@ -78,6 +78,7 @@ class Controls(AbstractControls):
 			'h': 'help',
 			'w': 'write',
 			'e': 'edit',
+			'c': 'command',
 		}
 		self.messaging=False
 		self.cpp=cpp
@@ -160,6 +161,8 @@ class Controls(AbstractControls):
 		self.cpp.editor_load(file_name+'.editor')
 	def command_name(self):
 		self.cpp.editor_name()
+	def command_command(self, *args):
+		self.cpp.editor_push('queue 0 0 {}'.format(' '.join(args)))
 
 	#callback
 	def on_input(self):
