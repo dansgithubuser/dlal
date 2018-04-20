@@ -147,6 +147,9 @@ class System:
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: return self.deserialize(file.read())
 
+	def component_with_name(self, name):
+		return _skeleton.dlalComponentWithName(self.system, name)
+
 	def _report(self, report): _skeleton.dlalReport(self.system, report)
 
 class Component:
@@ -193,6 +196,9 @@ class Component:
 	def output(self): return self.component
 
 	def system(self): return _skeleton.dlalSystem(self.component)
+
+	def component_with_name(self, name):
+		return _skeleton.dlalComponentWithName(self.system(), name)
 
 class Pipe(Component):
 	def __init__(self, *args):

@@ -1,5 +1,4 @@
 from .skeleton import *
-from .skeleton import _skeleton
 
 class Commander(Component):
 	@staticmethod
@@ -69,7 +68,7 @@ class Commander(Component):
 			f=self.library.dlalCommanderDisconnect
 		def componentify(arg, connectee):
 			if type(arg) in [str, unicode]:
-				return _skeleton.dlalComponentWithName(self.system(), arg)
+				return self.component_with_name(arg)
 			return arg.output() if connectee else arg.component
 		for i in range(len(args)-1):
 			result+=report(f(
