@@ -2,6 +2,7 @@ import ctypes
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import weakref
@@ -211,9 +212,13 @@ def component_to_dict(self, members):
 	result={k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
 	return result
 
+def snake_case(camel_case):
+	return re.sub('(.)([A-Z])', r'\1_\2', camel_case).lower()
+
 def component_from_dict(self, members, d, component_map):
 	for member in members:
-		try: exec('from {} import *').format(d[member]['class'].lower())
+		statement='from {} import *'.format(snake_case(d[member]['class']))
+		try: exec(statement)
 		except ImportError: pass
 		cls=eval(d[member]['class'])
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))

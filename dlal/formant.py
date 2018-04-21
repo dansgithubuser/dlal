@@ -3,7 +3,7 @@ from .skeleton import *
 try: import tkinter
 except ImportError: import Tkinter as tkinter
 
-class Fir(Component):
+class Formant(Component):
 	def __init__(self, **kwargs):
 		Component.__init__(self, 'fir', **kwargs)
 		self.commander=Component('commander')
@@ -101,13 +101,13 @@ class Fir(Component):
 	}
 
 	def phonetic_voice(self, p):
-		if p in Fir.stops and p in Fir.voiced:
+		if p in Formant.stops and p in Formant.voiced:
 			pass
-		elif p not in Fir.phonetics_voice:
-			for i in range(Fir.formants_voice):
+		elif p not in Formant.phonetics_voice:
+			for i in range(Formant.formants_voice):
 				self.live_command('formant_mute {} 0.1'.format(i))
 		else:
-			p=Fir.phonetics_voice[p]
+			p=Formant.phonetics_voice[p]
 			for i in range(len(p)):
 				self.live_command('formant {} {} {} 10000 0.1'.format(i, p[i][0], p[i][1]))
 
@@ -133,17 +133,17 @@ class Fir(Component):
 	}
 
 	def phonetic_noise(self, p):
-		if p not in Fir.phonetics_noise:
-			for i in range(Fir.formants_noise):
+		if p not in Formant.phonetics_noise:
+			for i in range(Formant.formants_noise):
 				self.live_command('formant_mute {} 0.1'.format(i))
-		elif p in Fir.stops:
-			p=Fir.phonetics_noise[p]
-			for i in range(Fir.formants_noise):
+		elif p in Formant.stops:
+			p=Formant.phonetics_noise[p]
+			for i in range(Formant.formants_noise):
 				self.live_command('formant {} {} {} {} 1'.format(i, p[i][0], p[i][1], p[i][2]))
 				self.live_command('formant_mute {} {}'.format(i, p[i][3]))
 		else:
-			p=Fir.phonetics_noise[p]
-			for i in range(Fir.formants_noise):
+			p=Formant.phonetics_noise[p]
+			for i in range(Formant.formants_noise):
 				self.live_command('formant {} {} {} {} 1'.format(i, p[i][0], p[i][1], p[i][2]))
 
 	def live_command(self, command):

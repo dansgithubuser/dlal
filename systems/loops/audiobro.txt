@@ -116,7 +116,7 @@
         }
       }, 
       "synth": {
-        "class": "Sonic", 
+        "class": "SonicController", 
         "dict": {
           "commander": "0x564707f8a928", 
           "component": "0x564707f662d8"

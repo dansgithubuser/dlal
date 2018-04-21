@@ -68,7 +68,7 @@ def soundboard():
 	return r
 
 synths=[
-	('sonic', lambda: dlal.Sonic()),
+	('sonic', lambda: dlal.SonicController()),
 	('soundfont', soundfont),
 	('soundboard', soundboard),
 ]
@@ -100,7 +100,7 @@ def add_midi():
 	looper.add(track)
 
 def add_metronome():
-	track=dlal.MidiTrack(inputs[input].midi, dlal.Sonic())
+	track=dlal.MidiTrack(inputs[input].midi, dlal.SonicController())
 	track.synth.load(os.path.join(dlal.root, 'components', 'sonic', 'settings', 'snare.txt'))
 	looper.add(track)
 	track.drumline()

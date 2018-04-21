@@ -1,8 +1,8 @@
 import dlal, os
 
-sonic=dlal.Sonic()
+sonic_controller=dlal.SonicController()
 vst=dlal.Component('vst')
-system=dlal.SimpleSystem([sonic, vst])
+system=dlal.SimpleSystem([sonic_controller, vst])
 vst_path=dlal.tunefish_path()
 if 'DLAL_VST_PLUGIN_PATH' in os.environ:
 	vst_path=os.environ['DLAL_VST_PLUGIN_PATH']
