@@ -487,7 +487,6 @@ void Component::registerCommand(
 	const std::string& parameters,
 	Command command
 ){
-	if(_commands.count(name)) throw std::logic_error("command "+name+" already exists");
 	_commands[name]={command, parameters};
 }
 

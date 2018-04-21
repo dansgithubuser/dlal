@@ -15,6 +15,12 @@ import obvious
 def invoke(invocation):
 	subprocess.check_call(invocation, shell=True)
 
+def snake_case(camel_case):
+	return re.sub('(.)([A-Z])', r'\1_\2', camel_case).lower()
+
+def camel_case(snake_case):
+	return ''.join([i.capitalize() for i in snake_case.split('_')])
+
 _systems=0
 
 def report(text):
@@ -125,7 +131,16 @@ class System:
 		#components
 		components={}
 		for name, serialized in state['components'].items():
-			component=Component(state['component_types'][name], name=name)
+			component_type=state['component_types'][name]
+			try:
+				exec('from .{} import *'.format(component_type))
+				imported=True
+			except ImportError:
+				imported=False
+			if imported:
+				component=eval(camel_case(component_type))(name=name)
+			else:
+				component=Component(component_type, name=name)
 			component.deserialize(serialized)
 			components[name]=component
 		for index, slot in enumerate(state['component_order']):
@@ -212,13 +227,9 @@ def component_to_dict(self, members):
 	result={k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
 	return result
 
-def snake_case(camel_case):
-	return re.sub('(.)([A-Z])', r'\1_\2', camel_case).lower()
-
 def component_from_dict(self, members, d, component_map):
 	for member in members:
-		statement='from {} import *'.format(snake_case(d[member]['class']))
-		try: exec(statement)
+		try: exec('from .{} import *'.format(snake_case(d[member]['class'])))
 		except ImportError: pass
 		cls=eval(d[member]['class'])
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
