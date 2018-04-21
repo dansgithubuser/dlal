@@ -147,9 +147,6 @@ class System:
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: return self.deserialize(file.read())
 
-	def component_with_name(self, name):
-		return _skeleton.dlalComponentWithName(self.system, name)
-
 	def _report(self, report): _skeleton.dlalReport(self.system, report)
 
 class Component:
@@ -197,9 +194,6 @@ class Component:
 
 	def system(self): return _skeleton.dlalSystem(self.component)
 
-	def component_with_name(self, name):
-		return _skeleton.dlalComponentWithName(self.system(), name)
-
 class Pipe(Component):
 	def __init__(self, *args):
 		if not len(args): return
@@ -223,5 +217,11 @@ def component_from_dict(self, members, d, component_map):
 		except ImportError: pass
 		cls=eval(d[member]['class'])
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
+
+def component_with_name(system, name):
+	if isinstance(system, System): system=system.system
+	component=_skeleton.dlalComponentWithName(system, name)
+	component_type=report(_skeleton.dlalCommand(component, 'type'))
+	return Component(component_type, component=component)
 
 def test(): _skeleton.dlalTest()

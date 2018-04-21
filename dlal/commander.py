@@ -68,7 +68,7 @@ class Commander(Component):
 			f=self.library.dlalCommanderDisconnect
 		def componentify(arg, connectee):
 			if type(arg) in [str, unicode]:
-				return self.component_with_name(arg)
+				return component_with_name(self.system(), arg).component
 			return arg.output() if connectee else arg.component
 		for i in range(len(args)-1):
 			result+=report(f(
