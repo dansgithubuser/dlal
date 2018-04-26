@@ -132,15 +132,9 @@ class System:
 		components={}
 		for name, serialized in state['components'].items():
 			component_type=state['component_types'][name]
-			try:
-				exec('from .{} import *'.format(component_type))
-				imported=True
-			except ImportError:
-				imported=False
-			if imported:
-				component=eval(camel_case(component_type))(name=name)
-			else:
-				component=Component(component_type, name=name)
+			cls=component_try_import(component_type)
+			if cls: component=cls(name=name)
+			else: component=Component(component_type, name=name)
 			component.deserialize(serialized)
 			components[name]=component
 		for index, slot in enumerate(state['component_order']):
@@ -163,6 +157,13 @@ class System:
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: return self.deserialize(file.read())
 
+	def c(self, name): return self.component_with_name(name)
+	def component_with_name(self, name):
+		component=component_with_name(self, name)
+		cls=component_try_import(component.type())
+		if cls: component=cls(component=component.transfer_component())
+		return component
+
 	def _report(self, report): _skeleton.dlalReport(self.system, report)
 
 class Component:
@@ -175,15 +176,18 @@ class Component:
 	def to_dict(self): return {'component': self.to_str()}
 
 	def __init__(self, component_type, **kwargs):
+		self.component=None
 		if component_type not in Component._libraries:
 			Component._libraries[component_type]=obvious.load_lib(camel_case(component_type))
 			Component._libraries[component_type].dlalBuildComponent.restype=ctypes.c_void_p
 			Component._libraries[component_type].dlalBuildComponent.argtypes=[ctypes.c_char_p]
 		self.library=Component._libraries[component_type]
-		name=kwargs.get('name', _namer.name())
-		self.component=kwargs.get('component',
-			Component._libraries[component_type].dlalBuildComponent(name)
-		)
+		if 'component' in kwargs:
+			self.component=kwargs['component']
+		else:
+			self.component=Component._libraries[component_type].dlalBuildComponent(
+				kwargs.get('name', _namer.name())
+			)
 		self.components_to_add=[self]
 		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
 		def captain(command):
@@ -227,11 +231,15 @@ def component_to_dict(self, members):
 	result={k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
 	return result
 
+def component_try_import(component_type, default=None):
+	try: exec('from .{} import *'.format(component_type))
+	except ImportError: return default
+	return eval(camel_case(component_type))
+
 def component_from_dict(self, members, d, component_map):
 	for member in members:
-		try: exec('from .{} import *'.format(snake_case(d[member]['class'])))
-		except ImportError: pass
-		cls=eval(d[member]['class'])
+		cls=d[member]['class']
+		cls=component_try_import(snake_case(cls), eval(cls))
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
 
 def component_with_name(system, name):
