@@ -71,7 +71,7 @@ class Parser:
 	def get(self, delimiter=' '):
 		self.skip()
 		result=''
-		while True:
+		while self.i<len(self.s):
 			c=self.s[self.i]
 			if c==delimiter: break
 			result+=c
