@@ -90,8 +90,10 @@ class System:
 			if len(command)<4: return
 			if command[0]!='2': return
 			def queue_add():
-				component=Component(command[4])
-				weak_self().novel_components[component.to_str()]=component
+				component=component_builder(command[4])()
+				name=component.to_str()
+				weak_self().novel_components[name]=component
+				if not hasattr(weak_self(), name): setattr(weak_self(), name, component)
 				weak_self().add(component)
 			eval(command[3])()
 		self.handler=TextCallback(handler)
@@ -131,10 +133,7 @@ class System:
 		#components
 		components={}
 		for name, serialized in state['components'].items():
-			component_type=state['component_types'][name]
-			cls=component_try_import(component_type)
-			if cls: component=cls(name=name)
-			else: component=Component(component_type, name=name)
+			component=component_builder(state['component_types'][name])(name=name)
 			component.deserialize(serialized)
 			components[name]=component
 		for index, slot in enumerate(state['component_order']):
@@ -156,13 +155,6 @@ class System:
 	def load(self, file_name='system.state.txt'):
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: return self.deserialize(file.read())
-
-	def c(self, name): return self.component_with_name(name)
-	def component_with_name(self, name):
-		component=component_with_name(self, name)
-		cls=component_try_import(component.type())
-		if cls: component=cls(component=component.transfer_component())
-		return component
 
 	def _report(self, report): _skeleton.dlalReport(self.system, report)
 
@@ -235,6 +227,11 @@ def component_try_import(component_type, default=None):
 	try: exec('from .{} import *'.format(component_type))
 	except ImportError: return default
 	return eval(camel_case(component_type))
+
+def component_builder(component_type):
+	cls=component_try_import(component_type)
+	if cls: return cls
+	return lambda **kwargs: Component(component_type, **kwargs)
 
 def component_from_dict(self, members, d, component_map):
 	for member in members:
