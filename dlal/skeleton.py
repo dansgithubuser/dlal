@@ -176,7 +176,7 @@ class Component:
 
 	def __init__(self, component_type, **kwargs):
 		if component_type not in Component._libraries:
-			Component._libraries[component_type]=obvious.load_lib(component_type.capitalize())
+			Component._libraries[component_type]=obvious.load_lib(camel_case(component_type))
 			Component._libraries[component_type].dlalBuildComponent.restype=ctypes.c_void_p
 			Component._libraries[component_type].dlalBuildComponent.argtypes=[ctypes.c_char_p]
 		self.library=Component._libraries[component_type]

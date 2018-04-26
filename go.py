@@ -8,7 +8,7 @@ parser=argparse.ArgumentParser(description='interface for developer operations')
 parser.add_argument('--setup', action='store_true', help='install dependencies')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
-parser.add_argument('--system', '-s', help='which system to run')
+parser.add_argument('--system', '-s', help='which system to run (? to list systems)')
 parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments to pass to system (default -g)')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--interface-iterate', '--ii', action='store_true', help='run interfaces sequentially, then exit')
@@ -183,7 +183,10 @@ if args.interface:
 		if os.path.exists(py): return py
 		raise Exception("couldn't find binary for interface {}".format(name))
 	for i in args.interface:
-		if ':' in i:
+		if i=='?':
+			for j in os.listdir('interfaces'): print(j)
+			break
+		elif ':' in i:
 			name, port=i.split(':')
 		else:
 			name=i
