@@ -18,7 +18,6 @@ class Commander(Component):
 		self.library.dlalCommanderRegisterCommand.restype=ctypes.c_void_p
 		self.library.dlalCommanderRegisterCommand.argtypes=[ctypes.c_void_p, ctypes.c_char_p, TextCallback]
 		self.commands=[]#to prevent python from garbage-collecting callbacks sent c-side
-		self.novel_components={}
 		def queue_add(text):
 			_, type=text.decode('utf-8').split()
 			self.queue_add(type)
@@ -49,8 +48,8 @@ class Commander(Component):
 			return report(self.library.dlalCommanderAdd(self.component, component, slot, edges_to_wait))
 		for arg in args:
 			if type(arg) in [str, unicode]:
-				component=Component(arg)
-				self.novel_components[component.to_str()]=component
+				component=component_builder(arg)()
+				self.weak_system().register_novel_component(component)
 				result+=add(component.component)
 			else:
 				for c in arg.components_to_add: result+=add(c.component)

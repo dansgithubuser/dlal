@@ -91,9 +91,7 @@ class System:
 			if command[0]!='2': return
 			def queue_add():
 				component=component_builder(command[4])()
-				name=component.to_str()
-				weak_self().novel_components[name]=component
-				if not hasattr(weak_self(), name): setattr(weak_self(), name, component)
+				weak_self().register_novel_component(component)
 				weak_self().add(component)
 			eval(command[3])()
 		self.handler=TextCallback(handler)
@@ -115,6 +113,7 @@ class System:
 		for arg in args:
 			for c in arg.components_to_add:
 				result+=report(_skeleton.dlalAdd(self.system, c.component, slot))
+				c.weak_system=weakref.ref(self)
 			if len(result): result+='\n'
 		return result
 
@@ -138,7 +137,9 @@ class System:
 			components[name]=component
 		for index, slot in enumerate(state['component_order']):
 			for component in slot:
-				self.add(components[component], slot=index)
+				component=components[component]
+				self.register_novel_component(component)
+				self.add(component, slot=index)
 		#connections
 		for input, output in state['connections']: components[input].connect(components[output])
 		#extra
@@ -155,6 +156,11 @@ class System:
 	def load(self, file_name='system.state.txt'):
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: return self.deserialize(file.read())
+
+	def register_novel_component(self, component):
+		name=component.to_str()
+		self.novel_components[name]=component
+		if not hasattr(self, name): setattr(self, name, component)
 
 	def _report(self, report): _skeleton.dlalReport(self.system, report)
 
@@ -223,10 +229,12 @@ def component_to_dict(self, members):
 	result={k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
 	return result
 
-def component_try_import(component_type, default=None):
-	try: exec('from .{} import *'.format(component_type))
-	except ImportError: return default
-	return eval(camel_case(component_type))
+def component_try_import(component_type):
+	try: exec('from .{} import {} as result'.format(
+		component_type, camel_case(component_type)
+	))
+	except ImportError: return None
+	return result
 
 def component_builder(component_type):
 	cls=component_try_import(component_type)
@@ -235,8 +243,9 @@ def component_builder(component_type):
 
 def component_from_dict(self, members, d, component_map):
 	for member in members:
-		cls=d[member]['class']
-		cls=component_try_import(snake_case(cls), eval(cls))
+		class_name=d[member]['class']
+		cls=component_try_import(snake_case(class_name))
+		if not cls: cls=eval(class_name)
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
 
 def component_with_name(system, name):
