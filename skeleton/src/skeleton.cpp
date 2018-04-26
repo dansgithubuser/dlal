@@ -85,6 +85,11 @@ DLAL void* dlalComponentWithName(void* system, const char* name){
 	return ((dlal::System*)system)->_nameToComponent.at(name);
 }
 
+DLAL void dlalRename(void* system, void* component, const char* newName){
+	using namespace dlal;
+	((System*)system)->rename(toComponent(component), newName);
+}
+
 DLAL char* dlalSetVariable(void* system, const char* name, const char* value){
 	return dlal::toCStr(((dlal::System*)system)->setVariable(name, value));
 }
@@ -386,6 +391,14 @@ std::string System::serialize() const {
 	ss<<"\"connections\": "<<_reportConnections<<"\n";
 	ss<<"}\n";
 	return ss.str();
+}
+
+void System::rename(Component* component, const char* newName){
+	for(auto& i: _reportConnections){
+		if(i.first==component->_name) i.first=newName;
+		if(i.second==component->_name) i.second=newName;
+	}
+	component->_name=newName;
 }
 
 dyad_Stream* System::dyadNewStream(){

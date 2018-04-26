@@ -70,7 +70,7 @@ class System{
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string setVariable(std::string name, std::string value);
 		std::string serialize() const;
-		Component* componentWithName(const char* name);
+		void rename(Component* component, const char* newName);
 
 		dyad_Stream* dyadNewStream();
 		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);

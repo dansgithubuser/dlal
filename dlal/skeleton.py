@@ -61,6 +61,7 @@ obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p, int)
 obvious.set_ffi_types(_skeleton.dlalDemolishSystem, None, ctypes.c_void_p)
 obvious.set_ffi_types(_skeleton.dlalReport, None, ctypes.c_void_p, ctypes.c_char_p)
 obvious.set_ffi_types(_skeleton.dlalComponentWithName, ctypes.c_void_p, ctypes.c_void_p, str)
+obvious.set_ffi_types(_skeleton.dlalRename, None, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalSetVariable, ctypes.c_void_p, ctypes.c_void_p, str, str)
 obvious.set_ffi_types(_skeleton.dlalCommand, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalAdd, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint)
@@ -211,6 +212,8 @@ class Component:
 	def output(self): return self.component
 
 	def system(self): return _skeleton.dlalSystem(self.component)
+
+	def rename(self, name): _skeleton.dlalRename(self.system(), self.component, name)
 
 class Pipe(Component):
 	def __init__(self, *args):
