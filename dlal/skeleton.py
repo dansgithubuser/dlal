@@ -1,3 +1,4 @@
+import atexit
 import ctypes
 import json
 import os
@@ -74,6 +75,17 @@ obvious.set_ffi_types(_skeleton.dlalTest)
 
 TextCallback=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 
+class ReprMethod:
+	def __init__(self, target, method):
+		self.target=weakref.ref(target)
+		self.method=method
+
+	def __repr__(self):
+		return str(getattr(self.target(), self.method)())
+
+	def __call__(self, *args, **kwargs):
+		return getattr(self.target(), self.method)(*args, **kwargs)
+
 class System:
 	def __init__(self, port=None):
 		global _systems
@@ -101,8 +113,11 @@ class System:
 		self.novel_components={}
 		self.set('sampleRate', 44100)
 		self.set('samplesPerEvaluation', 128)
+		self.on_del=[]
+		self.l=ReprMethod(self, 'load')
 
 	def __del__(self):
+		for i in self.on_del: i()
 		_skeleton.dlalDemolishSystem(self.system)
 		global _systems
 		_systems-=1
@@ -154,9 +169,16 @@ class System:
 		with open(file_name, 'w') as file: file.write(serialized)
 		self._report('save '+os.path.abspath(file_name))
 
-	def load(self, file_name='system.state.txt'):
+	def load(self, file_name='system.state.txt', start=True):
 		self.set('system.load', os.path.abspath(file_name))
-		with open(file_name) as file: return self.deserialize(file.read())
+		with open(file_name) as file: result=self.deserialize(file.read())
+		if start: self.start()
+		return result
+
+	def start(self):
+		if not hasattr(self, 'audio'): raise Exception('no audio component')
+		atexit.register(lambda: self.audio.finish())
+		return self.audio.start()
 
 	def register_novel_component(self, component):
 		name=component.to_str()
