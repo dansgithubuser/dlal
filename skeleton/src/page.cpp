@@ -77,8 +77,7 @@ void Page::dispatch(
 			break;
 		case Page::MIDI:
 			for(auto output: outputs){
-				output->midi(_midi.data(), _midi.size());
-				component._system->_reportQueue.write((std::string)"midi "+componentToStr(&component)+" "+componentToStr(output));
+				component.midiSend(output, _midi.data(), _midi.size());
 			}
 			break;
 		case Page::TEXT:

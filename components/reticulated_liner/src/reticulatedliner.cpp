@@ -46,7 +46,7 @@ void ReticulatedLiner::midi(const uint8_t* bytes, unsigned size){
 	if(!_iterator) _iterator=_line.begin();
 	if(!_iterator) return;
 	for(unsigned i=0; i<2; ++i){
-		for(auto output: _outputs) output->midi(_iterator->data(), _iterator->size());
+		for(auto output: _outputs) midiSend(output, _iterator->data(), _iterator->size());
 		++_iterator;
 		if(!_iterator) _iterator=_line.begin();
 		if((_iterator->at(0)&0xf0)==0x80) break;

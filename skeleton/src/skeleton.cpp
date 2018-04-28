@@ -495,6 +495,11 @@ std::string Component::join(System& system){
 	return "";
 }
 
+void Component::midiSend(Component* target, const uint8_t* bytes, unsigned size) const {
+	target->midi(bytes, size);
+	_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(target));
+}
+
 void Component::registerCommand(
 	const std::string& name,
 	const std::string& parameters,

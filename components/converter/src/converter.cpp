@@ -22,7 +22,7 @@ Converter::Converter(): _controller(0){
 
 void Converter::evaluate(){
 	uint8_t x[]={0xb0, _controller, uint8_t(64+_audio.back()*63)};
-	for(auto output: _outputs) output->midi(x, sizeof(x));
+	for(auto output: _outputs) midiSend(output, x, sizeof(x));
 	std::fill_n(_audio.data(), _samplesPerEvaluation, 0.0f);
 }
 

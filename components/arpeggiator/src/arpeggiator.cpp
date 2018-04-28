@@ -25,15 +25,15 @@ void Arpeggiator::evaluate(){
 			uint8_t x[]={0x80, _sounding.first, _sounding.second};
 			uint8_t y[]={0x90, i->first, i->second};
 			for(auto output: _outputs){
-				output->midi(x, sizeof(x));
-				output->midi(y, sizeof(y));
+				midiSend(output, x, sizeof(x));
+				midiSend(output, y, sizeof(y));
 			}
 			_sounding=std::make_pair(i->first, i->second);
 		}
 		else{
 			_i=0;
 			uint8_t x[]={0x80, _sounding.first, _sounding.second};
-			for(auto output: _outputs) output->midi(x, sizeof(x));
+			for(auto output: _outputs) midiSend(output, x, sizeof(x));
 		}
 	}
 }

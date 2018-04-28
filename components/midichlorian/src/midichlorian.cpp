@@ -21,9 +21,9 @@ void Midichlorian::evaluate(){
 	if(_period&&phase()){
 		for(auto output: _outputs){
 			uint8_t start[]={0x80, 0x3c, 0x7f};
-			output->midi(start, sizeof(start));
+			midiSend(output, start, sizeof(start));
 			uint8_t stop[]={0x90, 0x3c, 0x7f};
-			output->midi(stop, sizeof(stop));
+			midiSend(output, stop, sizeof(stop));
 			_system->_reportQueue.write("midi "+componentToStr(this)+" "+componentToStr(output));
 		}
 	}

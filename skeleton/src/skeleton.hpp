@@ -119,6 +119,7 @@ class Component{
 		//audio/midi
 		virtual void midi(const uint8_t* bytes, unsigned size){}
 		virtual bool midiAccepted(){ return false; }
+		void midiSend(Component* target, const uint8_t* bytes, unsigned size) const;
 		virtual float* audio(){ return nullptr; }
 		virtual bool hasAudio(){ return false; }
 

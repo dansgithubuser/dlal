@@ -14,7 +14,6 @@ class Midi: public MultiOut{
 		std::string type() const { return "midi"; }
 		void evaluate();
 		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
 	private:
 		class List{
 			public:

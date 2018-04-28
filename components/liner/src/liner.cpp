@@ -90,8 +90,7 @@ void Liner::advance(uint64_t phase){
 	while(_iterator&&_iterator->sample<=phase){
 		for(auto output: _outputs){
 			std::vector<uint8_t>& m=_iterator->midi;
-			output->midi(m.data(), m.size());
-			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(output));
+			midiSend(output, m.data(), m.size());
 		}
 		++_iterator;
 	}
