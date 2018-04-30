@@ -100,6 +100,20 @@ Commander::Commander():
 			return "";
 		}
 	);
+	registerCommand("queue_by_name", "<period edges to wait> <output name> command",
+		[this](std::stringstream& ss){
+			unsigned edgesToWait;
+			std::string output;
+			ss>>edgesToWait>>output;
+			ss.ignore(1);
+			std::string s;
+			std::getline(ss, s);
+			if(!_system->_nameToComponent.count(output)) return "error: no such component";
+			if(!_queue.write(Directive(*_system->_nameToComponent.at(output), s, edgesToWait)))
+				return "error: queue full";
+			return "";
+		}
+	);
 	registerCommand("queue_resize", "size", [this](std::stringstream& ss){
 		unsigned size;
 		ss>>size;
