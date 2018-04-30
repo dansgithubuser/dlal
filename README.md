@@ -77,14 +77,19 @@ todo
 	- render to file
 	- new ideas
 
-- radio (load a bunch of sounds and select between them)
 - bunch of simple components
-	- midi clock, midi divider, midi logic gate
+	- midi logic
+		- multiply by harmony
+		- multiply by rhythm
+		- random note
+		- random rhythm
+		- add/subtract/divide/multiply note
 	- adsr
 	- sine, triangle, square, saw, noise
-	- enough to make a bassline, snare, bass drum, chords, cymbal
+	- enough to make a bassline, snare, bass drum, chords, cymbal, wind sound
 	- look to modular synths for examples
 - upgrade system viewer to editor, build like midi editor
+	- send commands through editor
 	- queue and commit changes
 	- remove components
 	- UI remove components
