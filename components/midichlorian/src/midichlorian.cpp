@@ -6,25 +6,33 @@ namespace dlal{
 
 Midichlorian::Midichlorian(){
 	_checkMidi=true;
-	registerCommand("logic", "<and, or, xor>", [this](std::stringstream& ss)->std::string{
+	registerCommand("rhythm", "<x for note, . for rest>", [this](std::stringstream& ss)->std::string{
 		std::string s;
 		ss>>s;
-		if(s=="and") _logic=Logic::AND;
-		else if(s=="or") _logic=Logic::OR;
-		else if(s=="xor") _logic=Logic::XOR;
-		else return "error: unknown logic \""+s+"\"";
+		for(auto c: s) if(c!='.'&&c!='x') return "error: invalid character in rhythm";
+		_rhythm=s;
+		_i=0;
 		return "";
+	});
+	registerCommand("serialize_midichlorian", "", [this](std::stringstream&){
+		return _rhythm;
+	});
+	registerCommand("deserialize_midichlorian", "<serialized>", [this](std::stringstream& ss){
+		return command("rhythm "+ss.str());
 	});
 }
 
 void Midichlorian::evaluate(){
 	if(_period&&phase()){
 		for(auto output: _outputs){
-			uint8_t start[]={0x80, 0x3c, 0x7f};
-			midiSend(output, start, sizeof(start));
-			uint8_t stop[]={0x90, 0x3c, 0x7f};
+			uint8_t stop[]={0x80, 0x3c, 0x7f};
 			midiSend(output, stop, sizeof(stop));
-			_system->_reportQueue.write("midi "+componentToStr(this)+" "+componentToStr(output));
+			if(_rhythm[_i]=='x'){
+				uint8_t start[]={0x90, 0x3c, 0x7f};
+				midiSend(output, start, sizeof(start));
+			}
+			++_i;
+			_i%=_rhythm.size();
 		}
 	}
 }

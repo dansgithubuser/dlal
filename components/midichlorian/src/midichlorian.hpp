@@ -13,8 +13,8 @@ class Midichlorian: public MultiOut, public Periodic {
 		void midi(const uint8_t* bytes, unsigned size);
 		bool midiAccepted(){ return true; }
 	private:
-		enum Logic{ AND, OR, XOR };
-		Logic _logic=Logic::OR;
+		std::string _rhythm="x";
+		size_t _i=0;
 };
 
 }//namespace dlal
