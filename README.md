@@ -89,7 +89,6 @@ todo
 	- enough to make a bassline, snare, bass drum, chords, cymbal, wind sound
 	- look to modular synths for examples
 - upgrade system viewer to editor, build like midi editor
-	- send commands through editor
 	- queue and commit changes
 	- remove components
 	- UI remove components
@@ -109,6 +108,8 @@ todo
 		- other events
 		- zoom
 		- horizontal scale shouldn't change when ticks per quarter does
+
+- fold formant and sonic_controller into commander
 
 - vocoder
 - pitch shift component

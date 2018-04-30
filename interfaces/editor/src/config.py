@@ -162,6 +162,9 @@ class Controls(AbstractControls):
 			self.cpp.editor_push('queue_by_name 0 {} {}'.format(self.cpp.component_name(component), command))
 		else:
 			self.cpp.editor_push('queue 0 0 {}'.format(command))
+	def __getattr__(self, name):
+		if not name.startswith('command_'): raise AttributeError
+		return lambda *args: self.command_command(name[8:], *args)
 
 	#callback
 	def on_input(self):
