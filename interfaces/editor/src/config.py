@@ -156,7 +156,12 @@ class Controls(AbstractControls):
 	def command_name(self):
 		self.cpp.editor_name()
 	def command_command(self, *args):
-		self.cpp.editor_push('queue 0 0 {}'.format(' '.join(args)))
+		command=' '.join(args)
+		component=self.cpp.selection_component()
+		if component:
+			self.cpp.editor_push('queue_by_name 0 {} {}'.format(self.cpp.component_name(component), command))
+		else:
+			self.cpp.editor_push('queue 0 0 {}'.format(command))
 
 	#callback
 	def on_input(self):
