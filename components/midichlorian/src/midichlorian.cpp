@@ -18,7 +18,9 @@ Midichlorian::Midichlorian(){
 		return _rhythm;
 	});
 	registerCommand("deserialize_midichlorian", "<serialized>", [this](std::stringstream& ss){
-		return command("rhythm "+ss.str());
+		std::string s;
+		ss>>s;
+		return command("rhythm "+s);
 	});
 }
 
