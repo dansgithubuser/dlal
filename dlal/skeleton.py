@@ -1,4 +1,5 @@
 import atexit
+import copy
 import ctypes
 import json
 import os
@@ -76,15 +77,18 @@ obvious.set_ffi_types(_skeleton.dlalTest)
 TextCallback=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 
 class ReprMethod:
-	def __init__(self, target, method):
+	def __init__(self, target, method, **kwargs):
 		self.target=weakref.ref(target)
 		self.method=method
+		self.kwargs=kwargs
 
 	def __repr__(self):
-		return str(getattr(self.target(), self.method)())
+		return str(getattr(self.target(), self.method)(**self.kwargs))
 
-	def __call__(self, *args, **kwargs):
-		return getattr(self.target(), self.method)(*args, **kwargs)
+	def __call__(self, **kwargs):
+		x=copy.deepcopy(self.kwargs)
+		x.update(kwargs)
+		return getattr(self.target(), self.method)(**x)
 
 class System:
 	def __init__(self, port=None):
@@ -114,7 +118,7 @@ class System:
 		self.set('sampleRate', 44100)
 		self.set('samplesPerEvaluation', 128)
 		self.on_del=[]
-		self.l=ReprMethod(self, 'load')
+		self.l=ReprMethod(self, 'load', start=True)
 
 	def __del__(self):
 		for i in self.on_del: i()
@@ -169,7 +173,7 @@ class System:
 		with open(file_name, 'w') as file: file.write(serialized)
 		self._report('save '+os.path.abspath(file_name))
 
-	def load(self, file_name='system.state.txt', start=True):
+	def load(self, file_name='system.state.txt', start=False):
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: result=self.deserialize(file.read())
 		if start: self.start()
