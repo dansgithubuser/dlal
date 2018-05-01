@@ -110,6 +110,10 @@ class System:
 				component=component_builder(command[4])()
 				weak_self().register_novel_component(component)
 				weak_self().add(component)
+			def queue_connect():
+				connector=component_with_name(weak_self(), command[4])
+				connectee=component_with_name(weak_self(), command[5])
+				connector.connect(connectee)
 			eval(command[3])()
 		self.handler=TextCallback(handler)
 		self.system=_skeleton.dlalBuildSystem(port, self.handler)
