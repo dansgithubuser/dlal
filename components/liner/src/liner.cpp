@@ -137,6 +137,7 @@ std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter){
 		if(sample>latestSample) latestSample=sample;
 	}
 	resize(latestSample);
+	setPhase(_phase);
 	return "";
 }
 
