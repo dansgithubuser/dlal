@@ -180,6 +180,8 @@ class System:
 		self._report('save '+os.path.abspath(file_name))
 
 	def load(self, file_name='system.state.txt', start=False):
+		potential_expansion=os.path.join('..', '..', 'states', file_name+'.txt')
+		if os.path.exists(potential_expansion): file_name=potential_expansion
 		self.set('system.load', os.path.abspath(file_name))
 		with open(file_name) as file: result=self.deserialize(file.read())
 		if start: self.start()
