@@ -636,6 +636,8 @@ std::string MultiOut::connect(Component& output){
 		return "error: output must accept midi";
 	if(std::find(_outputs.begin(), _outputs.end(), &output)!=_outputs.end())
 		return "error: output already connected";
+	if(_maxOutputs&&_outputs.size()==_maxOutputs)
+		return "error: max outputs already connected";
 	_outputs.push_back(&output);
 	if(_system) _system->_reportQueue.write(
 		"connect "+componentToStr(this)+" "+componentToStr(&output)

@@ -183,6 +183,7 @@ class MultiOut: public virtual Component{
 		bool _checkAudio, _checkMidi;
 	protected:
 		std::vector<Component*> _outputs;
+		int _maxOutputs=0;
 };
 
 class MidiControllee: public virtual Component{
