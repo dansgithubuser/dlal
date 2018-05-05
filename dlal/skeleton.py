@@ -1,6 +1,6 @@
 import atexit
-import copy
 import ctypes
+import inspect
 import json
 import os
 import platform
@@ -85,10 +85,12 @@ class ReprMethod:
 	def __repr__(self):
 		return str(getattr(self.target(), self.method)(**self.kwargs))
 
-	def __call__(self, **kwargs):
-		x=copy.deepcopy(self.kwargs)
+	def __call__(self, *args, **kwargs):
+		method=getattr(self.target(), self.method)
+		arg_names=inspect.getargspec(method).args
+		x={k: v for k, v in self.kwargs.items() if k not in arg_names[:len(args)]}
 		x.update(kwargs)
-		return getattr(self.target(), self.method)(**x)
+		return method(*args, **x)
 
 class System:
 	def __init__(self, port=None):
