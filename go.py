@@ -15,7 +15,6 @@ parser.add_argument('--interface-iterate', '--ii', action='store_true', help='ru
 parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands -- use h for help')
-parser.add_argument('--system-state', '--ss', default='system.state.txt', help='system state to load for canned commands')
 args=parser.parse_args()
 
 #canned commands
@@ -26,7 +25,6 @@ if args.can:
 		's': '-s soundfont ',
 		'v': '-s vst       ',
 		'l': '-s looper -i editor:9088 -i softboard:9089',
-		'll': ['-s', 'looper', '-i', 'softboard:9089', '-i', 'editor:9088', '--sa', '-l {} -g'.format(args.system_state)],
 	}
 	canned_options={
 		'r': '-r',
@@ -35,7 +33,7 @@ if args.can:
 	}
 	import pprint
 	if args.can=='h':
-		print('usage: `can.options`')
+		print('usage: `can.options.state`')
 		print('available cans:')
 		pprint.pprint(canned_commands)
 		print('available options:')
@@ -44,6 +42,7 @@ if args.can:
 	can=args.can.split('.')
 	name=can[0]
 	options=can[1] if len(can)>1 else ''
+	system_state=can[2] if len(can)>2 else None
 	if name not in canned_commands:
 		print('invalid command -- valid commands are')
 		pprint.pprint(canned_commands)
@@ -58,6 +57,7 @@ if args.can:
 		option=canned_options[i]
 		if type(option)==str: option=option.split()
 		command+=option
+	if system_state: command+=['--sa', '-l {} -g'.format(system_state)]
 	args=parser.parse_args(command)
 
 #helpers
