@@ -35,6 +35,7 @@ struct Component: public Object {
 
 
 	void draw(sf::VertexArray& va, bool selected, bool type=false){
+		if(!_type.size()) return;
 		dans_sfml_wrapper_text_draw(
 			mouseX()+2*SZ+2, mouseY(),
 			SZ, _label.c_str(), 0, 128, 0, 255

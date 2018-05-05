@@ -107,8 +107,9 @@ extern "C" {
 		typedef CartesianPair<int> Pair;
 		typedef std::map<std::string, Pair> Map;
 		std::ofstream(fileName)
-			<<OBV_FOR(fVariables , r[i->first]=Pair(i->second._x, i->second._y), Map())
-			<<OBV_FOR(fComponents, r[i->first]=Pair(i->second._x, i->second._y), Map())
+			<<OBV_FOR(fVariables, r[i->first]=Pair(i->second._x, i->second._y), Map())
+			<<OBV_FOR(fComponents,
+				if(i->second._type.size()) r[i->first]=Pair(i->second._x, i->second._y), Map())
 		;
 	}
 
