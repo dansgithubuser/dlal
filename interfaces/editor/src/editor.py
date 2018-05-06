@@ -91,14 +91,8 @@ class Parser:
 class Component:
 	SIZE=8
 
-	number=1
-
 	def __init__(self, name, type):
-		cpp.component_new(name, type,
-			Component.number*Component.SIZE*5,
-			Component.number*Component.SIZE*5,
-		)
-		Component.number+=1
+		cpp.component_new(name, type, Component.SIZE*5, Component.SIZE*5)
 
 components={}
 variables={}
