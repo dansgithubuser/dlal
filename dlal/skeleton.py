@@ -154,7 +154,9 @@ class System:
 	def deserialize(self, serialized):
 		state=json.loads(serialized)
 		#variables
-		for name, value in state['variables'].items(): self.set(name, value)
+		for name, value in state['variables'].items():
+			if name!='system.load':
+				self.set(name, value)
 		#components
 		components={}
 		for name, serialized in state['components'].items():
