@@ -23,7 +23,7 @@ end
 end
  <Esc >Esc:
  self.reset()
- self.cpp.selection_clear()
+ self.i.selection_clear()
 end
 .* <LShift >LShift: self.sequence=self.sequence[:-2]; self.shift=False
 .* <RShift >RShift: self.sequence=self.sequence[:-2]; self.shift=False
@@ -68,7 +68,7 @@ class Button:
 		return dy
 
 class Controls(AbstractControls):
-	def __init__(self, cpp):
+	def __init__(self, interface):
 		self.configure(configuration)
 		AbstractControls.__init__(self)
 		self.done=False
@@ -79,7 +79,7 @@ class Controls(AbstractControls):
 			'c': 'command',
 		}
 		self.messaging=False
-		self.cpp=cpp
+		self.i=interface
 		self.buttons=[Button() for _ in range(2)]
 
 	def command(self, command=None):
@@ -101,39 +101,41 @@ class Controls(AbstractControls):
 
 	def message(self, message):
 		self.reset()
-		self.cpp.editor_set_text(message)
+		self.i.editor_set_text(message)
 		self.messaging=True
 
 	def button(self, button, pressed, x, y):
 		if button==0:
 			if pressed:
 				self.buttons[0].press(x, y)
-				if x>self.cpp.dans_sfml_wrapper_width()-self.cpp.addables_width():
-					addable=self.cpp.addable_at(x, y)
-					if addable: self.cpp.editor_push('queue_add '+self.cpp.component_type(addable))
+				if x>self.i.dans_sfml_wrapper_width()-self.i.addables_width():
+					addable=self.i.addable_at(x, y)
+					if addable:
+						self.i.reset_component_number()
+						self.i.editor_push('queue_add '+self.i.component_type(addable))
 				else:
-					object=self.cpp.object_at(x, y)
-					if object: self.cpp.selection_add(object)
+					object=self.i.object_at(x, y)
+					if object: self.i.selection_add(object)
 			else: self.buttons[0].release()
 		elif button==1:
 			if pressed:
-				connector=self.cpp.selection_component()
-				connectee=self.cpp.object_at(x, y)
+				connector=self.i.selection_component()
+				connectee=self.i.object_at(x, y)
 				if connector and connectee:
-					self.cpp.connection_toggle(connector, connectee)
-					self.cpp.selection_clear()
+					self.i.connection_toggle(connector, connectee)
+					self.i.selection_clear()
 
 	def move(self, x, y):
 		if self.buttons[0].pressed:
 			dx=self.buttons[0].x_to(x);
 			dy=self.buttons[0].y_to(y);
-			if x>self.cpp.dans_sfml_wrapper_width()-self.cpp.addables_width(): self.cpp.addables_scroll(dy);
+			if x>self.i.dans_sfml_wrapper_width()-self.i.addables_width(): self.i.addables_scroll(dy);
 			else:
-				for i in self.selection(): self.cpp.object_move_by(i, dx, dy)
+				for i in self.selection(): self.i.object_move_by(i, dx, dy)
 
 	def selection(self):
-		for i in range(self.cpp.selection_size()):
-			yield self.cpp.selection_at_index(i)
+		for i in range(self.i.selection_size()):
+			yield self.i.selection_at_index(i)
 
 	#commands
 	def command_quit(self): self.done=True
@@ -152,16 +154,16 @@ class Controls(AbstractControls):
 					if callable(getattr(self, i)) and i.startswith('command_'): print(i[8:])
 			else: print('no such help topic "{}"'.format(args[0]))
 		return 'see terminal for details'
-	def command_push(self, command): self.cpp.editor_push(command)
+	def command_push(self, command): self.i.editor_push(command)
 	def command_name(self):
-		self.cpp.editor_name()
+		self.i.editor_name()
 	def command_command(self, *args):
 		command=' '.join(args)
-		component=self.cpp.selection_component()
+		component=self.i.selection_component()
 		if component:
-			self.cpp.editor_push('queue_by_name 0 {} {}'.format(self.cpp.component_name(component), command))
+			self.i.editor_push('queue_by_name 0 {} {}'.format(self.i.component_name(component), command))
 		else:
-			self.cpp.editor_push('queue 0 0 {}'.format(command))
+			self.i.editor_push('queue 0 0 {}'.format(command))
 	def __getattr__(self, name):
 		if not name.startswith('command_'): raise AttributeError
 		return lambda *args: self.command_command(name[8:], *args)
@@ -169,5 +171,5 @@ class Controls(AbstractControls):
 	#callback
 	def on_input(self):
 		if self.messaging: self.messaging=False; return
-		if   self.mode=='command': self.cpp.editor_set_text(':'+self.sequence_as_text())
-		else                     : self.cpp.editor_set_text(''.join(self.sequence))
+		if   self.mode=='command': self.i.editor_set_text(':'+self.sequence_as_text())
+		else                     : self.i.editor_set_text(''.join(self.sequence))

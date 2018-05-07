@@ -91,8 +91,17 @@ class Parser:
 class Component:
 	SIZE=8
 
+	number=1
+
 	def __init__(self, name, type):
-		cpp.component_new(name, type, Component.SIZE*5, Component.SIZE*5)
+		cpp.component_new(name, type,
+			Component.number*Component.SIZE*5,
+			Component.number*Component.SIZE*5,
+		)
+		Component.number+=1
+
+def reset_component_number(): Component.number=1
+cpp.reset_component_number=reset_component_number
 
 components={}
 variables={}
@@ -128,7 +137,9 @@ while not controls.done:
 			def variable():
 				name, value=parser.get_n(2, '\n')
 				cpp.variable_set(name, value)
-				if name=='system.load': cpp.editor_load(value+'.editor')
+				if name=='system.load':
+					cpp.reset_component_number()
+					cpp.editor_load(value+'.editor')
 			def command():
 				src, dst=parser.get_n(2)
 				cpp.connection_command(src, dst)
