@@ -2,6 +2,7 @@
 #define DLAL_RINGBUFFER_INCLUDED
 
 #include <cmath>
+#include <stdexcept>
 #include <vector>
 
 namespace dlal{
@@ -13,6 +14,7 @@ template <typename T> class Ringbuffer{
 		Ringbuffer(unsigned size, const T& t): _mask(1), _i(0) {
 			unsigned log2Size=unsigned(std::log2(size)+1);
 			_v.resize(1<<log2Size, t);
+			if(_v.size()!=size) throw std::logic_error("size must be power of 2");
 			if(log2Size>0) for(unsigned i=0; i<log2Size-1; ++i) _mask|=_mask<<1;
 		}
 
@@ -35,6 +37,33 @@ template <typename T> class Ringbuffer{
 	private:
 		std::vector<T> _v;
 		unsigned _mask, _i;
+};
+
+template <typename T> class ModRingbuffer{
+	public:
+		ModRingbuffer(){}
+
+		ModRingbuffer(unsigned size, const T& t): _v(size, t), _i(0) {}
+
+		const T& read(unsigned i) const { return _v[(_i+i)%_v.size()]; }
+
+		const T& readBack(unsigned i) const { return _v[(_i+_v.size()-1-i)%_v.size()]; }
+
+		void write(const T& t){
+			_v[_i]=t;
+			++_i;
+			_i%=_v.size();
+		}
+
+		const T& max(unsigned w) const {
+			T m=readBack(0); unsigned mi=0;
+			for(unsigned i=1; i<w; ++i) if(readBack(i)>m){ m=readBack(i); mi=i; }
+			return readBack(mi);
+		}
+
+	private:
+		std::vector<T> _v;
+		unsigned _i;
 };
 
 }//namespace dlal
