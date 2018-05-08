@@ -69,7 +69,6 @@ todo
 	- midi controllee, all components
 
 - audiobro
-	- reverb
 	- piano
 	- vibrato
 	- pitch slide
