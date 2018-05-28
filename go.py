@@ -24,7 +24,8 @@ if args.can:
 		'f': '-s sonic     ',
 		's': '-s soundfont ',
 		'v': '-s vst       ',
-		'l': '-s looper -i editor:9088 -i softboard:9089',
+		'looper': '-s looper -i editor:9088 -i softboard:9089',
+		'l': '-s loader -i editor',
 	}
 	canned_options={
 		'r': '-r',
@@ -38,6 +39,8 @@ if args.can:
 		pprint.pprint(canned_commands)
 		print('available options:')
 		pprint.pprint(canned_options)
+		print('available states:')
+		pprint.pprint([i[:-4] for i in os.listdir('states') if i.endswith('.txt')])
 		sys.exit(0)
 	can=args.can.split('.')
 	name=can[0]
