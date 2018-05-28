@@ -88,14 +88,21 @@ if args.debug: config='Debug'
 if args.setup:
 	if platform.system()=='Linux':
 		#sfml dependencies
-		shell('sudo apt-get install --yes --force-yes '
-			'libxcb-image0-dev freeglut3-dev libjpeg-dev libfreetype6-dev '
-			'libxrandr-dev libglew-dev libsndfile1-dev libopenal-dev libudev-dev '
+		shell('sudo apt install --yes --force-yes '
+			'libxcb-image0-dev '
+			'freeglut3-dev '
+			'libjpeg-dev '
+			'libfreetype6-dev '
+			'libxrandr-dev '
+			'libglew-dev '
+			'libsndfile1-dev '
+			'libopenal-dev '
+			'libudev-dev '
 		)
 		#tkinter
-		shell('sudo apt-get install --yes --force-yes python-tk')
+		shell('sudo apt install --yes --force-yes python-tk')
 		#rtmidi dependencies
-		shell('sudo apt-get install --yes --force-yes libasound2-dev')
+		shell('sudo apt install --yes --force-yes libasound2-dev')
 		#cmake
 		shell('wget http://www.cmake.org/files/v3.2/cmake-3.2.3-Linux-x86_64.sh')
 		shell('chmod a+x cmake-3.2.3-Linux-x86_64.sh')

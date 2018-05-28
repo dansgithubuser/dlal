@@ -3,6 +3,9 @@ os:
   - osx
 dist: trusty
 sudo: required
+addons:
+  apt:
+    update: true
 install:
   - python go.py --setup
   - export PATH=/usr/local/bin:$PATH
