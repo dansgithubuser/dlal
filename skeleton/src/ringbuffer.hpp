@@ -12,9 +12,10 @@ template <typename T> class Ringbuffer{
 		Ringbuffer(){}
 
 		Ringbuffer(unsigned size, const T& t): _mask(1), _i(0) {
-			unsigned log2Size=unsigned(std::log2(size)+1);
+			auto log2SizeF=std::log2(size);
+			unsigned log2Size=unsigned(log2SizeF);
+			if(log2SizeF-log2Size!=0) throw std::logic_error("size must be power of 2");
 			_v.resize(1<<log2Size, t);
-			if(_v.size()!=size) throw std::logic_error("size must be power of 2");
 			if(log2Size>0) for(unsigned i=0; i<log2Size-1; ++i) _mask|=_mask<<1;
 		}
 
