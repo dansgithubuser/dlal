@@ -63,6 +63,13 @@ file organization
 
 todo
 ----
+- need to design for more than one person interacting at once with common devices (phones)
+	- network component (py-side) serves a websocket
+	- webify interfaces
+		- softboard
+		- system editor
+	- create a web midi editor
+
 - audio select input and output
 
 - save and load system
@@ -87,7 +94,7 @@ todo
 	- sine, triangle, square, saw, noise
 	- enough to make a bassline, snare, bass drum, chords, cymbal, wind sound
 	- look to modular synths for examples
-- upgrade system viewer to editor, build like midi editor
+- system editor
 	- queue and commit changes
 	- remove components
 	- UI remove components
