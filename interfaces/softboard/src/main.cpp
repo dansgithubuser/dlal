@@ -76,6 +76,7 @@ int main(int argc, char** argv){
 		std::stringstream ss;
 		dlal::Page(argv[3], 0).toFile(ss);
 		client.writeSizedString(ss.str());
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 		return EXIT_SUCCESS;
 	}
 	//sfml
