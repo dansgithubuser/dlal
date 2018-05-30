@@ -13,3 +13,6 @@
 [submodule "deps/dryad"]
 	path = deps/dryad
 	url = https://github.com/dansgithubuser/dryad
+[submodule "deps/simple-websocket-server"]
+	path = deps/simple-websocket-server
+	url = https://github.com/dpallot/simple-websocket-server
