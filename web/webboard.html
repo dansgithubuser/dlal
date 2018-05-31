@@ -11,6 +11,10 @@ var gDebug;
 function e(name){ return document.getElementById(name) }
 function v(name){ return e(name).value }
 
+function localize(){
+	e('host').value='192.168.1.';
+}
+
 function connect(){
 	gSocket=new WebSocket('ws://'+v('host')+':'+v('port'));
 	e('divInit').style.display='none';
@@ -46,7 +50,7 @@ function resize(){
 	for(var b=0; b<v('boards'); ++b){
 		for(var k=0; k<v('keysPerBoard'); ++k){
 			var x=gWKey*k;
-			var y=hBoard*b+(white[k%12]?gHKey:0);
+			var y=canvas.height-hBoard*(b+1)+(white[k%12]?gHKey:0);
 			var n=parseInt(v('lowestNote'))+b*parseInt(v('octavesBetweenBoards'))*12+k;
 			gKeys.push({x: x, y: y, n: n, touches: 0, newTouches: 0});
 			var g=white[k%12]?255:127;
@@ -177,13 +181,14 @@ window.onload=function(){
 <div id='divInit'>
 	<div>
 		host: <input type='text' id='host'/>
+		<button onclick='localize()'>localize</button>
 	</div>
 	<div>
 		port: <input type='text' id='port'/>
 		<button onclick='connect()'>connect</button>
 		debug: <input type='checkbox' id='debug'/>
 	</div>
-	<div>keys per board: <input type='text' id='keysPerBoard' value='12'/></div>
+	<div>keys per board: <input type='text' id='keysPerBoard' value='13'/></div>
 	<div>boards: <input type='text' id='boards' value='1'/></div>
 	<div>octaves between boards: <input type='text' id='octavesBetweenBoards' value='1'/></div>
 	<div>lowest note: <input type='text' id='lowestNote' value='60'/></div>
