@@ -1,0 +1,44 @@
+<script>
+
+var gSocket;
+
+function e(name){ return document.getElementById(name) }
+function v(name){ return e(name).value }
+
+function connect(){
+	gSocket=new WebSocket('ws://'+v('host')+':'+v('port'));
+}
+
+function send(note, down){
+	gSocket.send('1 0 3 '+(down?0x90:0x80)+' '+note+' '+64);
+}
+
+window.onload=function(){
+	e('host').value='localhost';
+	e('port').value=29120;
+}
+
+</script>
+
+<div>
+	host: <input type='text' id='host'/>
+</div>
+<div>
+	port: <input type='text' id='port'/>
+	<button onclick='connect()'>connect</button>
+</div>
+<div>
+	<button onmousedown='send(60, true)' onmouseup='send(60, false)'>C</button>
+	<button onmousedown='send(61, true)' onmouseup='send(61, false)'>C#</button>
+	<button onmousedown='send(62, true)' onmouseup='send(62, false)'>D</button>
+	<button onmousedown='send(63, true)' onmouseup='send(63, false)'>Eb</button>
+	<button onmousedown='send(64, true)' onmouseup='send(64, false)'>E</button>
+	<button onmousedown='send(65, true)' onmouseup='send(65, false)'>F</button>
+	<button onmousedown='send(66, true)' onmouseup='send(66, false)'>F#</button>
+	<button onmousedown='send(67, true)' onmouseup='send(67, false)'>G</button>
+	<button onmousedown='send(68, true)' onmouseup='send(68, false)'>Ab</button>
+	<button onmousedown='send(69, true)' onmouseup='send(69, false)'>A</button>
+	<button onmousedown='send(70, true)' onmouseup='send(70, false)'>Bb</button>
+	<button onmousedown='send(71, true)' onmouseup='send(71, false)'>B</button>
+	<button onmousedown='send(72, true)' onmouseup='send(72, false)'>C</button>
+</div>
