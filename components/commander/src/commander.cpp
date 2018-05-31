@@ -148,6 +148,13 @@ void Commander::evaluate(){
 	}
 }
 
+void Commander::midi(const uint8_t* bytes, unsigned size){
+	std::stringstream ss;
+	ss<<"midi ";
+	for(unsigned i=0; i<size; ++i) ss<<(unsigned)bytes[i]<<" ";
+	_queue.write(Directive(0, ss.str(), 0));
+}
+
 void Commander::customCommand(
 	const std::string& name, dlal::TextCallback command
 ){

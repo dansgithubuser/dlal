@@ -137,7 +137,7 @@ class System:
 		slot=kwargs.get('slot', 0)
 		result=''
 		for arg in args:
-			for c in arg.components_to_add:
+			for c in arg.get_components_to_add():
 				result+=report(_skeleton.dlalAdd(self.system, c.component, slot))
 				c.weak_system=weakref.ref(self)
 			if len(result): result+='\n'
@@ -210,6 +210,12 @@ class Component:
 
 	def to_dict(self): return {'component': self.to_str()}
 
+	def set_components_to_add(self, components):
+		self.components_to_add=[weakref.ref(i) for i in components]
+
+	def get_components_to_add(self):
+		return [i() for i in self.components_to_add]
+
 	def __init__(self, component_type, **kwargs):
 		self.component=None
 		if component_type not in Component._libraries:
@@ -223,10 +229,11 @@ class Component:
 			self.component=Component._libraries[component_type].dlalBuildComponent(
 				kwargs.get('name', _namer.name())
 			)
-		self.components_to_add=[self]
+		self.set_components_to_add([self])
 		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
+		weak_self=weakref.ref(self)
 		def captain(command):
-			return lambda *args: self.command(command+' '+' '.join([str(i) for i in args]))
+			return lambda *args: weak_self().command(command+' '+' '.join([str(i) for i in args]))
 		for command in commands:
 			if command not in dir(self): setattr(self, command, captain(command))
 
@@ -255,13 +262,13 @@ class Pipe(Component):
 	def __init__(self, *args):
 		if not len(args): return
 		self.component=args[0].component
-		self.components_to_add=[x for arg in args for x in arg.components_to_add]
+		self.set_components_to_add([x for arg in args for x in arg.get_components_to_add()])
 
 	def __del__(self): pass
 
-	def __getitem__(self, i): return self.components_to_add[i]
+	def __getitem__(self, i): return self.get_components_to_add()[i]
 
-	def output(self): return self.components_to_add[-1].component
+	def output(self): return self.get_components_to_add()[-1].component
 
 def component_to_dict(self, members):
 	result={i: getattr(self, i) for i in members}

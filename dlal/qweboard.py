@@ -1,4 +1,5 @@
 from .commander import *
+from .network import *
 from .skeleton import *
 
 class Qweboard(Pipe):
@@ -11,7 +12,7 @@ class Qweboard(Pipe):
 			d, component_map=from_dict
 			component_from_dict(self, ['network', 'commander'], d, component_map)
 		else:
-			self.network=Component('network')
+			self.network=Network()
 			self.commander=Commander()
 			self.network.connect(self.commander)
 			self.network.port(Qweboard.port)

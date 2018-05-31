@@ -8,7 +8,7 @@ class Formant(Component):
 		Component.__init__(self, 'fir', **kwargs)
 		self.commander=Component('commander')
 		self.commander.connect(self)
-		self.components_to_add=[self.commander, self]
+		self.set_components_to_add([self.commander, self])
 
 	def show_controls(self, title='dlal formant synth controls'):
 		root=tkinter.Tk(title)

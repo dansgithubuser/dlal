@@ -15,6 +15,7 @@ class Network: public MultiOut, public SamplesPerEvaluationGetter{
 		void evaluate();
 		void queue(const Page&);
 		Queue<uint8_t> _data;
+		Queue<Page> _forward_queue;
 	private:
 		int _port;
 		Queue<Page> _queue;

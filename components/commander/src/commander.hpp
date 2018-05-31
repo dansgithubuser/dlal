@@ -50,6 +50,8 @@ class Commander: public MultiOut, public Periodic{
 		std::string type() const { return "commander"; }
 		void* derived(){ return this; }
 		void evaluate();
+		void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
 		void customCommand(const std::string& name, dlal::TextCallback command);
 		Queue<Directive> _queue;
 	private:
