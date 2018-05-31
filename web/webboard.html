@@ -5,6 +5,8 @@
 var gSocket;
 var gWKey, gHKey;
 var gKeys;
+var gMessages=[];
+var gDebug;
 
 function e(name){ return document.getElementById(name) }
 function v(name){ return e(name).value }
@@ -14,10 +16,13 @@ function connect(){
 	e('divInit').style.display='none';
 	e('divBoard').style.display='';
 	resize();
+	gDebug=e('debug').checked;
 }
 
 function send(note, down){
+	if(gDebug) gMessages.push('sending '+note+', '+down);
 	gSocket.send('1 0 3 '+(down?0x90:0x80)+' '+note+' '+64);
+	if(gDebug) gMessages.push('sent'+note+', '+down);
 }
 
 function rect(context, xi, yi, xf, yf, r, g, b){
@@ -71,6 +76,14 @@ function processNewTouches(){
 			else if(oldTouches!=0&&gKeys[k].touches==0) send(gKeys[k].n, false);
 		}
 	}
+	if(gDebug){
+		var canvas=e('canvas');
+		var context=canvas.getContext('2d');
+		rect(context, 5, 0, 140, canvas.height*0.75, 40, 0, 0);
+		context.fillStyle='rgb(255, 0, 0)';
+		for(var i=0; i<gMessages.length; ++i)
+			context.fillText(gMessages[i], 10, canvas.height*0.75-(gMessages.length-i)*16);
+	}
 }
 
 var gTouches={};
@@ -79,6 +92,7 @@ function touchStart(evt){
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
 		gTouches[touch.identifier]={x: touch.clientX, y: touch.clientY};
+		if(gDebug) gMessages.push('touchStart '+touch.clientX+' '+touch.clientY);
 		touchHandle(touch.clientX, touch.clientY, true);
 	}
 	processNewTouches();
@@ -88,6 +102,7 @@ function touchEnd(evt){
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
 		delete gTouches[touch.identifier];
+		if(gDebug) gMessages.push('touchEnd '+touch.clientX+' '+touch.clientY);
 		touchHandle(touch.clientX, touch.clientY, false);
 	}
 	processNewTouches();
@@ -97,6 +112,7 @@ function touchMove(evt){
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
 		var oldTouch=gTouches[touch.identifier];
+		if(gDebug) gMessages.push('touchMove '+touch.clientX+' '+touch.clientY);
 		touchHandle(oldTouch.x, oldTouch.y, false);
 		touchHandle(touch.clientX, touch.clientY, true);
 		gTouches[touch.identifier]={x: touch.clientX, y: touch.clientY};
@@ -109,6 +125,7 @@ var gMouseXOld;
 var gMouseYOld;
 
 function mouseDown(evt){
+	if(gDebug) gMessages.push('mouseDown '+evt.clientX+' '+evt.clientY);
 	gMouseXOld=evt.clientX;
 	gMouseYOld=evt.clientY;
 	gMouseDragging=true;
@@ -117,12 +134,14 @@ function mouseDown(evt){
 }
 
 function mouseUp(evt){
+	if(gDebug) gMessages.push('mouseUp '+evt.clientX+' '+evt.clientY);
 	gMouseDragging=false;
 	touchHandle(evt.clientX, evt.clientY, false);
 	processNewTouches();
 }
 
 function mouseMove(evt){
+	if(gDebug) gMessages.push('mouseMove '+evt.clientX+' '+evt.clientY);
 	if(!gMouseDragging) return;
 	touchHandle(gMouseXOld, gMouseYOld, false);
 	touchHandle(evt.clientX, evt.clientY, true);
@@ -155,6 +174,7 @@ window.onload=function(){
 	<div>
 		port: <input type='text' id='port'/>
 		<button onclick='connect()'>connect</button>
+		debug: <input type='checkbox' id='debug'/>
 	</div>
 	<div>keys per board: <input type='text' id='keysPerBoard' value='12'/></div>
 	<div>boards: <input type='text' id='boards' value='1'/></div>
