@@ -4,6 +4,7 @@ from .formant import *
 from .helpers import *
 from .liner import *
 from .looper import *
+from .network import *
 from .qweboard import *
 from .reticulated_liner import *
 from .skeleton import *

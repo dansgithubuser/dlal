@@ -29,9 +29,15 @@ static void onAccept(dyad_Event* e){
 	);
 }
 
+static void onTick(dyad_Event* e){
+	auto& self=*(dlal::Network*)e->udata;
+	dlal::Page page;
+	if(self._forward_queue.read(page, true)) self.queue(page);
+}
+
 namespace dlal{
 
-Network::Network(): _data(10), _port(9089), _queue(8) {
+Network::Network(): _data(10), _forward_queue(8), _port(9089), _queue(8) {
 	addJoinAction([this](System&)->std::string{
 		_system->setVariable(componentToStr(this)+".port", std::to_string(_port));
 		return _system->dyadPauseAnd([this]()->std::string{
@@ -39,6 +45,7 @@ Network::Network(): _data(10), _port(9089), _queue(8) {
 			_system->dyadAddListener(server, DYAD_EVENT_ACCEPT , onAccept   , this);
 			_system->dyadAddListener(server, DYAD_EVENT_ERROR  , onError    , this);
 			_system->dyadAddListener(server, DYAD_EVENT_DESTROY, onDestroyed, this);
+			_system->dyadAddListener(server, DYAD_EVENT_TICK   , onTick     , this);
 			if(_system->dyadListenEx(server, "0.0.0.0", _port, 511)<0)
 				return obvstr("error: couldn't listen to port", _port);
 			return "";
@@ -46,7 +53,7 @@ Network::Network(): _data(10), _port(9089), _queue(8) {
 	});
 	registerCommand("port", "", [this](std::stringstream& ss)->std::string{
 		ss>>_port;
-		return "";
+		return std::to_string(_port);
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return (_data.lockless()&&_queue.lockless())?"lockless":"lockfull";
@@ -76,6 +83,10 @@ Network::Network(): _data(10), _port(9089), _queue(8) {
 	});
 	registerCommand("deserialize_network", "<serialized>", [this](std::stringstream& ss){
 		ss>>_port;
+		return "";
+	});
+	registerCommand("forward_data", "<data>", [this](std::stringstream& ss){
+		_forward_queue.write(dlal::Page(ss));
 		return "";
 	});
 }
