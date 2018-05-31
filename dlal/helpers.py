@@ -6,7 +6,8 @@ from .sonic_controller import *
 import sys
 
 def midi_ports():
-	return [i for i in Component('midi').ports().split('\n') if len(i) and 'Midi Through' not in i]
+	midi=Component('midi')
+	return [i for i in midi.ports().split('\n') if len(i) and 'Midi Through' not in i]
 
 def standard_system_functionality(audio, midi=None, raw=False, test=False, args=None):
 	def go():

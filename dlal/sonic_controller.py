@@ -103,7 +103,7 @@ class SonicController(Component):
 			Component.__init__(self, 'sonic', **kwargs)
 			self.commander=Component('commander')
 			self.commander.connect(self)
-		self.components_to_add=[self.commander, self]
+		self.set_components_to_add([self.commander, self])
 		self.oscillators=[]
 		if setting: self.load(setting)
 

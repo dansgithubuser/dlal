@@ -52,7 +52,7 @@ class Commander(Component):
 				self.weak_system().register_novel_component(component)
 				result+=add(component.component)
 			else:
-				for c in arg.components_to_add: result+=add(c.component)
+				for c in arg.get_components_to_add(): result+=add(c.component)
 			if len(result): result+='\n';
 		return result
 
