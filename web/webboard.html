@@ -86,9 +86,11 @@ function processNewTouches(){
 	}
 }
 
+var gTouchHappened=false;
 var gTouches={};
 
 function touchStart(evt){
+	gTouchHappened=true;
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
 		gTouches[touch.identifier]={x: touch.clientX, y: touch.clientY};
@@ -99,6 +101,7 @@ function touchStart(evt){
 }
 
 function touchEnd(evt){
+	gTouchHappened=true;
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
 		delete gTouches[touch.identifier];
@@ -109,6 +112,7 @@ function touchEnd(evt){
 }
 
 function touchMove(evt){
+	gTouchHappened=true;
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
 		var oldTouch=gTouches[touch.identifier];
@@ -125,6 +129,7 @@ var gMouseXOld;
 var gMouseYOld;
 
 function mouseDown(evt){
+	if(gTouchHappened) return;
 	if(gDebug) gMessages.push('mouseDown '+evt.clientX+' '+evt.clientY);
 	gMouseXOld=evt.clientX;
 	gMouseYOld=evt.clientY;
@@ -134,6 +139,7 @@ function mouseDown(evt){
 }
 
 function mouseUp(evt){
+	if(gTouchHappened) return;
 	if(gDebug) gMessages.push('mouseUp '+evt.clientX+' '+evt.clientY);
 	gMouseDragging=false;
 	touchHandle(evt.clientX, evt.clientY, false);
@@ -141,6 +147,7 @@ function mouseUp(evt){
 }
 
 function mouseMove(evt){
+	if(gTouchHappened) return;
 	if(gDebug) gMessages.push('mouseMove '+evt.clientX+' '+evt.clientY);
 	if(!gMouseDragging) return;
 	touchHandle(gMouseXOld, gMouseYOld, false);
