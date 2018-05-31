@@ -6,12 +6,12 @@ static void rtMidiCallback(
 	double delta, std::vector<unsigned char>* message, void* userData
 ){
 	dlal::Midi* midi=(dlal::Midi*)userData;
-	midi->midi(message->data(), message->size());
+	midi->rtMidi(message->data(), message->size());
 }
 
 namespace dlal{
 
-Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
+Midi::Midi(): _rtMidiIn(nullptr), _rtQueue(7), _cmdQueue(7) {
 	registerCommand("ports", "", [this](std::stringstream& ss){
 		std::string s;
 		s=allocate();
@@ -48,7 +48,7 @@ Midi::Midi(): _rtMidiIn(nullptr), _queue(7) {
 		return _whitelist.append(ss);
 	});
 	registerCommand("lockless", "", [this](std::stringstream& ss){
-		return _queue.lockless()?"lockless":"lockfull";
+		return _rtQueue.lockless()?"lockless":"lockfull";
 	});
 }
 
@@ -60,18 +60,17 @@ static unsigned getNibble(const std::vector<uint8_t>& bytes, unsigned i){
 
 void Midi::evaluate(){
 	std::vector<uint8_t> midi;
-	while(_queue.read(midi, true))
-		for(unsigned i=0; i<_outputs.size(); ++i){
-			if(_blacklist.match(i, midi)&&!_whitelist.match(i, midi)) continue;
-			midiSend(_outputs.at(i), midi.data(), midi.size());
-			_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(_outputs.at(i)));
-		}
+	while(_rtQueue.read(midi, true)) evaluateMidi(midi);
+	while(_cmdQueue.read(midi, true)) evaluateMidi(midi);
+}
+
+void Midi::rtMidi(const uint8_t* bytes, unsigned size){
+	_rtQueue.write(std::vector<uint8_t>(bytes, bytes+size));
 }
 
 void Midi::midi(const uint8_t* bytes, unsigned size){
-	_queue.write(std::vector<uint8_t>(bytes, bytes+size));
+	_cmdQueue.write(std::vector<uint8_t>(bytes, bytes+size));
 }
-
 
 std::string Midi::List::append(std::stringstream& ss){
 	unsigned output;
@@ -126,6 +125,14 @@ std::string Midi::allocate(){
 		return "error: "+error.getMessage();
 	}
 	return "";
+}
+
+void Midi::evaluateMidi(const std::vector<uint8_t>& midi){
+	for(unsigned i=0; i<_outputs.size(); ++i){
+		if(_blacklist.match(i, midi)&&!_whitelist.match(i, midi)) continue;
+		midiSend(_outputs.at(i), midi.data(), midi.size());
+		_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(_outputs.at(i)));
+	}
 }
 
 }//namespace dlal
