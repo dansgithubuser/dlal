@@ -64,13 +64,14 @@ file organization
 todo
 ----
 - need to design for more than one person interacting at once with common devices (phones)
-	- network component (py-side) serves a websocket
+	- loop midi by playing the same thing twice
+		- liner mode
+		- sync to other liner
 	- webify interfaces
-		- softboard
 		- system editor
-	- create a web midi editor
 
 - audio select input and output
+- soundscape: estimate amount of time that recording can last
 
 - save and load system
 	- midi controllee, all components
