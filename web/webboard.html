@@ -1,44 +1,207 @@
+<head>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
 <script>
 
 var gSocket;
+var gWKey, gHKey;
+var gKeys;
+var gMessages=[];
+var gDebug;
+
+function debugLog(message){
+	if(!gDebug) return;
+	gMessages.push(message);
+	console.log(message);
+}
 
 function e(name){ return document.getElementById(name) }
 function v(name){ return e(name).value }
 
+function localize(){
+	e('host').value='192.168.1.';
+}
+
 function connect(){
 	gSocket=new WebSocket('ws://'+v('host')+':'+v('port'));
+	e('divInit').style.display='none';
+	e('divBoard').style.display='';
+	resize();
+	gDebug=e('debug').checked;
 }
 
 function send(note, down){
+	debugLog('sending '+note+', '+down);
 	gSocket.send('1 0 3 '+(down?0x90:0x80)+' '+note+' '+64);
+	debugLog('sent'+note+', '+down);
+}
+
+function rect(context, xi, yi, xf, yf, r, g, b){
+	context.fillStyle='rgb('+r+', '+g+', '+b+')';
+	context.fillRect(xi, yi, xf-xi, yf-yi);
+	context.stroke();
+}
+
+function resize(){
+	var divBoard=e('divBoard');
+	var canvas=e('canvas');
+	canvas.width =divBoard.offsetWidth;
+	canvas.height=divBoard.offsetHeight;
+	var context=canvas.getContext('2d');
+	rect(context, 0, 0, canvas.width, canvas.height, 0, 0, 0);
+	const hBoard=canvas.height/v('boards');
+	const white=[1, 0, 1, 0, 1,  1, 0, 1, 0, 1, 0, 1];
+	gWKey=canvas.width/v('keysPerBoard');
+	gHKey=hBoard/2;
+	gKeys=[];
+	for(var b=0; b<v('boards'); ++b){
+		for(var k=0; k<v('keysPerBoard'); ++k){
+			var x=gWKey*k;
+			var y=canvas.height-hBoard*(b+1)+(white[k%12]?gHKey:0);
+			var n=parseInt(v('lowestNote'))+b*parseInt(v('octavesBetweenBoards'))*12+k;
+			gKeys.push({x: x, y: y, n: n, touches: 0, newTouches: 0});
+			var g=white[k%12]?255:127;
+			rect(context, x, y, x+gWKey, y+gHKey, 0, g, 0);
+		}
+	}
+}
+
+function touchHandle(x, y, down){
+	for(var k=0; k<gKeys.length; ++k){
+		var dx=x-gKeys[k].x;
+		var dy=y-gKeys[k].y;
+		if(0<dx&&dx<gWKey&&0<dy&&dy<gHKey){
+			gKeys[k].newTouches+=down?1:-1;
+			return;
+		}
+	}
+}
+
+function processNewTouches(){
+	for(var k=0; k<gKeys.length; ++k){
+		if(gKeys[k].newTouches!=0){
+			var oldTouches=gKeys[k].touches;
+			gKeys[k].touches+=gKeys[k].newTouches;
+			gKeys[k].newTouches=0;
+			if(oldTouches==0&&gKeys[k].touches!=0) send(gKeys[k].n, true);
+			else if(oldTouches!=0&&gKeys[k].touches==0) send(gKeys[k].n, false);
+		}
+	}
+	if(gDebug){
+		var canvas=e('canvas');
+		var context=canvas.getContext('2d');
+		rect(context, 5, 0, 140, canvas.height*0.75, 40, 0, 0);
+		context.fillStyle='rgb(255, 0, 0)';
+		for(var i=0; i<gMessages.length; ++i)
+			context.fillText(gMessages[i], 10, canvas.height*0.75-(gMessages.length-i)*16);
+	}
+}
+
+var gTouchHappened=false;
+var gTouches={};
+
+function touchStart(evt){
+	gTouchHappened=true;
+	for(var i=0; i<evt.changedTouches.length; ++i){
+		var touch=evt.changedTouches[i];
+		gTouches[touch.identifier]={x: touch.clientX, y: touch.clientY};
+		debugLog('touchStart '+touch.clientX+' '+touch.clientY);
+		touchHandle(touch.clientX, touch.clientY, true);
+	}
+	processNewTouches();
+}
+
+function touchEnd(evt){
+	gTouchHappened=true;
+	for(var i=0; i<evt.changedTouches.length; ++i){
+		var touch=evt.changedTouches[i];
+		var oldTouch=gTouches[touch.identifier];
+		touchHandle(oldTouch.x, oldTouch.y, false);
+		delete gTouches[touch.identifier];
+		debugLog('touchEnd '+touch.clientX+' '+touch.clientY);
+	}
+	processNewTouches();
+}
+
+function touchMove(evt){
+	gTouchHappened=true;
+	for(var i=0; i<evt.changedTouches.length; ++i){
+		var touch=evt.changedTouches[i];
+		var oldTouch=gTouches[touch.identifier];
+		debugLog('touchMove '+touch.clientX+' '+touch.clientY);
+		touchHandle(oldTouch.x, oldTouch.y, false);
+		touchHandle(touch.clientX, touch.clientY, true);
+		gTouches[touch.identifier]={x: touch.clientX, y: touch.clientY};
+	}
+	processNewTouches();
+}
+
+var gMouseDragging=false;
+var gMouseXOld;
+var gMouseYOld;
+
+function mouseDown(evt){
+	if(gTouchHappened) return;
+	debugLog('mouseDown '+evt.clientX+' '+evt.clientY);
+	gMouseXOld=evt.clientX;
+	gMouseYOld=evt.clientY;
+	gMouseDragging=true;
+	touchHandle(evt.clientX, evt.clientY, true);
+	processNewTouches();
+}
+
+function mouseUp(evt){
+	if(gTouchHappened) return;
+	debugLog('mouseUp '+evt.clientX+' '+evt.clientY);
+	gMouseDragging=false;
+	touchHandle(evt.clientX, evt.clientY, false);
+	processNewTouches();
+}
+
+function mouseMove(evt){
+	if(gTouchHappened) return;
+	debugLog('mouseMove '+evt.clientX+' '+evt.clientY);
+	if(!gMouseDragging) return;
+	touchHandle(gMouseXOld, gMouseYOld, false);
+	touchHandle(evt.clientX, evt.clientY, true);
+	gMouseXOld=evt.clientX;
+	gMouseYOld=evt.clientY;
+	processNewTouches();
 }
 
 window.onload=function(){
 	e('host').value='localhost';
 	e('port').value=29120;
+	var canvas=e('canvas');
+	canvas.addEventListener('touchstart' , touchStart);
+	canvas.addEventListener('touchend'   , touchEnd);
+	canvas.addEventListener('touchcancel', touchEnd);
+	canvas.addEventListener('touchmove'  , touchMove);
+	canvas.addEventListener('mousedown', mouseDown);
+	canvas.addEventListener('mouseup'  , mouseUp);
+	canvas.addEventListener('mousemove', mouseMove);
 }
 
 </script>
+</head>
+<body style='margin: 0' onresize='resize()'>
 
-<div>
-	host: <input type='text' id='host'/>
+<div id='divInit'>
+	<div>
+		host: <input type='text' id='host'/>
+		<button onclick='localize()'>localize</button>
+	</div>
+	<div>
+		port: <input type='text' id='port'/>
+		<button onclick='connect()'>connect</button>
+		debug: <input type='checkbox' id='debug'/>
+	</div>
+	<div>keys per board: <input type='text' id='keysPerBoard' value='13'/></div>
+	<div>boards: <input type='text' id='boards' value='1'/></div>
+	<div>octaves between boards: <input type='text' id='octavesBetweenBoards' value='1'/></div>
+	<div>lowest note: <input type='text' id='lowestNote' value='60'/></div>
 </div>
-<div>
-	port: <input type='text' id='port'/>
-	<button onclick='connect()'>connect</button>
+<div id='divBoard' style='display: none; height: 100%; width: 100%;'>
+	<canvas id='canvas' style='height: 100%; width: 100%;'/>
 </div>
-<div>
-	<button onmousedown='send(60, true)' onmouseup='send(60, false)'>C</button>
-	<button onmousedown='send(61, true)' onmouseup='send(61, false)'>C#</button>
-	<button onmousedown='send(62, true)' onmouseup='send(62, false)'>D</button>
-	<button onmousedown='send(63, true)' onmouseup='send(63, false)'>Eb</button>
-	<button onmousedown='send(64, true)' onmouseup='send(64, false)'>E</button>
-	<button onmousedown='send(65, true)' onmouseup='send(65, false)'>F</button>
-	<button onmousedown='send(66, true)' onmouseup='send(66, false)'>F#</button>
-	<button onmousedown='send(67, true)' onmouseup='send(67, false)'>G</button>
-	<button onmousedown='send(68, true)' onmouseup='send(68, false)'>Ab</button>
-	<button onmousedown='send(69, true)' onmouseup='send(69, false)'>A</button>
-	<button onmousedown='send(70, true)' onmouseup='send(70, false)'>Bb</button>
-	<button onmousedown='send(71, true)' onmouseup='send(71, false)'>B</button>
-	<button onmousedown='send(72, true)' onmouseup='send(72, false)'>C</button>
-</div>
+
+</body>
