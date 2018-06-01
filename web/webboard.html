@@ -114,9 +114,10 @@ function touchEnd(evt){
 	gTouchHappened=true;
 	for(var i=0; i<evt.changedTouches.length; ++i){
 		var touch=evt.changedTouches[i];
+		var oldTouch=gTouches[touch.identifier];
+		touchHandle(oldTouch.x, oldTouch.y, false);
 		delete gTouches[touch.identifier];
 		debugLog('touchEnd '+touch.clientX+' '+touch.clientY);
-		touchHandle(touch.clientX, touch.clientY, false);
 	}
 	processNewTouches();
 }
