@@ -28,7 +28,7 @@ Liner::Liner(): _resetOnMidi(false) {
 	registerCommand("load", "<file path> [<samples per quarter>]", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
-		float samplesPerQuarter;
+		float samplesPerQuarter=22050.0f;
 		ss>>samplesPerQuarter;
 		dlal::Midi midi;
 		midi.read(filePath);
