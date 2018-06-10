@@ -5,12 +5,9 @@ DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 namespace dlal{
 
 Liner::Liner(): _resetOnMidi(false) {
+	_period=44100*8;
 	_iterator=_line.begin();
 	_checkMidi=true;
-	addJoinAction([this](System&){
-		if(!_period) return "error: size not set";
-		return "";
-	});
 	registerCommand("midi_event", "<time in samples> byte[1]..byte[n]",
 		[this](std::stringstream& ss){
 			unsigned sample;
