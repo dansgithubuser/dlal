@@ -261,6 +261,10 @@ class Component:
 
 	def rename(self, name): _skeleton.dlalRename(self.system(), self.component, name)
 
+	def phase(self): return int(self.periodic_get().split()[1])
+
+	def period(self): return int(self.periodic_get().split()[0])
+
 class Pipe(Component):
 	def __init__(self, *args):
 		if not len(args): return
