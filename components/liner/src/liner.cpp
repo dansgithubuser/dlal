@@ -25,14 +25,16 @@ Liner::Liner(): _resetOnMidi(false) {
 		getMidi().write(filePath);
 		return "";
 	});
-	registerCommand("load", "<file path> [<samples per quarter>]", [this](std::stringstream& ss){
+	registerCommand("load", "<file path> [<samples per quarter>] [track]", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
 		float samplesPerQuarter=22050.0f;
 		ss>>samplesPerQuarter;
+		unsigned track=1;
+		ss>>track;
 		dlal::Midi midi;
 		midi.read(filePath);
-		return putMidi(midi, samplesPerQuarter);
+		return putMidi(midi, samplesPerQuarter, track);
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
@@ -115,15 +117,15 @@ Midi Liner::getMidi() const {
 	return result;
 }
 
-std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter){
+std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter, unsigned track){
 	int ticks=0;
-	if(midi.tracks.size()<2) return "error: no track to read";
+	if(midi.tracks.size()<=track) return "error: no track "+std::to_string(track);
 	for(auto i: midi.tracks[0]){
 		if(i.type==dlal::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
 		if(i.ticks) break;
 	}
 	_samplesPerQuarter=samplesPerQuarter;
-	auto pairs=getPairs(midi.tracks[1]);
+	auto pairs=getPairs(midi.tracks[track]);
 	_line.clear();
 	float latestSample=0.0f;
 	for(auto i: pairs){
