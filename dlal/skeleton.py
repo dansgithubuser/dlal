@@ -11,8 +11,10 @@ import sys
 import weakref
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
+sys.path.append(os.path.join(root, 'deps', 'dansmidilibs'))
 sys.path.append(os.path.join(root, 'deps', 'obvious'))
 
+import midi
 import obvious
 
 def invoke(invocation):
