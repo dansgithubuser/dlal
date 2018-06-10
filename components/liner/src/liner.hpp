@@ -30,7 +30,7 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		void advance(uint64_t phase);
 		void put(const uint8_t* midi, unsigned size, uint64_t sample);
 		dlal::Midi getMidi() const;
-		std::string putMidi(dlal::Midi, float samplesPerQuarter);
+		std::string putMidi(dlal::Midi, float samplesPerQuarter, unsigned track=1);
 		AtomicList<Midi> _line;
 		AtomicList<Midi>::Iterator _iterator;
 		float _samplesPerQuarter=22050.0f;

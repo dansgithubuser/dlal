@@ -9,6 +9,10 @@ Soundfont::Soundfont(): _settings(NULL), _synth(NULL) {
 	addJoinAction([this](System&){
 		return initialize();
 	});
+	registerCommand("reset", "", [this](std::stringstream& ss){
+		fluid_synth_system_reset(_synth);
+		return "";
+	});
 	registerCommand("load", "<soundfont file>", [this](std::stringstream& ss){
 		std::string s;
 		s=initialize();

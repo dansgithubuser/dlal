@@ -1,5 +1,6 @@
 import atexit
 import ctypes
+import functools
 import inspect
 import json
 import os
@@ -10,8 +11,10 @@ import sys
 import weakref
 
 root=os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
+sys.path.append(os.path.join(root, 'deps', 'dansmidilibs'))
 sys.path.append(os.path.join(root, 'deps', 'obvious'))
 
+import midi
 import obvious
 
 def invoke(invocation):
@@ -301,3 +304,8 @@ def component_with_name(system, name):
 	return Component(component_type, component=component)
 
 def test(): _skeleton.dlalTest()
+
+component_types=sorted(os.listdir(os.path.join(root, 'components')))
+for i in component_types:
+	if not component_try_import(i):
+		globals()[i.capitalize()]=functools.partial(Component, i)
