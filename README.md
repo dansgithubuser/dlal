@@ -105,17 +105,6 @@ todo
 	- hide uninteresting variables
 	- place new components/variables in consistent spot, draw that spot
 
-- midi editor
-	- quantization
-	- niceties
-		- controls -- regex list into regex with a bunch of |s
-		- many-notes render speed
-		- indicator that more notes are off-screen
-		- track 0 events
-		- other events
-		- zoom
-		- horizontal scale shouldn't change when ticks per quarter does
-
 - fold formant and sonic_controller into commander
 
 - vocoder
