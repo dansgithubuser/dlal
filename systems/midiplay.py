@@ -12,16 +12,16 @@ args=parser.parse_args()
 
 #construct
 system=dlal.System()
-commander=dlal.Commander()
-liner=dlal.Liner()
+liners=[dlal.Liner()]
 soundfont=dlal.Soundfont()
 audio=dlal.Audio()
 
 #connect
-dlal.connect(liner, soundfont, audio)
+dlal.connect(liners[0], soundfont, audio)
 
 #add
-system.add(commander, liner, soundfont, audio)
+system.add(liners[0], slot=0)
+system.add(soundfont, audio, slot=1)
 
 #command
 soundfont.load(os.path.join('..', '..', 'components', 'soundfont', 'deps', '32MbGMStereo.sf2'))
@@ -32,14 +32,28 @@ atexit.register(lambda: audio.finish())
 playing=False
 
 def play_start():
+	global liners
+	#infrastructure for more tracks
+	regular_tracks=len(dlal.midi.read(args.file_path))-1
+	more=regular_tracks-len(liners)
+	if more>0:
+		new_liners=[dlal.Liner() for _ in range(more)]
+		for i in new_liners:
+			i.connect(soundfont)
+			system.add(i, slot=1)
+		liners+=new_liners
+	elif more<0:
+		for i in liners[regular_tracks:]: i.clear()
+	#load
+	for i in range(len(liners)): liners[i].load(args.file_path, 22050, i+1)
+	for i in liners: i.periodic_set_phase(0)
+	#play
 	audio.start()
-	commander.queue_command(liner, 'load', args.file_path)
 	global playing
 	playing=True
 
 def play_stop():
 	audio.finish()
-	liner.periodic_set_phase(0)
 	soundfont.reset()
 	global playing
 	playing=False
