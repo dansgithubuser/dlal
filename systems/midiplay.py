@@ -46,7 +46,11 @@ def play_start():
 		for i in liners[regular_tracks:]: i.clear()
 	#load
 	for i in range(len(liners)): liners[i].load(args.file_path, 22050, i+1)
-	for i in liners: i.periodic_set_phase(0)
+	periods=[]
+	for i in liners:
+		i.periodic_set_phase(0)
+		periods.append(i.period())
+	for i in liners: i.periodic_resize(max(periods))
 	#play
 	audio.start()
 	global playing
