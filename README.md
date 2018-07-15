@@ -105,6 +105,10 @@ todo
 	- hide uninteresting variables
 	- place new components/variables in consistent spot, draw that spot
 
+- operations in frequency domain
+	- low pass amplitude of frequencies over time
+		- for example, to extract the choral part of "Gangster's Paradise" which has many other fast-changing parts
+
 - fold formant and sonic_controller into commander
 
 - vocoder
