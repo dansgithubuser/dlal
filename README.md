@@ -105,6 +105,8 @@ todo
 	- hide uninteresting variables
 	- place new components/variables in consistent spot, draw that spot
 
+- music from formula with time as input
+
 - operations in frequency domain
 	- low pass amplitude of frequencies over time
 		- for example, to extract the choral part of "Gangster's Paradise" which has many other fast-changing parts
