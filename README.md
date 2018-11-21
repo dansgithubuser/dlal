@@ -63,10 +63,10 @@ file organization
 
 todo
 ----
+- liner.py - create random drumlines
+- samples per callback -> samples per evaluation
+
 - need to design for more than one person interacting at once with common devices (phones)
-	- loop midi by playing the same thing twice
-		- liner mode
-		- sync to other liner
 	- webify interfaces
 		- system editor
 

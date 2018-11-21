@@ -4,10 +4,11 @@ DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
 namespace dlal{
 
-Liner::Liner(): _resetOnMidi(false) {
+Liner::Liner(){
 	_period=44100*8;
 	_iterator=_line.begin();
 	_checkMidi=true;
+	resetGene0();
 	registerCommand("midi_event", "<time in samples> byte[1]..byte[n]",
 		[this](std::stringstream& ss){
 			unsigned sample;
@@ -59,12 +60,30 @@ Liner::Liner(): _resetOnMidi(false) {
 		midi.read(bytes);
 		return putMidi(midi, _samplesPerQuarter);
 	});
+	registerCommand("loop_on_repeat", "<enable>", [this](std::stringstream& ss){
+		int enable=1;
+		ss>>enable;
+		_loopOnRepeat=(bool)enable;
+		return "";
+	});
 }
 
 void Liner::evaluate(){
 	advance(_phase);
 	if(phase()){
 		advance(_period);
+		if(_loopOnRepeat){
+			if(_genes[0][0].midi.size()&&_genes[0]==_genes[1]){
+				//translate _genes[0] into _line
+				_line.clear();
+				for(const auto& gene: _genes[0])
+					for(const auto& midi: gene.midi)
+						_line.push_back(midi);
+			}
+			_genes[1]=_genes[0];
+			resetGene0();
+			_notesPlaying=0;
+		}
 		_iterator=_line.begin();
 	}
 }
@@ -75,7 +94,26 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 		_iterator=_line.begin();
 		_resetOnMidi=false;
 	}
-	put(bytes, size, _phase);
+	if(_loopOnRepeat){ if(size){
+		//record notes
+		auto& g=_genes[0];
+		if(bytes[0]>>4==9){//probably note on
+			if(bytes[2]){//definitely note on
+				if(!_notesPlaying)//new gene
+					if(g.size()!=1||g[0].notes.size()) g.push_back(Gene());//no placeholder gene
+				g.back().notes.insert(bytes[1]);//put the note in the gene
+				++_notesPlaying;
+			}
+			else --_notesPlaying;//actually a note off
+		}
+		else if(bytes[0]>>4==8) --_notesPlaying;//note off
+		if(_notesPlaying<0) _notesPlaying=0;
+		//record midi
+		g.back().midi.push_back(Midi(
+			_phase, std::vector<uint8_t>(bytes, bytes+size)
+		));
+	}}
+	else put(bytes, size, _phase);
 }
 
 std::string Liner::setPhase(uint64_t phase){
@@ -138,6 +176,11 @@ std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter, unsigned tr
 	resize(latestSample);
 	setPhase(_phase);
 	return "";
+}
+
+void Liner::resetGene0(){
+	_genes[0].clear();
+	_genes[0].push_back(Gene());//placeholder gene
 }
 
 }//namespace dlal

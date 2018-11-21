@@ -55,12 +55,15 @@ Raw::Raw():
 		_doFile=s=="y";
 		return "";
 	});
-	registerCommand("start", "", [this](std::stringstream&)->std::string{
+	registerCommand("start", "pause", [this](std::stringstream& ss)->std::string{
+		int pause=0;
+		ss>>pause;
 		if(!_system) return "error: must add before starting";
 		auto s=_system->check();
 		if(isError(s)) return s;
 		const unsigned samples=1<<_log2SamplesPerCallback;
 		int j=0;
+		if(pause) return "";
 		for(uint64_t i=0; i<_maxSample; i+=samples){
 			if(_print){
 				++j;
@@ -69,6 +72,10 @@ Raw::Raw():
 			}
 			_system->evaluate();
 		}
+		return "";
+	});
+	registerCommand("evaluate", "", [this](std::stringstream&)->std::string{
+		_system->evaluate();
 		return "";
 	});
 	registerCommand("finish", "", [this](std::stringstream& ss){
