@@ -9,3 +9,5 @@ from .qweboard import *
 from .reticulated_liner import *
 from .skeleton import *
 from .sonic_controller import *
+
+regularize_component_constructors()
