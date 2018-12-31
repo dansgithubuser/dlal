@@ -536,7 +536,7 @@ SamplesPerEvaluationGetter::SamplesPerEvaluationGetter(): _samplesPerEvaluation(
 Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 	registerCommand("periodic", "", [this](std::stringstream& ss){
 		std::stringstream tt;
-		tt<<(Periodic*)this;
+		tt<<(void*)(Periodic*)this;
 		return tt.str();
 	});
 	registerCommand("periodic_resize", "<period in samples>", [this](std::stringstream& ss){
