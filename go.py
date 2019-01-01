@@ -24,13 +24,13 @@ if args.can:
 		'f': '-s sonic     ',
 		's': '-s soundfont ',
 		'v': '-s vst       ',
-		'looper': '-s looper -i editor:9088 -i softboard:9089',
+		'looper': '-s looper -i editor -i softboard:9089c',
 		'l': '-s loader -i editor',
 	}
 	canned_options={
 		'r': '-r',
 		'd': '-d',
-		'i': '-i softboard:9120',
+		'i': '-i softboard',
 	}
 	import pprint
 	if args.can=='h':
@@ -193,11 +193,16 @@ if args.interface:
 		if os.path.exists(py): return py
 		raise Exception("couldn't find binary for interface {}".format(name))
 	for i in args.interface:
+		extra=''
 		if i=='?':
 			for j in os.listdir('interfaces'): print(j)
 			break
 		elif ':' in i:
 			name, port=i.split(':')
+			if name=='softboard':
+				if port.endswith('c'):
+					port=port[:-1]
+					extra=' - computer'
 		else:
 			name=i
 			port=str({
@@ -205,9 +210,10 @@ if args.interface:
 				'softboard': 9120,
 			}[name])
 		os.chdir(built_rel_path)
-		invocation=find_binary(name)+' 127.0.0.1 '+port
+		invocation=find_binary(name)+' 127.0.0.1 '+port+extra
 		if args.interface_iterate: shell(invocation)
 		else:
+			print('invoking interface `{}`'.format(invocation))
 			if platform.system()=='Windows': os.system('start '+invocation)
 			else: subprocess.Popen(invocation, shell=True)
 		os.chdir(file_path)

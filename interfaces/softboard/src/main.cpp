@@ -12,44 +12,46 @@
 #include <thread>
 #include <chrono>
 #include <set>
+#include <array>
+
+std::array<int, 101> domain={
+	//a, b, c, d, e, f, g, h, i, j, k, l, m,
+	  0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1,
+	//n, o, p, q, r, s, t, u, v, w, x, y, z,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	//0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+	  1, 0, 0, 1, 1, 0, 1, 1, 1, 0,
+	//Esc,
+	  0,
+	//LCtrl, LShift, LAlt, LSys,
+	  0,     0,      0,    0,
+	//RCtrl, RShift, RAlt, RSys,
+	  0,     0,      0,    0,
+	//Menu,
+	  0,
+	//[, ], ;, ,, ., ', /, \, `, =, -,
+	  1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1,
+	//Space, Return, Backspace, Tab,
+	  0,     0,      0,         0,
+	//PageUp, PageDown, End, Home, Insert, Delete,
+	  1,      1,        0,   0,    0,      0,
+	//N+, N-, N*, N/,
+	  0,  0,  0,  0,
+	//Left, Right, Up, Down,
+	  0,    0,     0,  0,
+	//N0, N1, N2, N3, N4, N5, N6, N7, N8, N9,
+	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	//F1 , F2 , F3 , F4 , F5 ,
+	  0,   0,   0,   0,   0,
+	//F6 , F7 , F8 , F9 , F10,
+	  0,   0,   0,   0,   0,
+	//F11, F12, F13, F14, F15,
+	  0,   0,   0,   0,   0,
+	//Pause,
+	  0,
+};
 
 std::string processKey(sf::Keyboard::Key key, bool on, std::string& s){
-	const int domain[]={
-		//a, b, c, d, e, f, g, h, i, j, k, l, m,
-		  0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1,
-		//n, o, p, q, r, s, t, u, v, w, x, y, z,
-		  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-		//0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-		  1, 0, 0, 1, 1, 0, 1, 1, 1, 0,
-		//Esc,
-		  0,
-		//LCtrl, LShift, LAlt, LSys,
-		  0,     0,      0,    0,
-		//RCtrl, RShift, RAlt, RSys,
-		  0,     0,      0,    0,
-		//Menu,
-		  0,
-		//[, ], ;, ,, ., ', /, \, `, =, -,
-		  1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1,
-		//Space, Return, Backspace, Tab,
-		  0,     0,      0,         0,
-		//PageUp, PageDown, End, Home, Insert, Delete,
-		  1,      1,        0,   0,    0,      0,
-		//N+, N-, N*, N/,
-		  0,  0,  0,  0,
-		//Left, Right, Up, Down,
-		  0,    0,     0,  0,
-		//N0, N1, N2, N3, N4, N5, N6, N7, N8, N9,
-		  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-		//F1 , F2 , F3 , F4 , F5 ,
-		  0,   0,   0,   0,   0,
-		//F6 , F7 , F8 , F9 , F10,
-		  0,   0,   0,   0,   0,
-		//F11, F12, F13, F14, F15,
-		  0,   0,   0,   0,   0,
-		//Pause,
-		  0,
-	};
 	if(key<0||key>=sf::Keyboard::Key::KeyCount) return "";
 	if(!domain[key]) return "";
 	s=keys[key];
@@ -59,8 +61,9 @@ std::string processKey(sf::Keyboard::Key key, bool on, std::string& s){
 }
 
 int main(int argc, char** argv){
-	if(argc<3||argc>4){
-		std::cerr<<"usage: Softboard ip port [key]\n";
+	if(argc<3||argc>5){
+		std::cerr<<"usage: Softboard ip port [key] [music or computer]\n";
+		std::cerr<<"- to skip an optional parameter\n";
 		return EXIT_FAILURE;
 	}
 	int port;
@@ -72,12 +75,19 @@ int main(int argc, char** argv){
 	//dyad
 	dryad::Client client(std::string(argv[1]), port);
 	//command-line
-	if(argc>3){
+	if(argc>3&&std::string(argv[3])!="-"){
 		std::stringstream ss;
 		dlal::Page(argv[3], 0).toFile(ss);
 		client.writeSizedString(ss.str());
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 		return EXIT_SUCCESS;
+	}
+	//music or computer board
+	if(argc>4&&std::string(argv[4])!="-"){
+		std::string t(argv[4]);
+		if(t=="music");
+		else if(t=="computer") for(size_t i=0; i<domain.size(); ++i) domain[i]=1;
+		else return EXIT_FAILURE;
 	}
 	//sfml
 	sf::Font font;
