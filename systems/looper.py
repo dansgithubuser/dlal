@@ -99,11 +99,11 @@ def add_midi():
 	track=dlal.MidiTrack(inputs[input].midi, synths[synth][1]())
 	looper.add(track)
 
-def add_metronome():
-	track=dlal.MidiTrack(inputs[input].midi, dlal.SonicController())
-	track.synth.load(os.path.join(dlal.root, 'components', 'sonic', 'settings', 'snare.txt'))
+def add_drumline():
+	track=dlal.MidiTrack(inputs[input].midi, dlal.Buffer())
+	track.synth.render_sonic_drums()
 	looper.add(track)
-	track.drumline()
+	track.drumline(0x3c, 0x3e, 0x40)
 
 def add_audio():
 	track=dlal.AudioTrack(looper.audio)
@@ -200,7 +200,7 @@ commands=[
 	('F1', (add_input, 'add input')),
 	('F2', (scan_for_midi_inputs, 'scan for midi inputs')),
 	('F5', (add_midi, 'add midi track')),
-	('F6', (add_metronome, 'add metronome midi track')),
+	('F6', (add_drumline, 'add drumline midi track')),
 	('F7', (add_audio, 'add audio track')),
 	('h', (synth_next, 'next synth')),
 	('y', (synth_prev, 'prev synth')),

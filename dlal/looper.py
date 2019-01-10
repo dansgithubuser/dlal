@@ -28,9 +28,23 @@ class MidiTrack(Pipe):
 		self.output=self.synth
 		Pipe.__init__(self, self.input, self.container, self.synth)
 
-	def drumline(self, text=None, beats=4):
-		if not text: text='S '+str(self.container.samples_per_beat//2)+' z . x . z . . . '
-		self.container.line(text*((self.container.period_in_samples//self.container.samples_per_beat+beats-1)//beats))
+	def drumline(self, snare_note, kick_note, ride_note):
+		i=0
+		notes=[]
+		state=0
+		while i<self.container.period_in_samples:
+			if state%4==0:
+				notes.append((i, kick_note))
+			elif (state+2)%4==0:
+				notes.append((i, snare_note))
+			notes.append((i, ride_note))
+			i+=self.container.samples_per_beat
+			state+=1
+		for note in notes:
+			self.container.midi_event(note[0],
+				0x90, note[1], 0x3f)
+			self.container.midi_event(note[0]+self.container.samples_per_beat//2,
+				0x80, note[1], 0x3f)
 
 class AudioTrack(Pipe):
 	def to_dict(self): return component_to_dict(self, ['input', 'container', 'multiplier'])

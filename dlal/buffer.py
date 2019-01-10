@@ -29,6 +29,7 @@ class Buffer(Component):
 		commander=Commander()
 		for i in range(250): commander.queue_command(sonic_controller, 'frequency_multiplier', 0.97**i, edges_to_wait=i)
 		self.render_simple_system(0x3e, SimpleSystem([sonic_controller, commander], test=True, test_duration=250))
+		self.render_simple_system(0x40, SimpleSystem([SonicController('ride')], test=True, test_duration=250))
 
 	def load_sound(self, note_number, file_name):
 		if file_name in self.known_sounds: file_name=self.known_sounds[file_name]
