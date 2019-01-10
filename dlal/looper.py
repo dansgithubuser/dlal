@@ -2,7 +2,9 @@ from .skeleton import *
 from .commander import *
 from .liner import *
 
+import collections
 import json
+import random
 
 def track_to_dict(track):
 	d=track.to_dict()
@@ -29,22 +31,56 @@ class MidiTrack(Pipe):
 		Pipe.__init__(self, self.input, self.container, self.synth)
 
 	def drumline(self, snare_note, kick_note, ride_note):
-		i=0
-		notes=[]
-		state=0
-		while i<self.container.period_in_samples:
-			if state%4==0:
-				notes.append((i, kick_note))
-			elif (state+2)%4==0:
-				notes.append((i, snare_note))
-			notes.append((i, ride_note))
-			i+=self.container.samples_per_beat
-			state+=1
-		for note in notes:
-			self.container.midi_event(note[0],
-				0x90, note[1], 0x3f)
-			self.container.midi_event(note[0]+self.container.samples_per_beat//2,
-				0x80, note[1], 0x3f)
+		n_bars=4
+		pattern=[random.randint(0, n_bars-1) for i in range(n_bars)]
+		def sensible_number():
+			r=random.randint(1, 100)
+			for i in range(7, 2, -1):
+				if r%(i*i//3)==0: return i
+			return 4
+		beats_per_bar=sensible_number()
+		divisions_per_beat=sensible_number()
+		print(pattern)
+		print(beats_per_bar, divisions_per_beat)
+		class Notes(list): pass
+		Note=collections.namedtuple('Note', ['number', 'velocity'])
+		def random_notes(beat, division):
+			result=Notes()
+			velocity=0x3f if division==0 else 0x1f
+			if random.randint(0, 8)==0: result.append(Note(kick_note, velocity))
+			if random.randint(0, 4)==0: result.append(Note(snare_note, velocity))
+			if random.randint(0, 2)==0: result.append(Note(ride_note, velocity))
+			if beat==0 and kick_note not in result:
+				result.append(Note(kick_note, 0x7f))
+			if division==0 and snare_note not in result and random.randint(0, 1):
+				result.append(Note(snare_note, 0x5f))
+			return result
+		bars=[]
+		for i in range(n_bars):
+			bar=[
+				[random_notes(j, k) for k in range(divisions_per_beat)]
+				for
+				j in range(beats_per_bar)
+			]
+			bars.append(bar)
+		for i in range(n_bars):
+			pattern[i]=bars[pattern[i]]
+		class Accumulator:
+			def __init__(self): self.value=0
+			def add(self, addend): self.value+=addend
+		sample=Accumulator()
+		def traverse(pattern, divisor=1):
+			if isinstance(pattern, Notes):
+				duration=self.container.period_in_samples//divisor
+				for i in pattern:
+					self.container.midi_event(sample.value,
+						0x90, i.number, i.velocity)
+					self.container.midi_event(sample.value+duration,
+						0x80, i.number, i.velocity)
+				sample.add(duration)
+			else:
+				for i in pattern: traverse(i, divisor*len(pattern))
+		traverse(pattern)
 
 class AudioTrack(Pipe):
 	def to_dict(self): return component_to_dict(self, ['input', 'container', 'multiplier'])
