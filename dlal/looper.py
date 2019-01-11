@@ -47,11 +47,12 @@ class MidiTrack(Pipe):
 		def random_notes(beat, division):
 			result=Notes()
 			velocity=0x3f if division==0 else 0x1f
-			if random.randint(0, 8)==0: result.append(Note(kick_note, velocity))
 			if random.randint(0, 4)==0: result.append(Note(snare_note, velocity))
 			if random.randint(0, 2)==0: result.append(Note(ride_note, velocity))
-			if beat==0 and kick_note not in result:
+			if beat==0 and division==0:
 				result.append(Note(kick_note, 0x7f))
+			elif random.randint(0, 8)==0:
+				result.append(Note(kick_note, velocity))
 			if division==0 and snare_note not in result and random.randint(0, 1):
 				result.append(Note(snare_note, 0x5f))
 			return result
@@ -75,7 +76,7 @@ class MidiTrack(Pipe):
 				for i in pattern:
 					self.container.midi_event(sample.value,
 						0x90, i.number, i.velocity)
-					self.container.midi_event(sample.value+duration,
+					self.container.midi_event(sample.value+3*duration//4,
 						0x80, i.number, i.velocity)
 				sample.add(duration)
 			else:
