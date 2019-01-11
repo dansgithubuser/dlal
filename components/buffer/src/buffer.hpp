@@ -18,11 +18,16 @@ class Buffer: public MultiOut, public Periodic, public SampleRateGetter{
 		bool hasAudio(){ return true; }
 		std::string resize(uint64_t period);
 	private:
+		struct Playing{
+			Playing(){}
+			Playing(float volume): volume(volume), sample(0.0f) {}
+			float sample, volume;
+		};
 		std::string checkSize(uint64_t period);
 		std::vector<float> _audio;
 		bool _clearOnEvaluate, _repeatSound, _pitchSound;
 		std::vector<std::vector<float>> _sounds;
-		std::map<unsigned, float> _playing;
+		std::map<unsigned, Playing> _playing;
 };
 
 }//namespace dlal

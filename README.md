@@ -63,7 +63,6 @@ file organization
 
 todo
 ----
-- buffer listen to midi velocity
 - samples per callback -> samples per evaluation
 
 - need to design for more than one person interacting at once with common devices (phones)

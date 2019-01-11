@@ -120,11 +120,11 @@ void Buffer::evaluate(){
 			float m=pow(2.0f, i->first/12.0f);
 			for(auto j: _outputs)
 				for(unsigned k=0; k<_samplesPerEvaluation; ++k)
-					j->audio()[k]+=_sounds[0][unsigned(i->second+k*m)%size];
-			i->second+=_samplesPerEvaluation*m;
+					j->audio()[k]+=_sounds[0][unsigned(i->second.sample+k*m)%size]*i->second.volume;
+			i->second.sample+=_samplesPerEvaluation*m;
 			//ensure repeat-sound logic will work correctly
-			auto x=i->second/size;
-			if(x>2) i->second-=floor(x-1)*size;
+			auto x=i->second.sample/size;
+			if(x>2) i->second.sample-=floor(x-1)*size;
 		}
 		//soundboarding
 		else{
@@ -133,21 +133,21 @@ void Buffer::evaluate(){
 				//repeat-sound
 				if(_repeatSound){
 					for(unsigned k=0; k<_samplesPerEvaluation; ++k)
-						j->audio()[k]+=_sounds[i->first][unsigned(i->second+k)%size];
+						j->audio()[k]+=_sounds[i->first][unsigned(i->second.sample+k)%size]*i->second.volume;
 				}
 				//one-shot sound
 				else{
-					for(unsigned k=0; k<_samplesPerEvaluation&&unsigned(i->second+k)<size; ++k)
-						j->audio()[k]+=_sounds[i->first][unsigned(i->second+k)];
+					for(unsigned k=0; k<_samplesPerEvaluation&&unsigned(i->second.sample+k)<size; ++k)
+						j->audio()[k]+=_sounds[i->first][unsigned(i->second.sample+k)]*i->second.volume;
 				}
 			}
-			i->second+=_samplesPerEvaluation;
+			i->second.sample+=_samplesPerEvaluation;
 		}
 		//next
-		if(i->second>=size){
+		if(i->second.sample>=size){
 			//repeat-sound
 			if(_repeatSound){
-				i->second-=size;
+				i->second.sample-=size;
 				++i;
 			}
 			//one-shot sound
@@ -175,7 +175,7 @@ void Buffer::midi(const uint8_t* bytes, unsigned size){
 			if(bytes[2]==0)
 				_playing.erase(bytes[1]);
 			else if(_pitchSound||bytes[1]<_sounds.size())
-				_playing[bytes[1]]=0.0f;
+				_playing[bytes[1]]=Playing(bytes[2]/127.0f);
 			break;
 		default: break;
 	}
