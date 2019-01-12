@@ -30,7 +30,7 @@ class MidiTrack(Pipe):
 		self.output=self.synth
 		Pipe.__init__(self, self.input, self.container, self.synth)
 
-	def drumline(self, snare_note, kick_note, ride_note):
+	def drumline(self, snare_note=0x3c, kick_note=0x3e, ride_note=0x40):
 		n_bars=4
 		pattern=[random.randint(0, n_bars-1) for i in range(n_bars)]
 		def sensible_number():
@@ -39,22 +39,32 @@ class MidiTrack(Pipe):
 				if r%(i*i//3)==0: return i
 			return 4
 		beats_per_bar=sensible_number()
+		def make_strong_beats(beats):
+			groups=[]
+			while beats>4:
+				group=random.randint(2, 3)
+				beats-=group
+				groups.append(group)
+			if beats==4: groups.extend([2, 2])
+			elif beats==3: groups.append(3)
+			result=[0]
+			for group in groups: result.append(result[-1]+group)
+			return result
+		strong_beats=make_strong_beats(beats_per_bar)
 		divisions_per_beat=sensible_number()
-		print(pattern)
-		print(beats_per_bar, divisions_per_beat)
 		class Notes(list): pass
 		Note=collections.namedtuple('Note', ['number', 'velocity'])
 		def random_notes(beat, division):
 			result=Notes()
 			velocity=0x3f if division==0 else 0x1f
-			if random.randint(0, 4)==0: result.append(Note(snare_note, velocity))
 			if random.randint(0, 2)==0: result.append(Note(ride_note, velocity))
 			if beat==0 and division==0:
 				result.append(Note(kick_note, 0x7f))
 			elif random.randint(0, 8)==0:
 				result.append(Note(kick_note, velocity))
-			if division==0 and snare_note not in result and random.randint(0, 1):
+			if division==0 and beat!=0 and beat in strong_beats:
 				result.append(Note(snare_note, 0x5f))
+			elif random.randint(0, 4)==0: result.append(Note(snare_note, velocity))
 			return result
 		bars=[]
 		for i in range(n_bars):
@@ -81,6 +91,7 @@ class MidiTrack(Pipe):
 				sample.add(duration)
 			else:
 				for i in pattern: traverse(i, divisor*len(pattern))
+		self.container.clear()
 		traverse(pattern)
 
 class AudioTrack(Pipe):

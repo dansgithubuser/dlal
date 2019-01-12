@@ -2,6 +2,8 @@
 
 DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
+static const unsigned FUDGE_PER_SECOND=20;
+
 namespace dlal{
 
 Liner::Liner(){
@@ -16,7 +18,7 @@ Liner::Liner(){
 			std::vector<uint8_t> m;
 			unsigned byte;
 			while(ss>>byte) m.push_back(byte);
-			put(m.data(), m.size(), sample);
+			process(m.data(), m.size(), sample);
 			return "";
 		}
 	);
@@ -74,15 +76,18 @@ void Liner::evaluate(){
 		advance(_period);
 		if(_loopOnRepeat){
 			if(_genes[0][0].midi.size()&&_genes[0]==_genes[1]){
-				//translate _genes[0] into _line
-				_line.clear();
-				for(const auto& gene: _genes[0])
+				//translate _genes[1] into _line
+				for(const auto& gene: _genes[1])
 					for(const auto& midi: gene.midi)
-						_line.push_back(midi);
+						put(midi);
 			}
 			_genes[1]=_genes[0];
 			resetGene0();
-			_notesPlaying=0;
+			if(_genes[1].back().lastNoteOnComparedTo(_period, _sampleRate/FUDGE_PER_SECOND)==Gene::GT){
+				_genes[0][0]=_genes[1].back();
+				_genes[1].pop_back();
+				for(auto& i: _genes[0][0].midi) i.sample=0;
+			}
 		}
 		_iterator=_line.begin();
 	}
@@ -94,26 +99,7 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 		_iterator=_line.begin();
 		_resetOnMidi=false;
 	}
-	if(_loopOnRepeat){ if(size){
-		//record notes
-		auto& g=_genes[0];
-		if(bytes[0]>>4==9){//probably note on
-			if(bytes[2]){//definitely note on
-				if(!_notesPlaying)//new gene
-					if(g.size()!=1||g[0].notes.size()) g.push_back(Gene());//no placeholder gene
-				g.back().notes.insert(bytes[1]);//put the note in the gene
-				++_notesPlaying;
-			}
-			else --_notesPlaying;//actually a note off
-		}
-		else if(bytes[0]>>4==8) --_notesPlaying;//note off
-		if(_notesPlaying<0) _notesPlaying=0;
-		//record midi
-		g.back().midi.push_back(Midi(
-			_phase, std::vector<uint8_t>(bytes, bytes+size)
-		));
-	}}
-	else put(bytes, size, _phase);
+	process(bytes, size, _phase);
 }
 
 std::string Liner::setPhase(uint64_t phase){
@@ -133,10 +119,26 @@ void Liner::advance(uint64_t phase){
 	}
 }
 
-void Liner::put(const uint8_t* midi, unsigned size, uint64_t sample){
-	Midi m(sample, std::vector<uint8_t>(midi, midi+size));
+void Liner::process(const uint8_t* midi, unsigned size, uint64_t sample){
+	if(_loopOnRepeat){ if(size){
+		//record notes
+		auto& g=_genes[0];
+		if(midi[0]>>4==9&&midi[2]){
+			if(g.back().lastNoteOnComparedTo(sample, _sampleRate/FUDGE_PER_SECOND)==Gene::LT)//new gene
+				if(g.size()!=1||g[0].notes.size()) g.push_back(Gene());//no placeholder gene
+			g.back().notes.insert(midi[1]);//put the note in the gene
+		}
+		//record midi
+		g.back().midi.push_back(Midi(
+			sample, std::vector<uint8_t>(midi, midi+size)
+		));
+	}}
+	else put(Midi(sample, std::vector<uint8_t>(midi, midi+size)));
+}
+
+void Liner::put(const Midi& m){
 	auto i=_line.begin();
-	for(/*nothing*/; i!=_line.end(); ++i) if(i->sample>=sample) break;
+	for(/*nothing*/; i!=_line.end(); ++i) if(i->sample>=m.sample) break;
 	_line.insert(i, m);
 	if(!_iterator) setPhase(_phase);
 }
