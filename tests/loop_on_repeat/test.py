@@ -11,6 +11,7 @@ sonic_controller=dlal.SonicController()
 #command
 raw.set(44100, log2_samples_per_callback)
 liner.loop_on_repeat()
+liner.set_fudge(0)
 sonic_controller.a(1)
 sonic_controller.d(1)
 sonic_controller.s(1)

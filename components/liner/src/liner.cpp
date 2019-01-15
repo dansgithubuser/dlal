@@ -2,8 +2,6 @@
 
 DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
-static const unsigned FUDGE_PER_SECOND=20;
-
 namespace dlal{
 
 Liner::Liner(){
@@ -68,6 +66,10 @@ Liner::Liner(){
 		_loopOnRepeat=(bool)enable;
 		return "";
 	});
+	registerCommand("set_fudge", "<loop-on-repeat fudge in seconds>", [this](std::stringstream& ss){
+		ss>>_fudge;
+		return "";
+	});
 }
 
 void Liner::evaluate(){
@@ -83,7 +85,7 @@ void Liner::evaluate(){
 			}
 			_genes[1]=_genes[0];
 			resetGene0();
-			if(_genes[1].back().lastNoteOnComparedTo(_period, _sampleRate/FUDGE_PER_SECOND)==Gene::GT){
+			if(_genes[1].back().lastNoteOnComparedTo(_period, _sampleRate*_fudge)==Gene::GT){
 				_genes[0][0]=_genes[1].back();
 				_genes[1].pop_back();
 				for(auto& i: _genes[0][0].midi) i.sample=0;
@@ -124,7 +126,7 @@ void Liner::process(const uint8_t* midi, unsigned size, uint64_t sample){
 		//record notes
 		auto& g=_genes[0];
 		if(midi[0]>>4==9&&midi[2]){
-			if(g.back().lastNoteOnComparedTo(sample, _sampleRate/FUDGE_PER_SECOND)==Gene::LT)//new gene
+			if(g.back().lastNoteOnComparedTo(sample, _sampleRate*_fudge)==Gene::LT)//new gene
 				if(g.size()!=1||g[0].notes.size()) g.push_back(Gene());//no placeholder gene
 			g.back().notes.insert(midi[1]);//put the note in the gene
 		}

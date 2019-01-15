@@ -57,6 +57,7 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		float _samplesPerQuarter=22050.0f;
 		bool _resetOnMidi=false, _loopOnRepeat=false;
 		std::array<std::vector<Gene>, 2> _genes;
+		float _fudge=0.05f;
 };
 
 }//namespace dlal
