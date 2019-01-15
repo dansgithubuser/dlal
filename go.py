@@ -125,7 +125,9 @@ if not args.run_only:
 	generator=''
 	shell('cmake --version')
 	shell(preamble, 'cmake', generator, '-DBUILD_SHARED_LIBS=ON', '-DCMAKE_BUILD_TYPE='+config, '..')
-	shell(preamble, 'cmake --build . --config '+config+' --target install')
+	invocation='cmake --build . --config '+config
+	if platform.system()!='Darwin': invocation+=' --target install'
+	shell(preamble, invocation)
 	import shutil
 	for path, folders, files in os.walk('installed'):
 		for file in files:
