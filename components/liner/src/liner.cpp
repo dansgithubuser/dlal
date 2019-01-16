@@ -77,7 +77,7 @@ void Liner::evaluate(){
 	if(phase()){
 		advance(_period);
 		if(_loopOnRepeat){
-			if(_genes[0][0].midi.size()&&_genes[0]==_genes[1]){
+			if(_genes[0][0].notes.size()&&_genes[0]==_genes[1]){
 				//translate _genes[1] into _line
 				for(const auto& gene: _genes[1])
 					for(const auto& midi: gene.midi)
