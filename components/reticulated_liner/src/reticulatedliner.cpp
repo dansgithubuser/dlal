@@ -4,7 +4,7 @@ DLAL_BUILD_COMPONENT_DEFINITION(ReticulatedLiner)
 
 namespace dlal{
 
-ReticulatedLiner::ReticulatedLiner(){
+ReticulatedLiner::ReticulatedLiner(): _line(256) {
 	_iterator=_line.begin();
 	_checkMidi=true;
 	registerCommand("save", "<file path>", [this](std::stringstream& ss){
@@ -48,7 +48,10 @@ void ReticulatedLiner::midi(const uint8_t* bytes, unsigned size){
 	for(unsigned i=0; i<2; ++i){
 		for(auto output: _outputs) midiSend(output, _iterator->data(), _iterator->size());
 		++_iterator;
-		if(!_iterator) _iterator=_line.begin();
+		if(!_iterator){
+			_line.freshen();
+			_iterator=_line.begin();
+		}
 		if((_iterator->at(0)&0xf0)==0x80) break;
 	}
 }

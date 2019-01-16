@@ -4,7 +4,7 @@ DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
 namespace dlal{
 
-Liner::Liner(){
+Liner::Liner(): _line(256) {
 	_period=44100*8;
 	_iterator=_line.begin();
 	_checkMidi=true;
@@ -91,6 +91,7 @@ void Liner::evaluate(){
 				for(auto& i: _genes[0][0].midi) i.sample=0;
 			}
 		}
+		_line.freshen();
 		_iterator=_line.begin();
 	}
 }
