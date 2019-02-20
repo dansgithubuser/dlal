@@ -5,11 +5,18 @@
 
 namespace dlal{
 
-class Lpf: public MultiOut, public SamplesPerEvaluationGetter, public MidiControllee{
+class Lpf:
+	public MultiOut,
+	public SamplesPerEvaluationGetter,
+	public SampleRateGetter,
+	public MidiControllee
+{
 	public:
 		Lpf();
 		std::string type() const { return "lpf"; }
 		void evaluate();
+		void midi(const uint8_t* bytes, unsigned size);
+		bool midiAccepted(){ return true; }
 	private:
 		float _lowness;
 		struct Float{
