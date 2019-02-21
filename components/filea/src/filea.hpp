@@ -9,10 +9,10 @@ class Filea: public MultiOut, public SamplesPerEvaluationGetter, public SampleRa
 	public:
 		Filea();
 		~Filea();
-		std::string type() const { return "filea"; }
-		void evaluate();
-		float* audio();
-		bool hasAudio(){ return true; }
+		std::string type() const override { return "filea"; }
+		void evaluate() override;
+		float* audio() override;
+		bool hasAudio() override { return true; }
 	private:
 		std::vector<float> _audio;
 		void* _i;

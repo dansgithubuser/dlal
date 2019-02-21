@@ -53,7 +53,7 @@ char* dlalCommanderRegisterCommand(
 	void* commander, const char* name, dlal::TextCallback command
 ){
 	using namespace dlal;
-	toCommander(commander)->customCommand(std::string(name), command);
+	toCommander(commander)->registerCommand(std::string(name), command);
 	return toCStr("");
 }
 
@@ -85,10 +85,10 @@ Commander::Directive::Directive(
 ): _type(CONNECT), _a(&input), _b(&output), _edgesToWait(edgesToWait) {}
 
 Commander::Commander():
-	_queue(8), _size(0)
+	_queue(8), _nDequeued(0)
 {
 	_dequeued.resize(256);
-	registerCommand("queue", "<period edges to wait> <output index> command",
+	Component::registerCommand("queue", "<period edges to wait> <output index> command",
 		[this](std::stringstream& ss){
 			unsigned edgesToWait, output;
 			ss>>edgesToWait>>output;
@@ -100,7 +100,7 @@ Commander::Commander():
 			return "";
 		}
 	);
-	registerCommand("queue_by_name", "<period edges to wait> <output name> command",
+	Component::registerCommand("queue_by_name", "<period edges to wait> <output name> command",
 		[this](std::stringstream& ss){
 			unsigned edgesToWait;
 			std::string output;
@@ -114,13 +114,13 @@ Commander::Commander():
 			return "";
 		}
 	);
-	registerCommand("queue_resize", "size", [this](std::stringstream& ss){
+	Component::registerCommand("queue_resize", "size", [this](std::stringstream& ss){
 		unsigned size;
 		ss>>size;
 		_queue.resize(unsigned(std::log2(size))+1);
 		return "";
 	});
-	registerCommand("lockless", "", [this](std::stringstream& ss){
+	Component::registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _queue.lockless()?"lockless":"lockfull";
 	});
 }
@@ -128,21 +128,21 @@ Commander::Commander():
 void Commander::evaluate(){
 	//dequeue
 	while(true){
-		if(_dequeued.size()<=_size) _dequeued.resize(_dequeued.size()*2);
-		if(!_queue.read(_dequeued[_size], true)) break;
-		if(!_dequeued[_size]._edgesToWait) dispatch(_dequeued[_size]);
-		else ++_size;
+		if(_dequeued.size()<=_nDequeued) _dequeued.resize(_dequeued.size()*2);
+		if(!_queue.read(_dequeued[_nDequeued], true)) break;
+		if(!_dequeued[_nDequeued]._edgesToWait) dispatch(_dequeued[_nDequeued]);
+		else ++_nDequeued;
 	}
 	//update
 	if(!phase()) return;
 	//command
 	unsigned i=0;
-	while(i<_size){
+	while(i<_nDequeued){
 		--_dequeued[i]._edgesToWait;
 		if(_dequeued[i]._edgesToWait==0){
 			dispatch(_dequeued[i]);
-			_dequeued[i]=_dequeued[_size-1];
-			--_size;
+			_dequeued[i]=_dequeued[_nDequeued-1];
+			--_nDequeued;
 		}
 		else ++i;
 	}
@@ -155,10 +155,10 @@ void Commander::midi(const uint8_t* bytes, unsigned size){
 	_queue.write(Directive(0, ss.str(), 0));
 }
 
-void Commander::customCommand(
+void Commander::registerCommand(
 	const std::string& name, dlal::TextCallback command
 ){
-	registerCommand(name, "", [this, command](std::stringstream& ss){
+	Component::registerCommand(name, "", [this, command](std::stringstream& ss){
 		command(dlal::toCStr(ss.str()));
 		return "";
 	});

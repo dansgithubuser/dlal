@@ -8,11 +8,11 @@ namespace dlal{
 class Arpeggiator: public MultiOut, public MidiControllee{
 	public:
 		Arpeggiator();
-		std::string type() const { return "arpeggiator"; }
-		void* derived(){ return this; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
+		std::string type() const override { return "arpeggiator"; }
+		void* derived() override { return this; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
 	private:
 		std::map<uint8_t, uint8_t> _down;
 		std::pair<uint8_t, uint8_t> _sounding;

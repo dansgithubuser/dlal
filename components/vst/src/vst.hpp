@@ -12,10 +12,10 @@ namespace dlal{
 class Vst: public SamplesPerEvaluationGetter, public SampleRateGetter, public MultiOut {
 	public:
 		Vst();
-		std::string type() const { return "vst"; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
+		std::string type() const override { return "vst"; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
 	private:
 		struct Plugin{
 			typedef int* (*Dispatcher)(Plugin*, int32_t, int32_t, int*, void*, float);

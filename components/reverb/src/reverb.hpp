@@ -9,8 +9,8 @@ namespace dlal{
 class Reverb: public MultiOut, public SamplesPerEvaluationGetter {
 	public:
 		Reverb();
-		std::string type() const { return "reverb"; }
-		void evaluate();
+		std::string type() const override { return "reverb"; }
+		void evaluate() override;
 	private:
 		float _amount;
 		std::vector<ModRingbuffer<float>> _echos;

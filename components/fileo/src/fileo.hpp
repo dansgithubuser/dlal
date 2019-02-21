@@ -12,13 +12,13 @@ class Fileo: public SamplesPerEvaluationGetter{
 	public:
 		Fileo();
 		~Fileo();
-		std::string type() const { return "fileo"; }
-		std::string command(const std::string&);
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
-		float* audio();
-		bool hasAudio(){ return true; }
+		std::string type() const override { return "fileo"; }
+		std::string command(const std::string&) override;
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
+		float* audio() override;
+		bool hasAudio() override { return true; }
 	private:
 		void finish();
 		uint64_t _evaluation;

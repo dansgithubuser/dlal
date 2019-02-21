@@ -8,8 +8,8 @@ namespace dlal{
 class Multiplier: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Multiplier();
-		std::string type() const { return "multiplier"; }
-		void evaluate();
+		std::string type() const override { return "multiplier"; }
+		void evaluate() override;
 	private:
 		float _multiplier, _offset, _gate;
 };

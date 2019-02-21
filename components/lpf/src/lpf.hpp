@@ -13,10 +13,10 @@ class Lpf:
 {
 	public:
 		Lpf();
-		std::string type() const { return "lpf"; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
+		std::string type() const override { return "lpf"; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
 	private:
 		float _lowness;
 		struct Float{

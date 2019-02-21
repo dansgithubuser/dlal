@@ -9,8 +9,8 @@ namespace dlal{
 class Filei: public MultiOut, SamplesPerEvaluationGetter{
 	public:
 		Filei();
-		std::string type() const { return "filei"; }
-		void evaluate();
+		std::string type() const override { return "filei"; }
+		void evaluate() override;
 	private:
 		uint64_t _evaluation;
 		std::vector<Page> _loaded;

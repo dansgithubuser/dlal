@@ -23,11 +23,11 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 			std::vector<uint8_t> midi;
 		};
 		Liner();
-		std::string type() const { return "liner"; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
-		std::string setPhase(uint64_t);
+		std::string type() const override { return "liner"; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
+		std::string setPhase(uint64_t) override;
 	private:
 		struct Gene{
 			enum Inequality{ NO, LT, EQ, GT };

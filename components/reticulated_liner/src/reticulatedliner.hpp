@@ -13,9 +13,9 @@ namespace dlal{
 class ReticulatedLiner: public MultiOut {
 	public:
 		ReticulatedLiner();
-		std::string type() const { return "reticulated_liner"; }
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
+		std::string type() const override { return "reticulated_liner"; }
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
 	private:
 		Midi getMidi() const;
 		std::string putMidi(Midi);

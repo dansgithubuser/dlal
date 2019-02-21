@@ -178,8 +178,8 @@ class MultiOut: public virtual Component{
 	public:
 		MultiOut();
 		virtual ~MultiOut(){}
-		virtual std::string connect(Component& output);
-		virtual std::string disconnect(Component& output);
+		virtual std::string connect(Component& output) override;
+		virtual std::string disconnect(Component& output) override;
 		bool _checkAudio, _checkMidi;
 	protected:
 		std::vector<Component*> _outputs;
@@ -189,7 +189,7 @@ class MultiOut: public virtual Component{
 class MidiControllee: public virtual Component{
 	public:
 		MidiControllee();
-		virtual void midi(const uint8_t* bytes, unsigned size);
+		virtual void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted(){ return true; }
 	protected:
 		std::map<std::string, float*> _nameToControl;
@@ -221,9 +221,9 @@ class MidiControllee: public virtual Component{
 class Dummy: public SamplesPerEvaluationGetter{
 	public:
 		Dummy(){ addJoinAction([this](System&){ _audio.resize(_samplesPerEvaluation, .101f); return ""; }); }
-		std::string type() const { return "dummy"; }
-		float* audio(){ return _audio.data(); }
-		bool hasAudio(){ return true; }
+		std::string type() const override { return "dummy"; }
+		float* audio() override { return _audio.data(); }
+		bool hasAudio() override { return true; }
 		std::vector<float> _audio;
 };
 

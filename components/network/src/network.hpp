@@ -11,8 +11,8 @@ namespace dlal{
 class Network: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Network();
-		std::string type() const { return "network"; }
-		void evaluate();
+		std::string type() const override { return "network"; }
+		void evaluate() override;
 		void queue(const Page&);
 		Queue<uint8_t> _data;
 		Queue<Page> _forward_queue;

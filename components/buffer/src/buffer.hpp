@@ -10,13 +10,13 @@ namespace dlal{
 class Buffer: public MultiOut, public Periodic, public SampleRateGetter{
 	public:
 		Buffer();
-		std::string type() const { return "buffer"; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
-		float* audio();
-		bool hasAudio(){ return true; }
-		std::string resize(uint64_t period);
+		std::string type() const override { return "buffer"; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
+		float* audio() override;
+		bool hasAudio() override { return true; }
+		std::string resize(uint64_t period) override;
 	private:
 		struct Playing{
 			Playing(){}

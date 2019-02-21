@@ -11,10 +11,10 @@ namespace dlal{
 class Raw: public Component{
 	public:
 		Raw();
-		std::string type() const { return "raw"; }
-		void evaluate();
-		float* audio(){ return _audio.data(); }
-		bool hasAudio(){ return true; }
+		std::string type() const override { return "raw"; }
+		void evaluate() override;
+		float* audio() override { return _audio.data(); }
+		bool hasAudio() override { return true; }
 	private:
 		unsigned _sampleRate, _log2SamplesPerCallback;
 		std::vector<float> _audio;

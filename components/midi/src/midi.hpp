@@ -11,10 +11,10 @@ class Midi: public MultiOut{
 	public:
 		Midi();
 		~Midi();
-		std::string type() const { return "midi"; }
-		void evaluate();
+		std::string type() const override { return "midi"; }
+		void evaluate() override;
 		void rtMidi(const uint8_t* bytes, unsigned size);
-		void midi(const uint8_t* bytes, unsigned size);
+		void midi(const uint8_t* bytes, unsigned size) override;
 	private:
 		class List{
 			public:

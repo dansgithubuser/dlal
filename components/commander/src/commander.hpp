@@ -47,17 +47,17 @@ class Commander: public MultiOut, public Periodic{
 			unsigned _slot, _edgesToWait, _output;
 		};
 		Commander();
-		std::string type() const { return "commander"; }
-		void* derived(){ return this; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
-		void customCommand(const std::string& name, dlal::TextCallback command);
+		std::string type() const override { return "commander"; }
+		void* derived() override { return this; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
+		void registerCommand(const std::string& name, dlal::TextCallback command);
 		Queue<Directive> _queue;
 	private:
 		void dispatch(const Directive&);
 		std::vector<Directive> _dequeued;
-		unsigned _size;
+		unsigned _nDequeued;
 };
 
 }//namespace dlal

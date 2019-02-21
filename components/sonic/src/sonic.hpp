@@ -10,10 +10,10 @@ class Sonic:
 {
 	public:
 		Sonic();
-		std::string type() const { return "sonic"; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
+		std::string type() const override { return "sonic"; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
 	private:
 		static const unsigned NOTES=128;
 		static const unsigned OSCILLATORS=4;

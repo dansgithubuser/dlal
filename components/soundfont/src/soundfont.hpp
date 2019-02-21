@@ -13,10 +13,10 @@ class Soundfont: public SamplesPerEvaluationGetter, public SampleRateGetter, pub
 	public:
 		Soundfont();
 		~Soundfont();
-		std::string type() const { return "soundfont"; }
-		void evaluate();
-		void midi(const uint8_t* bytes, unsigned size);
-		bool midiAccepted(){ return true; }
+		std::string type() const override { return "soundfont"; }
+		void evaluate() override;
+		void midi(const uint8_t* bytes, unsigned size) override;
+		bool midiAccepted() override { return true; }
 	private:
 		void destroy();
 		std::string initialize();

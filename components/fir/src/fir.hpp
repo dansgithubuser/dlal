@@ -11,10 +11,10 @@ namespace dlal{
 class Fir: public SamplesPerEvaluationGetter, public SampleRateGetter, public MultiOut {
 	public:
 		Fir();
-		std::string connect(Component& output);
-		std::string disconnect(Component& output);
-		std::string type() const { return "fir"; }
-		void evaluate();
+		std::string connect(Component& output) override;
+		std::string disconnect(Component& output) override;
+		std::string type() const override { return "fir"; }
+		void evaluate() override;
 	private:
 		struct Formant{
 			Formant();

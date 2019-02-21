@@ -8,8 +8,8 @@ namespace dlal{
 class Peak: public MultiOut, public SamplesPerEvaluationGetter{
 	public:
 		Peak();
-		std::string type() const { return "peak"; }
-		void evaluate();
+		std::string type() const override { return "peak"; }
+		void evaluate() override;
 	private:
 		struct Float{
 			Float(): _(0.0f) {}
