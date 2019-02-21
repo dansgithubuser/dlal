@@ -29,11 +29,8 @@ void Lpf::evaluate(){
 void Lpf::midi(const uint8_t* bytes, unsigned size){
 	if(size==3&&(bytes[0]>>4)==9){
 		const int note=bytes[1];
-		const float f=440*std::pow(2, (note-69)/12.0f)/_sampleRate*205;
-		const float a=0.000016f;
-		const float b=-0.00644f;
-		const float c=1.0f;
-		_lowness=a*f*f+b*f+c;
+		const float f=440*std::pow(2, (note-69)/12.0f);
+		_lowness=1/(2*3.14159f/_sampleRate*f+1);
 	}
 }
 
