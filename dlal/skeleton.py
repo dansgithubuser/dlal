@@ -232,6 +232,7 @@ class Component:
 			self.component=Component._libraries[component_type].dlalBuildComponent(
 				kwargs.get('name', _namer.name())
 			)
+		self.weak=kwargs.get('weak', False)
 		self.set_components_to_add([self])
 		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
 		weak_self=weakref.ref(self)
@@ -241,7 +242,8 @@ class Component:
 			if command not in dir(self): setattr(self, command, captain(command))
 
 	def __del__(self):
-		if self.component!=None: _skeleton.dlalDemolishComponent(self.component)
+		if self.component!=None and not self.weak:
+			_skeleton.dlalDemolishComponent(self.component)
 
 	def transfer_component(self):
 		result=self.component
@@ -305,7 +307,7 @@ def component_with_name(system, name):
 	if isinstance(system, System): system=system.system
 	component=_skeleton.dlalComponentWithName(system, name)
 	component_type=report(_skeleton.dlalCommand(component, 'type'))
-	return Component(component_type, component=component)
+	return Component(component_type, component=component, weak=True)
 
 def test(): _skeleton.dlalTest()
 
