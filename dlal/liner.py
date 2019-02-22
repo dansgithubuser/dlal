@@ -1,11 +1,5 @@
 from .skeleton import *
-
-g_notes={
-	'z': 0, 's': 1, 'x': 2, 'd': 3, 'c': 4, 'v': 5,
-	'g': 6, 'b': 7, 'h': 8, 'n': 9, 'j': 10, 'm': 11, ',': 12,
-	'w': 12, '3': 13, 'e': 14, '4': 15, 'r': 16, 't': 17,
-	'6': 18, 'y': 19, '7': 20, 'u': 21, '8': 22, 'i': 23, 'o': 24
-}
+from .qweboard import qwe_to_note
 
 class Liner(Component):
 	@staticmethod
@@ -48,7 +42,7 @@ class Liner(Component):
 					if t[j]=='.':
 						if j!=0:
 							nextSample+=stride
-					else: notes.append(12*octave+g_notes[t[j]])
+					else: notes.append(12*octave+qwe_to_note[t[j]])
 				for note in notes:
 					self.midi_event(sample    , 0x90, note, 0x40)
 					self.midi_event(nextSample, 0x80, note, 0x40)
