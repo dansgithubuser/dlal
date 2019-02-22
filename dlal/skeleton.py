@@ -1,4 +1,5 @@
 import atexit
+import collections
 import ctypes
 import functools
 import inspect
@@ -44,17 +45,13 @@ def connect(*args):
 	return result
 
 class Namer:
-	def __init__(self): self.number=0
+	def __init__(self):
+		self.numbers=collections.defaultdict(int)
 
-	def register_name(self, name):
-		try:
-			number=int(name[1:])
-			self.number=max(number, self.number)
-		except: pass
-
-	def name(self):
-		self.number+=1
-		return 'c{}'.format(self.number)
+	def name(self, component_type='c'):
+		self.numbers[component_type]+=1
+		if self.numbers[component_type]==1: return component_type
+		return '{}{}'.format(component_type, self.numbers[component_type])
 
 _namer=Namer()
 
@@ -230,7 +227,7 @@ class Component:
 			self.component=kwargs['component']
 		else:
 			self.component=Component._libraries[component_type].dlalBuildComponent(
-				kwargs.get('name', _namer.name())
+				kwargs.get('name', _namer.name(component_type))
 			)
 		self.weak=kwargs.get('weak', False)
 		self.set_components_to_add([self])
