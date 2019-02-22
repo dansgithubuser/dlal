@@ -19,8 +19,9 @@ class ReticulatedLiner: public MultiOut {
 	private:
 		Midi getMidi() const;
 		std::string putMidi(Midi);
-		AtomicList<std::vector<uint8_t>> _line;
-		AtomicList<std::vector<uint8_t>>::Iterator _iterator;
+		using Reticule=std::vector<std::vector<uint8_t>>;
+		AtomicList<Reticule> _line;
+		AtomicList<Reticule>::Iterator _iterator;
 		uint8_t _playing=0xff;
 };
 

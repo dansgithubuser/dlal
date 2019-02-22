@@ -1,0 +1,14 @@
+{
+	"network.port": [400, 8],
+	"sampleRate": [400, 16],
+	"samplesPerEvaluation": [400, 24],
+	"system.load": [400, 32]
+}{
+	"audio": [200, 200],
+	"commander": [120, 120],
+	"midi": [160, 160],
+	"midichlorian": [200, 80],
+	"network": [80, 80],
+	"reticulated_liner": [200, 120],
+	"sonic": [200, 160]
+}
