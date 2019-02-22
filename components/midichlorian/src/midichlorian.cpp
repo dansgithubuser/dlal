@@ -6,6 +6,7 @@ namespace dlal{
 
 Midichlorian::Midichlorian(){
 	_checkMidi=true;
+	_period=44100;
 	registerCommand("rhythm", "<x for note, . for rest>", [this](std::stringstream& ss)->std::string{
 		std::string s;
 		ss>>s;
