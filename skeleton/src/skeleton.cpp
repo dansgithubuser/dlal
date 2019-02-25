@@ -557,7 +557,6 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 		uint64_t phase;
 		ss>>phase;
 		auto s=setPhase(phase);
-		if(!isError(s)) _last=0.0f;
 		return s;
 	});
 	registerCommand("periodic_match", "<other periodic>", [this](std::stringstream& ss){
@@ -567,7 +566,6 @@ Periodic::Periodic(): _period(0), _phase(0), _last(0.0f) {
 		auto s=resize(other->_period);
 		if(isError(s)) return s;
 		s=setPhase(other->_phase);
-		if(!isError(s)) _last=0.0f;
 		return s;
 	});
 	registerCommand("serialize_periodic", "", [this](std::stringstream& ss){
@@ -586,7 +584,11 @@ std::string Periodic::resize(uint64_t period){
 	return "";
 }
 
-std::string Periodic::setPhase(uint64_t phase){ _phase=phase; return ""; }
+std::string Periodic::setPhase(uint64_t phase){
+	_phase=phase;
+	_last=0.0f;
+	return "";
+}
 
 bool Periodic::phase(){
 	_phase+=_samplesPerEvaluation;

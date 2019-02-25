@@ -29,6 +29,7 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		bool midiAccepted() override { return true; }
 		std::string setPhase(uint64_t) override;
 	private:
+		static const int NOTE_SENTINEL=0xff;
 		struct Gene{
 			enum Inequality{ NO, LT, EQ, GT };
 			bool operator==(const Gene& other) const { return notes==other.notes; }
@@ -55,7 +56,10 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		AtomicList<Midi> _line;
 		AtomicList<Midi>::Iterator _iterator;
 		float _samplesPerQuarter=22050.0f;
-		bool _resetOnMidi=false, _loopOnRepeat=false;
+		bool _resetOnMidi=false, _transplantOnMidi=false, _loopOnRepeat=false;
+		uint8_t _transplantNote=NOTE_SENTINEL;
+		std::set<uint8_t> _allNotes;
+		uint8_t _minNote;
 		std::array<std::vector<Gene>, 2> _genes;
 		float _fudge=0.05f;
 };

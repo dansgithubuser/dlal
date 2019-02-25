@@ -6,9 +6,10 @@
 }{
 	"audio": [200, 200],
 	"commander": [120, 120],
+	"liner": [232, 128],
 	"midi": [160, 160],
-	"midichlorian": [200, 80],
+	"midichlorian": [200, 56],
 	"network": [80, 80],
-	"reticulated_liner": [200, 120],
+	"reticulated_liner": [200, 88],
 	"sonic": [200, 160]
 }

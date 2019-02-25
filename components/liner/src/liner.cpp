@@ -45,22 +45,45 @@ Liner::Liner(): _line(256) {
 		_resetOnMidi=true;
 		return "";
 	});
+	registerCommand("transplant_on_midi", "[enable, default 1] [anchor note, default lowest in line]", [this](std::stringstream& ss){
+		int enable=1;
+		ss>>enable;
+		_transplantOnMidi=(bool)enable;
+		if(_transplantOnMidi){
+			auto i=_line.begin();
+			_minNote=0xff;
+			_allNotes.clear();
+			while(i){
+				const auto& m=i->midi;
+				if(m.size()==3&&(m[0]>>4)==9){
+					_allNotes.insert(m[1]);
+					if(m[1]<_minNote) _minNote=m[1];
+				}
+				++i;
+			}
+			int anchorNote;
+			if(ss>>anchorNote) _minNote=(uint8_t)anchorNote;
+		}
+		return "";
+	});
 	registerCommand("serialize_liner", "", [this](std::stringstream&){
 		auto midi=getMidi();
 		std::vector<uint8_t> bytes;
 		midi.write(bytes);
 		std::stringstream ss;
-		ss<<_sampleRate<<" "<<bytes<<" "<<_samplesPerQuarter;
+		ss<<_sampleRate<<" "<<bytes<<" "<<_samplesPerQuarter<<" "<<_transplantOnMidi;
+		if(_transplantOnMidi) ss<<" "<<_allNotes<<" "<<_minNote;
 		return ss.str();
 	});
 	registerCommand("deserialize_liner", "<serialized>", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
-		ss>>_sampleRate>>" ">>bytes>>" ">>_samplesPerQuarter;
+		ss>>_sampleRate>>" ">>bytes>>" ">>_samplesPerQuarter>>" ">>_transplantOnMidi;
+		if(_transplantOnMidi) ss>>" ">>_allNotes>>" ">>_minNote;
 		dlal::Midi midi;
 		midi.read(bytes);
 		return putMidi(midi, _samplesPerQuarter);
 	});
-	registerCommand("loop_on_repeat", "<enable>", [this](std::stringstream& ss){
+	registerCommand("loop_on_repeat", "[enable, default 1]", [this](std::stringstream& ss){
 		int enable=1;
 		ss>>enable;
 		_loopOnRepeat=(bool)enable;
@@ -73,6 +96,7 @@ Liner::Liner(): _line(256) {
 }
 
 void Liner::evaluate(){
+	if(_transplantOnMidi&&_transplantNote==NOTE_SENTINEL) return;
 	advance(_phase);
 	if(phase()){
 		advance(_period);
@@ -93,12 +117,34 @@ void Liner::evaluate(){
 		}
 		_line.freshen();
 		_iterator=_line.begin();
+		if(_transplantOnMidi) _transplantNote=NOTE_SENTINEL;
 	}
 }
 
 void Liner::midi(const uint8_t* bytes, unsigned size){
+	auto stop=[this](){
+		for(const auto& note: _allNotes)
+			for(auto output: _outputs){
+				std::vector<uint8_t> m{0x80, uint8_t(note-_minNote+_transplantNote), 0x40};
+				midiSend(output, m.data(), m.size());
+			}
+		_transplantNote=NOTE_SENTINEL;
+	};
+	if(_transplantOnMidi){
+		if(size==3) switch(bytes[0]>>4){
+			case 9:
+				stop();
+				Periodic::setPhase(0);
+				_iterator=_line.begin();
+				_transplantNote=bytes[1];
+				break;
+			case 8: stop(); break;
+			default: break;
+		}
+		return;
+	}
 	if(_resetOnMidi){
-		_phase=0;
+		Periodic::setPhase(0);
 		_iterator=_line.begin();
 		_resetOnMidi=false;
 	}
@@ -116,7 +162,12 @@ void Liner::advance(uint64_t phase){
 	while(_iterator&&_iterator->sample<=phase){
 		for(auto output: _outputs){
 			std::vector<uint8_t>& m=_iterator->midi;
-			midiSend(output, m.data(), m.size());
+			uint8_t command=m[0]>>4;
+			if(_transplantOnMidi&&(command==9||command==8)){
+				uint8_t t[]={m[0], uint8_t(m[1]-_minNote+_transplantNote), m[2]};
+				midiSend(output, t, 3);
+			}
+			else midiSend(output, m.data(), m.size());
 		}
 		++_iterator;
 	}
