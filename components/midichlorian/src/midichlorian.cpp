@@ -7,6 +7,10 @@ namespace dlal{
 Midichlorian::Midichlorian(){
 	_checkMidi=true;
 	_period=44100;
+	addJoinAction([this](System&){
+		_phase=_period;
+		return "";
+	});
 	registerCommand("rhythm", "<x for note, . for rest>", [this](std::stringstream& ss)->std::string{
 		std::string s;
 		ss>>s;
@@ -38,9 +42,6 @@ void Midichlorian::evaluate(){
 			_i%=_rhythm.size();
 		}
 	}
-}
-
-void Midichlorian::midi(const uint8_t* bytes, unsigned size){
 }
 
 }//namespace dlal

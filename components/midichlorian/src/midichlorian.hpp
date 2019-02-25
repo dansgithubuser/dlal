@@ -10,8 +10,6 @@ class Midichlorian: public MultiOut, public Periodic {
 		Midichlorian();
 		std::string type() const override { return "midichlorian"; }
 		void evaluate() override;
-		void midi(const uint8_t* bytes, unsigned size) override;
-		bool midiAccepted() override { return true; }
 	private:
 		std::string _rhythm="x";
 		size_t _i=0;
