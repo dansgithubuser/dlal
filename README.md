@@ -63,37 +63,17 @@ file organization
 
 todo
 ----
+- switch fully to python3
 - samples per callback -> samples per evaluation
+- document skeleton and components
+
+- save and load system
+	- midi controllee, all components
 
 - need to design for more than one person interacting at once with common devices (phones)
 	- webify interfaces
 		- system editor
 
-- audio select input and output
-- soundscape: estimate amount of time that recording can last
-
-- save and load system
-	- midi controllee, all components
-
-- audiobro
-	- piano
-	- vibrato
-	- pitch slide
-	- long-term commander
-	- render to file
-	- new ideas
-
-- bunch of simple components
-	- midi logic
-		- multiply by harmony
-		- multiply by rhythm
-		- random note
-		- random rhythm
-		- add/subtract/divide/multiply note
-	- adsr
-	- sine, triangle, square, saw, noise
-	- enough to make a bassline, snare, bass drum, chords, cymbal, wind sound
-	- look to modular synths for examples
 - system editor
 	- queue and commit changes
 	- remove components
@@ -104,14 +84,24 @@ todo
 	- hide uninteresting variables
 	- place new components/variables in consistent spot, draw that spot
 
+- audiobro
+	- piano
+	- vibrato
+	- pitch slide
+	- long-term commander
+	- render to file
+	- new ideas
+
 - music from formula with time as input
 
 - operations in frequency domain
 	- low pass amplitude of frequencies over time
 		- for example, to extract the choral part of "Gangster's Paradise" which has many other fast-changing parts
 
-- fold formant and sonic_controller into commander
+- audio select input and output
+- soundscape: estimate amount of time that recording can last
 
 - vocoder
 - pitch shift component
 - auto dj
+- https://mutable-instruments.net/modules/
