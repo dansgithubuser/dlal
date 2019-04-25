@@ -190,7 +190,7 @@ class MidiControllee: public virtual Component{
 	public:
 		MidiControllee();
 		virtual void midi(const uint8_t* bytes, unsigned size) override;
-		bool midiAccepted(){ return true; }
+		bool midiAccepted() override { return true; }
 	protected:
 		std::map<std::string, float*> _nameToControl;
 	private:
