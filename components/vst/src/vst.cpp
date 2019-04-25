@@ -353,7 +353,7 @@ std::string Vst::show(unsigned duration, std::string expectationFileName){
 		window=[
 			[NSWindow alloc]
 			initWithContentRect: NSMakeRect(0, 0, width, height)
-			styleMask: NSTitledWindowMask|NSClosableWindowMask
+			styleMask: NSWindowStyleMaskTitled|NSWindowStyleMaskClosable
 			backing: NSBackingStoreBuffered
 			defer: NO
 		];
