@@ -64,6 +64,8 @@ file organization
 todo
 ----
 - switch fully to python3
+	- component_try_import can't import the way it is
+	- c_char_p expects bytes
 - samples per callback -> samples per evaluation
 - document skeleton and components
 
