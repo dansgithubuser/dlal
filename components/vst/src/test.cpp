@@ -3,13 +3,11 @@
 #include <iostream>
 
 int main(int argc, char** argv){
-	dlalDyadInit();
 	dlal::System system;
 	dlal::Vst vst;
 	dlal::Dummy dummy;
 	if(argc<2||std::string(argv[1])=="-h"){
 		std::cout<<"usage: vst <plugin>\n";
-		dlalDyadShutdown();
 		return 0;
 	}
 	system.set(22050, 10);
@@ -25,6 +23,5 @@ int main(int argc, char** argv){
 		for(unsigned i=0; i<dummy._audio.size(); ++i) std::cout<<dummy._audio[i]<<" ";
 		std::cout<<"\n";
 	}
-	dlalDyadShutdown();
 	return 0;
 }

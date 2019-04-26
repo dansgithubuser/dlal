@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+
 include(../../../build/CMakeCommon.txt)
 
 option(DLAL_TEST "ON to test, OFF otherwise")
@@ -15,3 +17,7 @@ endif()
 
 danssfml()
 target_link_libraries(Vst sfml-system sfml-window sfml-graphics)
+
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+	target_link_libraries(Vst ${CMAKE_DL_LIBS})
+endif()

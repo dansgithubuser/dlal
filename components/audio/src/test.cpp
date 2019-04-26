@@ -3,7 +3,6 @@
 #include <iostream>
 
 int main(){
-	dlalDyadInit();
 	dlal::System system;
 	dlal::Audio audio;
 	std::cout<<audio.command("test");
@@ -13,6 +12,5 @@ int main(){
 	std::string s;
 	std::cin>>s;
 	std::cout<<audio.command("finish");
-	dlalDyadShutdown();
 	return 0;
 }

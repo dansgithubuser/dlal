@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+
 include(../../../build/CMakeCommon.txt)
 
 option(DLAL_TEST "ON to test, OFF otherwise")

@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+
 include(../../../build/CMakeCommon.txt)
 
 option(DLAL_TEST "ON to test, OFF otherwise")
@@ -66,3 +68,8 @@ set(src ${src}
 
 #=====products=====#
 standard_component(${output})
+
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+	find_package(Threads)
+	target_link_libraries(${output} ${CMAKE_THREAD_LIBS_INIT})
+endif()

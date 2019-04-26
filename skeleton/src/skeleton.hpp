@@ -61,7 +61,7 @@ bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss);
 
 class System{
 	public:
-		System(int port=9088, TextCallback pythonCallback=nullptr);
+		System(int port=0, TextCallback pythonCallback=nullptr);
 		~System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
