@@ -308,8 +308,8 @@ def component_with_name(system, name):
 
 def test(): _skeleton.dlalTest()
 
-def regularize_component_constructors():
+def regularize_component_constructors(globals):
 	component_types=sorted(os.listdir(os.path.join(root, 'components')))
 	for i in component_types:
 		if not component_try_import(i):
-			globals()[i.capitalize()]=functools.partial(Component, i)
+			globals[i.capitalize()]=functools.partial(Component, i)
