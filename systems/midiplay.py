@@ -9,6 +9,8 @@ except: pass
 parser=argparse.ArgumentParser()
 parser.add_argument('file_path')
 args=parser.parse_args()
+if not os.path.exists(args.file_path):
+	args.file_path=os.path.join('..', '..', args.file_path)
 
 #construct
 system=dlal.System()
@@ -75,3 +77,4 @@ class ReprFunction:
 	def __repr__(self): return self.function()
 
 p=ReprFunction(play_toggle)
+print(repr(p))
