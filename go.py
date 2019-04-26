@@ -6,15 +6,17 @@ import glob, os, platform, subprocess, sys
 import argparse
 parser=argparse.ArgumentParser(description='interface for developer operations')
 parser.add_argument('--setup', action='store_true', help='install dependencies')
+parser.add_argument('--build', '-b', action='store_true', help='build')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run (? to list systems)')
 parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments to pass to system (default -g)')
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
-parser.add_argument('--interface-iterate', '--ii', action='store_true', help='run interfaces sequentially, then exit')
-parser.add_argument('--run-only', '-r', action='store_true', help='skip build, just run')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
-parser.add_argument('--can', '-c', help='canned commands -- use ? for help')
+parser.add_argument('--can', '-c', help='canned commands (? for help)')
+if len(sys.argv)==1:
+	parser.print_help()
+	sys.exit()
 args=parser.parse_args()
 
 #canned commands
@@ -28,7 +30,7 @@ if args.can:
 		'l': '-s loader -i editor',
 	}
 	canned_options={
-		'r': '-r',
+		'b': '-b',
 		'd': '-d',
 		'i': '-i softboard',
 	}
@@ -117,7 +119,7 @@ if args.setup:
 	sys.exit(0)
 
 #build
-if not args.run_only:
+if args.build:
 	shell('git submodule update --init --recursive')
 	if not os.path.exists(built_rel_path): os.makedirs(built_rel_path)
 	os.chdir(built_rel_path)
@@ -213,29 +215,19 @@ if args.interface:
 			}[name])
 		os.chdir(built_rel_path)
 		invocation=find_binary(name)+' 127.0.0.1 '+port+extra
-		if args.interface_iterate: shell(invocation)
-		else:
-			print('invoking interface `{}`'.format(invocation))
-			if platform.system()=='Windows': os.system('start '+invocation)
-			else: subprocess.Popen(invocation, shell=True)
+		print('invoking interface `{}`'.format(invocation))
+		if platform.system()=='Windows': os.system('start '+invocation)
+		else: subprocess.Popen(invocation, shell=True)
 		os.chdir(file_path)
-if args.interface_iterate: sys.exit()
 
 #run
 os.chdir(built_rel_path)
-invocation=['python', '-i']
-good=True
 if args.system:
 	systems_path=os.path.join('..', '..', 'systems')
 	system_path=os.path.join(systems_path, args.system+'.py')
-	if os.path.exists(system_path): invocation+=[system_path]+args.system_arguments.split()
+	if os.path.exists(system_path):
+		shell('python', '-i', system_path, *args.system_arguments.split())
 	else:
 		print('available systems are:')
 		for i in glob.glob(os.path.join('..', '..', 'systems', '*.py')):
 			print(os.path.split(i)[-1][:-3])
-		good=False
-if good and not args.test: shell(*invocation)
-os.chdir(file_path)
-
-#done
-print('all requests processed; call with -h for help')
