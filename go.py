@@ -26,7 +26,6 @@ if args.can:
 		'f': '-s sonic     ',
 		's': '-s soundfont ',
 		'v': '-s vst       ',
-		'looper': '-s looper -i editor -i softboard:9089c',
 		'l': '-s loader -i editor',
 	}
 	canned_options={
