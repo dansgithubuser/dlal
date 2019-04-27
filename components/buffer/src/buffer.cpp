@@ -15,7 +15,7 @@ namespace dlal{
 Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(false) {
 	_checkAudio=true;
 	addJoinAction([this](System&){
-		if(_audio.size()==0) resize(_samplesPerEvaluation);
+		if(_audio.size()==0) resize(_period?_period:_samplesPerEvaluation);
 		return checkSize(_audio.size());
 	});
 	registerCommand("clear_on_evaluate", "y/n", [this](std::stringstream& ss){
