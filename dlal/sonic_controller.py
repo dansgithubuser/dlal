@@ -94,11 +94,14 @@ class SonicController(Component):
 	def from_dict(d, component_map):
 		return SonicController(from_dict=(d, component_map))
 
-	def __init__(self, setting=None, from_dict=None, **kwargs):
+	def __init__(self, setting=None, from_dict=None, sonic=None, commander=None, **kwargs):
 		if from_dict:
 			d, component_map=from_dict
 			Component.__init__(self, 'sonic', component=component_map[d['component']].transfer_component())
 			self.commander=component_map[d['commander']]
+		elif sonic:
+			self.component=sonic.component
+			self.commander=commander
 		else:
 			Component.__init__(self, 'sonic', **kwargs)
 			self.commander=Component('commander')
