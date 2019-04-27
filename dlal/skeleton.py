@@ -27,8 +27,6 @@ def snake_case(camel_case):
 def camel_case(snake_case):
 	return ''.join([i.capitalize() for i in snake_case.split('_')])
 
-_systems=0
-
 def report(text):
 	t=ctypes.cast(text, ctypes.c_char_p).value.decode('utf-8')
 	_skeleton.dlalFree(text)
@@ -57,11 +55,8 @@ _namer=Namer()
 
 _skeleton=obvious.load_lib('Skeleton')
 obvious.set_ffi_types(_skeleton.dlalDemolishComponent, None, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalDyadInit)
-obvious.set_ffi_types(_skeleton.dlalDyadShutdown)
-obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p, int)
+obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p)
 obvious.set_ffi_types(_skeleton.dlalDemolishSystem, None, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalReport, None, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalComponentWithName, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalRename, None, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalSetVariable, ctypes.c_void_p, ctypes.c_void_p, str, str)
@@ -94,15 +89,7 @@ class ReprMethod:
 
 class System:
 	def __init__(self, port=None):
-		global _systems
-		if _systems==0:
-			_skeleton.dlalDyadInit()
-		if port==None:
-			if _systems==0:
-				port=9088
-			else:
-				port=0
-		_systems+=1
+		if port==None: port=9088
 		weak_self=weakref.ref(self)
 		def handler(command):
 			command=command.split()
@@ -118,7 +105,7 @@ class System:
 				connector.connect(connectee)
 			eval(command[3])()
 		self.handler=TextCallback(handler)
-		self.system=_skeleton.dlalBuildSystem(port, self.handler)
+		self.system=_skeleton.dlalBuildSystem()
 		assert(self.system)
 		self.novel_components={}
 		self.set('sampleRate', 44100)
@@ -129,9 +116,6 @@ class System:
 	def __del__(self):
 		for i in self.on_del: i()
 		_skeleton.dlalDemolishSystem(self.system)
-		global _systems
-		_systems-=1
-		if _systems==0: _skeleton.dlalDyadShutdown()
 
 	def add(self, *args, **kwargs):
 		slot=kwargs.get('slot', 0)
@@ -179,7 +163,6 @@ class System:
 		root.update(extra)
 		serialized=json.dumps(root, indent=2, sort_keys=True)
 		with open(file_name, 'w') as file: file.write(serialized)
-		self._report('save '+os.path.abspath(file_name))
 
 	def load(self, file_name='system.state.txt', start=False):
 		potential_expansion=os.path.join('..', '..', 'states', file_name+'.txt')
@@ -198,8 +181,6 @@ class System:
 		name=component.to_str()
 		self.novel_components[name]=component
 		if not hasattr(self, name): setattr(self, name, component)
-
-	def _report(self, report): _skeleton.dlalReport(self.system, report.encode('utf-8'))
 
 class Component:
 	_libraries={}
@@ -263,18 +244,6 @@ class Component:
 	def phase(self): return int(self.periodic_get().split()[1])
 
 	def period(self): return int(self.periodic_get().split()[0])
-
-class Pipe(Component):
-	def __init__(self, *args):
-		if not len(args): return
-		self.component=args[0].component
-		self.set_components_to_add([x for arg in args for x in arg.get_components_to_add()])
-
-	def __del__(self): pass
-
-	def __getitem__(self, i): return self.get_components_to_add()[i]
-
-	def output(self): return self.get_components_to_add()[-1].component
 
 def component_to_dict(self, members):
 	result={i: getattr(self, i) for i in members}

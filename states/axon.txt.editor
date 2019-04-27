@@ -1,5 +1,4 @@
 {
-	"network.port": [400, 8],
 	"sampleRate": [400, 16],
 	"samplesPerEvaluation": [400, 24],
 	"system.load": [400, 32]
@@ -9,7 +8,6 @@
 	"liner": [232, 128],
 	"midi": [160, 160],
 	"midichlorian": [200, 56],
-	"network": [80, 80],
 	"reticulated_liner": [200, 88],
 	"sonic": [200, 160]
 }

@@ -1,7 +1,6 @@
 import dlal
 
 #components
-network=dlal.Component('network'); network.port(9130)
 commander=dlal.Commander()
 s_voice=dlal.SonicController(); s_voice.i(0, 0, 0.25); s_voice.s(0, 1); s_voice.midi(0x90, 40, 0x7f)
 s_noise=dlal.SonicController();
@@ -15,12 +14,11 @@ multiplier=dlal.Component('multiplier'); multiplier.offset(1); multiplier.set(0.
 buffer_voice=dlal.Buffer(); buffer_voice.clear_on_evaluate('y')
 buffer_noise=dlal.Buffer(); buffer_noise.clear_on_evaluate('y')
 #system
-network.connect(commander)
 s_voice.connect(buffer_voice); f_voice.connect(buffer_voice)
 s_noise.connect(buffer_noise); f_noise.connect(buffer_noise)
 multiplier.connect(buffer_voice); multiplier.connect(buffer_noise)
 system=dlal.SimpleSystem(
-	[network, commander, s_voice, s_noise, f_voice, f_noise, multiplier, buffer_voice, buffer_noise],
+	[commander, s_voice, s_noise, f_voice, f_noise, multiplier, buffer_voice, buffer_noise],
 	[s_voice, s_noise],
 	[buffer_voice, buffer_noise]
 )

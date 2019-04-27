@@ -3,8 +3,6 @@ from .commander import *
 from .formant import *
 from .helpers import *
 from .liner import *
-from .network import *
-from .qweboard import *
 from .reticulated_liner import *
 from .skeleton import *
 from .sonic_controller import *
