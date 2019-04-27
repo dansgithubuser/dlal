@@ -26,7 +26,7 @@ if args.can:
 		'f': '-s sonic     ',
 		's': '-s soundfont ',
 		'v': '-s vst       ',
-		'l': '-s loader -i editor',
+		'l': '-s loader',
 	}
 	canned_options={
 		'b': '-b',
@@ -209,7 +209,6 @@ if args.interface:
 		else:
 			name=i
 			port=str({
-				'editor': 9088,
 				'softboard': 9120,
 			}[name])
 		os.chdir(built_rel_path)
