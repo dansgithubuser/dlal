@@ -24,5 +24,8 @@
 	"midi": [128, 96],
 	"midi_commander": [128, 64],
 	"midi_network": [128, 32],
-	"network": [408, 392]
+	"network": [408, 392],
+	"piano_commander": [152, 192],
+	"piano_liner": [128, 168],
+	"piano_sonic": [152, 224]
 }
