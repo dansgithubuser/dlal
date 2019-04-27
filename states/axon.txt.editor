@@ -4,7 +4,6 @@
 	"system.load": [400, 32]
 }{
 	"audio": [200, 200],
-	"commander": [120, 120],
 	"liner": [232, 128],
 	"midi": [160, 160],
 	"midichlorian": [200, 56],
