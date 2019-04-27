@@ -1,5 +1,7 @@
 #include "multiplier.hpp"
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(Multiplier)
 
 namespace dlal{
@@ -16,6 +18,15 @@ Multiplier::Multiplier(): _multiplier(1.0f), _offset(0.0f), _gate(-1.0f) {
 	});
 	registerCommand("gate", "<gate (amplitude)>", [this](std::stringstream& ss){
 		ss>>_gate;
+		return "";
+	});
+	registerCommand("serialize_multiplier", "", [this](std::stringstream&){
+		std::stringstream ss;
+		ss<<_multiplier<<" "<<_offset<<" "<<_gate;
+		return ss.str();
+	});
+	registerCommand("deserialize_liner", "<serialized>", [this](std::stringstream& ss){
+		ss>>_multiplier>>" ">>_offset>>" ">>_gate;
 		return "";
 	});
 }
