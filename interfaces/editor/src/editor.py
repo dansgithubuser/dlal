@@ -48,6 +48,7 @@ obvious.set_ffi_types(cpp.component_label, None, str, str)
 obvious.set_ffi_types(cpp.component_phase, None, str, ctypes.c_float)
 obvious.set_ffi_types(cpp.component_type, str, ctypes.c_void_p)
 obvious.set_ffi_types(cpp.component_name, str, ctypes.c_void_p)
+obvious.set_ffi_types(cpp.component_rename, None, str, str)
 #connection
 obvious.set_ffi_types(cpp.connection_new, None, str, str)
 obvious.set_ffi_types(cpp.connection_del, None, str, str)
@@ -94,11 +95,16 @@ class Component:
 	number=1
 
 	def __init__(self, name, type):
+		self._name=name
 		cpp.component_new(name, type,
 			Component.number*Component.SIZE*5,
 			Component.number*Component.SIZE*5,
 		)
 		Component.number+=1
+
+	def rename(self, name):
+		cpp.component_rename(self._name, name)
+		self._name=name
 
 def reset_component_number(): Component.number=1
 cpp.reset_component_number=reset_component_number
@@ -125,6 +131,12 @@ while not controls.done:
 			def remove():
 				name=parser.get()
 				del components[name]
+			def rename():
+				name_i, name_f=parser.get_n(2)
+				component=components[name_i]
+				component.rename(name_f)
+				del components[name_i]
+				components[name_f]=component
 			def label():
 				name, label=parser.get_n(2)
 				cpp.component_label(name, label)

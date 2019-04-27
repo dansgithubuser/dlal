@@ -398,6 +398,7 @@ void System::rename(Component* component, const char* newName){
 		if(i.first==component->_name) i.first=newName;
 		if(i.second==component->_name) i.second=newName;
 	}
+	dlalReport(this, obvstr("rename", component->_name, newName).c_str());
 	component->_name=newName;
 }
 

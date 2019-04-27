@@ -14,11 +14,22 @@ template<typename K, typename V> struct DeleterMap: public std::map<K, V> {
 	~DeleterMap(){ for(auto i: *this) delete i.second; }
 };
 
+template<typename K, typename V> struct NewerDeleterMap: public std::map<K, V*> {
+	~NewerDeleterMap(){ for(auto i: *this) delete i.second; }
+	V*& operator[](const K& k){
+		if(!this->count(k)) std::map<K, V*>::operator[](k)=new V;
+		return this->at(k);
+	}
+	V*& getNoNew(const K& k){
+		return std::map<K, V*>::operator[](k);
+	}
+};
+
 dryad::Client* fClient=nullptr;
 std::string fString;
 std::string fText;
 std::map<std::string, Variable> fVariables;
-std::map<std::string, Component> fComponents;
+NewerDeleterMap<std::string, Component> fComponents;
 std::vector<Object*> fSelected;
 DeleterMap<std::string, dryad::Client*> fTies;
 std::vector<Component> fAddables;
@@ -64,7 +75,7 @@ extern "C" {
 		gDansSfmlWrapperBoss->window.clear();
 		//objects
 		static sf::VertexArray va(sf::PrimitiveType::Lines);
-		for(auto& i: fComponents) i.second.draw(va, in((Object*)&i.second, fSelected));
+		for(auto& i: fComponents) i.second->draw(va, in((Object*)i.second, fSelected));
 		//objects - addables
 		fAddablesScrollX=dans_sfml_wrapper_width();
 		for(auto& i: fAddables) i.draw(va, false, true);
@@ -85,11 +96,11 @@ extern "C" {
 		if(!fClient) throw std::logic_error("not initialized");
 		Component* component=nullptr;
 		for(auto& i: fComponents) if(
-			i.second._type=="network"&&
-			i.second._connections.size()==1&&
-			i.second._connections.begin()->second._dst->_type=="commander"
+			i.second->_type=="network"&&
+			i.second->_connections.size()==1&&
+			i.second->_connections.begin()->second._dst->_type=="commander"
 		){
-			component=&i.second;
+			component=i.second;
 			break;
 		}
 		std::stringstream ss;
@@ -109,7 +120,7 @@ extern "C" {
 		std::ofstream(fileName)
 			<<OBV_FOR(fVariables, r[i->first]=Pair(i->second._x, i->second._y), Map())
 			<<OBV_FOR(fComponents,
-				if(i->second._type.size()) r[i->first]=Pair(i->second._x, i->second._y), Map())
+				if(i->second->_type.size()) r[i->first]=Pair(i->second->_x, i->second->_y), Map())
 		;
 	}
 
@@ -120,7 +131,7 @@ extern "C" {
 			for(auto& i: vPairs)
 				fVariables [i.first].name(i.first).moveTo(i.second.x, i.second.y);
 			for(auto& i: cPairs)
-				fComponents[i.first].name(i.first).moveTo(i.second.x, i.second.y);
+				fComponents[i.first]->name(i.first).moveTo(i.second.x, i.second.y);
 		}
 		catch(...){
 			editor_set_text("couldn't load");
@@ -148,7 +159,7 @@ extern "C" {
 
 	void* object_at(int x, int y){
 		std::vector<Object*> objects;
-		for(auto& i: fComponents) objects.push_back(&i.second);
+		for(auto& i: fComponents) objects.push_back(i.second);
 		for(auto& i: fVariables) objects.push_back(&i.second);
 		for(auto& i: objects) if(i->contains(x, y)) return i;
 		return nullptr;
@@ -184,17 +195,17 @@ extern "C" {
 	}
 
 	void component_new(const char* name, const char* type, int x, int y){
-		if(fComponents.count(name)) fComponents.at(name)._type=type;//component was previously loaded
-		else fComponents[name].set(name, type, x, y);
+		if(fComponents.count(name)) fComponents.at(name)->_type=type;//component was previously loaded
+		else fComponents[name]->set(name, type, x, y);
 	}
 
 	void component_label(const char* name, const char* label){
-		fComponents[name]._label=label;
+		fComponents[name]->_label=label;
 	}
 
 	void component_phase(const char* name, float phase){
 		if(!fComponents.count(name)) return;
-		fComponents.at(name)._phase=phase;
+		fComponents.at(name)->_phase=phase;
 	}
 
 	const char* component_type(Object* component){
@@ -205,27 +216,42 @@ extern "C" {
 		return dynamic_cast<Component*>(component)->_name.c_str();
 	}
 
+	void component_rename(const char* nameI, const char* nameF){
+		auto t=fComponents.at(nameI);
+		fComponents.erase(nameI);
+		t->_name=nameF;
+		fComponents.getNoNew(nameF)=t;
+		//rename associated variables
+		for(const auto& i: OBV_FOR(fVariables,
+			if(startsWith(i->first, nameI)) r.push_back(i->first),
+			std::vector<std::string>()
+		)){
+			auto newName=replace(i, nameI, nameF);
+			rekey(fVariables, i, newName)._name=newName;
+		}
+	}
+
 	void connection_new(const char* src, const char* dst){
 		fComponents[src];
 		fComponents[dst];
-		fComponents.at(src)._connections[dst]=Connection(&fComponents.at(src), &fComponents.at(dst));
+		fComponents.at(src)->_connections[dst]=Connection(fComponents.at(src), fComponents.at(dst));
 	}
 
 	void connection_del(const char* src, const char* dst){
 		if(!fComponents.count(src)) return;
-		eraseKey(dst, fComponents.at(src)._connections);
+		eraseKey(dst, fComponents.at(src)->_connections);
 	}
 
 	void connection_command(const char* src, const char* dst){
 		if(!fComponents.count(src)) return;
-		if(!fComponents.at(src)._connections.count(dst)) return;
-		fComponents.at(src)._connections.at(dst)._commandHeat=1.0f;
+		if(!fComponents.at(src)->_connections.count(dst)) return;
+		fComponents.at(src)->_connections.at(dst)._commandHeat=1.0f;
 	}
 
 	void connection_midi(const char* src, const char* dst){
 		if(!fComponents.count(src)) return;
-		if(!fComponents.at(src)._connections.count(dst)) return;
-		fComponents.at(src)._connections.at(dst)._midiHeat=1.0f;
+		if(!fComponents.at(src)->_connections.count(dst)) return;
+		fComponents.at(src)->_connections.at(dst)._midiHeat=1.0f;
 	}
 
 	void connection_toggle(Object* connectorObject, Object* connecteeObject){
