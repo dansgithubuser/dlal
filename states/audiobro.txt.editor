@@ -12,19 +12,15 @@
 	"wait": [344, 112]
 }{
 	"audio": [176, 392],
-	"bass_commander": [224, 192],
 	"bass_liner": [200, 168],
 	"bass_sonic": [224, 224],
-	"commander": [408, 424],
 	"drum_buffer": [64, 216],
 	"drum_liner": [64, 192],
 	"echo": [176, 360],
 	"midi": [128, 96],
-	"midi_commander": [128, 64],
 	"midi_network": [128, 32],
 	"multiplier": [144, 360],
 	"network": [408, 392],
-	"piano_commander": [152, 192],
 	"piano_liner": [128, 168],
 	"piano_sonic": [152, 224],
 	"reverb": [112, 360]

@@ -1,5 +1,4 @@
 from .buffer import *
-from .qweboard import *
 from .skeleton import *
 from .sonic_controller import *
 
@@ -102,7 +101,6 @@ class SimpleSystem:
 		self.test=test
 		#create
 		self.system=System()
-		if not (self.raw or self.test): self.qweboard=Qweboard()
 		self.midi=Component('midi')
 		if self.test: self.midi.midi(0x90, test_note, 0x40)
 		self.components=components
@@ -115,10 +113,8 @@ class SimpleSystem:
 		self.audio.set(self.sample_rate, self.log_2_samples_per_evaluation)
 		#add
 		self.system.add(self.audio, slot=1 if self.test else 0)
-		if not (self.raw or self.test): self.system.add(self.qweboard)
 		self.system.add(self.midi, *self.components)
 		#connect
-		if not (self.raw or self.test): self.qweboard.connect(self.midi)
 		x=components
 		if midi_receivers!=None: x=midi_receivers
 		for component in x: self.midi.connect(component)

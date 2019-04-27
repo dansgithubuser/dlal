@@ -12,73 +12,18 @@
 #include <stdexcept>
 #include <thread>
 
-static void atPanic(const char* message){
-	std::cerr<<message<<"\n";
-	throw std::runtime_error(message);
-}
-
-static void dyadWrite(dyad_Stream* stream, const uint8_t* data, uint32_t size){
-	uint8_t s[4];
-	s[0]=(size>>0x00)&0xff;
-	s[1]=(size>>0x08)&0xff;
-	s[2]=(size>>0x10)&0xff;
-	s[3]=(size>>0x18)&0xff;
-	dyad_write(stream, s, 4);
-	dyad_write(stream, data, size);
-}
-
-static std::atomic<bool> dyadDone;
-static std::thread dyadThread;
-static std::recursive_mutex dyadMutex;
-
 extern "C" {
 
 DLAL void dlalDemolishComponent(void* component){
 	delete dlal::toComponent(component);
 }
 
-DLAL void dlalDyadInit(){
-	dyadMutex.lock();
-	dyad_atPanic(atPanic);
-	dyad_init();
-	dyad_setUpdateTimeout(0.0);
-	dyad_setTickInterval(0.01);
-	dyadDone=false;
-	dyadThread=std::thread([](){
-		while(!dyadDone){
-			dyadMutex.lock();
-			dyad_update();
-			dyadMutex.unlock();
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	});
-	dyadMutex.unlock();
-}
-
-DLAL void dlalDyadShutdown(){
-	dyadDone=true;
-	dyadThread.join();
-	dyadMutex.lock();
-	dyad_shutdown();
-	dyadMutex.unlock();
-}
-
-DLAL void* dlalBuildSystem(int port, dlal::TextCallback pythonHandler){
-	try{ return new dlal::System(port, pythonHandler); }
-	catch(const std::exception& e){
-		std::cerr<<e.what()<<"\n";
-		return NULL;
-	}
+DLAL void* dlalBuildSystem(){
+	return new dlal::System;
 }
 
 DLAL void dlalDemolishSystem(void* system){
 	delete (dlal::System*)system;
-}
-
-DLAL void dlalReport(void* system, const char* report){
-	dyadMutex.lock();
-	((dlal::System*)system)->dyadWrite(report);
-	dyadMutex.unlock();
 }
 
 DLAL void* dlalComponentWithName(void* system, const char* name){
@@ -167,139 +112,10 @@ void safeAdd(
 			for(unsigned j=0; j<size; ++j) i->audio()[j]+=audio[j];
 }
 
-bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss){
-	uint8_t sizeBytes[4];
-	if(!data.read(sizeBytes, 4, false)) return false;
-	uint32_t size=
-		(sizeBytes[0]<<0x00)|
-		(sizeBytes[1]<<0x08)|
-		(sizeBytes[2]<<0x10)|
-		(sizeBytes[3]<<0x18)
-	;
-	if(!data.read(nullptr, size, false)) return false;
-	data.read(nullptr, 4, true);
-	std::vector<uint8_t> payload;
-	payload.resize(size);
-	data.read(payload.data(), size, true);
-	for(unsigned i=0; i<size; ++i) ss<<(char)payload[i];
-	return true;
-}
-
 //=====System=====//
-static void onDestroyed(dyad_Event* e){
-	System* system=(System*)e->udata;
-	if(e->stream==system->_server) std::cerr<<"error: server destroyed"<<std::endl;
-	else erase(e->stream, system->_clients);
-}
-
-static void onError(dyad_Event* e){
-	System* system=(System*)e->udata;
-	std::cerr<<"error: dyad error: "<<e->msg<<std::endl;
-}
-
-static void onData(dyad_Event* e){
-	System* system=(System*)e->udata;
-	system->_data.write((uint8_t*)e->data, e->size);
-	std::stringstream ss;
-	while(dataToStringstream(system->_data, ss))
-		system->_pythonHandler(ss.str().c_str());
-}
-
-static void onAccept(dyad_Event* e){
-	System* system=(System*)e->udata;
-	system->_clients.push_back(e->remote);
-	dyad_addListener(e->remote, DYAD_EVENT_DESTROY, onDestroyed, system);
-	dyad_addListener(e->remote, DYAD_EVENT_ERROR, onError, system);
-	dyad_addListener(e->remote, DYAD_EVENT_DATA, onData, system);
-	std::stringstream ss;
-	for(auto i: system->_components) for(auto j: i){
-		ss<<"add "<<componentToStr(j)<<" "<<j->type()<<" ";
-		if(j->_label.size()) ss<<"label "<<componentToStr(j)<<" "<<j->_label<<" ";
-	}
-	for(auto i: system->_reportConnections)
-		ss<<"connect "<<i.first<<" "<<i.second<<" ";
-	for(auto i: system->_variables)
-		ss<<"variable "<<i.first<<"\n"<<i.second<<"\n";
-	dyadWrite(e->remote, (uint8_t*)ss.str().data(), ss.str().size());
-}
-
-static void onTick(dyad_Event* e){
-	System* system=(System*)e->udata;
-	std::string s;
-	std::stringstream ss;
-	while(system->_reportQueue.read(s, true)){
-		ss<<s<<" ";
-		std::stringstream tt(s);
-		std::string t;
-		tt>>t;
-		if(t=="connect"){
-			tt>>t;
-			std::string u;
-			tt>>u;
-			system->_reportConnections.push_back(
-				std::pair<std::string, std::string>(t, u)
-			);
-		}
-		else if(t=="disconnect"){
-			tt>>t;
-			std::string u;
-			tt>>u;
-			for(unsigned i=0; i<system->_reportConnections.size(); ++i)
-				if(
-					system->_reportConnections[i].first==t
-					&&
-					system->_reportConnections[i].second==u
-				){
-					system->_reportConnections.erase(
-						system->_reportConnections.begin()+i
-					);
-					break;
-				}
-		}
-	}
-	if(ss.str().size()) system->dyadWrite(ss.str());
-}
-
-System::System(int port, TextCallback pythonHandler):
-	_reportQueue(8),
-	_data(10),
-	_pythonHandler(pythonHandler),
-	_dyadDone(dyadDone),
-	_dyadMutex(dyadMutex)
-{
-	if(port){
-		_dyadNewStream=dyad_newStream;
-		_dyadAddListener=dyad_addListener;
-		_dyadListenEx=dyad_listenEx;
-		std::string r=dyadPauseAnd([&]()->std::string{
-			_server=dyad_newStream();
-			dyad_addListener(_server, DYAD_EVENT_ACCEPT , onAccept   , this);
-			dyad_addListener(_server, DYAD_EVENT_ERROR  , onError    , this);
-			dyad_addListener(_server, DYAD_EVENT_DESTROY, onDestroyed, this);
-			dyad_addListener(_server, DYAD_EVENT_TICK   , onTick     , this);
-			if(dyad_listenEx(_server, "0.0.0.0", port, 511)<0){
-				std::stringstream ss;
-				ss<<"error: constructing System, couldn't listen on port "<<port;
-				return ss.str();
-			}
-			return "";
-		});
-		if(r.size()) throw std::runtime_error(r);
-	}
-	else _server=nullptr;
-}
-
-System::~System(){
-	if(_server){
-		dyadPauseAnd([this]()->std::string{
-			for(auto i: _clients) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
-			dyad_close(_server);
-			dyad_removeAllListeners(_server, DYAD_EVENT_NULL);
-			for(auto i: _streams) dyad_removeAllListeners(i, DYAD_EVENT_NULL);
-			return "";
-		});
-	}
-}
+System::System():
+	_reportQueue(8)
+{}
 
 std::string System::add(Component& component, unsigned slot, bool queue){
 	for(auto i: _components) for(auto j: i) if(j==&component) return "error: already added";
@@ -398,41 +214,8 @@ void System::rename(Component* component, const char* newName){
 		if(i.first==component->_name) i.first=newName;
 		if(i.second==component->_name) i.second=newName;
 	}
-	dlalReport(this, obvstr("rename", component->_name, newName).c_str());
+	_reportQueue.write(obvstr("rename", component->_name, newName));
 	component->_name=newName;
-}
-
-dyad_Stream* System::dyadNewStream(){
-	dyad_Stream* r=_dyadNewStream();
-	_streams.push_back(r);
-	return r;
-}
-
-void System::dyadAddListener(
-	dyad_Stream* stream, int event, dyad_Callback callback, void* userData
-){
-	_dyadAddListener(stream, event, callback, userData);
-}
-
-int System::dyadListenEx(
-	dyad_Stream* stream, const char* host, int port, int backlog
-){
-	return _dyadListenEx(stream, host, port, backlog);
-}
-
-std::string System::dyadPauseAnd(std::function<std::string()> f){
-	std::string r;
-	_dyadMutex.lock();
-	if(!_dyadDone) r=f();
-	_dyadMutex.unlock();
-	return r;
-}
-
-void System::dyadWrite(std::string s){
-	dyadMutex.lock();
-	for(auto i: _clients)
-		::dyadWrite(i, (uint8_t*)s.data(), s.size());
-	dyadMutex.unlock();
 }
 
 //=====Component=====//

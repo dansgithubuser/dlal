@@ -32,15 +32,12 @@ endif()
 include_directories(
 	"${cmake_common_dir}/../deps"
 	"${cmake_common_dir}/../deps/obvious/cpp"
-	"${cmake_common_dir}/../deps/dryad/dyad/src"
-	"${cmake_common_dir}/../deps/dryad"
 )
 
 function(component_src output)
 	#include
 	include_directories(
 			"../../../skeleton/src"
-			"../../../skeleton/deps/dyad/src"
 			"../src"
 	)
 	#source
@@ -60,7 +57,6 @@ function(footer output)
 		add_library(SkeletonObject OBJECT
 			"${cmake_common_dir}/../skeleton/src/skeleton.cpp"
 			"${cmake_common_dir}/../skeleton/src/page.cpp"
-			"${cmake_common_dir}/../deps/dryad/dyad/src/dyad.c"
 		)
 		set_property(TARGET SkeletonObject PROPERTY CXX_STANDARD 11)
 	endif()

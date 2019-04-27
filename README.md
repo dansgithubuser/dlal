@@ -96,12 +96,10 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - skeleton: C++ library; audio system definition and abstract component definition.
 - states: Collection of system states, loadable with loader system.
 - systems: Python scripts that describe some useful audio systems.
-	- loops: States loadable with looper system.
 - tests: Sanity tests.
 - web: Web interfaces.
 
 ## todo
-- take network out of system
 - put commander into system
 - clean up serialization
 
@@ -111,16 +109,9 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - need to design for more than one person interacting at once with common devices (phones)
 	- webify interfaces
 		- system editor
-
-- system editor
-	- queue and commit changes
-	- remove components
-	- UI remove components
-	- scroll
-	- load system, bootstrap system (system commands)
-	- snap components when not being dragged
-	- hide uninteresting variables
-	- place new components/variables in consistent spot, draw that spot
+			- similar functionality to nonweb system editor
+			- queue and commit changes
+			- load system, bootstrap system (system commands)
 
 - audiobro
 	- piano

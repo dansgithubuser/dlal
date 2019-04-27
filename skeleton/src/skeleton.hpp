@@ -3,8 +3,6 @@
 
 #include "queue.hpp"
 
-#include <dyad.h>
-
 #include <atomic>
 #include <cstdint>
 #include <string>
@@ -36,8 +34,6 @@ namespace dlal{
 
 class Component;
 
-typedef void (*TextCallback)(const char*);
-
 //cast to Component
 Component* toComponent(void*);
 
@@ -56,13 +52,9 @@ void add(const float* audio, unsigned size, std::vector<Component*>&);
 //add audio to components that have audio
 void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
 
-//convert data to a stringstream
-bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss);
-
 class System{
 	public:
-		System(int port=0, TextCallback pythonCallback=nullptr);
-		~System();
+		System();
 		std::string add(Component& component, unsigned slot, bool queue=false);
 		std::string remove(Component& component, bool queue=false);
 		std::string check();
@@ -72,31 +64,15 @@ class System{
 		std::string serialize() const;
 		void rename(Component* component, const char* newName);
 
-		dyad_Stream* dyadNewStream();
-		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
-		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
-		std::string dyadPauseAnd(std::function<std::string()>);
-		void dyadWrite(std::string);
-
-		std::vector<dyad_Stream*> _clients;
-		std::vector<dyad_Stream*> _streams;
 		Queue<std::string> _reportQueue;//for system visualization, populated in evaluation
 		std::vector<std::pair<std::string, std::string>> _reportConnections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
-		dyad_Stream* _server;
-		Queue<uint8_t> _data;
-		TextCallback _pythonHandler;
 
 	private:
 		std::vector<std::vector<Component*>> _componentsToAdd;
 		std::vector<Component*> _componentsToRemove;
-		std::function<dyad_Stream*()> _dyadNewStream;
-		std::function<void(dyad_Stream*, int event, dyad_Callback, void* userData)> _dyadAddListener;
-		std::function<int(dyad_Stream*, const char* host, int port, int backlog)> _dyadListenEx;
-		std::atomic<bool>& _dyadDone;
-		std::recursive_mutex& _dyadMutex;
 };
 
 class Component{
