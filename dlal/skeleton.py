@@ -61,7 +61,7 @@ obvious.set_ffi_types(_skeleton.dlalDyadInit)
 obvious.set_ffi_types(_skeleton.dlalDyadShutdown)
 obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p, int)
 obvious.set_ffi_types(_skeleton.dlalDemolishSystem, None, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalReport, None, ctypes.c_void_p, ctypes.c_char_p)
+obvious.set_ffi_types(_skeleton.dlalReport, None, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalComponentWithName, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalRename, None, ctypes.c_void_p, ctypes.c_void_p, str)
 obvious.set_ffi_types(_skeleton.dlalSetVariable, ctypes.c_void_p, ctypes.c_void_p, str, str)
@@ -199,7 +199,7 @@ class System:
 		self.novel_components[name]=component
 		if not hasattr(self, name): setattr(self, name, component)
 
-	def _report(self, report): _skeleton.dlalReport(self.system, report)
+	def _report(self, report): _skeleton.dlalReport(self.system, report.encode('utf-8'))
 
 class Component:
 	_libraries={}
@@ -227,7 +227,7 @@ class Component:
 			self.component=kwargs['component']
 		else:
 			self.component=Component._libraries[component_type].dlalBuildComponent(
-				kwargs.get('name', _namer.name(component_type))
+				kwargs.get('name', _namer.name(component_type)).encode('utf-8')
 			)
 		self.weak=kwargs.get('weak', False)
 		self.set_components_to_add([self])
@@ -258,7 +258,7 @@ class Component:
 
 	def system(self): return _skeleton.dlalSystem(self.component)
 
-	def rename(self, name): _skeleton.dlalRename(self.system(), self.component, name)
+	def rename(self, name): _skeleton.dlalRename(self.system(), self.component, name.encode('utf-8'))
 
 	def phase(self): return int(self.periodic_get().split()[1])
 
@@ -281,35 +281,31 @@ def component_to_dict(self, members):
 	result={k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
 	return result
 
-def component_try_import(component_type):
-	try: exec('from .{} import {} as result'.format(
-		component_type, camel_case(component_type)
-	))
-	except ImportError: return None
-	return result
+component_types={}
+def inform_component_type(name, value): component_types[snake_case(name)]=value
 
 def component_builder(component_type):
-	cls=component_try_import(component_type)
+	cls=component_types.get(component_type)
 	if cls: return cls
 	return lambda **kwargs: Component(component_type, **kwargs)
 
 def component_from_dict(self, members, d, component_map):
 	for member in members:
 		class_name=d[member]['class']
-		cls=component_try_import(snake_case(class_name))
+		cls=component_types.get(snake_case(class_name))
 		if not cls: cls=eval(class_name)
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
 
 def component_with_name(system, name):
 	if isinstance(system, System): system=system.system
-	component=_skeleton.dlalComponentWithName(system, name)
-	component_type=report(_skeleton.dlalCommand(component, 'type'))
+	component=_skeleton.dlalComponentWithName(system, name.encode('utf-8'))
+	component_type=report(_skeleton.dlalCommand(component, b'type'))
 	return Component(component_type, component=component, weak=True)
 
 def test(): _skeleton.dlalTest()
 
 def regularize_component_constructors(globals):
-	component_types=sorted(os.listdir(os.path.join(root, 'components')))
-	for i in component_types:
-		if not component_try_import(i):
+	component_dirs=sorted(os.listdir(os.path.join(root, 'components')))
+	for i in component_dirs:
+		if not component_types.get(i):
 			globals[i.capitalize()]=functools.partial(Component, i)

@@ -2,7 +2,6 @@
 
 import ctypes
 import os
-import StringIO
 import sys
 import time
 
@@ -55,6 +54,8 @@ obvious.set_ffi_types(cpp.connection_del, None, str, str)
 obvious.set_ffi_types(cpp.connection_command, None, str, str)
 obvious.set_ffi_types(cpp.connection_midi, None, str, str)
 obvious.set_ffi_types(cpp.connection_toggle, None, ctypes.c_void_p, ctypes.c_void_p)
+#
+obvious.python_3_string_prep(cpp)
 
 controls=Controls(cpp)
 

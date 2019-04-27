@@ -101,9 +101,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- switch fully to python3
-	- component_try_import can't import the way it is
-	- c_char_p expects bytes
 - take network out of system
 - put commander into system
 - clean up serialization
