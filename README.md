@@ -104,7 +104,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - switch fully to python3
 	- component_try_import can't import the way it is
 	- c_char_p expects bytes
-- samples per callback -> samples per evaluation
 - take network out of system
 - put commander into system
 - clean up serialization

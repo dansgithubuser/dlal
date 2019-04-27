@@ -59,15 +59,15 @@ Audio::Audio():
 			system._variables.count("samplesPerEvaluation")
 		){
 			_sampleRate=std::stoi(system._variables.at("sampleRate"));
-			_log2SamplesPerCallback=ilog2(std::stoi(system._variables.at("samplesPerEvaluation")));
+			_log2SamplesPerEvaluation=ilog2(std::stoi(system._variables.at("samplesPerEvaluation")));
 			return "";
 		}
-		return system.set(_sampleRate, _log2SamplesPerCallback);
+		return system.set(_sampleRate, _log2SamplesPerEvaluation);
 	});
-	registerCommand("set", "sampleRate <log2(samples per callback)>",
+	registerCommand("set", "sampleRate <log2(samples per evaluation)>",
 		[this](std::stringstream& ss){
 			ss>>_sampleRate;
-			ss>>_log2SamplesPerCallback;
+			ss>>_log2SamplesPerEvaluation;
 			return "";
 		}
 	);
@@ -97,7 +97,7 @@ Audio::Audio():
 }
 
 void Audio::evaluate(){
-	unsigned samples=1<<_log2SamplesPerCallback;
+	unsigned samples=1<<_log2SamplesPerEvaluation;
 	if(_input) add(_input, samples, _outputs);
 	else{
 		for(auto i: _outputs)
@@ -121,7 +121,7 @@ std::string Audio::start(){
 	RtAudio::StreamParameters iParams, oParams;
 	iParams.deviceId=_rtAudio.getDefaultInputDevice (); iParams.nChannels=1;
 	oParams.deviceId=_rtAudio.getDefaultOutputDevice(); oParams.nChannels=2;
-	unsigned samples=1<<_log2SamplesPerCallback;
+	unsigned samples=1<<_log2SamplesPerEvaluation;
 	try{ _rtAudio.openStream(
 		&oParams,
 		&iParams,
@@ -132,8 +132,8 @@ std::string Audio::start(){
 		this
 	); }
 	catch(RtAudioError& e){ return std::string("error: ")+e.getMessage(); }
-	if(samples!=1<<_log2SamplesPerCallback)
-		return "error: couldn't get desired samples per callback";
+	if(samples!=1<<_log2SamplesPerEvaluation)
+		return "error: couldn't get desired samples per evaluation";
 	try{ _rtAudio.startStream(); }
 	catch(RtAudioError& e){ return std::string("error: ")+e.getMessage(); }
 	_started=true;

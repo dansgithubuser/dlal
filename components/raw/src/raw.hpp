@@ -16,7 +16,7 @@ class Raw: public Component{
 		float* audio() override { return _audio.data(); }
 		bool hasAudio() override { return true; }
 	private:
-		unsigned _sampleRate, _log2SamplesPerCallback;
+		unsigned _sampleRate, _log2SamplesPerEvaluation;
 		std::vector<float> _audio;
 		uint64_t _duration, _sample, _maxSample;
 		std::string _fileName;

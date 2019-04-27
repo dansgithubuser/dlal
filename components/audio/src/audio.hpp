@@ -20,7 +20,7 @@ class Audio: public MultiOut{
 	private:
 		std::string start();
 		std::string finish();
-		unsigned _sampleRate, _log2SamplesPerCallback;
+		unsigned _sampleRate, _log2SamplesPerEvaluation;
 		RtAudio _rtAudio;
 		bool _started;
 		unsigned _underflows;

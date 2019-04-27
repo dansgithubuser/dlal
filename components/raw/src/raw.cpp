@@ -11,16 +11,16 @@ Raw::Raw():
 	_doFile(true), _peak(false), _print(false)
 {
 	addJoinAction([this](System& system){
-		_audio.resize(1<<_log2SamplesPerCallback, 0.0f);
+		_audio.resize(1<<_log2SamplesPerEvaluation, 0.0f);
 		_file.open(_fileName.c_str());
-		system.set(_sampleRate, _log2SamplesPerCallback);
+		system.set(_sampleRate, _log2SamplesPerEvaluation);
 		_maxSample=_duration*_sampleRate/1000;
 		return "";
 	});
-	registerCommand("set", "sampleRate <log2(samples per callback)>",
+	registerCommand("set", "sampleRate <log2(samples per evaluation)>",
 		[this](std::stringstream& ss){
 			ss>>_sampleRate;
-			ss>>_log2SamplesPerCallback;
+			ss>>_log2SamplesPerEvaluation;
 			return "";
 		}
 	);
@@ -61,7 +61,7 @@ Raw::Raw():
 		if(!_system) return "error: must add before starting";
 		auto s=_system->check();
 		if(isError(s)) return s;
-		const unsigned samples=1<<_log2SamplesPerCallback;
+		const unsigned samples=1<<_log2SamplesPerEvaluation;
 		int j=0;
 		if(pause) return "";
 		for(uint64_t i=0; i<_maxSample; i+=samples){
@@ -86,7 +86,7 @@ Raw::Raw():
 
 void Raw::evaluate(){
 	if(_sample>=_maxSample) return;
-	const unsigned samples=1<<_log2SamplesPerCallback;
+	const unsigned samples=1<<_log2SamplesPerEvaluation;
 	for(unsigned i=0; i<samples; ++i){
 		if(_peak){
 			_x.write(_audio[i]);

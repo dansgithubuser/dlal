@@ -70,15 +70,15 @@ def frequency_response(component, duration=10000):
 	raw=Component('raw')
 	#command
 	sample_rate=44100
-	log_2_samples_per_callback=6
-	commands=int(duration/1000.0*sample_rate)>>log_2_samples_per_callback
+	log_2_samples_per_evaluation=6
+	commands=int(duration/1000.0*sample_rate)>>log_2_samples_per_evaluation
 	commander.queue_resize(commands)
 	for i in range(1, commands):
 		commander.queue_command(sonic_controller, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, edges_to_wait=i)
 	sonic_controller.midi(0x90, 69, 0x7f)
 	buffer.clear_on_evaluate('y')
 	raw.duration(duration)
-	raw.set(sample_rate, log_2_samples_per_callback)
+	raw.set(sample_rate, log_2_samples_per_evaluation)
 	raw.peak(sample_rate/20)
 	#add
 	system.add(raw, slot=1)

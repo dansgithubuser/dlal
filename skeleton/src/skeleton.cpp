@@ -356,11 +356,11 @@ void System::evaluate(){
 	for(auto i: _components) for(auto j: i) j->evaluate();
 }
 
-std::string System::set(unsigned sampleRate, unsigned log2SamplesPerCallback){
-	if(!sampleRate||!log2SamplesPerCallback)
-		return "error: must set sample rate and log2 samples per callback";
+std::string System::set(unsigned sampleRate, unsigned log2SamplesPerEvaluation){
+	if(!sampleRate||!log2SamplesPerEvaluation)
+		return "error: must set sample rate and log2 samples per evaluation";
 	_variables["sampleRate"]=std::to_string(sampleRate);
-	_variables["samplesPerEvaluation"]=std::to_string(1<<log2SamplesPerCallback);
+	_variables["samplesPerEvaluation"]=std::to_string(1<<log2SamplesPerEvaluation);
 	return "";
 }
 

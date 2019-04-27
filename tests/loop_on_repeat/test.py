@@ -1,15 +1,15 @@
 import dlal
 
-log2_samples_per_callback=3
-samples_per_callback=1<<log2_samples_per_callback
+log2_samples_per_evaluation=3
+samples_per_evaluation=1<<log2_samples_per_evaluation
 
 #create
 system=dlal.System()
 raw=dlal.Component('raw')
-liner=dlal.Liner(period_in_samples=8*samples_per_callback)
+liner=dlal.Liner(period_in_samples=8*samples_per_evaluation)
 sonic_controller=dlal.SonicController()
 #command
-raw.set(44100, log2_samples_per_callback)
+raw.set(44100, log2_samples_per_evaluation)
 liner.loop_on_repeat()
 liner.set_fudge(0)
 sonic_controller.a(1)

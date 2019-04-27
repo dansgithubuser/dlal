@@ -3,7 +3,7 @@
 import dlal
 
 sample_rate=44100
-log_2_samples_per_callback=6
+log_2_samples_per_evaluation=6
 
 #-----out-----#
 #create
@@ -12,7 +12,7 @@ raw=dlal.Component('raw')
 midi=dlal.Component('midi')
 fileo=dlal.Component('fileo')
 #command
-raw.set(sample_rate, log_2_samples_per_callback)
+raw.set(sample_rate, log_2_samples_per_evaluation)
 midi.midi(0x90, 0x3C, 0x40)
 fileo.name('file.txt')
 #add
@@ -34,7 +34,7 @@ raw=dlal.Component('raw')
 filei=dlal.Component('filei')
 sonic_controller=dlal.SonicController()
 #command
-raw.set(sample_rate, log_2_samples_per_callback)
+raw.set(sample_rate, log_2_samples_per_evaluation)
 filei.name('file.txt')
 #add
 system.add(raw, slot=1)
