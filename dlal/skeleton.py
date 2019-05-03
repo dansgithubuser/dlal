@@ -27,18 +27,11 @@ def snake_case(camel_case):
 def camel_case(snake_case):
 	return ''.join([i.capitalize() for i in snake_case.split('_')])
 
-def report(text):
-	t=ctypes.cast(text, ctypes.c_char_p).value.decode('utf-8')
-	_skeleton.dlalFree(text)
-	if   t.startswith('error'): raise RuntimeError(t)
-	elif t.startswith('warning'): print(t)
-	return t
-
-def connect(*args):
+def connect(*args, immediate=False):
 	if len(args)<=1: return
 	result=''
 	for i in range(len(args)-1):
-		result+=args[i].connect(args[i+1])
+		result+=args[i].connect(args[i+1], immediate)
 		if len(result): result+='\n'
 	return result
 
@@ -50,26 +43,61 @@ class Namer:
 		self.numbers[component_type]+=1
 		if self.numbers[component_type]==1: return component_type
 		return '{}{}'.format(component_type, self.numbers[component_type])
-
 _namer=Namer()
 
-_skeleton=obvious.load_lib('Skeleton')
-obvious.set_ffi_types(_skeleton.dlalDemolishComponent, None, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalBuildSystem, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalDemolishSystem, None, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalComponentWithName, ctypes.c_void_p, ctypes.c_void_p, str)
-obvious.set_ffi_types(_skeleton.dlalRename, None, ctypes.c_void_p, ctypes.c_void_p, str)
-obvious.set_ffi_types(_skeleton.dlalSetVariable, ctypes.c_void_p, ctypes.c_void_p, str, str)
-obvious.set_ffi_types(_skeleton.dlalCommand, ctypes.c_void_p, ctypes.c_void_p, str)
-obvious.set_ffi_types(_skeleton.dlalAdd, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint)
-obvious.set_ffi_types(_skeleton.dlalConnect, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalDisconnect, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalSystem, ctypes.c_void_p, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalSerialize, ctypes.c_void_p, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalFree, None, ctypes.c_void_p)
-obvious.set_ffi_types(_skeleton.dlalTest)
+class Skeleton:
+	def __init__(self):
+		self.lib=obvious.load_lib('Skeleton')
+		obvious.set_ffi_types(self.lib.dlalRequest, str, str, bool)
+		obvious.python_3_string_prep(self.lib)
 
-TextCallback=ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+	def _call(self, immediate, *args):
+		def report(result):
+			if   result.startswith('error'): raise RuntimeError(result)
+			elif result.startswith('warning'): print(result)
+			return result
+		def convert(x):
+			if isinstance(x, ctypes.c_void_p): return hex(x.value)
+			elif isinstance(x, Component): return hex(x.component)
+			return str(x)
+		return report(self.lib.dlalRequest(
+			' '.join([convert(i) for i in args]).encode('utf-8'),
+			immediate,
+		))
+
+	def test(self):
+		return self._call(True, 'test')
+
+	def system_build(self):
+		return self._call(True, 'system/build')
+
+	def system_switch(self, system):
+		return self._call(True, 'system/switch', system)
+
+	def system_demolish(self, system):
+		return self._call(True, 'system/demolish', system)
+
+	def system_report(self, immediate):
+		return self._call(immediate, 'system/report')
+
+	def system_serialize(self, immediate):
+		return self._call(immediate, 'system/serialize')
+
+	def variable_set(self, immediate, name, value):
+		return self._call(immediate, 'variable/set', name, value)
+
+	def component_add(self, immediate, c, slot):
+		return self._call(immediate, 'component/add', c, slot)
+
+	def component_connect(self, immediate, a, b):
+		return self._call(immediate, 'component/connect', a, b)
+
+	def component_command(self, c, immediate, *command):
+		return self._call(immediate, 'component/command', c, *command)
+
+	def component_demolish(self, c):
+		return self._call(True, 'component/demolish', c)
+_skeleton=Skeleton()
 
 class ReprMethod:
 	def __init__(self, target, method, **kwargs):
@@ -88,72 +116,57 @@ class ReprMethod:
 		return method(*args, **x)
 
 class System:
-	def __init__(self, port=None):
-		if port==None: port=9088
-		weak_self=weakref.ref(self)
-		def handler(command):
-			command=command.split()
-			if len(command)<4: return
-			if command[0]!='2': return
-			def queue_add():
-				component=component_builder(command[4])()
-				weak_self().register_novel_component(component)
-				weak_self().add(component)
-			def queue_connect():
-				connector=component_with_name(weak_self(), command[4])
-				connectee=component_with_name(weak_self(), command[5])
-				connector.connect(connectee)
-			eval(command[3])()
-		self.handler=TextCallback(handler)
-		self.system=_skeleton.dlalBuildSystem()
-		assert(self.system)
+	def __init__(self):
+		self.system=_skeleton.system_build()
+		self.switched=_skeleton.system_switch(self.system)
 		self.novel_components={}
-		self.set('sampleRate', 44100)
-		self.set('samplesPerEvaluation', 128)
-		self.on_del=[]
+		self.set('sampleRate', 44100, True)
+		self.set('samplesPerEvaluation', 128, True)
 		self.l=ReprMethod(self, 'load', start=True)
 
 	def __del__(self):
-		for i in self.on_del: i()
-		_skeleton.dlalDemolishSystem(self.system)
+		while True:
+			report=_skeleton.system_report(True)
+			if not report: break
+			print(report)
+		_skeleton.system_switch(self.switched)
+		_skeleton.system_demolish(self.system)
 
 	def add(self, *args, **kwargs):
 		slot=kwargs.get('slot', 0)
+		immediate=kwargs.get('immediate', False)
 		result=''
 		for arg in args:
 			for c in arg.get_components_to_add():
-				result+=report(_skeleton.dlalAdd(self.system, c.component, slot))
-				c.weak_system=weakref.ref(self)
+				result+=_skeleton.component_add(immediate, c, slot)
 			if len(result): result+='\n'
 		return result
 
-	def set(self, name, value):
-		name=name.encode('utf-8')
-		value=str(value).encode('utf-8')
-		report(_skeleton.dlalSetVariable(self.system, name, value))
+	def set(self, name, value, immediate=False):
+		_skeleton.variable_set(immediate, name, value)
 
-	def serialize(self):
-		return report(_skeleton.dlalSerialize(self.system))
+	def serialize(self, immediate=False):
+		return _skeleton.system_serialize(immediate)
 
 	def deserialize(self, serialized):
 		state=json.loads(serialized)
 		#variables
 		for name, value in state['variables'].items():
 			if name!='system.load':
-				self.set(name, value)
+				self.set(name, value, True)
 		#components
 		components={}
 		for name, serialized in state['components'].items():
 			component=component_builder(state['component_types'][name])(name=name)
-			component.deserialize(serialized)
+			component.deserialize(serialized, immediate=True)
 			components[name]=component
 		for index, slot in enumerate(state['component_order']):
 			for component in slot:
 				component=components[component]
 				self.register_novel_component(component)
-				self.add(component, slot=index)
+				self.add(component, slot=index, immediate=True)
 		#connections
-		for input, output in state['connections']: components[input].connect(components[output])
+		for input, output in state['connections']: components[input].connect(components[output], immediate=True)
 		#extra
 		state['map']=components
 		return state
@@ -167,18 +180,18 @@ class System:
 	def load(self, file_name='system.state.txt', start=False):
 		potential_expansion=os.path.join('..', '..', 'states', file_name+'.txt')
 		if os.path.exists(potential_expansion): file_name=potential_expansion
-		self.set('system.load', os.path.abspath(file_name))
+		self.set('system.load', os.path.abspath(file_name), immediate=True)
 		with open(file_name) as file: result=self.deserialize(file.read())
 		if start: self.start()
 		return result
 
 	def start(self):
 		if not hasattr(self, 'audio'): raise Exception('no audio component')
-		atexit.register(lambda: self.audio.finish())
-		return self.audio.start()
+		atexit.register(lambda: self.audio.finish(immediate=True))
+		return self.audio.start(immediate=True)
 
 	def register_novel_component(self, component):
-		name=component.to_str()
+		name=component.to_str(immediate=True)
 		self.novel_components[name]=component
 		if not hasattr(self, name): setattr(self, name, component)
 
@@ -212,34 +225,32 @@ class Component:
 			)
 		self.weak=kwargs.get('weak', False)
 		self.set_components_to_add([self])
-		commands=[i.split()[0] for i in self.command('help').split('\n')[1:] if len(i)]
+		commands=[i.split()[0] for i in self.command('help', immediate=True).split('\n')[1:] if len(i)]
 		weak_self=weakref.ref(self)
 		def captain(command):
-			return lambda *args: weak_self().command(command+' '+' '.join([str(i) for i in args]))
+			return lambda *args, **kwargs: weak_self().command(
+				*([command]+list(args)),
+				immediate=kwargs.get('immediate', False),
+			)
 		for command in commands:
 			if command not in dir(self): setattr(self, command, captain(command))
 
 	def __del__(self):
 		if self.component!=None and not self.weak:
-			_skeleton.dlalDemolishComponent(self.component)
+			_skeleton.component_demolish(self)
 
 	def transfer_component(self):
 		result=self.component
 		self.component=None
 		return result
 
-	def command(self, command):
-		command=command.encode('utf-8')
-		return report(_skeleton.dlalCommand(self.component, command))
+	def command(self, *command, immediate=False):
+		return _skeleton.component_command(self, immediate, *command)
 
-	def connect(self, output):
-		return report(_skeleton.dlalConnect(self.output(), output.component))
+	def connect(self, output, immediate=False):
+		return _skeleton.component_connect(immediate, self.output(), output)
 
-	def output(self): return self.component
-
-	def system(self): return _skeleton.dlalSystem(self.component)
-
-	def rename(self, name): _skeleton.dlalRename(self.system(), self.component, name.encode('utf-8'))
+	def output(self): return self
 
 	def phase(self): return int(self.periodic_get().split()[1])
 
@@ -265,13 +276,7 @@ def component_from_dict(self, members, d, component_map):
 		if not cls: cls=eval(class_name)
 		setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
 
-def component_with_name(system, name):
-	if isinstance(system, System): system=system.system
-	component=_skeleton.dlalComponentWithName(system, name.encode('utf-8'))
-	component_type=report(_skeleton.dlalCommand(component, b'type'))
-	return Component(component_type, component=component, weak=True)
-
-def test(): _skeleton.dlalTest()
+def test(): _skeleton.test()
 
 def regularize_component_constructors(globals):
 	component_dirs=sorted(os.listdir(os.path.join(root, 'components')))

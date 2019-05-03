@@ -168,9 +168,12 @@ if args.test:
 				#compare result to expected
 				if len(raw)!=len(expected): r=1
 				else:
+					def bad(i): return abs(raw[i]-expected[i])>0.00001
 					for i in range(len(raw)):
-						if abs(raw[i]-expected[i])>0.00001:
-							r=1
+						if bad(i): r=1
+					if r:
+						for i in range(len(raw)):
+							print('{} {} {}'.format(raw[i], expected[i], '!' if bad(i) else ''))
 			else: print('abnormal return code {}'.format(r))
 			#bookkeepping
 			if r: overall=False

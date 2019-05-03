@@ -12,19 +12,19 @@ raw=dlal.Component('raw')
 midi=dlal.Component('midi')
 fileo=dlal.Component('fileo')
 #command
-raw.set(sample_rate, log_2_samples_per_evaluation)
-midi.midi(0x90, 0x3C, 0x40)
-fileo.name('file.txt')
+raw.set(sample_rate, log_2_samples_per_evaluation, immediate=True)
+midi.midi(0x90, 0x3C, 0x40, immediate=True)
+fileo.name('file.txt', immediate=True)
 #add
-system.add(raw, slot=1)
-system.add(midi, fileo)
+system.add(raw, slot=1, immediate=True)
+system.add(midi, fileo, immediate=True)
 #connect
-midi.connect(fileo)
+midi.connect(fileo, immediate=True)
 #start
-raw.start()
+raw.start(immediate=True)
 #finish
-fileo.finish()
-raw.finish()
+fileo.finish(immediate=True)
+raw.finish(immediate=True)
 del system
 
 #-----in-----#
@@ -34,13 +34,13 @@ raw=dlal.Component('raw')
 filei=dlal.Component('filei')
 sonic_controller=dlal.SonicController()
 #command
-raw.set(sample_rate, log_2_samples_per_evaluation)
-filei.name('file.txt')
+raw.set(sample_rate, log_2_samples_per_evaluation, immediate=True)
+filei.name('file.txt', immediate=True)
 #add
-system.add(raw, slot=1)
-system.add(filei, sonic_controller)
+system.add(raw, slot=1, immediate=True)
+system.add(filei, sonic_controller, immediate=True)
 #connect
-filei.connect(sonic_controller)
-sonic_controller.connect(raw)
+filei.connect(sonic_controller, immediate=True)
+sonic_controller.connect(raw, immediate=True)
 #start
-raw.start()
+raw.start(immediate=True)

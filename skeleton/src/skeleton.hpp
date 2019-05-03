@@ -55,24 +55,22 @@ void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
 class System{
 	public:
 		System();
-		std::string add(Component& component, unsigned slot, bool queue=false);
-		std::string remove(Component& component, bool queue=false);
+		std::string add(Component& component, unsigned slot);
+		std::string remove(Component& component);
 		std::string check();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string setVariable(std::string name, std::string value);
 		std::string serialize() const;
-		void rename(Component* component, const char* newName);
+		std::string rename(Component& component, std::string newName);
+		std::string handleRequest(std::string request);
 
 		Queue<std::string> _reports;//populated in evaluation
 		std::vector<std::pair<std::string, std::string>> _connections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
-
-	private:
-		std::vector<std::vector<Component*>> _componentsToAdd;
-		std::vector<Component*> _componentsToRemove;
+		Queue<std::string> _requests;//read in evaluation
 };
 
 class Component{

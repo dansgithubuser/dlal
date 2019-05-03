@@ -7,7 +7,7 @@ class Formant(Component):
 	def __init__(self, **kwargs):
 		Component.__init__(self, 'fir', **kwargs)
 		self.commander=Component('commander')
-		self.commander.connect(self)
+		self.commander.connect(self, immediate=True)
 		self.set_components_to_add([self.commander, self])
 
 	def show_controls(self, title='dlal formant synth controls'):
@@ -147,4 +147,4 @@ class Formant(Component):
 				self.live_command('formant {} {} {} {} 1'.format(i, p[i][0], p[i][1], p[i][2]))
 
 	def live_command(self, command):
-		self.commander.command('queue 0 0 '+command)
+		self.commander.queue_indexed(0, 0, command)

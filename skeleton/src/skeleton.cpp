@@ -12,74 +12,85 @@
 #include <stdexcept>
 #include <thread>
 
-extern "C" {
-
-DLAL void dlalDemolishComponent(void* component){
-	delete dlal::toComponent(component);
-}
-
-DLAL void* dlalBuildSystem(){
-	return new dlal::System;
-}
-
-DLAL void dlalDemolishSystem(void* system){
-	delete (dlal::System*)system;
-}
-
-DLAL void* dlalComponentWithName(void* system, const char* name){
-	return ((dlal::System*)system)->_nameToComponent.at(name);
-}
-
-DLAL void dlalRename(void* system, void* component, const char* newName){
-	using namespace dlal;
-	((System*)system)->rename(toComponent(component), newName);
-}
-
-DLAL char* dlalSetVariable(void* system, const char* name, const char* value){
-	return dlal::toCStr(((dlal::System*)system)->setVariable(name, value));
-}
-
-DLAL char* dlalCommand(void* component, const char* command){
-	using namespace dlal;
-	return toCStr(toComponent(component)->command(command));
-}
-
-DLAL char* dlalAdd(void* system, void* component, unsigned slot){
-	using namespace dlal;
-	return toCStr(((System*)system)->add(*toComponent(component), slot));
-}
-
-DLAL char* dlalConnect(void* input, void* output){
-	using namespace dlal;
-	return toCStr(toComponent(input)->connect(*toComponent(output)));
-}
-
-DLAL char* dlalDisconnect(void* input, void* output){
-	using namespace dlal;
-	return toCStr(toComponent(input)->disconnect(*toComponent(output)));
-}
-
-DLAL void* dlalSystem(void* component){
-	using namespace dlal;
-	return toComponent(component)->_system;
-}
-
-DLAL char* dlalSerialize(void* system){
-	using namespace dlal;
-	return toCStr(((System*)system)->serialize());
-}
-
-DLAL void dlalFree(void* p){ free(p); }
-
-DLAL void dlalTest(){
-	dlal::AtomicList<int>::test();
-}
-
-}//extern "C"
-
 std::ostream& operator<<(std::ostream& ostream, const dlal::Component* component){
 	return ostream<<componentToStr(component);
 }
+
+std::istream& operator>>(std::istream& istream, dlal::Component*& component){
+	void* v;
+	istream>>v;
+	component=(dlal::Component*)v;
+	return istream;
+}
+
+extern "C" {
+
+DLAL const char* dlalRequest(const char* request, bool immediate){
+	static std::set<dlal::System*> systems;
+	static dlal::System* active=nullptr;
+	if(immediate){
+		std::stringstream ss(request);
+		static std::string s;
+		ss>>s;
+		if(s=="test"){
+			dlal::AtomicList<int>::test();
+		}
+		else if(s=="system/build"){
+			auto system=new dlal::System;
+			systems.insert(system);
+			s=obvstr(system);
+		}
+		else if(s=="system/switch"){
+			s=obvstr(active);
+			void* system;
+			ss>>system;
+			active=(dlal::System*)system;
+		}
+		else if(s=="system/demolish"){
+			void* system;
+			ss>>system;
+			if(system==active) active=nullptr;
+			delete (dlal::System*)system;
+			systems.erase((dlal::System*)system);
+			s="";
+		}
+		else if(s=="component/connect"){
+			dlal::Component* a;
+			dlal::Component* b;
+			ss>>a>>b;
+			s=a->connect(*b);
+		}
+		else if(s=="component/disconnect"){
+			dlal::Component* a;
+			dlal::Component* b;
+			ss>>a>>b;
+			s=a->disconnect(*b);
+		}
+		else if(s=="component/command"){
+			dlal::Component* c;
+			ss>>c;
+			std::getline(ss, s);
+			s=c->command(s);
+		}
+		else if(s=="component/demolish"){
+			dlal::Component* c;
+			ss>>c;
+			delete c;
+		}
+		else if(!active) return "error: no active system\n";
+		else s=active->handleRequest(request);
+		return s.c_str();
+	}
+	else if(!active) return "error: no active system\n";
+	else{
+		static int requestNumber=0;
+		++requestNumber;
+		active->_requests.write(std::to_string(requestNumber)+" "+request);
+		return "";
+	}
+}
+
+}//extern "C"
 
 namespace dlal{
 
@@ -114,30 +125,26 @@ void safeAdd(
 
 //=====System=====//
 System::System():
-	_reports(8)
+	_reports(8),
+	_requests(8)
 {}
 
-std::string System::add(Component& component, unsigned slot, bool queue){
+std::string System::add(Component& component, unsigned slot){
 	for(auto i: _components) for(auto j: i) if(j==&component) return "error: already added";
 	std::string r=component.join(*this);
 	if(isError(r)) return r;
 	if(_components.size()<=slot) _components.resize(slot+1);
-	if(queue){
-		if(_componentsToAdd.size()<=slot) _componentsToAdd.resize(slot+1);
-		_componentsToAdd[slot].push_back(&component);
-	}
-	else _components[slot].push_back(&component);
+	_components[slot].push_back(&component);
 	_nameToComponent[component._name]=&component;
 	_reports.write("add "+componentToStr(&component)+" "+component.type());
 	return "";
 }
 
-std::string System::remove(Component& component, bool queue){
+std::string System::remove(Component& component){
 	for(auto i: _components){
 		auto j=std::find(i.begin(), i.end(), &component);
 		if(j!=i.end()){
-			if(queue) _componentsToRemove.push_back(&component);
-			else i.erase(j);
+			i.erase(j);
 			_reports.write("remove "+componentToStr(&component));
 			return "";
 		}
@@ -159,16 +166,14 @@ std::string System::check(){
 }
 
 void System::evaluate(){
-	for(auto i: _componentsToRemove) remove(*i);
-	_componentsToRemove.clear();
-	if(_components.size()<_componentsToAdd.size())
-		_components.resize(_componentsToAdd.size());
-	for(unsigned i=0; i<_componentsToAdd.size(); ++i)
-		_components[i].insert(
-			_components[i].end(),
-			_componentsToAdd[i].begin(), _componentsToAdd[i].end()
-		);
-	_componentsToAdd.clear();
+	static std::string s, requestNumber;
+	while(_requests.read(s, true)){
+		std::stringstream ss(s);
+		ss>>requestNumber;
+		std::getline(ss, s);
+		s=handleRequest(s);
+		_reports.write(requestNumber+": "+s);
+	}
 	for(auto i: _components) for(auto j: i) j->evaluate();
 }
 
@@ -209,13 +214,128 @@ std::string System::serialize() const {
 	return ss.str();
 }
 
-void System::rename(Component* component, const char* newName){
+std::string System::rename(Component& component, std::string newName){
+	std::string oldName=component._name;
 	for(auto& i: _connections){
-		if(i.first==component->_name) i.first=newName;
-		if(i.second==component->_name) i.second=newName;
+		if(i.first==oldName) i.first=newName;
+		if(i.second==oldName) i.second=newName;
 	}
-	_reports.write(obvstr("rename", component->_name, newName));
-	component->_name=newName;
+	component._name=newName;
+	_nameToComponent[newName]=&component;
+	_nameToComponent.erase(oldName);
+	_reports.write(obvstr("rename", oldName, newName));
+	return "";
+}
+
+std::string System::handleRequest(std::string request){
+	std::stringstream ss(request);
+	std::string command;
+	ss>>command;
+	std::string s;
+	if(command=="system/report"){
+		if(_reports.read(s, true)) return "value: "+s;
+	}
+	else if(command=="system/serialize") return serialize();
+	else if(command=="variable/get"){
+		if(ss>>s){
+			if(!_variables.count(s)) return "error: no such variable";
+			return "value: "+_variables.at(s);
+		}
+		else{
+			std::stringstream ss;
+			ss<<"value: "<<_variables;
+			return ss.str();
+		}
+	}
+	else if(command=="variable/set"){
+		std::string name, value;
+		ss>>name>>value;
+		return setVariable(name, value);
+	}
+	else if(command=="variable/unset"){
+		ss>>s;
+		if(!_variables.count(s)) return "error: no such variable";
+		_variables.erase(s);
+	}
+	else if(command=="component/get"){
+		if(ss>>s){
+			if(!_nameToComponent.count(s)) return "error: no such component";
+			return obvstr(_nameToComponent.at(s));
+		}
+		else{
+			std::stringstream ss;
+			ss<<"value: ";
+			for(const auto& i: _nameToComponent) ss<<i.first<<" ";
+			return ss.str();
+		}
+	}
+	else if(command=="component/get/connections"){
+		std::stringstream ss;
+		ss<<"value: ";
+		ss<<_connections;
+		return ss.str();
+	}
+	else if(command=="component/name"){
+		Component* c;
+		ss>>c;
+		ss>>c->_name;
+	}
+	else if(command=="component/add"){
+		Component* c;
+		ss>>c;
+		unsigned slot;
+		ss>>slot;
+		return add(*c, slot);
+	}
+	else if(command=="component/remove"){
+		Component* c;
+		ss>>c;
+		return remove(*c);
+	}
+	else if(command=="component/rename"){
+		Component* c;
+		ss>>c>>s;
+		return rename(*c, s);
+	}
+	else if(command=="component/connect"){
+		Component* a;
+		Component* b;
+		ss>>a>>b;
+		s=a->connect(*b);
+		if(!isError(s)){
+			auto sa=componentToStr(a);
+			auto sb=componentToStr(b);
+			_reports.write("connect "+sa+" "+sb);
+			_connections.push_back(std::pair<std::string, std::string>(sa, sb));
+		}
+		return s;
+	}
+	else if(command=="component/disconnect"){
+		Component* a;
+		Component* b;
+		ss>>a>>b;
+		s=a->disconnect(*b);
+		if(!isError(s)){
+			auto sa=componentToStr(a);
+			auto sb=componentToStr(b);
+			_reports.write("disconnect "+sa+" "+sb);
+			for(unsigned i=0; i<_connections.size(); ++i)
+				if(_connections[i]==std::pair<std::string, std::string>(sa, sb)){
+					_connections[i]=_connections.back();
+					_connections.pop_back();
+					break;
+				}
+		}
+		return s;
+	}
+	else if(command=="component/command"){
+		Component* c;
+		ss>>c;
+		std::getline(ss, s);
+		return c->command(s);
+	}
+	else return "error: no such command";
+	return "";
 }
 
 //=====Component=====//
@@ -425,9 +545,6 @@ std::string MultiOut::connect(Component& output){
 	if(_maxOutputs&&_outputs.size()==_maxOutputs)
 		return "error: max outputs already connected";
 	_outputs.push_back(&output);
-	if(_system) _system->_reports.write(
-		"connect "+componentToStr(this)+" "+componentToStr(&output)
-	);
 	return "";
 }
 
@@ -435,9 +552,6 @@ std::string MultiOut::disconnect(Component& output){
 	auto i=std::find(_outputs.begin(), _outputs.end(), &output);
 	if(i==_outputs.end()) return "error: component was not connected";
 	_outputs.erase(i);
-	if(_system) _system->_reports.write(
-		"disconnect "+componentToStr(this)+" "+componentToStr(&output)
-	);
 	return "";
 }
 

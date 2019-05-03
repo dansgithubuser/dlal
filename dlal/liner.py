@@ -24,7 +24,7 @@ class Liner(Component):
 			self.period_in_samples=period_in_samples
 		if samples_per_quarter: self.samples_per_quarter=samples_per_quarter
 
-	def line(self, text):
+	def line(self, text, immediate=False):
 		stride=self.samples_per_quarter
 		octave=5
 		sample=0
@@ -44,8 +44,8 @@ class Liner(Component):
 							nextSample+=stride
 					else: notes.append(12*octave+qwe_to_note[t[j]])
 				for note in notes:
-					self.midi_event(sample    , 0x90, note, 0x40)
-					self.midi_event(nextSample, 0x80, note, 0x40)
+					self.midi_event(sample    , 0x90, note, 0x40, immediate=immediate)
+					self.midi_event(nextSample, 0x80, note, 0x40, immediate=immediate)
 				sample=nextSample
 
 	def edit(self):
