@@ -114,7 +114,7 @@ void safeAdd(
 
 //=====System=====//
 System::System():
-	_reportQueue(8)
+	_reports(8)
 {}
 
 std::string System::add(Component& component, unsigned slot, bool queue){
@@ -128,7 +128,7 @@ std::string System::add(Component& component, unsigned slot, bool queue){
 	}
 	else _components[slot].push_back(&component);
 	_nameToComponent[component._name]=&component;
-	_reportQueue.write("add "+componentToStr(&component)+" "+component.type());
+	_reports.write("add "+componentToStr(&component)+" "+component.type());
 	return "";
 }
 
@@ -138,7 +138,7 @@ std::string System::remove(Component& component, bool queue){
 		if(j!=i.end()){
 			if(queue) _componentsToRemove.push_back(&component);
 			else i.erase(j);
-			_reportQueue.write("remove "+componentToStr(&component));
+			_reports.write("remove "+componentToStr(&component));
 			return "";
 		}
 	}
@@ -147,7 +147,7 @@ std::string System::remove(Component& component, bool queue){
 
 std::string System::check(){
 	std::set<std::string> components;
-	for(auto connection: _reportConnections){
+	for(auto connection: _connections){
 		components.insert(connection.first);
 		components.insert(connection.second);
 	}
@@ -186,7 +186,7 @@ std::string System::setVariable(std::string name, std::string value){
 	if(std::string(value).find('\n')!=std::string::npos)
 		return "error: value cannot contain newline";
 	_variables[name]=value;
-	_reportQueue.write("variable "+name+"\n"+value+"\n");
+	_reports.write("variable "+name+"\n"+value+"\n");
 	return "";
 }
 
@@ -204,17 +204,17 @@ std::string System::serialize() const {
 	}
 	ss<<"\"component_types\": "<<types<<",\n";
 	ss<<"\"components\": "<<components<<",\n";
-	ss<<"\"connections\": "<<_reportConnections<<"\n";
+	ss<<"\"connections\": "<<_connections<<"\n";
 	ss<<"}\n";
 	return ss.str();
 }
 
 void System::rename(Component* component, const char* newName){
-	for(auto& i: _reportConnections){
+	for(auto& i: _connections){
 		if(i.first==component->_name) i.first=newName;
 		if(i.second==component->_name) i.second=newName;
 	}
-	_reportQueue.write(obvstr("rename", component->_name, newName));
+	_reports.write(obvstr("rename", component->_name, newName));
 	component->_name=newName;
 }
 
@@ -238,7 +238,7 @@ Component::Component(): _system(nullptr) {
 	registerCommand("label", "<label>", [this](std::stringstream& ss){
 		ss>>_label;
 		if(_system){
-			_system->_reportQueue.write("label "+componentToStr(this)+" "+_label);
+			_system->_reports.write("label "+componentToStr(this)+" "+_label);
 			return "";
 		}
 		return "error: no system";
@@ -280,7 +280,7 @@ std::string Component::join(System& system){
 
 void Component::midiSend(Component* target, const uint8_t* bytes, unsigned size) const {
 	target->midi(bytes, size);
-	_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(target));
+	_system->_reports.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(target));
 }
 
 void Component::registerCommand(
@@ -379,13 +379,13 @@ bool Periodic::phase(){
 	if(_phase<_period){
 		float current=1.0f*_phase/_period;
 		if(current-_last>0.01f){
-			_system->_reportQueue.write((std::string)"phase "+componentToStr(this)+" "+std::to_string(current));
+			_system->_reports.write((std::string)"phase "+componentToStr(this)+" "+std::to_string(current));
 			_last=current;
 		}
 		return false;
 	}
 	_phase-=_period;
-	_system->_reportQueue.write((std::string)"edge "+componentToStr(this));
+	_system->_reports.write((std::string)"edge "+componentToStr(this));
 	_last=0.0f;
 	return true;
 }
@@ -410,7 +410,7 @@ MultiOut::MultiOut(): _checkAudio(false), _checkMidi(false) {
 		std::stringstream ss;
 		for(auto i: _outputs)
 			ss<<"connect "+componentToStr(this)+" "+componentToStr(i)<<" ";
-		if(ss.str().size()) system._reportQueue.write(ss.str());
+		if(ss.str().size()) system._reports.write(ss.str());
 		return "";
 	});
 }
@@ -425,7 +425,7 @@ std::string MultiOut::connect(Component& output){
 	if(_maxOutputs&&_outputs.size()==_maxOutputs)
 		return "error: max outputs already connected";
 	_outputs.push_back(&output);
-	if(_system) _system->_reportQueue.write(
+	if(_system) _system->_reports.write(
 		"connect "+componentToStr(this)+" "+componentToStr(&output)
 	);
 	return "";
@@ -435,7 +435,7 @@ std::string MultiOut::disconnect(Component& output){
 	auto i=std::find(_outputs.begin(), _outputs.end(), &output);
 	if(i==_outputs.end()) return "error: component was not connected";
 	_outputs.erase(i);
-	if(_system) _system->_reportQueue.write(
+	if(_system) _system->_reports.write(
 		"disconnect "+componentToStr(this)+" "+componentToStr(&output)
 	);
 	return "";

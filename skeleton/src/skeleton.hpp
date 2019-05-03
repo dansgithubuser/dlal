@@ -64,8 +64,8 @@ class System{
 		std::string serialize() const;
 		void rename(Component* component, const char* newName);
 
-		Queue<std::string> _reportQueue;//for system visualization, populated in evaluation
-		std::vector<std::pair<std::string, std::string>> _reportConnections;
+		Queue<std::string> _reports;//populated in evaluation
+		std::vector<std::pair<std::string, std::string>> _connections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
