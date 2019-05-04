@@ -105,10 +105,10 @@ class SonicController(Component):
 		else:
 			Component.__init__(self, 'sonic', **kwargs)
 			self.commander=Component('commander')
-			self.commander.connect(self)
+			self.commander.connect(self, immediate=True)
 		self.set_components_to_add([self.commander, self])
 		self.oscillators=[]
-		if setting: self.load(setting)
+		if setting: self.load(setting, immediate=True)
 
 	def to_dict(self):
 		return {
@@ -136,7 +136,7 @@ class SonicController(Component):
 
 	def refresh_controls(self):
 		if not self.oscillators: return
-		settings=self.save('i').split('\n')
+		settings=self.save('i', immediate=True).split('\n')
 		for setting in settings:
 			if not setting: continue
 			cmd=setting.strip().split()
@@ -151,13 +151,13 @@ class SonicController(Component):
 				i=osc.i[int(cmd[2])]
 				i.set(float(cmd[3])**(1.0/osc.exponents[i]))
 
-	def load(self, file_name=None):
+	def load(self, file_name=None, immediate=False):
 		if not file_name:
 			return os.listdir(os.path.join('..', '..', 'components', 'sonic', 'settings'))
 		if os.path.split(file_name)[1]==file_name:
 			file_name=os.path.join('..', '..', 'components', 'sonic', 'settings', file_name)
 		if file_name[-4:]!='.txt': file_name+='.txt'
-		result=self.command('load '+file_name)
+		result=self.command('load', file_name, immediate=immediate)
 		self.refresh_controls()
 		return result
 
@@ -359,4 +359,4 @@ class SonicController(Component):
 			self.oscillators[output].o.set(total_level[output])
 
 	def live_command(self, command):
-		self.commander.command('queue 0 0 '+command)
+		self.commander.queue_indexed(0, 0, command)

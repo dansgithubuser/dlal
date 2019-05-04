@@ -6,15 +6,15 @@ import sys
 
 def midi_ports():
 	midi=Component('midi')
-	return [i for i in midi.ports().split('\n') if len(i) and 'Midi Through' not in i]
+	return [i for i in midi.ports(immediate=True).split('\n') if len(i) and 'Midi Through' not in i]
 
 def standard_system_functionality(audio, midi=None, raw=False, test=False, args=None):
 	def go():
-		audio.start()
-		if raw or test: audio.finish()
+		audio.start(immediate=True)
+		if raw or test: audio.finish(immediate=True)
 		else:
 			import atexit
-			atexit.register(lambda: audio.finish())
+			atexit.register(lambda: audio.finish(immediate=True))
 			print('audio processing going')
 	if raw or test:
 		go()
@@ -26,10 +26,10 @@ def standard_system_functionality(audio, midi=None, raw=False, test=False, args=
 			go()
 	ports=None
 	if midi and not (raw or test):
-		ports=midi_ports()
+		ports=midi_ports(immediate=True)
 		if len(ports):
 			print('opening midi port '+ports[0])
-			midi.open(ports[0])
+			midi.open(ports[0], immediate=True)
 	return go, ports
 
 def raw_to_u8_pcm(input_file_name='raw.txt', output_file_name='raw.raw'):
@@ -71,22 +71,22 @@ def frequency_response(component, duration=10000):
 	sample_rate=44100
 	log_2_samples_per_evaluation=6
 	commands=int(duration/1000.0*sample_rate)>>log_2_samples_per_evaluation
-	commander.queue_resize(commands)
+	commander.queue_resize(commands, immediate=True)
 	for i in range(1, commands):
-		commander.queue_command(sonic_controller, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, edges_to_wait=i)
-	sonic_controller.midi(0x90, 69, 0x7f)
-	buffer.clear_on_evaluate('y')
-	raw.duration(duration)
-	raw.set(sample_rate, log_2_samples_per_evaluation)
-	raw.peak(sample_rate/20)
+		commander.queue(i, sonic_controller, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, immediate=True)
+	sonic_controller.midi(0x90, 69, 0x7f, immediate=True)
+	buffer.clear_on_evaluate('y', immediate=True)
+	raw.duration(duration, immediate=True)
+	raw.set(sample_rate, log_2_samples_per_evaluation, immediate=True)
+	raw.peak(sample_rate/20, immediate=True)
 	#add
-	system.add(raw, slot=1)
-	system.add(buffer, commander, sonic_controller, component)
+	system.add(raw, slot=1, immediate=True)
+	system.add(buffer, commander, sonic_controller, component, immediate=True)
 	#connect
-	connect(sonic_controller, buffer)
-	connect(component, buffer, raw)
+	connect(sonic_controller, buffer, immediate=True)
+	connect(component, buffer, raw, immediate=True)
 	#go
-	raw.start()
+	raw.start(immediate=True)
 
 class SimpleSystem:
 	sample_rate=44100
@@ -102,25 +102,25 @@ class SimpleSystem:
 		#create
 		self.system=System()
 		self.midi=Component('midi')
-		if self.test: self.midi.midi(0x90, test_note, 0x40)
+		if self.test: self.midi.midi(0x90, test_note, 0x40, immediate=True)
 		self.components=components
 		if self.test or self.raw:
 			self.audio=Component('raw')
-			self.audio.duration(test_duration)
+			self.audio.duration(test_duration, immediate=True)
 		else:
 			self.audio=Component('audio')
 		#command
-		self.audio.set(self.sample_rate, self.log_2_samples_per_evaluation)
+		self.audio.set(self.sample_rate, self.log_2_samples_per_evaluation, immediate=True)
 		#add
-		self.system.add(self.audio, slot=1 if self.test else 0)
-		self.system.add(self.midi, *self.components)
+		self.system.add(self.audio, slot=1 if self.test else 0, immediate=True)
+		self.system.add(self.midi, *self.components, immediate=True)
 		#connect
 		x=components
 		if midi_receivers!=None: x=midi_receivers
-		for component in x: self.midi.connect(component)
+		for component in x: self.midi.connect(component, immediate=True)
 		x=components
 		if outputs!=None: x=outputs
-		for component in x: component.connect(self.audio)
+		for component in x: component.connect(self.audio, immediate=True)
 
 	def standard_system_functionality(self):
 		return standard_system_functionality(
