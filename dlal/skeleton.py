@@ -61,7 +61,6 @@ class Skeleton:
             elif result.startswith('warning'):
                 print(result)
             return result
-
         def convert(x):
             if isinstance(x, Component):
                 return x.component
@@ -156,8 +155,7 @@ class System:
         immediate = kwargs.get('immediate', False)
         result = ''
         for arg in args:
-            for c in arg.get_components_to_add():
-                result += _skeleton.component_add(immediate, c, slot)
+            result += _skeleton.component_add(immediate, arg, slot)
             if len(result):
                 result += '\n'
         return result
@@ -240,12 +238,6 @@ class System:
 class Component:
     _libs = {}
 
-    def set_components_to_add(self, components):
-        self.components_to_add = [weakref.ref(i) for i in components]
-
-    def get_components_to_add(self):
-        return [i() for i in self.components_to_add]
-
     def __init__(self, component_type=None, **kwargs):
         self.component = None
         if component_type and component_type not in Component._libs:
@@ -260,7 +252,6 @@ class Component:
                 kwargs.get('name', _namer.name(component_type))
             )
         self.weak = kwargs.get('weak', False)
-        self.set_components_to_add([self])
         commands = [i.split()[0] for i in self.command('help', immediate=True).split('\n')[1:] if len(i)]
         weak_self = weakref.ref(self)
         def captain(command):
@@ -280,9 +271,7 @@ class Component:
         return _skeleton.component_command(self, immediate, *command)
 
     def connect(self, output, immediate=False):
-        return _skeleton.component_connect(immediate, self.output(), output)
-
-    def output(self): return self
+        return _skeleton.component_connect(immediate, self, output)
 
     def phase(self): return int(self.periodic_get().split()[1])
 

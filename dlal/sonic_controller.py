@@ -99,15 +99,8 @@ class VgmSetting:
         return result
 
 class SonicController(Component):
-    def __init__(self, setting=None, sonic=None, commander=None, **kwargs):
-        if sonic:
-            self.component = sonic.component
-            self.commander = commander
-        else:
-            Component.__init__(self, 'sonic', **kwargs)
-            self.commander = Component('commander')
-            self.commander.connect(self, immediate=True)
-        self.set_components_to_add([self.commander, self])
+    def __init__(self, setting=None, **kwargs):
+        Component.__init__(self, 'sonic', **kwargs)
         self.oscillators = []
         if setting:
             self.load(setting, immediate=True)
@@ -398,4 +391,4 @@ class SonicController(Component):
             self.oscillators[output].o.set(total_level[output])
 
     def live_command(self, command):
-        self.commander.queue_indexed(0, 0, command)
+        self.command(command)
