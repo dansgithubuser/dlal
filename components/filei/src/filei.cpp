@@ -12,7 +12,7 @@ Filei::Filei(): _evaluation(0), _index(0) {
 				return "error: samplesPerEvaluation and page audio size don't match";
 		return "";
 	});
-	registerCommand("name", "<input file name>", [this](std::stringstream& ss){
+	registerCommand("file_name", "<input file name>", [this](std::stringstream& ss){
 		std::string fileName;
 		ss>>fileName;
 		std::ifstream file(fileName.c_str());

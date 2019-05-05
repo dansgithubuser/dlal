@@ -83,7 +83,7 @@ void Page::dispatch(
 		case Page::TEXT:
 			for(auto output: outputs){
 				std::string result=output->command(_text);
-				component._system->_reportQueue.write((std::string)"command "+componentToStr(&component)+" "+componentToStr(output));
+				component._system->_reports.write((std::string)"command "+component._name+" "+output->_name);
 				if(result.size()) std::cerr<<result<<std::endl;
 			}
 			break;

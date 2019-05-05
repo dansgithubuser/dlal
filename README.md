@@ -50,33 +50,18 @@ The system is evaluated once per callback.
 In a system evaluation, each component is evaluated, in an order defined by the system.
 
 The system is responsible for communicating with the environment it is embedded in, on a different thread than the audio thread.
-This is crucial before a audio thread has been created to bootstrap a system.
-When the audio thread is running, changes to the system should done through one of its components.
-
-The system also optionally communicates via a network port to whatever interface is interested.
 
 #### components
-Components provide a rich input, audio synthesis and manipulation, and output toolbox. Some key components follow.
+Components provide a rich audio input, synthesis, manipulation, and output toolbox. Some key components follow.
 
 ##### audio
 The audio component creates the audio thread and evaluates the system.
 It is responsible for getting the result out into the real world as a sound.
 The current implementation also listens to the microphone.
 
-##### commander
-The commander component is responsible for modifying the system while the audio thread is running.
-It can receive commands on a foreign thread, and actions them on the audio thread at the next appropriate opportunity.
-
-##### network
-The network component, used in conjuction with the commander component, allows an interface to modify a running system.
-
 ### Python
 By wrapping the core in a Python environment, we get a nice language for audio system description.
 We can also beef up what our components do outside the audio loop.
-Further, because the system forwards what it gets from the network, we can respond to a richer interface than a bare system could.
-
-#### network component
-With Python's help, the network component can become a websocket server as well, allowing web interfaces.
 
 ### interfaces
 Interfaces communicate over the network and enrich the ways in which someone can interact with the system.
@@ -91,39 +76,26 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 ### top level
 - components: C++ components that can be connected to each other to create an audio system.
 - dlal: Python module that wraps skeleton.
-- interfaces: Interfaces that communicate with audio systems over the network.
 - midis: Collection of MIDIs, playable with midiplay system.
 - skeleton: C++ library; audio system definition and abstract component definition.
 - states: Collection of system states, loadable with loader system.
 - systems: Python scripts that describe some useful audio systems.
-	- loops: States loadable with looper system.
 - tests: Sanity tests.
 - web: Web interfaces.
 
 ## todo
-- take network out of system
-- put commander into system
-- clean up serialization
-
 - save and load system
 	- midi controllee, all components
 
 - need to design for more than one person interacting at once with common devices (phones)
 	- webify interfaces
 		- system editor
-
-- system editor
-	- queue and commit changes
-	- remove components
-	- UI remove components
-	- scroll
-	- load system, bootstrap system (system commands)
-	- snap components when not being dragged
-	- hide uninteresting variables
-	- place new components/variables in consistent spot, draw that spot
+			- similar functionality to nonweb system editor
+			- queue and commit changes
+			- load system, bootstrap system (system commands)
+		- update readme arch
 
 - audiobro
-	- piano
 	- vibrato
 	- pitch slide
 	- long-term commander

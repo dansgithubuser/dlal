@@ -3,8 +3,6 @@
 
 #include "queue.hpp"
 
-#include <dyad.h>
-
 #include <atomic>
 #include <cstdint>
 #include <string>
@@ -25,24 +23,20 @@
 
 #define DLAL_BUILD_COMPONENT_DEFINITION(COMPONENT)\
 	extern "C" {\
-		DLAL void* dlalBuildComponent(const char* name){\
+		DLAL const char* dlalBuildComponent(const char* name){\
 			auto component=new dlal::COMPONENT;\
 			component->_name=name;\
-			return (dlal::Component*)component;\
+			std::stringstream ss;\
+			ss<<(void*)(dlal::Component*)component;\
+			static std::string s;\
+			s=ss.str();\
+			return s.c_str();\
 		}\
 	}
 
 namespace dlal{
 
 class Component;
-
-typedef void (*TextCallback)(const char*);
-
-//cast to Component
-Component* toComponent(void*);
-
-//to uniquely identify component
-std::string componentToStr(const Component*);
 
 //allocate c string with contents of c++ string
 char* toCStr(const std::string&);
@@ -56,47 +50,24 @@ void add(const float* audio, unsigned size, std::vector<Component*>&);
 //add audio to components that have audio
 void safeAdd(const float* audio, unsigned size, std::vector<Component*>&);
 
-//convert data to a stringstream
-bool dataToStringstream(Queue<uint8_t>& data, std::stringstream& ss);
-
 class System{
 	public:
-		System(int port=0, TextCallback pythonCallback=nullptr);
-		~System();
-		std::string add(Component& component, unsigned slot, bool queue=false);
-		std::string remove(Component& component, bool queue=false);
+		System();
+		std::string add(Component& component, unsigned slot);
+		std::string remove(Component& component);
 		std::string check();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string setVariable(std::string name, std::string value);
-		std::string serialize() const;
-		void rename(Component* component, const char* newName);
+		std::string rename(Component& component, std::string newName);
+		std::string handleRequest(std::string request);
 
-		dyad_Stream* dyadNewStream();
-		void dyadAddListener(dyad_Stream*, int event, dyad_Callback, void* userData);
-		int dyadListenEx(dyad_Stream*, const char* host, int port, int backlog);
-		std::string dyadPauseAnd(std::function<std::string()>);
-		void dyadWrite(std::string);
-
-		std::vector<dyad_Stream*> _clients;
-		std::vector<dyad_Stream*> _streams;
-		Queue<std::string> _reportQueue;//for system visualization, populated in evaluation
-		std::vector<std::pair<std::string, std::string>> _reportConnections;
+		Queue<std::string> _reports;//populated in evaluation
+		std::vector<std::pair<std::string, std::string>> _connections;
 		std::map<std::string, std::string> _variables;
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
-		dyad_Stream* _server;
-		Queue<uint8_t> _data;
-		TextCallback _pythonHandler;
-
-	private:
-		std::vector<std::vector<Component*>> _componentsToAdd;
-		std::vector<Component*> _componentsToRemove;
-		std::function<dyad_Stream*()> _dyadNewStream;
-		std::function<void(dyad_Stream*, int event, dyad_Callback, void* userData)> _dyadAddListener;
-		std::function<int(dyad_Stream*, const char* host, int port, int backlog)> _dyadListenEx;
-		std::atomic<bool>& _dyadDone;
-		std::recursive_mutex& _dyadMutex;
+		Queue<std::string> _requests;//read in evaluation
 };
 
 class Component{
@@ -125,7 +96,6 @@ class Component{
 
 		System* _system;
 		std::string _name;
-		std::string _label;
 	protected:
 		typedef std::function<std::string(std::stringstream&)> Command;
 		typedef std::function<std::string(System&)> JoinAction;

@@ -20,7 +20,7 @@ Fileo::Fileo(): _evaluation(0), _queue(8), _audioRead(false), _quit(false) {
 		});
 		return "";
 	});
-	registerCommand("name", "<output file name>", [this](std::stringstream& ss){
+	registerCommand("file_name", "<output file name>", [this](std::stringstream& ss){
 		std::string fileName;
 		ss>>fileName;
 		_file.open(fileName.c_str());

@@ -6,28 +6,6 @@
 #include <atomic>
 #include <vector>
 
-extern "C"{
-	DLAL char* dlalCommanderCommand(
-		void* commander, void* component, const char* command, unsigned edgesToWait
-	);
-
-	DLAL char* dlalCommanderAdd(
-		void* commander, void* component, unsigned slot, unsigned edgesToWait
-	);
-
-	DLAL char* dlalCommanderConnect(
-		void* commander, void* input, void* output, unsigned edgesToWait
-	);
-
-	DLAL char* dlalCommanderDisconnect(
-		void* commander, void* input, void* output, unsigned edgesToWait
-	);
-
-	DLAL char* dlalCommanderRegisterCommand(
-		void* commander, const char* name, dlal::TextCallback command
-	);
-}
-
 namespace dlal{
 
 class Commander: public MultiOut, public Periodic{
@@ -52,7 +30,6 @@ class Commander: public MultiOut, public Periodic{
 		void evaluate() override;
 		void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted() override { return true; }
-		void registerCommand(const std::string& name, dlal::TextCallback command);
 		Queue<Directive> _queue;
 	private:
 		void dispatch(const Directive&);

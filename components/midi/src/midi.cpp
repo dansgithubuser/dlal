@@ -131,7 +131,7 @@ void Midi::evaluateMidi(const std::vector<uint8_t>& midi){
 	for(unsigned i=0; i<_outputs.size(); ++i){
 		if(_blacklist.match(i, midi)&&!_whitelist.match(i, midi)) continue;
 		midiSend(_outputs.at(i), midi.data(), midi.size());
-		_system->_reportQueue.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(_outputs.at(i)));
+		_system->_reports.write((std::string)"midi "+_name+" "+_outputs.at(i)->_name);
 	}
 }
 

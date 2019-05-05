@@ -1,6 +1,7 @@
-import dlal, os
+import dlal
+import os
 
-soundfont=dlal.Component('soundfont')
-system=dlal.SimpleSystem([soundfont])
+soundfont = dlal.Component('soundfont')
+system = dlal.SimpleSystem([soundfont])
 soundfont.load(os.path.join('..', '..', 'components', 'soundfont', 'deps', '32MbGMStereo.sf2'))
-go, ports=system.standard_system_functionality()
+go, ports = system.standard_system_functionality()
