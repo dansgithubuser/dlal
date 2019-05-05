@@ -38,9 +38,6 @@ namespace dlal{
 
 class Component;
 
-//cast to Component
-Component* toComponent(void*);
-
 //to uniquely identify component
 std::string componentToStr(const Component*);
 

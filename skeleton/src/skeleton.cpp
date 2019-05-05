@@ -96,8 +96,6 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 
 namespace dlal{
 
-Component* toComponent(void* p){ return (Component*)p; }
-
 std::string componentToStr(const Component* component){
 	return component->_name;
 }
