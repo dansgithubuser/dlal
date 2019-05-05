@@ -23,10 +23,14 @@
 
 #define DLAL_BUILD_COMPONENT_DEFINITION(COMPONENT)\
 	extern "C" {\
-		DLAL void* dlalBuildComponent(const char* name){\
+		DLAL const char* dlalBuildComponent(const char* name){\
 			auto component=new dlal::COMPONENT;\
 			component->_name=name;\
-			return (dlal::Component*)component;\
+			std::stringstream ss;\
+			ss<<(void*)(dlal::Component*)component;\
+			static std::string s;\
+			s=ss.str();\
+			return s.c_str();\
 		}\
 	}
 
@@ -61,7 +65,6 @@ class System{
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string setVariable(std::string name, std::string value);
-		std::string serialize() const;
 		std::string rename(Component& component, std::string newName);
 		std::string handleRequest(std::string request);
 

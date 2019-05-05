@@ -54,30 +54,32 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 			systems.erase((dlal::System*)system);
 			s="";
 		}
-		else if(s=="component/connect"){
-			dlal::Component* a;
-			dlal::Component* b;
-			ss>>a>>b;
-			s=a->connect(*b);
-		}
-		else if(s=="component/disconnect"){
-			dlal::Component* a;
-			dlal::Component* b;
-			ss>>a>>b;
-			s=a->disconnect(*b);
-		}
-		else if(s=="component/command"){
-			dlal::Component* c;
-			ss>>c;
-			std::getline(ss, s);
-			s=c->command(s);
-		}
 		else if(s=="component/demolish"){
 			dlal::Component* c;
 			ss>>c;
 			delete c;
 		}
-		else if(!active) return "error: no active system\n";
+		else if(!active){
+			if(s=="component/connect"){
+				dlal::Component* a;
+				dlal::Component* b;
+				ss>>a>>b;
+				s=a->connect(*b);
+			}
+			else if(s=="component/disconnect"){
+				dlal::Component* a;
+				dlal::Component* b;
+				ss>>a>>b;
+				s=a->disconnect(*b);
+			}
+			else if(s=="component/command"){
+				dlal::Component* c;
+				ss>>c;
+				std::getline(ss, s);
+				s=c->command(s);
+			}
+			else return "error: no active system\n";
+		}
 		else s=active->handleRequest(request);
 		return s.c_str();
 	}
@@ -195,25 +197,6 @@ std::string System::setVariable(std::string name, std::string value){
 	return "";
 }
 
-std::string System::serialize() const {
-	std::stringstream ss;
-	ss<<"{\n";
-	ss<<"\"variables\": "<<_variables<<",\n";
-	ss<<"\"component_order\": "<<_components<<",\n";
-	std::map<Component*, std::string> types, components;
-	for(auto i: _components) for(auto j: i){
-		types[j]=j->command("type");//can't call type function directly, causes segfault, not sure how this solves
-		components[j]=j->command("serialize");
-		replace(components[j], "\n", " ");
-		replace(components[j], "\t", " ");
-	}
-	ss<<"\"component_types\": "<<types<<",\n";
-	ss<<"\"components\": "<<components<<",\n";
-	ss<<"\"connections\": "<<_connections<<"\n";
-	ss<<"}\n";
-	return ss.str();
-}
-
 std::string System::rename(Component& component, std::string newName){
 	std::string oldName=component._name;
 	for(auto& i: _connections){
@@ -235,7 +218,6 @@ std::string System::handleRequest(std::string request){
 	if(command=="system/report"){
 		if(_reports.read(s, true)) return "value: "+s;
 	}
-	else if(command=="system/serialize") return serialize();
 	else if(command=="variable/get"){
 		if(ss>>s){
 			if(!_variables.count(s)) return "error: no such variable";
@@ -243,13 +225,15 @@ std::string System::handleRequest(std::string request){
 		}
 		else{
 			std::stringstream ss;
-			ss<<"value: "<<_variables;
+			ss<<_variables;
 			return ss.str();
 		}
 	}
 	else if(command=="variable/set"){
 		std::string name, value;
-		ss>>name>>value;
+		ss>>std::ws;
+		std::getline(ss, name);
+		std::getline(ss, value);
 		return setVariable(name, value);
 	}
 	else if(command=="variable/unset"){
@@ -259,19 +243,17 @@ std::string System::handleRequest(std::string request){
 	}
 	else if(command=="component/get"){
 		if(ss>>s){
-			if(!_nameToComponent.count(s)) return "error: no such component";
-			return obvstr(_nameToComponent.at(s));
+			if(!_nameToComponent.count(s)) return obvstr("error: no such component", s);
+			return obvstr((void*)_nameToComponent.at(s));
 		}
 		else{
 			std::stringstream ss;
-			ss<<"value: ";
-			for(const auto& i: _nameToComponent) ss<<i.first<<" ";
+			ss<<_components;
 			return ss.str();
 		}
 	}
 	else if(command=="component/get/connections"){
 		std::stringstream ss;
-		ss<<"value: ";
 		ss<<_connections;
 		return ss.str();
 	}

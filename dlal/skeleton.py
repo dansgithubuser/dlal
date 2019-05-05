@@ -51,17 +51,16 @@ class Skeleton:
 		obvious.set_ffi_types(self.lib.dlalRequest, str, str, bool)
 		obvious.python_3_string_prep(self.lib)
 
-	def _call(self, immediate, *args):
+	def _call(self, immediate, *args, sep=' '):
 		def report(result):
 			if   result.startswith('error'): raise RuntimeError(result)
 			elif result.startswith('warning'): print(result)
 			return result
 		def convert(x):
-			if isinstance(x, ctypes.c_void_p): return hex(x.value)
-			elif isinstance(x, Component): return hex(x.component)
+			if isinstance(x, Component): return x.component
 			return str(x)
 		return report(self.lib.dlalRequest(
-			' '.join([convert(i) for i in args]).encode('utf-8'),
+			sep.join([convert(i) for i in args]),
 			immediate,
 		))
 
@@ -80,11 +79,23 @@ class Skeleton:
 	def system_report(self, immediate):
 		return self._call(immediate, 'system/report')
 
-	def system_serialize(self, immediate):
-		return self._call(immediate, 'system/serialize')
+	def variable_get_all(self, immediate):
+		return self._call(immediate, 'variable/get')
+
+	def variable_get(self, immediate, name):
+		return self._call(immediate, 'variable/get', name)
 
 	def variable_set(self, immediate, name, value):
-		return self._call(immediate, 'variable/set', name, value)
+		return self._call(immediate, 'variable/set', name, value, sep='\n')
+
+	def component_get_all(self, immediate):
+		return self._call(immediate, 'component/get')
+
+	def component_get(self, immediate, name):
+		return self._call(immediate, 'component/get', name)
+
+	def component_get_connections(self, immediate):
+		return self._call(immediate, 'component/get/connections')
 
 	def component_add(self, immediate, c, slot):
 		return self._call(immediate, 'component/add', c, slot)
@@ -145,15 +156,32 @@ class System:
 	def set(self, name, value, immediate=False):
 		_skeleton.variable_set(immediate, name, value)
 
-	def serialize(self, immediate=False):
-		return _skeleton.system_serialize(immediate)
+	def serialize(self):
+		state={}
+		#variables
+		state['variables']=json.loads(_skeleton.variable_get_all(immediate=True))
+		#components
+		components=json.loads(_skeleton.component_get_all(immediate=True))
+		state['component_order']=components
+		components={j: Component(
+			component=_skeleton.component_get(immediate=True, name=j),
+			weak=True
+		) for i in components for j in i}
+		state['component_types']={k: v.type(immediate=True) for k, v in components.items()}
+		state['components']={
+			k: re.sub('\n|\t', ' ', v.serialize(immediate=True))
+			for k, v in components.items()
+		}
+		#connections
+		state['connections']=json.loads(_skeleton.component_get_connections(immediate=True))
+		#
+		return json.dumps(state)
 
 	def deserialize(self, serialized):
 		state=json.loads(serialized)
 		#variables
 		for name, value in state['variables'].items():
-			if name!='system.load':
-				self.set(name, value, True)
+			self.set(name, value, True)
 		#components
 		components={}
 		for name, serialized in state['components'].items():
@@ -167,23 +195,21 @@ class System:
 				self.add(component, slot=index, immediate=True)
 		#connections
 		for input, output in state['connections']: components[input].connect(components[output], immediate=True)
-		#extra
-		state['map']=components
+		#
 		return state
 
 	def save(self, file_name='system.state.txt', extra={}):
-		root=json.loads(self.serialize())
-		root.update(extra)
-		serialized=json.dumps(root, indent=2, sort_keys=True)
+		state=json.loads(self.serialize())
+		state.update(extra)
+		serialized=json.dumps(state, indent=2, sort_keys=True)
 		with open(file_name, 'w') as file: file.write(serialized)
 
 	def load(self, file_name='system.state.txt', start=False):
 		potential_expansion=os.path.join('..', '..', 'states', file_name+'.txt')
 		if os.path.exists(potential_expansion): file_name=potential_expansion
-		self.set('system.load', os.path.abspath(file_name), immediate=True)
-		with open(file_name) as file: result=self.deserialize(file.read())
+		with open(file_name) as file: state=self.deserialize(file.read())
 		if start: self.start()
-		return result
+		return state
 
 	def start(self):
 		if not hasattr(self, 'audio'): raise Exception('no audio component')
@@ -196,7 +222,7 @@ class System:
 		if not hasattr(self, name): setattr(self, name, component)
 
 class Component:
-	_libraries={}
+	_libs={}
 
 	@staticmethod
 	def from_dict(d, component_map):
@@ -210,18 +236,18 @@ class Component:
 	def get_components_to_add(self):
 		return [i() for i in self.components_to_add]
 
-	def __init__(self, component_type, **kwargs):
+	def __init__(self, component_type=None, **kwargs):
 		self.component=None
-		if component_type not in Component._libraries:
-			Component._libraries[component_type]=obvious.load_lib(camel_case(component_type))
-			Component._libraries[component_type].dlalBuildComponent.restype=ctypes.c_void_p
-			Component._libraries[component_type].dlalBuildComponent.argtypes=[ctypes.c_char_p]
-		self.library=Component._libraries[component_type]
+		if component_type and component_type not in Component._libs:
+			lib=obvious.load_lib(camel_case(component_type))
+			obvious.set_ffi_types(lib.dlalBuildComponent, str, str)
+			obvious.python_3_string_prep(lib)
+			Component._libs[component_type]=lib
 		if 'component' in kwargs:
 			self.component=kwargs['component']
 		else:
-			self.component=Component._libraries[component_type].dlalBuildComponent(
-				kwargs.get('name', _namer.name(component_type)).encode('utf-8')
+			self.component=Component._libs[component_type].dlalBuildComponent(
+				kwargs.get('name', _namer.name(component_type))
 			)
 		self.weak=kwargs.get('weak', False)
 		self.set_components_to_add([self])

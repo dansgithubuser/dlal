@@ -1,55 +1,55 @@
 {
   "component_order": [
     [
-      "audio", 
-      "midi", 
-      "midichlorian", 
-      "reticulated_liner", 
-      "liner", 
+      "audio",
+      "midi",
+      "midichlorian",
+      "reticulated_liner",
+      "liner",
       "sonic"
     ]
-  ], 
+  ],
   "component_types": {
-    "audio": "audio", 
-    "liner": "liner", 
-    "midi": "midi", 
-    "midichlorian": "midichlorian", 
-    "reticulated_liner": "reticulated_liner", 
+    "audio": "audio",
+    "liner": "liner",
+    "midi": "midi",
+    "midichlorian": "midichlorian",
+    "reticulated_liner": "reticulated_liner",
     "sonic": "sonic"
-  }, 
+  },
   "components": {
-    "audio": "", 
-    "liner": "44100 [  4d,  54,  68,  64,  00,  00,  00,  06,  00,  01,  00,  02,  01,  68,  4d,  54,  72,  6b,  00,  00,  00,  0f,  00,  ff,  01,  00,  00,  ff,  51,  03,  07,  a1,  20,  01,  ff,  2f,  00,  4d,  54,  72,  6b,  00,  00,  00,  55,  00,  ff,  01,  00,  00,  90,  45,  7f,  00,  90,  41,  7f,  00,  90,  3e,  7f,  81,  33,  80,  41,  00,  00,  80,  45,  00,  00,  80,  3e,  00,  81,  33,  90,  3e,  7f,  00,  90,  45,  7f,  00,  90,  41,  7f,  81,  34,  80,  41,  00,  00,  80,  3e,  00,  00,  80,  45,  00,  84,  19,  90,  45,  7f,  00,  90,  41,  7f,  00,  90,  3e,  7f,  81,  32,  80,  45,  00,  00,  80,  41,  00,  00,  80,  3e,  00,  01,  ff,  2f,  00 ] 22050 1 s<3e, 41, 45> 32 76746 ", 
-    "midi": "", 
-    "midichlorian": "x 120000 ", 
-    "reticulated_liner": "[  4d,  54,  68,  64,  00,  00,  00,  06,  00,  01,  00,  02,  01,  68,  4d,  54,  72,  6b,  00,  00,  00,  08,  00,  ff,  01,  00,  01,  ff,  2f,  00,  4d,  54,  72,  6b,  00,  00,  00,  2c,  00,  ff,  01,  00,  00,  90,  24,  40,  82,  68,  80,  24,  40,  00,  90,  2e,  40,  82,  68,  80,  2e,  40,  00,  90,  2c,  40,  82,  68,  80,  2c,  40,  00,  90,  2a,  40,  82,  68,  80,  2a,  40,  01,  ff,  2f,  00 ] ", 
+    "audio": "",
+    "liner": "44100 [  4d,  54,  68,  64,  00,  00,  00,  06,  00,  01,  00,  02,  01,  68,  4d,  54,  72,  6b,  00,  00,  00,  0f,  00,  ff,  01,  00,  00,  ff,  51,  03,  07,  a1,  20,  01,  ff,  2f,  00,  4d,  54,  72,  6b,  00,  00,  00,  55,  00,  ff,  01,  00,  00,  90,  45,  7f,  00,  90,  41,  7f,  00,  90,  3e,  7f,  81,  33,  80,  41,  00,  00,  80,  45,  00,  00,  80,  3e,  00,  81,  33,  90,  3e,  7f,  00,  90,  45,  7f,  00,  90,  41,  7f,  81,  34,  80,  41,  00,  00,  80,  3e,  00,  00,  80,  45,  00,  84,  19,  90,  45,  7f,  00,  90,  41,  7f,  00,  90,  3e,  7f,  81,  32,  80,  45,  00,  00,  80,  41,  00,  00,  80,  3e,  00,  01,  ff,  2f,  00 ] 22050 1 s<3e, 41, 45> 32 76746 ",
+    "midi": "",
+    "midichlorian": "x 120000 ",
+    "reticulated_liner": "[  4d,  54,  68,  64,  00,  00,  00,  06,  00,  01,  00,  02,  01,  68,  4d,  54,  72,  6b,  00,  00,  00,  08,  00,  ff,  01,  00,  01,  ff,  2f,  00,  4d,  54,  72,  6b,  00,  00,  00,  2c,  00,  ff,  01,  00,  00,  90,  24,  40,  82,  68,  80,  24,  40,  00,  90,  2e,  40,  82,  68,  80,  2e,  40,  00,  90,  2c,  40,  82,  68,  80,  2c,  40,  00,  90,  2a,  40,  82,  68,  80,  2a,  40,  01,  ff,  2f,  00 ] ",
     "sonic": "a 0 0.0001 d 0 0.0001 s 0 0.6 r 0 0.0001 m 0 1 i 0 0 0.25 i 0 1 0 i 0 2 0 i 0 3 0 o 0 0.25 a 1 0.01 d 1 0.01 s 1 0.5 r 1 0.01 m 1 1 i 1 0 0 i 1 1 0 i 1 2 0 i 1 3 0 o 1 0 a 2 0.01 d 2 0.01 s 2 0.5 r 2 0.01 m 2 1 i 2 0 0 i 2 1 0 i 2 2 0 i 2 3 0 o 2 0 a 3 0.01 d 3 0.01 s 3 0.5 r 3 0.01 m 3 1 i 3 0 0 i 3 1 0 i 3 2 0 i 3 3 0 o 3 0  "
-  }, 
+  },
   "connections": [
     [
-      "midichlorian", 
+      "midichlorian",
       "reticulated_liner"
-    ], 
+    ],
     [
-      "reticulated_liner", 
+      "reticulated_liner",
       "sonic"
-    ], 
+    ],
     [
-      "sonic", 
+      "sonic",
       "audio"
-    ], 
+    ],
     [
-      "reticulated_liner", 
+      "reticulated_liner",
       "liner"
-    ], 
+    ],
     [
-      "liner", 
+      "liner",
       "sonic"
     ]
-  ], 
+  ],
   "variables": {
-    "sampleRate": "44100", 
-    "samplesPerEvaluation": "128", 
+    "sampleRate": "44100",
+    "samplesPerEvaluation": "128",
     "system.load": "/home/dan/Desktop/repos/dlal/states/axon.txt"
   }
 }
