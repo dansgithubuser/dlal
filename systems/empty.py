@@ -1,4 +1,4 @@
 import dlal
 
-system=dlal.System()
-s=system
+system = dlal.System()
+s = system
