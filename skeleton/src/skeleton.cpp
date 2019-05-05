@@ -100,13 +100,6 @@ std::string componentToStr(const Component* component){
 	return component->_name;
 }
 
-char* toCStr(const std::string& s){
-	char* result=(char*)malloc(s.size()+1);
-	result[s.size()]='\0';
-	memcpy(result, s.c_str(), s.size());
-	return result;
-}
-
 bool isError(const std::string& s){ return s.compare(0, 5, "error")==0; }
 
 void add(
