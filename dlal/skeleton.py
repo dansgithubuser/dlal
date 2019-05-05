@@ -240,12 +240,6 @@ class System:
 class Component:
     _libs = {}
 
-    @staticmethod
-    def from_dict(d, component_map):
-        return component_map[d['component']]
-
-    def to_dict(self): return {'component': self.to_str()}
-
     def set_components_to_add(self, components):
         self.components_to_add = [weakref.ref(i) for i in components]
 
@@ -279,13 +273,8 @@ class Component:
                 setattr(self, command, captain(command))
 
     def __del__(self):
-        if self.component != None and not self.weak:
+        if not self.weak:
             _skeleton.component_demolish(self)
-
-    def transfer_component(self):
-        result = self.component
-        self.component = None
-        return result
 
     def command(self, *command, immediate=False):
         return _skeleton.component_command(self, immediate, *command)
@@ -299,11 +288,6 @@ class Component:
 
     def period(self): return int(self.periodic_get().split()[0])
 
-def component_to_dict(self, members):
-    result = {i: getattr(self, i) for i in members}
-    result = {k: {'class': v.__class__.__name__, 'dict': v.to_dict()} for k, v in result.items()}
-    return result
-
 component_types = {}
 def inform_component_type(name, value): component_types[snake_case(name)] = value
 
@@ -312,14 +296,6 @@ def component_builder(component_type):
     if cls:
         return cls
     return lambda **kwargs: Component(component_type, **kwargs)
-
-def component_from_dict(self, members, d, component_map):
-    for member in members:
-        class_name = d[member]['class']
-        cls = component_types.get(snake_case(class_name))
-        if not cls:
-            cls = eval(class_name)
-        setattr(self, member, cls.from_dict(d[member]['dict'], component_map))
 
 def test(): _skeleton.test()
 

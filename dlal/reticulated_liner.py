@@ -3,7 +3,6 @@ from .qweboard import qwe_to_note
 
 import random
 
-
 class ReticulatedLiner(Component):
     def __init__(self, **kwargs):
         Component.__init__(self, 'reticulated_liner', **kwargs)

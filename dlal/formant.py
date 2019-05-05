@@ -5,7 +5,6 @@ try:
 except ImportError:
     import Tkinter as tkinter
 
-
 class Formant(Component):
     def __init__(self, **kwargs):
         Component.__init__(self, 'fir', **kwargs)

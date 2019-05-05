@@ -2,15 +2,13 @@ from .skeleton import *
 from .helpers import *
 from .sonic_controller import *
 
-class Buffer(Component):
-    @staticmethod
-    def from_dict(d, component_map):
-        return Buffer(component=component_map[d['component']].transfer_component())
+import math
+import os
 
+class Buffer(Component):
     def __init__(self, **kwargs):
         Component.__init__(self, 'buffer', **kwargs)
         self.known_sounds = {}
-        import os
         for path, folders, files in os.walk(os.path.join('..', '..', 'components', 'buffer', 'sounds')):
             for file in files:
                 name, extension = os.path.splitext(file)
@@ -48,7 +46,6 @@ class Buffer(Component):
                 break
 
     def lfo(self, period_in_samples):
-        import math
         period = [str(math.sin(2*math.pi*x/period_in_samples)) for x in range(period_in_samples)]
         self.read_sound(0, ' '.join(period), immediate=True)
         self.repeat_sound('y', immediate=True)

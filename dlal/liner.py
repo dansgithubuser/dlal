@@ -2,30 +2,21 @@ from .skeleton import *
 from .qweboard import qwe_to_note
 
 class Liner(Component):
-    @staticmethod
-    def from_dict(d, component_map): return Liner(from_dict=(d, component_map))
-
-    def to_dict(self):
-        d = {'component': self.to_str()}
-        if hasattr(self, 'samples_per_quarter'):
-            d['samples_per_quarter'] = self.samples_per_quarter
-        return d
-
-    def __init__(self, period_in_samples=0, samples_per_quarter=22050, from_dict=None, **kwargs):
-        if from_dict:
-            d, component_map = from_dict
-            Component.__init__(self, 'liner', component=component_map[d['component']].transfer_component())
-            if 'samples_per_quarter' in d:
-                self.samples_per_quarter = d['samples_per_quarter']
-            self.period_in_samples = int(self.periodic_get().split()[0])
-            self.periodic_set_phase(0)
-            return
+    def __init__(self, period_in_samples=0, samples_per_quarter=22050, **kwargs):
         Component.__init__(self, 'liner', **kwargs)
         if period_in_samples:
             self.periodic_resize(period_in_samples)
-            self.period_in_samples = period_in_samples
-        if samples_per_quarter:
-            self.samples_per_quarter = samples_per_quarter
+        self.samples_per_quarter = samples_per_quarter
+
+    def serialize(self):
+        return {
+            'component': Component.serialize(self),
+            'samples_per_quarter': self.samples_per_quarter,
+        }
+
+    def deserialize(self, serialized, *args, **kwargs):
+        self.command('deserialize', serialized['component'], *args, **kwargs)
+        self.samples_per_quarter = serialized['samples_per_quarter']
 
     def line(self, text, immediate=False):
         stride = self.samples_per_quarter
