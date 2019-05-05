@@ -13,7 +13,7 @@
 #include <thread>
 
 std::ostream& operator<<(std::ostream& ostream, const dlal::Component* component){
-	return ostream<<componentToStr(component);
+	return ostream<<component->_name;
 }
 
 std::istream& operator>>(std::istream& istream, dlal::Component*& component){
@@ -96,10 +96,6 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 
 namespace dlal{
 
-std::string componentToStr(const Component* component){
-	return component->_name;
-}
-
 bool isError(const std::string& s){ return s.compare(0, 5, "error")==0; }
 
 void add(
@@ -129,7 +125,7 @@ std::string System::add(Component& component, unsigned slot){
 	if(_components.size()<=slot) _components.resize(slot+1);
 	_components[slot].push_back(&component);
 	_nameToComponent[component._name]=&component;
-	_reports.write("add "+componentToStr(&component)+" "+component.type());
+	_reports.write("add "+component._name+" "+component.type());
 	return "";
 }
 
@@ -138,7 +134,7 @@ std::string System::remove(Component& component){
 		auto j=std::find(i.begin(), i.end(), &component);
 		if(j!=i.end()){
 			i.erase(j);
-			_reports.write("remove "+componentToStr(&component));
+			_reports.write("remove "+component._name);
 			return "";
 		}
 	}
@@ -153,7 +149,7 @@ std::string System::check(){
 	}
 	for(auto slot: _components)
 		for(auto component: slot)
-			components.erase(componentToStr(component));
+			components.erase(component->_name);
 	if(components.size()) return "error: connected components have not been added";
 	return "";
 }
@@ -276,8 +272,8 @@ std::string System::handleRequest(std::string request){
 		ss>>a>>b;
 		s=a->connect(*b);
 		if(!isError(s)){
-			auto sa=componentToStr(a);
-			auto sb=componentToStr(b);
+			auto sa=a->_name;
+			auto sb=b->_name;
 			_reports.write("connect "+sa+" "+sb);
 			_connections.push_back(std::pair<std::string, std::string>(sa, sb));
 		}
@@ -289,8 +285,8 @@ std::string System::handleRequest(std::string request){
 		ss>>a>>b;
 		s=a->disconnect(*b);
 		if(!isError(s)){
-			auto sa=componentToStr(a);
-			auto sb=componentToStr(b);
+			auto sa=a->_name;
+			auto sb=b->_name;
 			_reports.write("disconnect "+sa+" "+sb);
 			for(unsigned i=0; i<_connections.size(); ++i)
 				if(_connections[i]==std::pair<std::string, std::string>(sa, sb)){
@@ -325,8 +321,8 @@ Component::Component(): _system(nullptr) {
 	registerCommand("type", "", [this](std::stringstream&){
 		return type();
 	});
-	registerCommand("to_str", "", [this](std::stringstream&){
-		return componentToStr(this);
+	registerCommand("name", "", [this](std::stringstream&){
+		return _name;
 	});
 	registerCommand("midi", "byte[1]..byte[n]", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
@@ -365,7 +361,7 @@ std::string Component::join(System& system){
 
 void Component::midiSend(Component* target, const uint8_t* bytes, unsigned size) const {
 	target->midi(bytes, size);
-	_system->_reports.write((std::string)"midi "+componentToStr(this)+" "+componentToStr(target));
+	_system->_reports.write((std::string)"midi "+_name+" "+target->_name);
 }
 
 void Component::registerCommand(
@@ -464,13 +460,13 @@ bool Periodic::phase(){
 	if(_phase<_period){
 		float current=1.0f*_phase/_period;
 		if(current-_last>0.01f){
-			_system->_reports.write((std::string)"phase "+componentToStr(this)+" "+std::to_string(current));
+			_system->_reports.write((std::string)"phase "+_name+" "+std::to_string(current));
 			_last=current;
 		}
 		return false;
 	}
 	_phase-=_period;
-	_system->_reports.write((std::string)"edge "+componentToStr(this));
+	_system->_reports.write((std::string)"edge "+_name);
 	_last=0.0f;
 	return true;
 }
@@ -494,7 +490,7 @@ MultiOut::MultiOut(): _checkAudio(false), _checkMidi(false) {
 	addJoinAction([this](System& system){
 		std::stringstream ss;
 		for(auto i: _outputs)
-			ss<<"connect "+componentToStr(this)+" "+componentToStr(i)<<" ";
+			ss<<"connect "+_name+" "+i->_name<<" ";
 		if(ss.str().size()) system._reports.write(ss.str());
 		return "";
 	});

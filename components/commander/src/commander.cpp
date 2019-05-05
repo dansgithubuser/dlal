@@ -107,7 +107,7 @@ void Commander::dispatch(const Directive& d){
 	switch(d._type){
 		case Directive::COMMAND:
 			result=d._a->command(d._command);
-			_system->_reports.write((std::string)"command "+componentToStr(this)+" "+componentToStr(d._a));
+			_system->_reports.write((std::string)"command "+_name+" "+d._a->_name);
 			break;
 		case Directive::COMMAND_INDEXED:
 			result=_outputs[d._output]->command(d._command);
