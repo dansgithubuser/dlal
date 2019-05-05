@@ -7,21 +7,21 @@ samples_per_evaluation = 1 << log2_samples_per_evaluation
 system = dlal.System()
 raw = dlal.Component('raw')
 liner = dlal.Liner(period_in_samples=8*samples_per_evaluation)
-sonic_controller = dlal.SonicController()
+sonic = dlal.Sonic()
 # command
 raw.set(44100, log2_samples_per_evaluation, immediate=True)
 liner.loop_on_repeat(immediate=True)
 liner.set_fudge(0, immediate=True)
-sonic_controller.a(1, immediate=True)
-sonic_controller.d(1, immediate=True)
-sonic_controller.s(1, immediate=True)
-sonic_controller.r(1, immediate=True)
+sonic.a(1, immediate=True)
+sonic.d(1, immediate=True)
+sonic.s(1, immediate=True)
+sonic.r(1, immediate=True)
 # add
 system.add(raw, slot=1, immediate=True)
-system.add(liner, sonic_controller, immediate=True)
+system.add(liner, sonic, immediate=True)
 # connect
-liner.connect(sonic_controller, immediate=True)
-sonic_controller.connect(raw, immediate=True)
+liner.connect(sonic, immediate=True)
+sonic.connect(raw, immediate=True)
 # start
 raw.start(1, immediate=True)
 
@@ -31,7 +31,7 @@ def note(number, on):
     else:
         cmd = 0x80
     liner.midi(cmd, number, 0x7f, immediate=True)
-    sonic_controller.midi(cmd, number, 0x7f, immediate=True)
+    sonic.midi(cmd, number, 0x7f, immediate=True)
 
 for i in range(2):
     note(60, True)

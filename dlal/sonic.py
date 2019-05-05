@@ -10,26 +10,26 @@ import pprint
 import copy
 
 class Oscillator:
-    def __init__(self, i, oscillators, sonic_controller):
-        self.sonic_controller = sonic_controller
+    def __init__(self, i, oscillators, sonic):
+        self.sonic= sonic
         column = itertools.count()
         self.label = tkinter.Label(text=str(i)).grid(row=i, column=next(column))
-        self.a = tkinter.Scale(command=lambda x: sonic_controller.live_command('a {0:d} {1:f}'.format(i, self.a.get()**self.exponents[self.a])))
+        self.a = tkinter.Scale(command=lambda x: sonic.live_command('a {0:d} {1:f}'.format(i, self.a.get()**self.exponents[self.a])))
         self.a.grid(row=i, column=next(column))
-        self.d = tkinter.Scale(command=lambda x: sonic_controller.live_command('d {0:d} {1:f}'.format(i, self.d.get()**self.exponents[self.d])))
+        self.d = tkinter.Scale(command=lambda x: sonic.live_command('d {0:d} {1:f}'.format(i, self.d.get()**self.exponents[self.d])))
         self.d.grid(row=i, column=next(column))
-        self.s = tkinter.Scale(command=lambda x: sonic_controller.live_command('s {0:d} {1:f}'.format(i, self.s.get()**self.exponents[self.s])))
+        self.s = tkinter.Scale(command=lambda x: sonic.live_command('s {0:d} {1:f}'.format(i, self.s.get()**self.exponents[self.s])))
         self.s.grid(row=i, column=next(column))
-        self.r = tkinter.Scale(command=lambda x: sonic_controller.live_command('r {0:d} {1:f}'.format(i, self.r.get()**self.exponents[self.r])))
+        self.r = tkinter.Scale(command=lambda x: sonic.live_command('r {0:d} {1:f}'.format(i, self.r.get()**self.exponents[self.r])))
         self.r.grid(row=i, column=next(column))
-        self.m = tkinter.Scale(command=lambda x: sonic_controller.live_command('m {0:d} {1:f}'.format(i, self.m.get()**self.exponents[self.m])))
+        self.m = tkinter.Scale(command=lambda x: sonic.live_command('m {0:d} {1:f}'.format(i, self.m.get()**self.exponents[self.m])))
         self.m.grid(row=i, column=next(column))
-        self.o = tkinter.Scale(command=lambda x: sonic_controller.live_command('o {0:d} {1:f}'.format(i, self.o.get()**self.exponents[self.o])))
+        self.o = tkinter.Scale(command=lambda x: sonic.live_command('o {0:d} {1:f}'.format(i, self.o.get()**self.exponents[self.o])))
         self.o.grid(row=i, column=next(column))
         self.i = [None]*oscillators
         for j in range(oscillators):
             def command(oscillator):
-                return lambda x: sonic_controller.live_command(
+                return lambda x: sonic.live_command(
                     'i {0:d} {1:d} {2:f}'.format(
                         i, oscillator, self.i[oscillator].get()**self.exponents[self.i[j]]
                     )
@@ -98,7 +98,7 @@ class VgmSetting:
         result['channel'].update(self.channel_commands[channel])
         return result
 
-class SonicController(Component):
+class Sonic(Component):
     def __init__(self, setting=None, **kwargs):
         Component.__init__(self, 'sonic', **kwargs)
         self.oscillators = []

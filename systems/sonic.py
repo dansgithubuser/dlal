@@ -1,7 +1,7 @@
 import dlal
 
-sonic_controller = dlal.SonicController()
+sonic = dlal.Sonic()
 lpf = dlal.Component('lpf')
-system = dlal.SimpleSystem([sonic_controller, lpf])
-sonic_controller.show_controls()
+system = dlal.SimpleSystem([sonic, lpf])
+sonic.show_controls()
 go, ports = system.standard_system_functionality()

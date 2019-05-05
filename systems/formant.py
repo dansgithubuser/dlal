@@ -2,8 +2,8 @@ import dlal
 
 # components
 commander = dlal.Commander()
-s_voice = dlal.SonicController(); s_voice.i(0, 0, 0.25); s_voice.s(0, 1); s_voice.midi(0x90, 40, 0x7f)
-s_noise = dlal.SonicController()
+s_voice = dlal.Sonic(); s_voice.i(0, 0, 0.25); s_voice.s(0, 1); s_voice.midi(0x90, 40, 0x7f)
+s_noise = dlal.Sonic()
 s_noise.i(0, 0, 4.00); s_noise.i(0, 1, 4.00)
 s_noise.i(1, 0, 4.00); s_noise.i(1, 1, 4.00)
 s_noise.m(1, 0.01)

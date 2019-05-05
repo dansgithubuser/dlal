@@ -1,6 +1,6 @@
 from .buffer import *
 from .skeleton import *
-from .sonic_controller import *
+from .sonic import *
 
 import sys
 
@@ -67,7 +67,7 @@ def frequency_response(component, duration=10000):
     # create
     system = System()
     commander = Commander()
-    sonic_controller = SonicController()
+    sonic = Sonic()
     buffer = Buffer()
     raw = Component('raw')
     # command
@@ -76,17 +76,17 @@ def frequency_response(component, duration=10000):
     commands = int(duration/1000.0*sample_rate) >> log_2_samples_per_evaluation
     commander.queue_resize(commands, immediate=True)
     for i in range(1, commands):
-        commander.queue(i, sonic_controller, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, immediate=True)
-    sonic_controller.midi(0x90, 69, 0x7f, immediate=True)
+        commander.queue(i, sonic, 'frequency_multiplier', 1.0*i/commands*sample_rate/2/440, immediate=True)
+    sonic.midi(0x90, 69, 0x7f, immediate=True)
     buffer.clear_on_evaluate('y', immediate=True)
     raw.duration(duration, immediate=True)
     raw.set(sample_rate, log_2_samples_per_evaluation, immediate=True)
     raw.peak(sample_rate/20, immediate=True)
     # add
     system.add(raw, slot=1, immediate=True)
-    system.add(buffer, commander, sonic_controller, component, immediate=True)
+    system.add(buffer, commander, sonic, component, immediate=True)
     # connect
-    connect(sonic_controller, buffer, immediate=True)
+    connect(sonic, buffer, immediate=True)
     connect(component, buffer, raw, immediate=True)
     # go
     raw.start(immediate=True)

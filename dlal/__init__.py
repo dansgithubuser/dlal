@@ -4,7 +4,7 @@ from .helpers import *
 from .liner import *
 from .reticulated_liner import *
 from .skeleton import *
-from .sonic_controller import *
+from .sonic import *
 
 import inspect
 

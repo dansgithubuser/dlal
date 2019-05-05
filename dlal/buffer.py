@@ -1,6 +1,6 @@
 from .skeleton import *
 from .helpers import *
-from .sonic_controller import *
+from .sonic import *
 
 import math
 import os
@@ -22,13 +22,13 @@ class Buffer(Component):
         self.load_raw(note_number, 'raw.txt', immediate=True)
 
     def render_sonic_drums(self):
-        self.render_simple_system(0x3c, SimpleSystem([SonicController('snare')], test=True, test_duration=250))
+        self.render_simple_system(0x3c, SimpleSystem([Sonic('snare')], test=True, test_duration=250))
         commander = Component('commander')
-        sonic_controller = SonicController('badassophone')
+        sonic = Sonic('badassophone')
         for i in range(250):
-            commander.queue(i, sonic_controller, 'frequency_multiplier', 0.97 ** i, immediate=True)
-        self.render_simple_system(0x3e, SimpleSystem([sonic_controller, commander], test=True, test_duration=250))
-        self.render_simple_system(0x40, SimpleSystem([SonicController('ride')], test=True, test_duration=250))
+            commander.queue(i, sonic, 'frequency_multiplier', 0.97 ** i, immediate=True)
+        self.render_simple_system(0x3e, SimpleSystem([sonic, commander], test=True, test_duration=250))
+        self.render_simple_system(0x40, SimpleSystem([Sonic('ride')], test=True, test_duration=250))
 
     def load_sound(self, note_number, file_name):
         if file_name in self.known_sounds:
