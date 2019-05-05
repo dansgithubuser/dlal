@@ -78,6 +78,17 @@
       "echo"
     ]
   ],
+  "py": {
+    "bass_liner": {
+      "samples_per_quarter": 22050
+    },
+    "drum_liner": {
+      "samples_per_quarter": 22050
+    },
+    "piano_liner": {
+      "samples_per_quarter": 22050
+    }
+  },
   "variables": {
     "input": "0",
     "input 0": "port 9120",

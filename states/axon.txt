@@ -47,6 +47,11 @@
       "sonic"
     ]
   ],
+  "py": {
+    "liner": {
+      "samples_per_quarter": 22050
+    }
+  },
   "variables": {
     "sampleRate": "44100",
     "samplesPerEvaluation": "128",

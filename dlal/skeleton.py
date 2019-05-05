@@ -136,7 +136,7 @@ class System:
     def __init__(self):
         self.system = _skeleton.system_build()
         self.switched = _skeleton.system_switch(self.system)
-        self.novel_components = {}
+        self.components = {}
         self.set('sampleRate', 44100, True)
         self.set('samplesPerEvaluation', 128, True)
         self.l = ReprMethod(self, 'load', start=True)
@@ -158,6 +158,10 @@ class System:
             result += _skeleton.component_add(immediate, arg, slot)
             if len(result):
                 result += '\n'
+            name = arg.name(immediate=True)
+            self.components[name] = arg
+            if not hasattr(self, name):
+                setattr(self, name, arg)
         return result
 
     def set(self, name, value, immediate=False):
@@ -181,6 +185,12 @@ class System:
         }
         # connections
         state['connections'] = json.loads(_skeleton.component_get_connections(immediate=True))
+        # python
+        state['py'] = {
+            k: v.py_serialize()
+            for k, v in self.components.items()
+            if hasattr(v, 'py_serialize')
+        }
         #
         return json.dumps(state)
 
@@ -198,11 +208,13 @@ class System:
         for index, slot in enumerate(state['component_order']):
             for component in slot:
                 component = components[component]
-                self.register_novel_component(component)
                 self.add(component, slot=index, immediate=True)
         # connections
         for input, output in state['connections']:
             components[input].connect(components[output], immediate=True)
+        # python
+        for k, v in state['py'].items():
+            components[k].py_deserialize(v)
         #
         return state
 
@@ -228,12 +240,6 @@ class System:
             raise Exception('no audio component')
         atexit.register(lambda: self.audio.finish(immediate=True))
         return self.audio.start(immediate=True)
-
-    def register_novel_component(self, component):
-        name = component.to_str(immediate=True)
-        self.novel_components[name] = component
-        if not hasattr(self, name):
-            setattr(self, name, component)
 
 class Component:
     _libs = {}

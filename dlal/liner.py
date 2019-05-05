@@ -8,14 +8,10 @@ class Liner(Component):
             self.periodic_resize(period_in_samples)
         self.samples_per_quarter = samples_per_quarter
 
-    def serialize(self):
-        return {
-            'component': Component.serialize(self),
-            'samples_per_quarter': self.samples_per_quarter,
-        }
+    def py_serialize(self):
+        return {'samples_per_quarter': self.samples_per_quarter}
 
-    def deserialize(self, serialized, *args, **kwargs):
-        self.command('deserialize', serialized['component'], *args, **kwargs)
+    def py_deserialize(self, serialized):
         self.samples_per_quarter = serialized['samples_per_quarter']
 
     def line(self, text, immediate=False):

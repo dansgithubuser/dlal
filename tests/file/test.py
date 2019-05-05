@@ -14,7 +14,7 @@ fileo = dlal.Component('fileo')
 # command
 raw.set(sample_rate, log_2_samples_per_evaluation, immediate=True)
 midi.midi(0x90, 0x3C, 0x40, immediate=True)
-fileo.name('file.txt', immediate=True)
+fileo.file_name('file.txt', immediate=True)
 # add
 system.add(raw, slot=1, immediate=True)
 system.add(midi, fileo, immediate=True)
@@ -35,7 +35,7 @@ filei = dlal.Component('filei')
 sonic_controller = dlal.SonicController()
 # command
 raw.set(sample_rate, log_2_samples_per_evaluation, immediate=True)
-filei.name('file.txt', immediate=True)
+filei.file_name('file.txt', immediate=True)
 # add
 system.add(raw, slot=1, immediate=True)
 system.add(filei, sonic_controller, immediate=True)
