@@ -102,7 +102,6 @@ class Component{
 
 		System* _system;
 		std::string _name;
-		std::string _label;
 	protected:
 		typedef std::function<std::string(std::stringstream&)> Command;
 		typedef std::function<std::string(System&)> JoinAction;

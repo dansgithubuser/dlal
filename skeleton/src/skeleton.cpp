@@ -337,14 +337,6 @@ Component::Component(): _system(nullptr) {
 	registerCommand("to_str", "", [this](std::stringstream&){
 		return componentToStr(this);
 	});
-	registerCommand("label", "<label>", [this](std::stringstream& ss){
-		ss>>_label;
-		if(_system){
-			_system->_reports.write("label "+componentToStr(this)+" "+_label);
-			return "";
-		}
-		return "error: no system";
-	});
 	registerCommand("midi", "byte[1]..byte[n]", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
 		unsigned byte;
