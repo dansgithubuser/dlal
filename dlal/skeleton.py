@@ -27,6 +27,13 @@ def snake_case(camel_case):
 def camel_case(snake_case):
     return ''.join([i.capitalize() for i in snake_case.split('_')])
 
+def report(result):
+    if result.startswith('error'):
+        raise RuntimeError(result)
+    elif result.startswith('warning'):
+        print(result)
+    return result
+
 def connect(*args, immediate=False):
     if len(args) <= 1:
         return
@@ -55,12 +62,6 @@ class Skeleton:
         obvious.python_3_string_prep(self.lib)
 
     def _call(self, immediate, *args, sep=' '):
-        def report(result):
-            if result.startswith('error'):
-                raise RuntimeError(result)
-            elif result.startswith('warning'):
-                print(result)
-            return result
         def convert(x):
             if isinstance(x, Component):
                 return x.component
@@ -143,12 +144,15 @@ class System:
 
     def __del__(self):
         while True:
-            report = _skeleton.system_report(True)
-            if not report:
+            r = _skeleton.system_report(True)
+            if not r:
                 break
-            print(report)
+            report(r)
         _skeleton.system_switch(self.switched)
         _skeleton.system_demolish(self.system)
+
+    def __repr__(self):
+        return self.diagram()
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
@@ -240,6 +244,70 @@ class System:
             raise Exception('no audio component')
         atexit.register(lambda: self.audio.finish(immediate=True))
         return self.audio.start(immediate=True)
+
+    def diagram(self):
+        # setup
+        connections_f = {}
+        connections_b = {}
+        for a, b in json.loads(_skeleton.component_get_connections(immediate=True)):
+            connections_f.setdefault(a, []).append(b)
+            connections_b.setdefault(b, []).append(a)
+        band_f = ['-']*len(self.components)
+        band_b = ['-']*len(self.components)
+        name_to_index = {}
+        for i, k in enumerate(self.components):
+            name_to_index[k] = i
+        # helpers ┃ ━ ┏ ┗ ┛ ┓ ┳ ┻ ┣ ┫ ╋
+        def advance():
+            for band in [band_f, band_b]:
+                for i, v in enumerate(band):
+                    if v in '┃┏┓┳┣┫╋':
+                        band[i] = '┃'
+                    else:
+                        band[i] = '-'
+        def lay_f(index):
+            if band_f[index] == '┃':
+                band_f[index] = '┣'
+            elif band_f[index] == '-':
+                band_f[index] = '┏'
+        def receive_f(index):
+            band_f[index] = '┗'
+        def lay_b(index):
+            if band_b[index] == '┃':
+                band_b[index] = '┫'
+            elif band_b[index] == '-':
+                band_b[index] = '┓'
+        def receive_b(index):
+            band_b[index] = '┛'
+        def above(index, component_name):
+            return index < name_to_index[component_name]
+        def below(index, component_name):
+            return index > name_to_index[component_name]
+        # loop
+        result = []
+        max_len = str(max(len(i) for i in self.components))
+        component_format = '{:-<' + max_len + '.' + max_len + '}'
+        for index, name in enumerate(self.components):
+            advance()
+            # forward connections
+            for i in connections_f.get(name, []):
+                if above(index, i):
+                    lay_f(name_to_index[i])
+            if any(below(index, i) for i in connections_b.get(name, [])):
+                receive_f(index)
+            result.append(''.join(band_f))
+            # component
+            result.append(component_format.format(name))
+            # backward connections
+            for i in connections_b.get(name, []):
+                if above(index, i):
+                    lay_b(name_to_index[i])
+            if any(below(index, i) for i in connections_f.get(name, [])):
+                receive_b(index)
+            result.append(''.join(band_b))
+            #
+            result.append('\n')
+        return ''.join(result)
 
 class Component:
     _libs = {}
