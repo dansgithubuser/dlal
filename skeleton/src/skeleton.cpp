@@ -28,9 +28,9 @@ extern "C" {
 DLAL const char* dlalRequest(const char* request, bool immediate){
 	static std::set<dlal::System*> systems;
 	static dlal::System* active=nullptr;
+	static std::string s;
 	if(immediate){
 		std::stringstream ss(request);
-		static std::string s;
 		ss>>s;
 		if(s=="test"){
 			dlal::AtomicList<int>::test();
@@ -88,7 +88,8 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 		static int requestNumber=0;
 		++requestNumber;
 		active->_requests.write(std::to_string(requestNumber)+" "+request);
-		return "";
+		s=std::to_string(requestNumber);
+		return s.c_str();
 	}
 }
 

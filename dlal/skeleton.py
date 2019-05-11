@@ -9,6 +9,7 @@ import platform
 import re
 import subprocess
 import sys
+import time
 import weakref
 
 root = os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
@@ -66,10 +67,25 @@ class Skeleton:
             if isinstance(x, Component):
                 return x.component
             return str(x)
-        return report(self.lib.dlalRequest(
-            sep.join([convert(i) for i in args]),
-            immediate,
-        ))
+        request = sep.join([convert(i) for i in args])
+        if immediate:
+            return report(self.lib.dlalRequest(request, True))
+        else:
+            self.pump()
+            request_number = self.lib.dlalRequest(request, False)
+            time.sleep(0.1)
+            r=self.pump(request_number)
+            return r
+
+    def pump(self, request_number = None):
+        for i in range(512):
+            r = self.system_report(True)
+            if r.startswith('value: '): r = r[7:]
+            if not r:
+                break
+            if request_number is not None and r.startswith('{}:'.format(request_number)):
+                return r.split(': ', 1)[1]
+            report(r)
 
     def test(self):
         return self._call(True, 'test')
@@ -143,11 +159,7 @@ class System:
         self.l = ReprMethod(self, 'load', start=True)
 
     def __del__(self):
-        while True:
-            r = _skeleton.system_report(True)
-            if not r:
-                break
-            report(r)
+        _skeleton.pump()
         _skeleton.system_switch(self.switched)
         _skeleton.system_demolish(self.system)
 
