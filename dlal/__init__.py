@@ -3,6 +3,7 @@ from .buffer import *
 from .formant import *
 from .helpers import *
 from .liner import *
+from .markov_liner import *
 from .reticulated_liner import *
 from .skeleton import *
 from .sonic import *

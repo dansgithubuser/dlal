@@ -84,6 +84,10 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
+pitch slide component (midi notes in, pitch wheel out)
+midi control de/serialize
+
+
 - save and load system
 	- midi controllee, all components
 
