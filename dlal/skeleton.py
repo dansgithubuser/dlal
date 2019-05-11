@@ -242,8 +242,8 @@ class System:
     def start(self):
         if not hasattr(self, 'audio'):
             raise Exception('no audio component')
-        atexit.register(lambda: self.audio.finish(immediate=True))
-        return self.audio.start(immediate=True)
+        atexit.register(lambda: self.audio.finish())
+        return self.audio.start()
 
     def diagram(self):
         # setup

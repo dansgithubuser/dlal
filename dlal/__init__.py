@@ -1,3 +1,4 @@
+from .audio import *
 from .buffer import *
 from .formant import *
 from .helpers import *
