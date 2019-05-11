@@ -351,6 +351,9 @@ class Component:
 
     def period(self): return int(self.periodic_get().split()[0])
 
+    def periodic_match(self, other, immediate=False):
+        return self.command('periodic_match', other.periodic(immediate=True), immediate=immediate)
+
 component_types = {}
 def inform_component_type(name, value): component_types[snake_case(name)] = value
 
