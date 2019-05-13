@@ -176,6 +176,27 @@ void Sonic::midi(const uint8_t* bytes, unsigned size){
 		case 0xa0:
 			_notes[bytes[1]]._desiredVolume=bytes[2]/127.0f;
 			break;
+		case 0xb0:
+			switch(bytes[1]){
+				case 0x65: _registeredParameterNumber=bytes[2]<<7; break;
+				case 0x64: _registeredParameterNumber+=bytes[2]; break;
+				case 0x06:
+					switch(_registeredParameterNumber){
+						case 0x0000: _pitchBendRange=bytes[2]; break;
+						default: break;
+					}
+					break;
+				case 0x26:
+					switch(_registeredParameterNumber){
+						case 0x0000: _pitchBendRange+=bytes[2]/100.0f; break;
+						default: break;
+					}
+					break;
+			}
+			break;
+		case 0xe0:
+			_frequencyMultiplier=pow(2.0f, _pitchBendRange*float(bytes[1]+(bytes[2]<<7)-0x2000)/(0x2000*12));
+			break;
 		default: break;
 	}
 }

@@ -50,6 +50,8 @@ class Sonic:
 		Oscillator _oscillators[OSCILLATORS];
 		Note _notes[NOTES];
 		float _frequencyMultiplier;
+		float _pitchBendRange=2.0f;
+		unsigned _registeredParameterNumber=0;
 };
 
 }//namespace dlal
