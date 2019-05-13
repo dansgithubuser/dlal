@@ -28,7 +28,7 @@ def standard_system_functionality(audio, midi=None, raw=False, test=False, args=
             go()
     ports = None
     if midi and not (raw or test):
-        ports = midi_ports(immediate=True)
+        ports = midi_ports()
         if len(ports):
             print('opening midi port '+ports[0])
             midi.open(ports[0], immediate=True)
