@@ -126,6 +126,9 @@ class Skeleton:
     def component_connect(self, immediate, a, b):
         return self._call(immediate, 'component/connect', a, b)
 
+    def component_disconnect(self, immediate, a, b):
+        return self._call(immediate, 'component/disconnect', a, b)
+
     def component_command(self, c, immediate, *command):
         return self._call(immediate, 'component/command', c, *command)
 
@@ -358,6 +361,9 @@ class Component:
 
     def connect(self, output, immediate=False):
         return _skeleton.component_connect(immediate, self, output)
+
+    def disconnect(self, output, immediate=False):
+        return _skeleton.component_disconnect(immediate, self, output)
 
     def phase(self): return int(self.periodic_get().split()[1])
 
