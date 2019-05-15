@@ -84,7 +84,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- get rid of SamplesPerEvaluationGetter and SampleRateGetter
 - take dlal namespace out of dansmidilibs
 
 - save and load system
