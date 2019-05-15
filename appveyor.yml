@@ -1,1 +1,2 @@
-build_script: python go.py -b -t "*"
+image: Visual Studio 2017
+build_script: C:\Python37\python go.py --build --build-update-submodules --test "*" --python C:\Python37\python

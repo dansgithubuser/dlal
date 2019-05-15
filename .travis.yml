@@ -7,8 +7,8 @@ addons:
   apt:
     update: true
 install:
-  - python go.py --setup
+  - python3 go.py --setup --python python3
   - export PATH=/usr/local/bin:$PATH
-script: sudo python go.py -b -t "*"
+script: sudo python3 go.py --build --build-update-submodules --test "*" --python python3
 notifications:
   email: false

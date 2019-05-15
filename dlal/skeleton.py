@@ -348,7 +348,7 @@ class Component:
         def captain(command):
             return lambda *args, **kwargs: weak_self().command(
                 *([command]+list(args)),
-                immediate=kwargs.get('immediate', False),
+                immediate=kwargs.get('immediate', False)
             )
         for command in commands:
             if command not in dir(self):

@@ -9,7 +9,7 @@ class MarkovLiner(Component):
         self.samples_per_quarter = samples_per_quarter
 
     def state_create(self, on, off, duration, immediate=False):
-        return self.command('state_create', *on, ';', *off, ';', duration, immediate=immediate)
+        return self.command('state_create', *(on + [';'] + off + [';', duration]), immediate=immediate)
 
     def note(self, note, duration, immediate=False):
         return self.state_create([0x90, note, 0x40], [0x80, note, 0x40], duration, immediate=immediate)

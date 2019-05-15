@@ -22,7 +22,7 @@ The benefit of being cross-platform is that as underlying systems change,
 dlal remains capable of taking whatever best suits it.
 
 dlal is conservative in its dependencies.
-C++11, Python (2 or 3), and cmake are used to build.
+C++11, Python 3, and cmake are used to build.
 As much as possible, dependencies are kept in-repo and reasonable errors should pop up if a requirement isn't met.
 Despite this, build scripts should be flexible enough to use out-of-repo versions of dependencies.
 

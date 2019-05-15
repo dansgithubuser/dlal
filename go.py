@@ -6,11 +6,14 @@ import platform
 import subprocess
 import sys
 
+assert sys.version_info.major == 3
+
 # args
 import argparse
 parser = argparse.ArgumentParser(description='interface for developer operations')
 parser.add_argument('--setup', action='store_true', help='install dependencies')
 parser.add_argument('--build', '-b', action='store_true', help='build')
+parser.add_argument('--build-update-submodules', action='store_true')
 parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run (? to list systems)')
@@ -18,6 +21,7 @@ parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments 
 parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands (? for help)')
+parser.add_argument('--python', default='python')
 if len(sys.argv) == 1:
     parser.print_help()
     sys.exit()
@@ -109,7 +113,7 @@ if args.setup:
             'libudev-dev '
         )
         # tkinter
-        shell('sudo apt install --yes --force-yes python-tk')
+        shell('sudo apt install --yes --force-yes python3-tk')
         # rtmidi dependencies
         shell('sudo apt install --yes --force-yes libasound2-dev')
         # cmake
@@ -127,7 +131,7 @@ if args.setup:
 
 # build
 if args.build:
-    shell('git submodule update --init --recursive')
+    if args.build_update_submodules: shell('git submodule update --init --recursive')
     if not os.path.exists(built_rel_path):
         os.makedirs(built_rel_path)
     os.chdir(built_rel_path)
@@ -166,7 +170,7 @@ if args.test:
         for i in range(runs):
             # run test
             os.chdir(built_rel_path)
-            r = subprocess.call(['python', os.path.join(test, 'test.py')])
+            r = subprocess.call([args.python, os.path.join(test, 'test.py')])
             os.chdir(file_path)
             if not r:
                 # read result and expected
@@ -248,7 +252,7 @@ if args.system:
     systems_path = os.path.join('..', '..', 'systems')
     system_path = os.path.join(systems_path, args.system + '.py')
     if os.path.exists(system_path):
-        shell('python', '-i', system_path, *args.system_arguments.split())
+        shell(args.python, '-i', system_path, *args.system_arguments.split())
     else:
         print('available systems are:')
         for i in glob.glob(os.path.join('..', '..', 'systems', '*.py')):
