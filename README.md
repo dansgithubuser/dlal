@@ -84,9 +84,8 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-pitch slide component (midi notes in, pitch wheel out)
-midi control de/serialize
-
+- get rid of SamplesPerEvaluationGetter and SampleRateGetter
+- take dlal namespace out of dansmidilibs
 
 - save and load system
 	- midi controllee, all components
@@ -100,9 +99,6 @@ midi control de/serialize
 		- update readme arch
 
 - audiobro
-	- vibrato
-	- pitch slide
-	- long-term commander
 	- render to file
 	- new ideas
 
