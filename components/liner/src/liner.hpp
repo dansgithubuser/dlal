@@ -50,8 +50,8 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		void advance(uint64_t phase);
 		void process(const uint8_t* midi, unsigned size, uint64_t sample);
 		void put(const Midi& midi);
-		dlal::Midi getMidi() const;
-		std::string putMidi(dlal::Midi, float samplesPerQuarter, unsigned track=1);
+		dans::Midi getMidi() const;
+		std::string putMidi(dans::Midi, float samplesPerQuarter, unsigned track=1);
 		void resetGene0();
 		AtomicList<Midi> _line;
 		AtomicList<Midi>::Iterator _iterator;

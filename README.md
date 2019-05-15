@@ -84,8 +84,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- take dlal namespace out of dansmidilibs
-
 - save and load system
 	- midi controllee, all components
 

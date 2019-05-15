@@ -17,8 +17,8 @@ class ReticulatedLiner: public MultiOut {
 		void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted() override { return true; }
 	private:
-		Midi getMidi() const;
-		std::string putMidi(Midi);
+		dans::Midi getMidi() const;
+		std::string putMidi(dans::Midi);
 		using Reticule=std::vector<std::vector<uint8_t>>;
 		AtomicList<Reticule> _line;
 		AtomicList<Reticule>::Iterator _iterator;

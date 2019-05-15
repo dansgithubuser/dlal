@@ -16,7 +16,7 @@ ReticulatedLiner::ReticulatedLiner(): _line(256) {
 	registerCommand("load", "<file path>", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
-		dlal::Midi midi;
+		dans::Midi midi;
 		midi.read(filePath);
 		return putMidi(midi);
 	});
@@ -50,7 +50,7 @@ ReticulatedLiner::ReticulatedLiner(): _line(256) {
 	registerCommand("deserialize_reticulated_liner", "<serialized>", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
 		ss>>bytes;
-		dlal::Midi midi;
+		dans::Midi midi;
 		midi.read(bytes);
 		return putMidi(midi);
 	});
@@ -74,8 +74,8 @@ void ReticulatedLiner::midi(const uint8_t* bytes, unsigned size){
 	}
 }
 
-Midi ReticulatedLiner::getMidi() const {
-	dlal::Midi result;
+dans::Midi ReticulatedLiner::getMidi() const {
+	dans::Midi result;
 	int delta=0;
 	for(auto i: _line){
 		for(auto j: i){
@@ -87,7 +87,7 @@ Midi ReticulatedLiner::getMidi() const {
 	return result;
 }
 
-std::string ReticulatedLiner::putMidi(Midi midi){
+std::string ReticulatedLiner::putMidi(dans::Midi midi){
 	if(midi.tracks.size()<2) return "error: no track to read";
 	auto pairs=getPairs(midi.tracks[1]);
 	_line.clear();

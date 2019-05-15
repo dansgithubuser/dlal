@@ -33,7 +33,7 @@ Liner::Liner(): _line(256) {
 		ss>>samplesPerQuarter;
 		unsigned track=1;
 		ss>>track;
-		dlal::Midi midi;
+		dans::Midi midi;
 		midi.read(filePath);
 		return putMidi(midi, samplesPerQuarter, track);
 	});
@@ -79,7 +79,7 @@ Liner::Liner(): _line(256) {
 		std::vector<uint8_t> bytes;
 		ss>>_sampleRate>>" ">>bytes>>" ">>_samplesPerQuarter>>" ">>_transplantOnMidi;
 		if(_transplantOnMidi) ss>>" ">>_allNotes>>" ">>_minNote;
-		dlal::Midi midi;
+		dans::Midi midi;
 		midi.read(bytes);
 		return putMidi(midi, _samplesPerQuarter);
 	});
@@ -197,9 +197,9 @@ void Liner::put(const Midi& m){
 	if(!_iterator) setPhase(_phase);
 }
 
-Midi Liner::getMidi() const {
-	dlal::Midi result;
-	result.append(0, 0, dlal::Midi::Event().setTempo(int(_samplesPerQuarter*1e6/_sampleRate)));
+dans::Midi Liner::getMidi() const {
+	dans::Midi result;
+	result.append(0, 0, dans::Midi::Event().setTempo(int(_samplesPerQuarter*1e6/_sampleRate)));
 	uint64_t last=0;
 	float lastRemainder=0.0f;
 	for(auto i: _line){
@@ -211,11 +211,11 @@ Midi Liner::getMidi() const {
 	return result;
 }
 
-std::string Liner::putMidi(dlal::Midi midi, float samplesPerQuarter, unsigned track){
+std::string Liner::putMidi(dans::Midi midi, float samplesPerQuarter, unsigned track){
 	int ticks=0;
 	if(midi.tracks.size()<=track) return "error: no track "+std::to_string(track);
 	for(auto i: midi.tracks[0]){
-		if(i.type==dlal::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
+		if(i.type==dans::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
 		if(i.ticks) break;
 	}
 	_samplesPerQuarter=samplesPerQuarter;
