@@ -84,7 +84,6 @@ void Page::dispatch(
 			for(auto output: outputs){
 				std::string result=output->command(_text);
 				component._system->_reports.write((std::string)"command "+component._name+" "+output->_name);
-				if(result.size()) std::cerr<<result<<std::endl;
 			}
 			break;
 	}
