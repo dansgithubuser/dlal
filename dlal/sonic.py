@@ -391,4 +391,4 @@ class Sonic(Component):
             self.oscillators[output].o.set(total_level[output])
 
     def live_command(self, command):
-        self.command(command)
+        self.command(command, detach=True)

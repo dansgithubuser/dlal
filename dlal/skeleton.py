@@ -62,7 +62,7 @@ class Skeleton:
         obvious.set_ffi_types(self.lib.dlalRequest, str, str, bool)
         obvious.python_3_string_prep(self.lib)
 
-    def _call(self, immediate, *args, sep=' '):
+    def _call(self, immediate, *args, sep=' ', detach=False):
         def convert(x):
             if isinstance(x, Component):
                 return x.component
@@ -70,6 +70,8 @@ class Skeleton:
         request = sep.join([convert(i) for i in args])
         if immediate:
             return report(self.lib.dlalRequest(request, True))
+        elif detach:
+            return report(self.lib.dlalRequest(request, False))
         else:
             self.pump()
             request_number = self.lib.dlalRequest(request, False)
@@ -129,8 +131,8 @@ class Skeleton:
     def component_disconnect(self, immediate, a, b):
         return self._call(immediate, 'component/disconnect', a, b)
 
-    def component_command(self, c, immediate, *command):
-        return self._call(immediate, 'component/command', c, *command)
+    def component_command(self, c, immediate, *command, detach=False):
+        return self._call(immediate, 'component/command', c, *command, detach=detach)
 
     def component_demolish(self, c):
         return self._call(True, 'component/demolish', c)
@@ -356,8 +358,8 @@ class Component:
         if not self.weak:
             _skeleton.component_demolish(self)
 
-    def command(self, *command, immediate=False):
-        return _skeleton.component_command(self, immediate, *command)
+    def command(self, *command, immediate=False, detach=False):
+        return _skeleton.component_command(self, immediate, *command, detach=detach)
 
     def connect(self, output, immediate=False):
         return _skeleton.component_connect(immediate, self, output)
