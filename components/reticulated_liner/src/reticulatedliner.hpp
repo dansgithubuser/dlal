@@ -3,7 +3,6 @@
 
 #include <skeleton.hpp>
 
-#include <atomiclist.hpp>
 #include <midi.hpp>
 
 #include <iostream>
@@ -20,8 +19,8 @@ class ReticulatedLiner: public MultiOut {
 		dans::Midi getMidi() const;
 		std::string putMidi(dans::Midi);
 		using Reticule=std::vector<std::vector<uint8_t>>;
-		AtomicList<Reticule> _line;
-		AtomicList<Reticule>::Iterator _iterator;
+		std::vector<Reticule> _line;
+		size_t _index;
 		uint8_t _playing=0xff;
 };
 

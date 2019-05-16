@@ -6,8 +6,8 @@ DLAL_BUILD_COMPONENT_DEFINITION(ReticulatedLiner)
 
 namespace dlal{
 
-ReticulatedLiner::ReticulatedLiner(): _line(256) {
-	_iterator=_line.begin();
+ReticulatedLiner::ReticulatedLiner(){
+	_index=0;
 	_checkMidi=true;
 	registerCommand("save", "<file path>", [this](std::stringstream& ss){
 		std::string filePath;
@@ -35,10 +35,12 @@ ReticulatedLiner::ReticulatedLiner(): _line(256) {
 		}
 		if(bytes.size()) r.push_back(bytes);
 		_line.push_back(r);
+		_index=0;
 		return "";
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
+		_index=0;
 		return "";
 	});
 	registerCommand("serialize_reticulated_liner", "", [this](std::stringstream&){
@@ -60,17 +62,16 @@ ReticulatedLiner::ReticulatedLiner(): _line(256) {
 
 void ReticulatedLiner::midi(const uint8_t* bytes, unsigned size){
 	if(size!=3||(bytes[0]&0xf0)!=0x90) return;
-	if(!_iterator) _iterator=_line.begin();
-	if(!_iterator) return;
+	if(_index==_line.size()) _index=0;
+	if(_index==_line.size()) return;
 	while(true){
-		if(_iterator->size())
+		if(_line[_index].size())
 			for(auto output: _outputs)
-				for(const auto& i: *_iterator)
+				for(const auto& i: _line[_index])
 					midiSend(output, i.data(), i.size());
-		++_iterator;
-		if(!_iterator){
-			_line.freshen();
-			_iterator=_line.begin();
+		++_index;
+		if(_index==_line.size()){
+			_index=0;
 		}
 		else break;
 	}
@@ -104,6 +105,7 @@ std::string ReticulatedLiner::putMidi(dans::Midi midi){
 		reticule.push_back(i.event);
 	}
 	_line.push_back(reticule);
+	_index=0;
 	return "";
 }
 

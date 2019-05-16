@@ -3,7 +3,6 @@
 
 #include <skeleton.hpp>
 
-#include <atomiclist.hpp>
 #include <midi.hpp>
 
 #include <iostream>
@@ -53,8 +52,8 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		dans::Midi getMidi() const;
 		std::string putMidi(dans::Midi, float samplesPerQuarter, unsigned track=1);
 		void resetGene0();
-		AtomicList<Midi> _line;
-		AtomicList<Midi>::Iterator _iterator;
+		std::vector<Midi> _line;
+		size_t _index;
 		float _samplesPerQuarter=22050.0f;
 		bool _resetOnMidi=false, _transplantOnMidi=false, _loopOnRepeat=false;
 		uint8_t _transplantNote=NOTE_SENTINEL;

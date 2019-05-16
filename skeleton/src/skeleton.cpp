@@ -1,7 +1,5 @@
 #include "skeleton.hpp"
 
-#include "atomiclist.hpp"
-
 #include <obvious.hpp>
 
 #include <algorithm>
@@ -31,10 +29,7 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 	if(immediate){
 		std::stringstream ss(request);
 		ss>>s;
-		if(s=="test"){
-			dlal::AtomicList<int>::test();
-		}
-		else if(s=="system/build"){
+		if(s=="system/build"){
 			auto system=new dlal::System;
 			systems.insert(system);
 			s=str((void*)system);

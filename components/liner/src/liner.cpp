@@ -6,9 +6,9 @@ DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
 namespace dlal{
 
-Liner::Liner(): _line(256) {
+Liner::Liner(){
 	_period=44100*8;
-	_iterator=_line.begin();
+	_index=0;
 	_checkMidi=true;
 	resetGene0();
 	registerCommand("midi_event", "<time in samples> byte[1]..byte[n]",
@@ -41,6 +41,7 @@ Liner::Liner(): _line(256) {
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
+		_index=0;
 		return "";
 	});
 	registerCommand("reset_on_midi", "", [this](std::stringstream& ss){
@@ -55,7 +56,7 @@ Liner::Liner(): _line(256) {
 			auto i=_line.begin();
 			_minNote=0xff;
 			_allNotes.clear();
-			while(i){
+			while(i!=_line.end()){
 				const auto& m=i->midi;
 				if(m.size()==3&&(m[0]>>4)==9){
 					_allNotes.insert(m[1]);
@@ -123,8 +124,7 @@ void Liner::evaluate(){
 				for(auto& i: _genes[0][0].midi) i.sample=0;
 			}
 		}
-		_line.freshen();
-		_iterator=_line.begin();
+		_index=0;
 		if(_transplantOnMidi) _transplantNote=NOTE_SENTINEL;
 	}
 }
@@ -143,7 +143,7 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 			case 9:
 				stop();
 				Periodic::setPhase(0);
-				_iterator=_line.begin();
+				_index=0;
 				_transplantNote=bytes[1];
 				break;
 			case 8: stop(); break;
@@ -153,7 +153,7 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 	}
 	if(_resetOnMidi){
 		Periodic::setPhase(0);
-		_iterator=_line.begin();
+		_index=0;
 		_resetOnMidi=false;
 	}
 	process(bytes, size, _phase);
@@ -161,15 +161,15 @@ void Liner::midi(const uint8_t* bytes, unsigned size){
 
 std::string Liner::setPhase(uint64_t phase){
 	Periodic::setPhase(phase);
-	_iterator=_line.begin();
-	while(_iterator&&_iterator->sample<_phase) ++_iterator;
+	_index=0;
+	while(_index<_line.size()&&_line[_index].sample<_phase) ++_index;
 	return "";
 }
 
 void Liner::advance(uint64_t phase){
-	while(_iterator&&_iterator->sample<=phase){
+	while(_index<_line.size()&&_line[_index].sample<=phase){
 		for(auto output: _outputs){
-			std::vector<uint8_t>& m=_iterator->midi;
+			std::vector<uint8_t>& m=_line[_index].midi;
 			uint8_t command=m[0]>>4;
 			if(_transplantOnMidi&&(command==9||command==8)){
 				uint8_t t[]={m[0], uint8_t(m[1]-_minNote+_transplantNote), m[2]};
@@ -177,7 +177,7 @@ void Liner::advance(uint64_t phase){
 			}
 			else midiSend(output, m.data(), m.size());
 		}
-		++_iterator;
+		++_index;
 	}
 }
 
@@ -202,7 +202,8 @@ void Liner::put(const Midi& m){
 	auto i=_line.begin();
 	for(/*nothing*/; i!=_line.end(); ++i) if(i->sample>=m.sample) break;
 	_line.insert(i, m);
-	if(!_iterator) setPhase(_phase);
+	_index=0;
+	while(_line[_index].sample<_phase) ++_index;
 }
 
 dans::Midi Liner::getMidi() const {
@@ -239,6 +240,8 @@ std::string Liner::putMidi(dans::Midi midi, float samplesPerQuarter, unsigned tr
 	}
 	resize(latestSample);
 	setPhase(_phase);
+	_index=0;
+	while(_line[_index].sample<_phase) ++_index;
 	return "";
 }
 
