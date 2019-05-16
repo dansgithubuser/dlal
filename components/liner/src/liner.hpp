@@ -66,6 +66,4 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 
 }//namespace dlal
 
-std::ostream& operator<<(std::ostream& o, const dlal::Liner::Midi& midi);
-
 #endif

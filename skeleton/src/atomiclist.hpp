@@ -84,6 +84,7 @@ template <typename T> class AtomicList{
 				Iterator(): _head(nullptr) {}
 				Iterator(const Iterator& other): _head(nullptr) { *this=other; }
 				~Iterator(){ Node::dec(_head); }
+				std::string str() const { return ::strs("<AtomicList::Iterator ", this, ">"); };
 				void operator++(){
 					if(!_current) throw std::logic_error("AtomicList::Iterator out of bounds");
 					_current=_current->_next;
@@ -106,6 +107,12 @@ template <typename T> class AtomicList{
 		AtomicList(): _head(nullptr) {}
 		AtomicList(size_t size): _head(nullptr) { resize(size); }
 		~AtomicList(){ for(auto i: _pool) delete i; }
+
+		std::string str() const {
+			std::vector<T> v;
+			for(auto i=begin(); i!=end(); ++i) v.push_back(*i);
+			return ::str(v);
+		}
 
 		void operator=(const AtomicList& other)=delete;
 
@@ -212,22 +219,22 @@ template <typename T> class AtomicList{
 				for(int i=0; i<3; ++i) l1.push_back(i);
 				{
 					auto it=l1.begin();
-					for(int i=0; i<3; ++i, ++it) EXPECT(*it, i)
-					EXPECT(it, l1.end())
-					EXPECT(it, false)
+					for(int i=0; i<3; ++i, ++it) OBV_EXPECT(*it, i)
+					OBV_EXPECT(it, l1.end())
+					OBV_EXPECT(it, false)
 				}
 				l1.clear();
-				EXPECT(l1.begin(), false)
+				OBV_EXPECT(l1.begin(), false)
 				//ref counting sanity
 				std::cout<<"ref counting sanity\n";
 				{
 					AtomicList<Canary> l;
 					int alive=0;
 					l.push_back(Canary(&alive));
-					EXPECT(*l.begin()->alive, 1);
+					OBV_EXPECT(*l.begin()->alive, 1);
 					l.clear();
 					l.freshenFree();
-					EXPECT(alive, 0);
+					OBV_EXPECT(alive, 0);
 				}
 				//insertion in middle
 				std::cout<<"insertion in middle\n";
@@ -240,11 +247,11 @@ template <typename T> class AtomicList{
 				l1.insert(l1.begin(), 5);
 				{
 					auto it=l1.begin();
-					EXPECT(*it, 5); ++it;
-					EXPECT(*it, 0); ++it;
-					EXPECT(*it, 4); ++it;
-					EXPECT(*it, 1); ++it;
-					EXPECT(*it, 2); ++it;
+					OBV_EXPECT(*it, 5); ++it;
+					OBV_EXPECT(*it, 0); ++it;
+					OBV_EXPECT(*it, 4); ++it;
+					OBV_EXPECT(*it, 1); ++it;
+					OBV_EXPECT(*it, 2); ++it;
 				}
 				//lockless check
 				std::cout<<"lockless check\n";
@@ -261,10 +268,10 @@ template <typename T> class AtomicList{
 					{
 						auto it=l.begin();
 						l.clear();
-						for(int i=0; i<3; ++i, ++it) EXPECT(*it->alive, 1)
+						for(int i=0; i<3; ++i, ++it) OBV_EXPECT(*it->alive, 1)
 					}
 					l.freshenFree();
-					for(int i=0; i<3; ++i) EXPECT(alive[i], 0)
+					for(int i=0; i<3; ++i) OBV_EXPECT(alive[i], 0)
 				}
 				{//iterator assign causes free
 					std::cout<<"iterator assign causes free\n";
@@ -275,7 +282,7 @@ template <typename T> class AtomicList{
 					l.clear();
 					it=l.begin();
 					l.freshenFree();
-					for(int i=0; i<3; ++i) EXPECT(alive[i], 0)
+					for(int i=0; i<3; ++i) OBV_EXPECT(alive[i], 0)
 				}
 				{//list cleared after head changes
 					std::cout<<"list cleared after head changes\n";
@@ -286,14 +293,14 @@ template <typename T> class AtomicList{
 					l.insert(it, Canary(&alive[0]));
 					l.clear();
 					l.freshenFree();
-					EXPECT(alive[0], 0)
-					EXPECT(alive[1], 1)
-					EXPECT(alive[2], 1)
+					OBV_EXPECT(alive[0], 0)
+					OBV_EXPECT(alive[1], 1)
+					OBV_EXPECT(alive[2], 1)
 					it=l.begin();
 					l.freshenFree();
-					EXPECT(alive[0], 0)
-					EXPECT(alive[1], 0)
-					EXPECT(alive[2], 0)
+					OBV_EXPECT(alive[0], 0)
+					OBV_EXPECT(alive[1], 0)
+					OBV_EXPECT(alive[2], 0)
 				}
 			}
 			//stress
@@ -317,7 +324,7 @@ template <typename T> class AtomicList{
 					tf.join();
 					qg=true;
 					tg.join();
-					EXPECT(ok, true)
+					OBV_EXPECT(ok, true)
 				};
 				srand((unsigned)time(NULL));
 				//clear or insert while iterating
@@ -379,11 +386,5 @@ template <typename T> class AtomicList{
 };
 
 }//namespace dlal
-
-template<typename T> std::ostream& operator<<(std::ostream& o, const dlal::AtomicList<T>& l){
-	std::vector<T> v;
-	for(auto i=l.begin(); i!=l.end(); ++i) v.push_back(*i);
-	return o<<v;
-}
 
 #endif

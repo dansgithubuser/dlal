@@ -99,11 +99,11 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 	});
 	registerCommand("serialize_buffer", "", [this](std::stringstream&){
 		std::stringstream ss;
-		ss<<_sounds;
+		ss<<::str(_sounds);
 		return ss.str();
 	});
 	registerCommand("deserialize_buffer", "<serialized>", [this](std::stringstream& ss){
-		ss>>_sounds;
+		::dstr(ss, _sounds);
 		return "";
 	});
 }

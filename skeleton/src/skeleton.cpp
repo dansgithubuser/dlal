@@ -12,11 +12,7 @@
 #include <stdexcept>
 #include <thread>
 
-std::ostream& operator<<(std::ostream& ostream, const dlal::Component* component){
-	return ostream<<component->_name;
-}
-
-std::istream& operator>>(std::istream& istream, dlal::Component*& component){
+static std::istream& operator>>(std::istream& istream, dlal::Component*& component){
 	void* v;
 	istream>>v;
 	component=(dlal::Component*)v;
@@ -26,6 +22,9 @@ std::istream& operator>>(std::istream& istream, dlal::Component*& component){
 extern "C" {
 
 DLAL const char* dlalRequest(const char* request, bool immediate){
+	#if 0
+		printf("%d %s\n", immediate, request);
+	#endif
 	static std::set<dlal::System*> systems;
 	static dlal::System* active=nullptr;
 	static std::string s;
@@ -38,10 +37,10 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 		else if(s=="system/build"){
 			auto system=new dlal::System;
 			systems.insert(system);
-			s=obvstr(system);
+			s=str((void*)system);
 		}
 		else if(s=="system/switch"){
-			s=obvstr(active);
+			s=str((void*)active);
 			void* system;
 			ss>>system;
 			active=(dlal::System*)system;
@@ -194,7 +193,7 @@ std::string System::rename(Component& component, std::string newName){
 	component._name=newName;
 	_nameToComponent[newName]=&component;
 	_nameToComponent.erase(oldName);
-	_reports.write(obvstr("rename", oldName, newName));
+	_reports.write(str("rename", oldName, newName));
 	return "";
 }
 
@@ -213,7 +212,7 @@ std::string System::handleRequest(std::string request){
 		}
 		else{
 			std::stringstream ss;
-			ss<<_variables;
+			ss<<str(_variables);
 			return ss.str();
 		}
 	}
@@ -231,18 +230,18 @@ std::string System::handleRequest(std::string request){
 	}
 	else if(command=="component/get"){
 		if(ss>>s){
-			if(!_nameToComponent.count(s)) return obvstr("error: no such component", s);
-			return obvstr((void*)_nameToComponent.at(s));
+			if(!_nameToComponent.count(s)) return str("error: no such component", s);
+			return str((void*)_nameToComponent.at(s));
 		}
 		else{
 			std::stringstream ss;
-			ss<<_components;
+			ss<<str(_components);
 			return ss.str();
 		}
 	}
 	else if(command=="component/get/connections"){
 		std::stringstream ss;
-		ss<<_connections;
+		ss<<str(_connections);
 		return ss.str();
 	}
 	else if(command=="component/name"){
@@ -345,6 +344,10 @@ Component::Component(): _system(nullptr) {
 			i.second.command(ss);
 		return "";
 	});
+}
+
+std::string Component::str() const {
+	return _name;
 }
 
 std::string Component::command(const std::string& s){

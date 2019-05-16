@@ -26,7 +26,7 @@ Multiplier::Multiplier(): _multiplier(1.0f), _offset(0.0f), _gate(-1.0f) {
 		return ss.str();
 	});
 	registerCommand("deserialize_liner", "<serialized>", [this](std::stringstream& ss){
-		ss>>_multiplier>>" ">>_offset>>" ">>_gate;
+		dstr(ss, _multiplier, _offset, _gate);
 		return "";
 	});
 }

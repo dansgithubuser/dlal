@@ -6,35 +6,33 @@
 
 DLAL_BUILD_COMPONENT_DEFINITION(MarkovLiner)
 
-static std::ostream& operator<<(std::ostream& s, const dlal::MarkovLiner::State& x) {
-	return s<<x.on<<" "<<x.off<<" "<<x.duration;
-}
-
-static std::istream& operator>>(std::istream& s, dlal::MarkovLiner::State& x) {
-	return s>>x.on>>" ">>x.off>>" ">>x.duration;
-}
-
-static std::ostream& operator<<(std::ostream& s, const dlal::MarkovLiner::Transition& x) {
-	return s<<x.weight<<" "<<x.state;
-}
-
-static std::istream& operator>>(std::istream& s, dlal::MarkovLiner::Transition& x) {
-	return s>>x.weight>>" ">>x.state;
-}
-
 namespace dlal{
+
+std::string MarkovLiner::State::str() const {
+	return ::str(on, off, duration);
+}
+
+void MarkovLiner::State::dstr(std::stringstream& ss){
+	::dstr(ss, on, off, duration);
+}
+
+std::string MarkovLiner::Transition::str() const {
+	return ::str(weight, state);
+}
+
+void MarkovLiner::Transition::dstr(std::stringstream& ss){
+	::dstr(ss, weight, state);
+}
 
 MarkovLiner::MarkovLiner(){
 	_checkMidi=true;
 	_rng.seed(std::time(NULL)+(size_t)this);
 	_rng();
 	registerCommand("serialize_markov_liner", "", [this](std::stringstream&){
-		std::stringstream ss;
-		ss<<_states<<" "<<_transitions;
-		return ss.str();
+		return ::str(_states, _transitions);
 	});
 	registerCommand("deserialize_markov_liner", "<serialized>", [this](std::stringstream& ss){
-		ss>>_states>>" ">>_transitions;
+		::dstr(ss, _states, _transitions);
 		return "";
 	});
 	registerCommand("state_create", "<on midi bytes> ; <off midi bytes> ; duration", [this](std::stringstream& ss){

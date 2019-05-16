@@ -10,12 +10,17 @@ namespace dlal{
 class MarkovLiner: public MultiOut, public Periodic, public SampleRateGetter {
 	public:
 		using Midi=std::vector<uint8_t>;
+
 		struct State {
+			std::string str() const;
+			void dstr(std::stringstream& ss);
 			Midi on, off;
 			uint64_t duration;
 		};
 
 		struct Transition {
+			std::string str() const;
+			void dstr(std::stringstream& ss);
 			float weight;
 			size_t state;
 		};

@@ -1,5 +1,7 @@
 #include "liner.hpp"
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
 namespace dlal{
@@ -71,14 +73,20 @@ Liner::Liner(): _line(256) {
 		std::vector<uint8_t> bytes;
 		midi.write(bytes);
 		std::stringstream ss;
-		ss<<_sampleRate<<" "<<bytes<<" "<<_samplesPerQuarter<<" "<<_transplantOnMidi;
-		if(_transplantOnMidi) ss<<" "<<_allNotes<<" "<<_minNote;
+		ss<<::str(_sampleRate, bytes, _samplesPerQuarter, _transplantOnMidi);
+		if(_transplantOnMidi){
+			ss<<" ";
+			ss<<::str(_allNotes, _minNote);
+		}
 		return ss.str();
 	});
 	registerCommand("deserialize_liner", "<serialized>", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
-		ss>>_sampleRate>>" ">>bytes>>" ">>_samplesPerQuarter>>" ">>_transplantOnMidi;
-		if(_transplantOnMidi) ss>>" ">>_allNotes>>" ">>_minNote;
+		::dstr(ss, _sampleRate, bytes, _samplesPerQuarter, _transplantOnMidi);
+		if(_transplantOnMidi){
+			::dstr(ss, " ");
+			::dstr(ss, _allNotes, _minNote);
+		}
 		dans::Midi midi;
 		midi.read(bytes);
 		return putMidi(midi, _samplesPerQuarter);
@@ -240,7 +248,3 @@ void Liner::resetGene0(){
 }
 
 }//namespace dlal
-
-std::ostream& operator<<(std::ostream& o, const dlal::Liner::Midi& midi){
-	return o<<"{"<<midi.sample<<", "<<midi.midi<<"}";
-}

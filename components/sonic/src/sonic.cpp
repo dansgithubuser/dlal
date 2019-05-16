@@ -107,7 +107,9 @@ Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 		ss>>s;
 		std::ifstream file(s.c_str());
 		if(!file.good()) return std::string("error: couldn't open file");
-		return command(obvstr("deserialize_sonic", file.rdbuf()));
+		std::stringstream tt;
+		tt<<"deserialize_sonic "<<file.rdbuf();
+		return command(tt.str());
 	});
 	registerCommand("serialize_sonic", "", [this](std::stringstream&){
 		return command("save i");

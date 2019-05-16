@@ -1,5 +1,7 @@
 #include "reticulatedliner.hpp"
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(ReticulatedLiner)
 
 namespace dlal{
@@ -44,12 +46,12 @@ ReticulatedLiner::ReticulatedLiner(): _line(256) {
 		std::vector<uint8_t> bytes;
 		midi.write(bytes);
 		std::stringstream ss;
-		ss<<bytes;
+		ss<<::str(bytes);
 		return ss.str();
 	});
 	registerCommand("deserialize_reticulated_liner", "<serialized>", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
-		ss>>bytes;
+		::dstr(ss, bytes);
 		dans::Midi midi;
 		midi.read(bytes);
 		return putMidi(midi);
