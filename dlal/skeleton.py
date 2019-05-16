@@ -329,20 +329,15 @@ class System:
 class Component:
     _libs = {}
 
-    def __init__(self, component_type=None, **kwargs):
-        self.component = None
-        if component_type and component_type not in Component._libs:
+    def __init__(self, component_type, name=None):
+        if component_type not in Component._libs:
             lib = obvious.load_lib(camel_case(component_type))
             obvious.set_ffi_types(lib.dlalBuildComponent, str, str)
             obvious.python_3_string_prep(lib)
             Component._libs[component_type] = lib
-        if 'component' in kwargs:
-            self.component = kwargs['component']
-        else:
-            self.component = Component._libs[component_type].dlalBuildComponent(
-                kwargs.get('name', _namer.name(component_type))
-            )
-        self.weak = kwargs.get('weak', False)
+        self.component = Component._libs[component_type].dlalBuildComponent(
+            name or _namer.name(component_type)
+        )
         commands = [i.split()[0] for i in self.command('help', immediate=True).split('\n')[1:] if len(i)]
         weak_self = weakref.ref(self)
         def captain(command):
@@ -355,8 +350,7 @@ class Component:
                 setattr(self, command, captain(command))
 
     def __del__(self):
-        if not self.weak:
-            _skeleton.component_demolish(self)
+        _skeleton.component_demolish(self)
 
     def command(self, *command, immediate=False, detach=False):
         return _skeleton.component_command(self, immediate, *command, detach=detach)
