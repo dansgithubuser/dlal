@@ -342,7 +342,7 @@ Component::Component(): _system(nullptr) {
 }
 
 std::string Component::str() const {
-	return _name;
+	return ::str(_name);
 }
 
 std::string Component::command(const std::string& s){

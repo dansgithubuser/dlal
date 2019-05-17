@@ -193,16 +193,11 @@ class System:
         # variables
         state['variables'] = json.loads(_skeleton.variable_get_all(immediate=True))
         # components
-        components = json.loads(_skeleton.component_get_all(immediate=True))
-        state['component_order'] = components
-        components = {j: Component(
-            component=_skeleton.component_get(immediate=True, name=j),
-            weak=True
-        ) for i in components for j in i}
-        state['component_types'] = {k: v.type(immediate=True) for k, v in components.items()}
+        state['component_order'] = json.loads(_skeleton.component_get_all(immediate=True))
+        state['component_types'] = {k: v.type(immediate=True) for k, v in self.components.items()}
         state['components'] = {
             k: re.sub('\n|\t', ' ', v.serialize(immediate=True))
-            for k, v in components.items()
+            for k, v in self.components.items()
         }
         # connections
         state['connections'] = json.loads(_skeleton.component_get_connections(immediate=True))
