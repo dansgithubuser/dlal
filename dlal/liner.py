@@ -10,7 +10,7 @@ class Liner(Component):
             self.command('samples_per_quarter', samples_per_quarter, immediate=True)
 
     def line(self, text, immediate=False):
-        stride = self.samples_per_quarter(immediate=True)
+        stride = int(self.samples_per_quarter(immediate=True))
         octave = 5
         sample = 0
         text = text.split()
