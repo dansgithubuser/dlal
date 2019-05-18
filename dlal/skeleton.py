@@ -358,7 +358,7 @@ class Component:
         def captain(command):
             return lambda *args, **kwargs: weak_self().command(
                 *([command]+list(args)),
-                immediate=kwargs.get('immediate', False)
+                **kwargs
             )
         for command in commands:
             if command not in dir(self):
@@ -387,6 +387,10 @@ class Component:
 
     def periodic_match(self, other, immediate=False):
         return self.command('periodic_match', other.periodic(immediate=True), immediate=immediate)
+
+    def midi_stop(self):
+        for i in range(128):
+            self.midi(0x80, i, 0, detach=True)
 
 component_types = {}
 def inform_component_type(name, value): component_types[snake_case(name)] = value
