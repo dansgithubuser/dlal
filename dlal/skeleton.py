@@ -173,6 +173,16 @@ class System:
     def __repr__(self):
         return self.diagram()
 
+    def __getattr__(self, attr):
+        candidates = []
+        for k in self.__dict__:
+            if re.match('.*'.join(attr), k):
+                candidates.append(k)
+        if len(candidates) == 1: return self.__dict__[candidates[0]]
+        raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
+            attr, '\n'.join(candidates),
+        ))
+
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
         immediate = kwargs.get('immediate', False)
@@ -347,6 +357,8 @@ class Component:
         for command in commands:
             if command not in dir(self):
                 setattr(self, command, captain(command))
+        self.c = self.connect
+        self.d = self.disconnect
 
     def __del__(self):
         _skeleton.component_demolish(self)
