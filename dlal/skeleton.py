@@ -244,6 +244,8 @@ class System:
             file.write(serialized)
 
     def load(self, file_name='system.state.txt', start=False):
+        if hasattr(self, 'audio'):
+            return 'warning: already loaded, aborting load'
         potential_expansion = os.path.join('..', '..', 'states', file_name+'.txt')
         if os.path.exists(potential_expansion):
             file_name = potential_expansion
