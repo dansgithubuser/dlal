@@ -29,9 +29,10 @@ def camel_case(snake_case):
     return ''.join([i.capitalize() for i in snake_case.split('_')])
 
 def report(result):
-    if result.startswith('error'):
+    trimmed=re.sub(r'\d+: ', '', result)
+    if trimmed.startswith('error:'):
         raise RuntimeError(result)
-    elif result.startswith('warning'):
+    elif trimmed.startswith('warning:'):
         print(result)
     return result
 
@@ -82,7 +83,6 @@ class Skeleton:
     def pump(self, request_number = None):
         for i in range(512):
             r = self.system_report(True)
-            if r.startswith('value: '): r = r[7:]
             if not r:
                 break
             if request_number is not None and r.startswith('{}:'.format(request_number)):
