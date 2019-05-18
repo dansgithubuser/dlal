@@ -156,6 +156,19 @@ class ReprMethod:
         x.update(kwargs)
         return method(*args, **x)
 
+def translate_lazy(lazy, possibilities):
+    candidates = []
+    for i in possibilities:
+        if re.match('.*'.join(lazy), i):
+            candidates.append(i)
+    if len(candidates) > 1:
+        same_end = [i for i in candidates if i.endswith(lazy[-1])]
+        if same_end: candidates = same_end
+    if len(candidates) == 1: return possibilities[candidates[0]]
+    raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
+        lazy, '\n'.join(candidates),
+    ))
+
 class System:
     def __init__(self):
         self.system = _skeleton.system_build()
@@ -174,14 +187,7 @@ class System:
         return self.diagram()
 
     def __getattr__(self, attr):
-        candidates = []
-        for k in self.__dict__:
-            if re.match('.*'.join(attr), k):
-                candidates.append(k)
-        if len(candidates) == 1: return self.__dict__[candidates[0]]
-        raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
-            attr, '\n'.join(candidates),
-        ))
+        return translate_lazy(attr, self.__dict__)
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
@@ -362,6 +368,9 @@ class Component:
 
     def __del__(self):
         _skeleton.component_demolish(self)
+
+    def __getattr__(self, attr):
+        return translate_lazy(attr, self.__dict__)
 
     def command(self, *command, immediate=False, detach=False):
         return _skeleton.component_command(self, immediate, *command, detach=detach)
