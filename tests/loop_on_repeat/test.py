@@ -13,7 +13,7 @@ raw.set(44100, log2_samples_per_evaluation, immediate=True)
 liner.loop_on_repeat(immediate=True)
 liner.set_fudge(0, immediate=True)
 sonic.a(1, immediate=True)
-sonic.d(1, immediate=True)
+sonic.command('d', 1, immediate=True)
 sonic.s(1, immediate=True)
 sonic.r(1, immediate=True)
 # add
