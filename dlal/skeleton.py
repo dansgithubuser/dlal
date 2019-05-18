@@ -63,6 +63,11 @@ class Skeleton:
         obvious.set_ffi_types(self.lib.dlalRequest, str, str, bool)
         obvious.python_3_string_prep(self.lib)
 
+    def _check_component(self, *args):
+        for arg in args:
+            if not isinstance(arg, Component):
+                raise Exception('{} is not a component'.format(arg))
+
     def _call(self, immediate, *args, sep=' ', detach=False):
         def convert(x):
             if isinstance(x, Component):
@@ -125,17 +130,15 @@ class Skeleton:
         return self._call(immediate, 'component/get/connections')
 
     def component_add(self, immediate, c, slot):
-        if not isinstance(c, Component): raise Exception('not a component')
+        self._check_component(c)
         return self._call(immediate, 'component/add', c, slot)
 
     def component_connect(self, immediate, a, b):
-        if not isinstance(a, Component): raise Exception('input is not a component')
-        if not isinstance(b, Component): raise Exception('output is not a component')
+        self._check_component(a, b)
         return self._call(immediate, 'component/connect', a, b)
 
     def component_disconnect(self, immediate, a, b):
-        if not isinstance(a, Component): raise Exception('input is not a component')
-        if not isinstance(b, Component): raise Exception('output is not a component')
+        self._check_component(a, b)
         return self._call(immediate, 'component/disconnect', a, b)
 
     def component_command(self, c, immediate, *command, detach=False):
@@ -349,7 +352,8 @@ class System:
 class Component:
     _libs = {}
 
-    def __init__(self, component_type, name=None):
+    def __init__(self, component_type=None, name=None, empty=False):
+        if empty: return
         if component_type not in Component._libs:
             lib = obvious.load_lib(camel_case(component_type))
             obvious.set_ffi_types(lib.dlalBuildComponent, str, str)
@@ -372,7 +376,8 @@ class Component:
         self.d = self.disconnect
 
     def __del__(self):
-        _skeleton.component_demolish(self)
+        if self.component is not None:
+            _skeleton.component_demolish(self)
 
     def __getattr__(self, attr):
         return translate_lazy(attr, self.__dict__)
@@ -383,8 +388,19 @@ class Component:
     def connect(self, output, immediate=False):
         return _skeleton.component_connect(immediate, self, output)
 
-    def disconnect(self, output, immediate=False):
-        return _skeleton.component_disconnect(immediate, self, output)
+    def disconnect(self, output=None, immediate=False):
+        if output is None:
+            connections = json.loads(_skeleton.component_get_connections(immediate))
+            name = self.name(immediate=immediate)
+            assert name
+            for i, o in connections:
+                if i != name: continue
+                output = Component(empty=True)
+                output.component = _skeleton.component_get(immediate, o)
+                _skeleton.component_disconnect(immediate, self, output)
+                output.component = None
+        else:
+            return _skeleton.component_disconnect(immediate, self, output)
 
     def phase(self): return int(self.periodic_get().split()[1])
 
