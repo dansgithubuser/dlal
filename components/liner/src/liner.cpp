@@ -33,16 +33,14 @@ Liner::Liner(){
 		getMidi().write(filePath);
 		return "";
 	});
-	registerCommand("load", "<file path> [<samples per quarter>] [track]", [this](std::stringstream& ss){
+	registerCommand("load", "<file path> [track]", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
-		float samplesPerQuarter=22050.0f;
-		ss>>samplesPerQuarter;
 		unsigned track=1;
 		ss>>track;
 		dans::Midi midi;
 		midi.read(filePath);
-		return putMidi(midi, samplesPerQuarter, track);
+		return putMidi(midi, track);
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
@@ -95,7 +93,7 @@ Liner::Liner(){
 		}
 		dans::Midi midi;
 		midi.read(bytes);
-		return putMidi(midi, _samplesPerQuarter);
+		return putMidi(midi);
 	});
 	registerCommand("loop_on_repeat", "[enable, default 1]", [this](std::stringstream& ss){
 		int enable=1;
@@ -106,6 +104,10 @@ Liner::Liner(){
 	registerCommand("set_fudge", "<loop-on-repeat fudge in seconds>", [this](std::stringstream& ss){
 		ss>>_fudge;
 		return "";
+	});
+	registerCommand("samples_per_quarter", "[samples]", [this](std::stringstream& ss){
+		ss>>_samplesPerQuarter;
+		return ::str(_samplesPerQuarter);
 	});
 }
 
@@ -238,20 +240,15 @@ dans::Midi Liner::getMidi() const {
 	return result;
 }
 
-std::string Liner::putMidi(dans::Midi midi, float samplesPerQuarter, unsigned track){
+std::string Liner::putMidi(dans::Midi midi, unsigned track){
 	int ticks=0;
 	if(midi.tracks.size()<=track) return "error: no track "+std::to_string(track);
-	for(auto i: midi.tracks[0]){
-		if(i.type==dans::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
-		if(i.ticks) break;
-	}
-	_samplesPerQuarter=samplesPerQuarter;
 	auto pairs=getPairs(midi.tracks[track]);
 	_line.clear();
 	float latestSample=0.0f;
 	for(auto i: pairs){
 		ticks+=i.delta;
-		auto sample=ticks*samplesPerQuarter/midi.ticksPerQuarter;
+		auto sample=ticks*_samplesPerQuarter/midi.ticksPerQuarter;
 		auto sampleI=uint64_t(sample);
 		_line.push_back(Midi(sampleI, sample-sampleI, i.event));
 		if(sample>latestSample) latestSample=sample;

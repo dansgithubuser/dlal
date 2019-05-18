@@ -2,20 +2,15 @@ from .skeleton import *
 from .qweboard import qwe_to_note
 
 class Liner(Component):
-    def __init__(self, period_in_samples=0, samples_per_quarter=22050, **kwargs):
+    def __init__(self, period_in_samples=0, samples_per_quarter=0, **kwargs):
         Component.__init__(self, 'liner', **kwargs)
         if period_in_samples:
             self.periodic_resize(period_in_samples)
-        self.samples_per_quarter = samples_per_quarter
-
-    def py_serialize(self):
-        return {'samples_per_quarter': self.samples_per_quarter}
-
-    def py_deserialize(self, serialized):
-        self.samples_per_quarter = serialized['samples_per_quarter']
+        if samples_per_quarter:
+            self.command('samples_per_quarter', samples_per_quarter, immediate=True)
 
     def line(self, text, immediate=False):
-        stride = self.samples_per_quarter
+        stride = self.samples_per_quarter(immediate=True)
         octave = 5
         sample = 0
         text = text.split()
@@ -48,4 +43,4 @@ class Liner(Component):
         self.save(file_name)
         editor = os.path.join(root, 'deps', 'dansmidieditor', 'src', 'dansmidieditor.py')
         invoke('{} --command "edit {}"'.format(editor, file_name))
-        self.load(file_name, self.samples_per_quarter)
+        self.load(file_name)
