@@ -67,6 +67,8 @@ class Skeleton:
         def convert(x):
             if isinstance(x, Component):
                 return x.component
+            elif type(x)==bool:
+                return '1' if x else '0'
             return str(x)
         request = sep.join([convert(i) for i in args])
         if immediate:

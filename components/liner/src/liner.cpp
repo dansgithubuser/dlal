@@ -33,14 +33,16 @@ Liner::Liner(){
 		getMidi().write(filePath);
 		return "";
 	});
-	registerCommand("load", "<file path> [track]", [this](std::stringstream& ss){
+	registerCommand("load", "<file path> [resize] [track]", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
+		int doResize=1;
+		ss>>doResize;
 		unsigned track=1;
 		ss>>track;
 		dans::Midi midi;
 		midi.read(filePath);
-		return putMidi(midi, track);
+		return putMidi(midi, doResize, track);
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
@@ -191,7 +193,7 @@ std::string Liner::setPhase(uint64_t phase){
 }
 
 void Liner::advance(uint64_t phase){
-	while(_index<_line.size()&&_line[_index].sample<=phase){
+	while(_index<_line.size()&&(_line[_index].sample<=phase||phase==_period)){
 		for(auto output: _outputs){
 			std::vector<uint8_t>& m=_line[_index].midi;
 			uint8_t command=m[0]>>4;
@@ -240,7 +242,7 @@ dans::Midi Liner::getMidi() const {
 	return result;
 }
 
-std::string Liner::putMidi(dans::Midi midi, unsigned track){
+std::string Liner::putMidi(dans::Midi midi, bool doResize, unsigned track){
 	int ticks=0;
 	if(midi.tracks.size()<=track) return "error: no track "+std::to_string(track);
 	auto pairs=getPairs(midi.tracks[track]);
@@ -253,7 +255,7 @@ std::string Liner::putMidi(dans::Midi midi, unsigned track){
 		_line.push_back(Midi(sampleI, sample-sampleI, i.event));
 		if(sample>latestSample) latestSample=sample;
 	}
-	resize(latestSample);
+	if(doResize) resize(latestSample);
 	setPhase(_phase);
 	_index=0;
 	while(_line[_index].sample<_phase) ++_index;

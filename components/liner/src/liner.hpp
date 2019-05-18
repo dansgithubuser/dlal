@@ -35,7 +35,7 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		void process(const uint8_t* midi, unsigned size, uint64_t sample);
 		void put(Midi midi);
 		dans::Midi getMidi() const;
-		std::string putMidi(dans::Midi, unsigned track=1);
+		std::string putMidi(dans::Midi, bool doResize=true, unsigned track=1);
 		std::set<uint8_t> grabGene(std::vector<Midi>::iterator& i, std::vector<Midi>::iterator end) const;
 		int64_t noteEnd(std::vector<Midi>::iterator i, std::vector<Midi>::iterator end) const;
 		std::vector<Midi> _line;

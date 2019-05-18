@@ -38,9 +38,9 @@ class Liner(Component):
                     self.midi_event(nextSample, 0x80, note, 0x40, immediate=immediate)
                 sample = nextSample
 
-    def edit(self):
+    def edit(self, resize=True):
         file_name = '.liner.tmp.mid'
         self.save(file_name)
         editor = os.path.join(root, 'deps', 'dansmidieditor', 'src', 'dansmidieditor.py')
         invoke('{} --command "edit {}"'.format(editor, file_name))
-        self.load(file_name)
+        self.load(file_name, resize)
