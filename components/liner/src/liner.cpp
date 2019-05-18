@@ -1,16 +1,21 @@
 #include "liner.hpp"
 
+#include <cmath>
+
 #include <obvious.hpp>
 
 DLAL_BUILD_COMPONENT_DEFINITION(Liner)
 
 namespace dlal{
 
+std::string Liner::Midi::str() const {
+	return ::str(sample, midi);
+}
+
 Liner::Liner(){
 	_period=44100*8;
 	_index=0;
 	_checkMidi=true;
-	resetGene0();
 	registerCommand("midi_event", "<time in samples> byte[1]..byte[n]",
 		[this](std::stringstream& ss){
 			unsigned sample;
@@ -28,16 +33,16 @@ Liner::Liner(){
 		getMidi().write(filePath);
 		return "";
 	});
-	registerCommand("load", "<file path> [<samples per quarter>] [track]", [this](std::stringstream& ss){
+	registerCommand("load", "<file path> [resize] [track]", [this](std::stringstream& ss){
 		std::string filePath;
 		ss>>filePath;
-		float samplesPerQuarter=22050.0f;
-		ss>>samplesPerQuarter;
+		int doResize=1;
+		ss>>doResize;
 		unsigned track=1;
 		ss>>track;
 		dans::Midi midi;
 		midi.read(filePath);
-		return putMidi(midi, samplesPerQuarter, track);
+		return putMidi(midi, doResize, track);
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
 		_line.clear();
@@ -90,7 +95,7 @@ Liner::Liner(){
 		}
 		dans::Midi midi;
 		midi.read(bytes);
-		return putMidi(midi, _samplesPerQuarter);
+		return putMidi(midi);
 	});
 	registerCommand("loop_on_repeat", "[enable, default 1]", [this](std::stringstream& ss){
 		int enable=1;
@@ -102,6 +107,10 @@ Liner::Liner(){
 		ss>>_fudge;
 		return "";
 	});
+	registerCommand("samples_per_quarter", "[samples]", [this](std::stringstream& ss){
+		ss>>_samplesPerQuarter;
+		return ::str(_samplesPerQuarter);
+	});
 }
 
 void Liner::evaluate(){
@@ -110,18 +119,51 @@ void Liner::evaluate(){
 	if(phase()){
 		advance(_period);
 		if(_loopOnRepeat){
-			if(_genes[0][0].notes.size()&&_genes[0]==_genes[1]){
+			bool equal=false;
+			std::vector<Midi>::iterator i0=_genes[0].begin();
+			std::vector<Midi>::iterator i1=_genes[1].begin();
+			while(true){
+				auto g1=grabGene(i0, _genes[0].end());
+				auto g2=grabGene(i1, _genes[1].end());
+				if(i0==_genes[0].end()&&i1==_genes[1].end()) break;
+				equal=g1==g2;
+				if(!equal) break;
+			}
+			if(equal){
 				//translate _genes[1] into _line
-				for(const auto& gene: _genes[1])
-					for(const auto& midi: gene.midi)
-						put(midi);
+				std::set<uint8_t> notes;
+				for(const auto& midi: _genes[0]){
+					put(midi);
+					const auto& m=midi.midi;
+					if(m.size()==3){
+						if(m[0]>>4==9){
+							if(m[2])
+								notes.insert(m[1]);
+							else
+								notes.erase(m[1]);
+						}
+						else if(m[0]>>4==8)
+							notes.erase(m[1]);
+					}
+				}
+				for(const auto& i: notes){
+					put(Midi(_period, std::vector<uint8_t>{0x80, i, 0}));
+				}
 			}
 			_genes[1]=_genes[0];
-			resetGene0();
-			if(_genes[1].back().lastNoteOnComparedTo(_period, _sampleRate*_fudge)==Gene::GT){
-				_genes[0][0]=_genes[1].back();
-				_genes[1].pop_back();
-				for(auto& i: _genes[0][0].midi) i.sample=0;
+			_genes[0].clear();
+			for(auto i=_genes[1].rbegin(); i!=_genes[1].rend(); ++i){
+				if(i->sample+_fudge*_sampleRate<_period){//find something that should stay in gene1
+					//move note ons strictly ahead to gene0
+					for(auto j=i.base(); j!=_genes[1].end(); ++j){
+						if(j->midi[0]>>4==9&&j->midi[2]){
+							_genes[0].push_back(*j);
+							_genes[0].back().sample-=_period;
+							j->midi=std::vector<uint8_t>{0xff, 1, 0};//empty text event
+						}
+					}
+					break;
+				}
 			}
 		}
 		_index=0;
@@ -167,7 +209,7 @@ std::string Liner::setPhase(uint64_t phase){
 }
 
 void Liner::advance(uint64_t phase){
-	while(_index<_line.size()&&_line[_index].sample<=phase){
+	while(_index<_line.size()&&(_line[_index].sample<=phase||phase==_period)){
 		for(auto output: _outputs){
 			std::vector<uint8_t>& m=_line[_index].midi;
 			uint8_t command=m[0]>>4;
@@ -183,22 +225,18 @@ void Liner::advance(uint64_t phase){
 
 void Liner::process(const uint8_t* midi, unsigned size, uint64_t sample){
 	if(_loopOnRepeat){ if(size){
-		//record notes
-		auto& g=_genes[0];
-		if(midi[0]>>4==9&&midi[2]){
-			if(g.back().lastNoteOnComparedTo(sample, _sampleRate*_fudge)==Gene::LT)//new gene
-				if(g.size()!=1||g[0].notes.size()) g.push_back(Gene());//no placeholder gene
-			g.back().notes.insert(midi[1]);//put the note in the gene
-		}
 		//record midi
-		g.back().midi.push_back(Midi(
+		_genes[0].push_back(Midi(
 			sample, std::vector<uint8_t>(midi, midi+size)
 		));
 	}}
 	else put(Midi(sample, std::vector<uint8_t>(midi, midi+size)));
 }
 
-void Liner::put(const Midi& m){
+void Liner::put(Midi m){
+	if(!m.midi.size()) return;
+	if(m.midi[0]==0xff) return;
+	if(m.sample<0) m.sample=0;
 	auto i=_line.begin();
 	for(/*nothing*/; i!=_line.end(); ++i) if(i->sample>=m.sample) break;
 	_line.insert(i, m);
@@ -220,34 +258,65 @@ dans::Midi Liner::getMidi() const {
 	return result;
 }
 
-std::string Liner::putMidi(dans::Midi midi, float samplesPerQuarter, unsigned track){
+std::string Liner::putMidi(dans::Midi midi, bool doResize, unsigned track){
 	int ticks=0;
 	if(midi.tracks.size()<=track) return "error: no track "+std::to_string(track);
-	for(auto i: midi.tracks[0]){
-		if(i.type==dans::Midi::Event::TEMPO) samplesPerQuarter=1.0f*_sampleRate*i.usPerQuarter/1e6;
-		if(i.ticks) break;
-	}
-	_samplesPerQuarter=samplesPerQuarter;
 	auto pairs=getPairs(midi.tracks[track]);
 	_line.clear();
 	float latestSample=0.0f;
 	for(auto i: pairs){
 		ticks+=i.delta;
-		auto sample=ticks*samplesPerQuarter/midi.ticksPerQuarter;
+		auto sample=ticks*_samplesPerQuarter/midi.ticksPerQuarter;
 		auto sampleI=uint64_t(sample);
 		_line.push_back(Midi(sampleI, sample-sampleI, i.event));
 		if(sample>latestSample) latestSample=sample;
 	}
-	resize(latestSample);
+	if(doResize) resize(latestSample);
 	setPhase(_phase);
 	_index=0;
 	while(_line[_index].sample<_phase) ++_index;
 	return "";
 }
 
-void Liner::resetGene0(){
-	_genes[0].clear();
-	_genes[0].push_back(Gene());//placeholder gene
+std::set<uint8_t> Liner::grabGene(std::vector<Liner::Midi>::iterator& i, std::vector<Liner::Midi>::iterator end) const {
+	std::set<uint8_t> result;
+	int64_t ni, nf;
+	//find the next note
+	while(i!=end){
+		if(i->midi[0]>>4==9&&i->midi[2]){
+			result.insert(i->midi[1]);
+			ni=i->sample;
+			nf=noteEnd(i, end);
+			++i;
+			break;
+		}
+		++i;
+	}
+	//find notes that overlap the original note
+	auto j=i;
+	while(j!=end){
+		if(j->midi[0]>>4==9&&j->midi[2]){
+			int64_t
+				mi=j->sample,
+				mf=noteEnd(j, end);
+			if(4*std::abs((nf+ni)-(mf+mi))>nf-ni+mf-mi)//distance between midpoints vs combined length
+				break;//not overlapping
+			result.insert(j->midi[1]);
+			i=j+1;
+		}
+		++j;
+	}
+	return result;
+};
+
+int64_t Liner::noteEnd(std::vector<Midi>::iterator i, std::vector<Midi>::iterator end) const {
+	uint8_t note=i->midi[1];
+	while(++i!=end) if(
+		(i->midi[0]>>4==8||i->midi[0]>>4==9&&!i->midi[2])
+		&&
+		i->midi[1]==note
+	) return i->sample;
+	return _period;
 }
 
 }//namespace dlal

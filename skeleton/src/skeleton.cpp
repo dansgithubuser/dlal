@@ -198,12 +198,12 @@ std::string System::handleRequest(std::string request){
 	ss>>command;
 	std::string s;
 	if(command=="system/report"){
-		if(_reports.read(s, true)) return "value: "+s;
+		if(_reports.read(s, true)) return s;
 	}
 	else if(command=="variable/get"){
 		if(ss>>s){
 			if(!_variables.count(s)) return "error: no such variable";
-			return "value: "+_variables.at(s);
+			return _variables.at(s);
 		}
 		else{
 			std::stringstream ss;

@@ -29,9 +29,10 @@ def camel_case(snake_case):
     return ''.join([i.capitalize() for i in snake_case.split('_')])
 
 def report(result):
-    if result.startswith('error'):
+    trimmed=re.sub(r'\d+: ', '', result)
+    if trimmed.startswith('error:'):
         raise RuntimeError(result)
-    elif result.startswith('warning'):
+    elif trimmed.startswith('warning:'):
         print(result)
     return result
 
@@ -66,6 +67,8 @@ class Skeleton:
         def convert(x):
             if isinstance(x, Component):
                 return x.component
+            elif type(x)==bool:
+                return '1' if x else '0'
             return str(x)
         request = sep.join([convert(i) for i in args])
         if immediate:
@@ -82,7 +85,6 @@ class Skeleton:
     def pump(self, request_number = None):
         for i in range(512):
             r = self.system_report(True)
-            if r.startswith('value: '): r = r[7:]
             if not r:
                 break
             if request_number is not None and r.startswith('{}:'.format(request_number)):
@@ -171,6 +173,16 @@ class System:
     def __repr__(self):
         return self.diagram()
 
+    def __getattr__(self, attr):
+        candidates = []
+        for k in self.__dict__:
+            if re.match('.*'.join(attr), k):
+                candidates.append(k)
+        if len(candidates) == 1: return self.__dict__[candidates[0]]
+        raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
+            attr, '\n'.join(candidates),
+        ))
+
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
         immediate = kwargs.get('immediate', False)
@@ -242,6 +254,8 @@ class System:
             file.write(serialized)
 
     def load(self, file_name='system.state.txt', start=False):
+        if hasattr(self, 'audio'):
+            return 'warning: already loaded, aborting load'
         potential_expansion = os.path.join('..', '..', 'states', file_name+'.txt')
         if os.path.exists(potential_expansion):
             file_name = potential_expansion
@@ -343,6 +357,8 @@ class Component:
         for command in commands:
             if command not in dir(self):
                 setattr(self, command, captain(command))
+        self.c = self.connect
+        self.d = self.disconnect
 
     def __del__(self):
         _skeleton.component_demolish(self)

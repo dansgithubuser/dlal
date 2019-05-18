@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <set>
+#include <sstream>
 #include <array>
 
 namespace dlal{
@@ -17,7 +18,8 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 			Midi(){}
 			Midi(uint64_t sample, std::vector<uint8_t> midi): sample(sample), midi(midi) {}
 			Midi(uint64_t sample, float sampleRemainder, std::vector<uint8_t> midi): sample(sample), sampleRemainder(sampleRemainder), midi(midi) {}
-			uint64_t sample;
+			std::string str() const;
+			int64_t sample;
 			float sampleRemainder=0.0f;
 			std::vector<uint8_t> midi;
 		};
@@ -29,29 +31,13 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		std::string setPhase(uint64_t) override;
 	private:
 		static const int NOTE_SENTINEL=0xff;
-		struct Gene{
-			enum Inequality{ NO, LT, EQ, GT };
-			bool operator==(const Gene& other) const { return notes==other.notes; }
-			std::vector<Midi> midi;
-			std::set<uint8_t> notes;
-			void print() const{ for(const auto& i: notes) std::cout<<(unsigned)i<<" "; }
-			Inequality lastNoteOnComparedTo(uint64_t sample, unsigned fudge){
-				for(int i=int(midi.size()-1); i>=0; --i){
-					if(midi[i].midi[0]>>4!=9) continue;
-					const auto fudged=midi[i].sample+fudge;
-					if(fudged<sample) return LT;
-					if(fudged>sample) return GT;
-					return EQ;
-				}
-				return NO;
-			}
-		};
 		void advance(uint64_t phase);
 		void process(const uint8_t* midi, unsigned size, uint64_t sample);
-		void put(const Midi& midi);
+		void put(Midi midi);
 		dans::Midi getMidi() const;
-		std::string putMidi(dans::Midi, float samplesPerQuarter, unsigned track=1);
-		void resetGene0();
+		std::string putMidi(dans::Midi, bool doResize=true, unsigned track=1);
+		std::set<uint8_t> grabGene(std::vector<Midi>::iterator& i, std::vector<Midi>::iterator end) const;
+		int64_t noteEnd(std::vector<Midi>::iterator i, std::vector<Midi>::iterator end) const;
 		std::vector<Midi> _line;
 		size_t _index;
 		float _samplesPerQuarter=22050.0f;
@@ -59,8 +45,8 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		uint8_t _transplantNote=NOTE_SENTINEL;
 		std::set<uint8_t> _allNotes;
 		uint8_t _minNote;
-		std::array<std::vector<Gene>, 2> _genes;
-		float _fudge=0.05f;
+		std::array<std::vector<Midi>, 2> _genes;
+		float _fudge=0.1f;
 };
 
 }//namespace dlal
