@@ -85,7 +85,9 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 
 ## todo
 - save and load system
-	- midi controllee, all components
+	- midi controllee
+	- midi remember port
+	- all components
 
 - need to design for more than one person interacting at once with common devices (phones)
 	- webify interfaces
