@@ -125,12 +125,17 @@ class Skeleton:
         return self._call(immediate, 'component/get/connections')
 
     def component_add(self, immediate, c, slot):
+        if not isinstance(c, Component): raise Exception('not a component')
         return self._call(immediate, 'component/add', c, slot)
 
     def component_connect(self, immediate, a, b):
+        if not isinstance(a, Component): raise Exception('input is not a component')
+        if not isinstance(b, Component): raise Exception('output is not a component')
         return self._call(immediate, 'component/connect', a, b)
 
     def component_disconnect(self, immediate, a, b):
+        if not isinstance(a, Component): raise Exception('input is not a component')
+        if not isinstance(b, Component): raise Exception('output is not a component')
         return self._call(immediate, 'component/disconnect', a, b)
 
     def component_command(self, c, immediate, *command, detach=False):
