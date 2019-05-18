@@ -131,8 +131,24 @@ void Liner::evaluate(){
 			}
 			if(equal){
 				//translate _genes[1] into _line
-				for(const auto& midi: _genes[1])
+				std::set<uint8_t> notes;
+				for(const auto& midi: _genes[0]){
 					put(midi);
+					const auto& m=midi.midi;
+					if(m.size()==3){
+						if(m[0]>>4==9){
+							if(m[2])
+								notes.insert(m[1]);
+							else
+								notes.erase(m[1]);
+						}
+						else if(m[0]>>4==8)
+							notes.erase(m[1]);
+					}
+				}
+				for(const auto& i: notes){
+					put(Midi(_period, std::vector<uint8_t>{0x80, i, 0}));
+				}
 			}
 			_genes[1]=_genes[0];
 			_genes[0].clear();
