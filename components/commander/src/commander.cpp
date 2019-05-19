@@ -123,6 +123,13 @@ Commander::Commander():
 		_slots[i].clear();
 		return "";
 	});
+	Component::registerCommand("slot_insert", "<before this slot>", [this](std::stringstream& ss){
+		size_t i;
+		ss>>i;
+		if(i>=_slots.size()) return "error: no such slot";
+		_slots.insert(_slots.begin()+i, std::vector<Directive>());
+		return "";
+	});
 	Component::registerCommand("slot_command", "slot output command", [this](std::stringstream& ss){
 		size_t i;
 		void* output;
