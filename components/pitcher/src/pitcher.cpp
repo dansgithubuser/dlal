@@ -44,6 +44,16 @@ std::string Pitcher::connect(Component& output){
 	return MultiOut::connect(output);
 }
 
+std::string Pitcher::disconnect(Component& output){
+	midiSend(&output, Midi{0xb0, 0x65,  0}.data(), 3);
+	midiSend(&output, Midi{0xb0, 0x64,  0}.data(), 3);
+	midiSend(&output, Midi{0xb0, 0x06,  2}.data(), 3);
+	midiSend(&output, Midi{0xb0, 0x26,  0}.data(), 3);
+	midiSend(&output, Midi{0xe0, 0x00, 0x20}.data(), 3);
+	midiSend(&output, Midi{0x80,   64, 0x40}.data(), 3);
+	return MultiOut::disconnect(output);
+}
+
 void Pitcher::evaluate(){
 	if(_off.size()) _silence+=_samplesPerEvaluation/float(_sampleRate);
 	if(_silence>_glissSeparation&&_off.size()){

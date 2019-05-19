@@ -55,7 +55,10 @@ class System{
 		System();
 		std::string add(Component& component, unsigned slot);
 		std::string remove(Component& component);
-		std::string check();
+		std::string reslot(Component& component, unsigned slot);
+		std::string swap(Component& a, Component& b);
+		std::string connect(Component& a, Component& b, bool enable=true);
+		std::string prep();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string setVariable(std::string name, std::string value);
@@ -68,6 +71,12 @@ class System{
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
 		Queue<std::string> _requests;//read in evaluation
+	private:
+		bool findComponent(
+			const Component& component,
+			unsigned& slot,
+			std::vector<Component*>::iterator& it
+		);
 };
 
 class Component{
@@ -82,6 +91,7 @@ class Component{
 		//on failure, return x such that isError(x) is true
 		virtual std::string command(const std::string&);//see registerCommand
 		virtual std::string join(System&);//see addJoinAction
+		virtual std::string prep(){ return ""; };
 		virtual std::string connect(Component& output){ return "error: unimplemented"; }
 		virtual std::string disconnect(Component& output){ return "error: unimplemented"; }
 

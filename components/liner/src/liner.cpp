@@ -113,6 +113,14 @@ Liner::Liner(){
 	});
 }
 
+std::string Liner::disconnect(Component& output){
+	for(uint8_t i=0; i<=127; ++i)
+		for(auto output: _outputs)
+			midiSend(output, std::vector<uint8_t>{0x80, i, 0x40}.data(), 3);
+	MultiOut::disconnect(output);
+	return "";
+}
+
 void Liner::evaluate(){
 	if(_transplantOnMidi&&_transplantNote==NOTE_SENTINEL) return;
 	advance(_phase);

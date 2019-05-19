@@ -21,7 +21,7 @@ extern "C" {
 
 DLAL const char* dlalRequest(const char* request, bool immediate){
 	#if 0
-		printf("%d %s\n", immediate, request);
+		std::cout<<immediate<<" "<<request<<"\n";
 	#endif
 	static std::set<dlal::System*> systems;
 	static dlal::System* active=nullptr;
@@ -29,6 +29,7 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 	if(immediate){
 		std::stringstream ss(request);
 		ss>>s;
+		//systems and memory management
 		if(s=="system/build"){
 			auto system=new dlal::System;
 			systems.insert(system);
@@ -54,6 +55,7 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 			delete c;
 		}
 		else if(!active){
+			//systemless component commands
 			if(s=="component/connect"){
 				dlal::Component* a;
 				dlal::Component* b;
@@ -125,18 +127,73 @@ std::string System::add(Component& component, unsigned slot){
 }
 
 std::string System::remove(Component& component){
-	for(auto i: _components){
-		auto j=std::find(i.begin(), i.end(), &component);
-		if(j!=i.end()){
-			i.erase(j);
-			_reports.write("remove "+component._name);
-			return "";
-		}
-	}
-	return "error: component was not added";
+	unsigned slot;
+	std::vector<Component*>::iterator it;
+	if(!findComponent(component, slot, it)) return "error: component was not added";
+	_components[slot].erase(it);
+	_reports.write("remove "+component._name);
+	return "";
 }
 
-std::string System::check(){
+std::string System::reslot(Component& component, unsigned newSlot){
+	unsigned slot;
+	std::vector<Component*>::iterator it;
+	if(!findComponent(component, slot, it)) return "error: component was not added";
+	_components[slot].erase(it);
+	if(_components.size()<=newSlot) _components.resize(newSlot+1);
+	_components[newSlot].push_back(&component);
+	_reports.write(::str("reslot", component._name, slot));
+	return "";
+}
+
+std::string System::swap(Component& a, Component& b){
+	unsigned aSlot, bSlot;
+	std::vector<Component*>::iterator aIt, bIt;
+	if(!findComponent(a, aSlot, aIt)) return "error: component a was not added";
+	if(!findComponent(b, bSlot, bIt)) return "error: component b was not added";
+	*aIt=&b;
+	*bIt=&a;
+	auto aConnectors=OBV_FOR(
+		_connections,
+		if(i->second==a._name) r.push_back(i->first),
+		std::vector<std::string>()
+	);
+	auto bConnectors=OBV_FOR(
+		_connections,
+		if(i->second==b._name) r.push_back(i->first),
+		std::vector<std::string>()
+	);
+	for(auto i: aConnectors){
+		Component& c=*_nameToComponent.at(i);
+		connect(c, a, false);
+		connect(c, b, true);
+	}
+	for(auto i: bConnectors){
+		Component& c=*_nameToComponent.at(i);
+		connect(c, b, false);
+		connect(c, a, true);
+	}
+	_reports.write(::str("swap", a._name, b._name));
+	return "";
+}
+
+std::string System::connect(Component& a, Component& b, bool enable){
+	std::string s;
+	s=enable?a.connect(b):a.disconnect(b);
+	if(!isError(s)){
+		_reports.write((enable?"connect ":"disconnect ")+a._name+" "+b._name);
+		if(enable) _connections.push_back(std::pair<std::string, std::string>(a._name, b._name));
+		else for(unsigned i=0; i<_connections.size(); ++i)
+			if(_connections[i]==std::pair<std::string, std::string>(a._name, b._name)){
+				_connections[i]=_connections.back();
+				_connections.pop_back();
+				break;
+			}
+	}
+	return s;
+}
+
+std::string System::prep(){
 	std::set<std::string> components;
 	for(auto connection: _connections){
 		components.insert(connection.first);
@@ -146,6 +203,11 @@ std::string System::check(){
 		for(auto component: slot)
 			components.erase(component->_name);
 	if(components.size()) return "error: connected components have not been added";
+	for(auto slot: _components)
+		for(auto component: slot){
+			std::string s=component->prep();
+			if(isError(s)) return s;
+		}
 	return "";
 }
 
@@ -158,7 +220,13 @@ void System::evaluate(){
 		s=handleRequest(s);
 		_reports.write(requestNumber+": "+s);
 	}
-	for(auto i: _components) for(auto j: i) j->evaluate();
+	for(auto i: _components)
+		for(auto j: i){
+			#if 0
+				std::cout<<"evaluate "<<j->_name<<"\n";
+			#endif
+			j->evaluate();
+		}
 }
 
 std::string System::set(unsigned sampleRate, unsigned log2SamplesPerEvaluation){
@@ -199,6 +267,12 @@ std::string System::handleRequest(std::string request){
 	std::string s;
 	if(command=="system/report"){
 		if(_reports.read(s, true)) return s;
+	}
+	else if(command=="system/prep"){
+		return prep();
+	}
+	else if(command=="system/evaluate"){
+		evaluate();
 	}
 	else if(command=="variable/get"){
 		if(ss>>s){
@@ -256,6 +330,18 @@ std::string System::handleRequest(std::string request){
 		ss>>c;
 		return remove(*c);
 	}
+	else if(command=="component/reslot"){
+		Component* c;
+		size_t slot;
+		ss>>c>>slot;
+		return reslot(*c, slot);
+	}
+	else if(command=="component/swap"){
+		Component* a;
+		Component* b;
+		ss>>a>>b;
+		return swap(*a, *b);
+	}
 	else if(command=="component/rename"){
 		Component* c;
 		ss>>c>>s;
@@ -265,32 +351,13 @@ std::string System::handleRequest(std::string request){
 		Component* a;
 		Component* b;
 		ss>>a>>b;
-		s=a->connect(*b);
-		if(!isError(s)){
-			auto sa=a->_name;
-			auto sb=b->_name;
-			_reports.write("connect "+sa+" "+sb);
-			_connections.push_back(std::pair<std::string, std::string>(sa, sb));
-		}
-		return s;
+		return connect(*a, *b);
 	}
 	else if(command=="component/disconnect"){
 		Component* a;
 		Component* b;
 		ss>>a>>b;
-		s=a->disconnect(*b);
-		if(!isError(s)){
-			auto sa=a->_name;
-			auto sb=b->_name;
-			_reports.write("disconnect "+sa+" "+sb);
-			for(unsigned i=0; i<_connections.size(); ++i)
-				if(_connections[i]==std::pair<std::string, std::string>(sa, sb)){
-					_connections[i]=_connections.back();
-					_connections.pop_back();
-					break;
-				}
-		}
-		return s;
+		return connect(*a, *b, false);
 	}
 	else if(command=="component/command"){
 		Component* c;
@@ -298,10 +365,22 @@ std::string System::handleRequest(std::string request){
 		std::getline(ss, s);
 		return c->command(s);
 	}
-	else return "error: no such command";
+	else return ::str("error: no such command", command);
 	return "";
 }
 
+bool System::findComponent(
+	const Component& component,
+	unsigned& slot,
+	std::vector<Component*>::iterator& it
+){
+	for(slot=0; slot<_components.size(); ++slot){
+		auto& s=_components[slot];
+		it=std::find(s.begin(), s.end(), &component);
+		if(it!=_components[slot].end()) return true;
+	}
+	return false;
+}
 //=====Component=====//
 Component::Component(): _system(nullptr) {
 	addJoinAction([this](System& system){
@@ -501,7 +580,7 @@ std::string MultiOut::connect(Component& output){
 	if(_checkMidi&&!output.midiAccepted())
 		return "error: output must accept midi";
 	if(std::find(_outputs.begin(), _outputs.end(), &output)!=_outputs.end())
-		return "error: output already connected";
+		return "warning: output already connected";
 	if(_maxOutputs&&_outputs.size()==_maxOutputs)
 		return "error: max outputs already connected";
 	_outputs.push_back(&output);
@@ -510,7 +589,7 @@ std::string MultiOut::connect(Component& output){
 
 std::string MultiOut::disconnect(Component& output){
 	auto i=std::find(_outputs.begin(), _outputs.end(), &output);
-	if(i==_outputs.end()) return "error: component was not connected";
+	if(i==_outputs.end()) return "warning: component was not connected";
 	_outputs.erase(i);
 	return "";
 }

@@ -74,7 +74,7 @@ Audio::Audio():
 	registerCommand("start", "", [this](std::stringstream& ss)->std::string{
 		if(!_system) return "error: must add before starting";
 		if(_started) return "already started";
-		auto s=_system->check();
+		auto s=_system->prep();
 		if(isError(s)) return s;
 		return start();
 	});

@@ -84,6 +84,8 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
+- repair older systems
+
 - save and load system
 	- midi controllee
 	- midi remember port
@@ -96,10 +98,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 			- queue and commit changes
 			- load system, bootstrap system (system commands)
 		- update readme arch
-
-- audiobro
-	- render to file
-	- new ideas
 
 - music from formula with time as input
 

@@ -4,6 +4,7 @@
 #include <skeleton.hpp>
 
 #include <atomic>
+#include <sstream>
 #include <vector>
 
 namespace dlal{
@@ -18,23 +19,30 @@ class Commander: public MultiOut, public Periodic{
 			Directive(Component&, unsigned slot, unsigned edgesToWait);
 			Directive(Component& input, Component& output, unsigned edgesToWait);
 			Directive& disconnect(){ _type=DISCONNECT; return *this; }
+			std::string str() const;
+			void dstr(std::stringstream&);
 			Type _type;
 			std::string _command;
-			Component* _a;
-			Component* _b;
+			std::string _nameA, _nameB;
+			Component* _a=nullptr;
+			Component* _b=nullptr;
 			unsigned _slot, _edgesToWait, _output;
 		};
 		Commander();
 		std::string type() const override { return "commander"; }
 		void* derived() override { return this; }
+		std::string prep() override;
 		void evaluate() override;
 		void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted() override { return true; }
 		Queue<Directive> _queue;
 	private:
-		void dispatch(const Directive&);
+		void dispatch(Directive&);
 		std::vector<Directive> _dequeued;
 		unsigned _nDequeued;
+		std::vector<std::vector<Directive>> _slots;
+		size_t _slot=0;
+		bool _slotsEnable=true;
 };
 
 }//namespace dlal

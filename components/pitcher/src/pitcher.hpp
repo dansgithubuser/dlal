@@ -11,6 +11,7 @@ class Pitcher: public SampleRateGetter, public SamplesPerEvaluationGetter, publi
 		std::string type() const override { return "pitcher"; }
 		void* derived() override { return this; }
 		std::string connect(Component& output) override;
+		std::string disconnect(Component& output) override;
 		void evaluate() override;
 		void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted() override { return true; }

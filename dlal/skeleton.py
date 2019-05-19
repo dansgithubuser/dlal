@@ -63,6 +63,11 @@ class Skeleton:
         obvious.set_ffi_types(self.lib.dlalRequest, str, str, bool)
         obvious.python_3_string_prep(self.lib)
 
+    def _check_component(self, *args):
+        for arg in args:
+            if not isinstance(arg, Component):
+                raise Exception('{} is not a component'.format(arg))
+
     def _call(self, immediate, *args, sep=' ', detach=False):
         def convert(x):
             if isinstance(x, Component):
@@ -106,6 +111,12 @@ class Skeleton:
     def system_report(self, immediate):
         return self._call(immediate, 'system/report')
 
+    def system_prep(self):
+        return self._call(True, 'system/prep')
+
+    def system_evaluate(self):
+        return self._call(True, 'system/evaluate')
+
     def variable_get_all(self, immediate):
         return self._call(immediate, 'variable/get')
 
@@ -125,15 +136,27 @@ class Skeleton:
         return self._call(immediate, 'component/get/connections')
 
     def component_add(self, immediate, c, slot):
+        self._check_component(c)
         return self._call(immediate, 'component/add', c, slot)
 
+    def component_remove(self, immediate, c):
+        return self._call(immediate, 'component/remove', c)
+
+    def component_reslot(self, immediate, c, slot):
+        return self._call(immediate, 'component/reslot', c, slot)
+
+    def component_swap(self, immediate, a, b):
+        return self._call(immediate, 'component/swap', a, b)
+
     def component_connect(self, immediate, a, b):
+        self._check_component(a, b)
         return self._call(immediate, 'component/connect', a, b)
 
     def component_disconnect(self, immediate, a, b):
+        self._check_component(a, b)
         return self._call(immediate, 'component/disconnect', a, b)
 
-    def component_command(self, c, immediate, *command, detach=False):
+    def component_command(self, immediate, c, *command, detach=False):
         return self._call(immediate, 'component/command', c, *command, detach=detach)
 
     def component_demolish(self, c):
@@ -156,6 +179,20 @@ class ReprMethod:
         x.update(kwargs)
         return method(*args, **x)
 
+def translate_lazy(lazy, obj):
+    possibilities = dir(obj)
+    candidates = []
+    for i in possibilities:
+        if re.search('.*'.join(lazy), i):
+            candidates.append(i)
+    if len(candidates) > 1:
+        same_end = [i for i in candidates if i.endswith(lazy[-1])]
+        if same_end: candidates = same_end
+    if len(candidates) == 1: return getattr(obj, candidates[0])
+    raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
+        lazy, '\n'.join(candidates),
+    ))
+
 class System:
     def __init__(self):
         self.system = _skeleton.system_build()
@@ -174,14 +211,7 @@ class System:
         return self.diagram()
 
     def __getattr__(self, attr):
-        candidates = []
-        for k in self.__dict__:
-            if re.match('.*'.join(attr), k):
-                candidates.append(k)
-        if len(candidates) == 1: return self.__dict__[candidates[0]]
-        raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
-            attr, '\n'.join(candidates),
-        ))
+        return translate_lazy(attr, self)
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
@@ -193,8 +223,21 @@ class System:
                 result += '\n'
             name = arg.name(immediate=True)
             self.components[name] = arg
-            if not hasattr(self, name):
+            if name not in self.__dict__:
                 setattr(self, name, arg)
+        return result
+
+    def remove(self, *args, **kwargs):
+        immediate = kwargs.get('immediate', False)
+        result = ''
+        for arg in args:
+            result += _skeleton.component_remove(immediate, arg)
+            if len(result):
+                result += '\n'
+            name = arg.name(immediate=True)
+            del self.components[name]
+            if name in self.__dict__:
+                delattr(self, name)
         return result
 
     def set(self, name, value, immediate=False):
@@ -264,6 +307,12 @@ class System:
         if start:
             self.start()
         return state
+
+    def prep(self):
+        return _skeleton.system_prep()
+
+    def evaluate(self):
+        return _skeleton.system_evaluate()
 
     def start(self):
         if not hasattr(self, 'audio'):
@@ -338,7 +387,8 @@ class System:
 class Component:
     _libs = {}
 
-    def __init__(self, component_type, name=None):
+    def __init__(self, component_type=None, name=None, empty=False):
+        if empty: return
         if component_type not in Component._libs:
             lib = obvious.load_lib(camel_case(component_type))
             obvious.set_ffi_types(lib.dlalBuildComponent, str, str)
@@ -352,7 +402,7 @@ class Component:
         def captain(command):
             return lambda *args, **kwargs: weak_self().command(
                 *([command]+list(args)),
-                immediate=kwargs.get('immediate', False)
+                **kwargs
             )
         for command in commands:
             if command not in dir(self):
@@ -361,16 +411,37 @@ class Component:
         self.d = self.disconnect
 
     def __del__(self):
-        _skeleton.component_demolish(self)
+        if self.component is not None:
+            _skeleton.component_demolish(self)
+
+    def __getattr__(self, attr):
+        return translate_lazy(attr, self)
+
+    def reslot(self, slot, immediate=False):
+        return _skeleton.component_reslot(immediate, self, slot)
+
+    def swap(self, other, immediate=False):
+        return _skeleton.component_swap(immediate, self, other)
 
     def command(self, *command, immediate=False, detach=False):
-        return _skeleton.component_command(self, immediate, *command, detach=detach)
+        return _skeleton.component_command(immediate, self, *command, detach=detach)
 
     def connect(self, output, immediate=False):
         return _skeleton.component_connect(immediate, self, output)
 
-    def disconnect(self, output, immediate=False):
-        return _skeleton.component_disconnect(immediate, self, output)
+    def disconnect(self, output=None, immediate=False):
+        if output is None:
+            connections = json.loads(_skeleton.component_get_connections(immediate))
+            name = self.name(immediate=immediate)
+            assert name
+            for i, o in connections:
+                if i != name: continue
+                output = Component(empty=True)
+                output.component = _skeleton.component_get(immediate, o)
+                _skeleton.component_disconnect(immediate, self, output)
+                output.component = None
+        else:
+            return _skeleton.component_disconnect(immediate, self, output)
 
     def phase(self): return int(self.periodic_get().split()[1])
 
@@ -378,6 +449,10 @@ class Component:
 
     def periodic_match(self, other, immediate=False):
         return self.command('periodic_match', other.periodic(immediate=True), immediate=immediate)
+
+    def midi_stop(self):
+        for i in range(128):
+            self.midi(0x80, i, 0, detach=True)
 
 component_types = {}
 def inform_component_type(name, value): component_types[snake_case(name)] = value

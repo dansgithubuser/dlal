@@ -50,13 +50,50 @@ MarkovLiner::MarkovLiner(){
 		_states.push_back(state);
 		return std::to_string(_states.size()-1);
 	});
-	registerCommand("transition_create", "initial final weight", [this](std::stringstream& ss){
+	registerCommand("state_list", "", [this](std::stringstream&){
+		return ::str(_states);
+	});
+	registerCommand("state_set", "state <on midi bytes> ; <off midi bytes> ; duration", [this](std::stringstream& ss){
 		size_t i;
+		ss>>i;
+		if(i>=_states.size()) return "error: no such state";
+		std::string s;
+		State state;
+		while(ss>>s){
+			if(s==";") break;
+			state.on.push_back(std::stoul(s));
+		}
+		while(ss>>s){
+			if(s==";") break;
+			state.off.push_back(std::stoul(s));
+		}
+		ss>>state.duration;
+		_states[i]=state;
+		return "";
+	});
+	registerCommand("transition_create", "initial final weight", [this](std::stringstream& ss){
+		size_t initial;
 		Transition t;
-		ss>>i>>t.state>>t.weight;
-		if(i>=_states.size()) return "error: no such initial state";
+		ss>>initial>>t.state>>t.weight;
+		if(initial>=_states.size()) return "error: no such initial state";
 		if(t.state>=_states.size()) return "error: no such final state";
-		_transitions[i].push_back(t);
+		_transitions[initial].push_back(t);
+		return "";
+	});
+	registerCommand("transition_list", "", [this](std::stringstream&){
+		return ::str(_transitions);
+	});
+	registerCommand("transition_set", "initial final weight", [this](std::stringstream& ss){
+		size_t initial;
+		Transition t;
+		ss>>initial>>t.state>>t.weight;
+		if(!_transitions.count(initial)) return "error: no such transition from initial state";
+		auto& fromInitial=_transitions.at(initial);
+		auto it=OBV_FOR(fromInitial, if(i->state==t.state) r=i, fromInitial.begin());
+		if(it==fromInitial.end()) return "error: no such transition to final state";
+		if(initial>=_states.size()) return "error: no such initial state";
+		if(t.state>=_states.size()) return "error: no such final state";
+		*it=t;
 		return "";
 	});
 }
