@@ -167,7 +167,8 @@ class ReprMethod:
         x.update(kwargs)
         return method(*args, **x)
 
-def translate_lazy(lazy, possibilities):
+def translate_lazy(lazy, obj):
+    possibilities = dir(obj)
     candidates = []
     for i in possibilities:
         if re.match('.*'.join(lazy), i):
@@ -175,7 +176,7 @@ def translate_lazy(lazy, possibilities):
     if len(candidates) > 1:
         same_end = [i for i in candidates if i.endswith(lazy[-1])]
         if same_end: candidates = same_end
-    if len(candidates) == 1: return possibilities[candidates[0]]
+    if len(candidates) == 1: return getattr(obj, candidates[0])
     raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
         lazy, '\n'.join(candidates),
     ))
@@ -198,7 +199,7 @@ class System:
         return self.diagram()
 
     def __getattr__(self, attr):
-        return translate_lazy(attr, self.__dict__)
+        return translate_lazy(attr, self)
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
@@ -383,7 +384,7 @@ class Component:
             _skeleton.component_demolish(self)
 
     def __getattr__(self, attr):
-        return translate_lazy(attr, self.__dict__)
+        return translate_lazy(attr, self)
 
     def reslot(self, slot, immediate=False):
         return _skeleton.component_reslot(immediate, self, slot)
