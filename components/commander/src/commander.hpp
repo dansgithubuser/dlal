@@ -31,6 +31,7 @@ class Commander: public MultiOut, public Periodic{
 		Commander();
 		std::string type() const override { return "commander"; }
 		void* derived() override { return this; }
+		std::string prep() override;
 		void evaluate() override;
 		void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted() override { return true; }

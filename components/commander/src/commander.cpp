@@ -182,6 +182,13 @@ Commander::Commander():
 	});
 }
 
+std::string Commander::prep(){
+	if(!_slots.size()) return "";
+	for(auto i: _slots[0]) dispatch(i);
+	_slot=1%_slots.size();
+	return "";
+}
+
 void Commander::evaluate(){
 	//dequeue
 	while(true){

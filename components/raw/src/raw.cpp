@@ -59,7 +59,7 @@ Raw::Raw():
 		int pause=0;
 		ss>>pause;
 		if(!_system) return "error: must add before starting";
-		auto s=_system->check();
+		auto s=_system->prep();
 		if(isError(s)) return s;
 		const unsigned samples=1<<_log2SamplesPerEvaluation;
 		int j=0;

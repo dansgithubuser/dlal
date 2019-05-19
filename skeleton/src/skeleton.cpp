@@ -168,7 +168,7 @@ std::string System::connect(Component& a, Component& b, bool enable){
 	return s;
 }
 
-std::string System::check(){
+std::string System::prep(){
 	std::set<std::string> components;
 	for(auto connection: _connections){
 		components.insert(connection.first);
@@ -178,6 +178,11 @@ std::string System::check(){
 		for(auto component: slot)
 			components.erase(component->_name);
 	if(components.size()) return "error: connected components have not been added";
+	for(auto slot: _components)
+		for(auto component: slot){
+			std::string s=component->prep();
+			if(isError(s)) return s;
+		}
 	return "";
 }
 
@@ -520,7 +525,7 @@ std::string MultiOut::connect(Component& output){
 	if(_checkMidi&&!output.midiAccepted())
 		return "error: output must accept midi";
 	if(std::find(_outputs.begin(), _outputs.end(), &output)!=_outputs.end())
-		return "error: output already connected";
+		return "warning: output already connected";
 	if(_maxOutputs&&_outputs.size()==_maxOutputs)
 		return "error: max outputs already connected";
 	_outputs.push_back(&output);
@@ -529,7 +534,7 @@ std::string MultiOut::connect(Component& output){
 
 std::string MultiOut::disconnect(Component& output){
 	auto i=std::find(_outputs.begin(), _outputs.end(), &output);
-	if(i==_outputs.end()) return "error: component was not connected";
+	if(i==_outputs.end()) return "warning: component was not connected";
 	_outputs.erase(i);
 	return "";
 }

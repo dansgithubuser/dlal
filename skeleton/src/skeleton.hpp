@@ -57,7 +57,7 @@ class System{
 		std::string remove(Component& component);
 		std::string reslot(Component& component, unsigned slot);
 		std::string connect(Component& a, Component& b, bool enable=true);
-		std::string check();
+		std::string prep();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);
 		std::string setVariable(std::string name, std::string value);
@@ -84,6 +84,7 @@ class Component{
 		//on failure, return x such that isError(x) is true
 		virtual std::string command(const std::string&);//see registerCommand
 		virtual std::string join(System&);//see addJoinAction
+		virtual std::string prep(){ return ""; };
 		virtual std::string connect(Component& output){ return "error: unimplemented"; }
 		virtual std::string disconnect(Component& output){ return "error: unimplemented"; }
 
