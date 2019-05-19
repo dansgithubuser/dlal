@@ -133,6 +133,9 @@ class Skeleton:
         self._check_component(c)
         return self._call(immediate, 'component/add', c, slot)
 
+    def component_reslot(self, immediate, c, slot):
+        return self._call(immediate, 'component/reslot', c, slot)
+
     def component_connect(self, immediate, a, b):
         self._check_component(a, b)
         return self._call(immediate, 'component/connect', a, b)
@@ -141,7 +144,7 @@ class Skeleton:
         self._check_component(a, b)
         return self._call(immediate, 'component/disconnect', a, b)
 
-    def component_command(self, c, immediate, *command, detach=False):
+    def component_command(self, immediate, c, *command, detach=False):
         return self._call(immediate, 'component/command', c, *command, detach=detach)
 
     def component_demolish(self, c):
@@ -382,8 +385,11 @@ class Component:
     def __getattr__(self, attr):
         return translate_lazy(attr, self.__dict__)
 
+    def reslot(self, slot, immediate=False):
+        return _skeleton.component_reslot(immediate, self, slot)
+
     def command(self, *command, immediate=False, detach=False):
-        return _skeleton.component_command(self, immediate, *command, detach=detach)
+        return _skeleton.component_command(immediate, self, *command, detach=detach)
 
     def connect(self, output, immediate=False):
         return _skeleton.component_connect(immediate, self, output)

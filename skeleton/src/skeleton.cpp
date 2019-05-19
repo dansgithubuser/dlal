@@ -29,6 +29,7 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 	if(immediate){
 		std::stringstream ss(request);
 		ss>>s;
+		//systems and memory management
 		if(s=="system/build"){
 			auto system=new dlal::System;
 			systems.insert(system);
@@ -54,6 +55,7 @@ DLAL const char* dlalRequest(const char* request, bool immediate){
 			delete c;
 		}
 		else if(!active){
+			//systemless component commands
 			if(s=="component/connect"){
 				dlal::Component* a;
 				dlal::Component* b;
@@ -125,7 +127,7 @@ std::string System::add(Component& component, unsigned slot){
 }
 
 std::string System::remove(Component& component){
-	for(auto i: _components){
+	for(auto& i: _components){
 		auto j=std::find(i.begin(), i.end(), &component);
 		if(j!=i.end()){
 			i.erase(j);
@@ -134,6 +136,36 @@ std::string System::remove(Component& component){
 		}
 	}
 	return "error: component was not added";
+}
+
+std::string System::reslot(Component& component, unsigned slot){
+	for(auto& i: _components){
+		auto j=std::find(i.begin(), i.end(), &component);
+		if(j!=i.end()){
+			i.erase(j);
+			if(_components.size()<=slot) _components.resize(slot+1);
+			_components[slot].push_back(&component);
+			_reports.write(::str("reslot", component._name, slot));
+			return "";
+		}
+	}
+	return "error: component was not added";
+}
+
+std::string System::connect(Component& a, Component& b, bool enable){
+	std::string s;
+	s=enable?a.connect(b):a.disconnect(b);
+	if(!isError(s)){
+		_reports.write((enable?"connect ":"disconnect ")+a._name+" "+b._name);
+		if(enable) _connections.push_back(std::pair<std::string, std::string>(a._name, b._name));
+		else for(unsigned i=0; i<_connections.size(); ++i)
+			if(_connections[i]==std::pair<std::string, std::string>(a._name, b._name)){
+				_connections[i]=_connections.back();
+				_connections.pop_back();
+				break;
+			}
+	}
+	return s;
 }
 
 std::string System::check(){
@@ -256,6 +288,12 @@ std::string System::handleRequest(std::string request){
 		ss>>c;
 		return remove(*c);
 	}
+	else if(command=="component/reslot"){
+		Component* c;
+		size_t slot;
+		ss>>c>>slot;
+		return reslot(*c, slot);
+	}
 	else if(command=="component/rename"){
 		Component* c;
 		ss>>c>>s;
@@ -265,32 +303,13 @@ std::string System::handleRequest(std::string request){
 		Component* a;
 		Component* b;
 		ss>>a>>b;
-		s=a->connect(*b);
-		if(!isError(s)){
-			auto sa=a->_name;
-			auto sb=b->_name;
-			_reports.write("connect "+sa+" "+sb);
-			_connections.push_back(std::pair<std::string, std::string>(sa, sb));
-		}
-		return s;
+		return connect(*a, *b);
 	}
 	else if(command=="component/disconnect"){
 		Component* a;
 		Component* b;
 		ss>>a>>b;
-		s=a->disconnect(*b);
-		if(!isError(s)){
-			auto sa=a->_name;
-			auto sb=b->_name;
-			_reports.write("disconnect "+sa+" "+sb);
-			for(unsigned i=0; i<_connections.size(); ++i)
-				if(_connections[i]==std::pair<std::string, std::string>(sa, sb)){
-					_connections[i]=_connections.back();
-					_connections.pop_back();
-					break;
-				}
-		}
-		return s;
+		return connect(*a, *b, false);
 	}
 	else if(command=="component/command"){
 		Component* c;

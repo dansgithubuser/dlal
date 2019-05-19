@@ -3,6 +3,8 @@
 #include <cmath>
 #include <iostream>
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(Commander)
 
 namespace dlal{
@@ -31,6 +33,40 @@ Commander::Directive::Directive(
 Commander::Directive::Directive(
 	Component& input, Component& output, unsigned edgesToWait
 ): _type(CONNECT), _a(&input), _b(&output), _edgesToWait(edgesToWait) {}
+
+std::string Commander::Directive::str() const {
+	std::stringstream ss;
+	std::string nameA=_nameA, nameB=_nameB;
+	if(!nameA.size())
+		nameA=_a->_name;
+	if(!nameB.size()&&_b)
+		nameB=_b->_name;
+	ss<<_type<<" "<<nameA<<" ";
+	switch(_type){
+		case COMMAND: ss<<_command.size()<<" "<<_command; break;
+		case CONNECT: ss<<nameB; break;
+		case DISCONNECT: ss<<nameB; break;
+		default: break;
+	}
+	return ss.str();
+}
+
+void Commander::Directive::dstr(std::stringstream& ss){
+	unsigned t;
+	ss>>t>>_nameA;
+	_type=(Type)t;
+	switch(_type){
+		case COMMAND:{
+			size_t size;
+			ss>>size;
+			ss.ignore(1);
+			_command=read(ss, size);
+			break;
+		}
+		case CONNECT: ss>>_nameB; break;
+		case DISCONNECT: ss>>_nameB; break;
+	}
+}
 
 Commander::Commander():
 	_queue(8), _nDequeued(0)
@@ -67,6 +103,73 @@ Commander::Commander():
 		_queue.resize(unsigned(std::log2(size))+1);
 		return "";
 	});
+	Component::registerCommand("slots_resize", "size", [this](std::stringstream& ss){
+		size_t size;
+		ss>>size;
+		_slots.resize(size);
+		return "";
+	});
+	Component::registerCommand("slots_list", "size", [this](std::stringstream& ss){
+		return ::str(_slots);
+	});
+	Component::registerCommand("slots_enable", "<enable, default 1>", [this](std::stringstream& ss){
+		if(!(ss>>_slotsEnable)) _slotsEnable=1;
+		return "";
+	});
+	Component::registerCommand("slot_clear", "slot", [this](std::stringstream& ss){
+		size_t i;
+		ss>>i;
+		if(i>=_slots.size()) return "error: no such slot";
+		_slots[i].clear();
+		return "";
+	});
+	Component::registerCommand("slot_command", "slot output command", [this](std::stringstream& ss){
+		size_t i;
+		void* output;
+		ss>>i>>output;
+		if(i>=_slots.size()) return "error: no such slot";
+		ss.ignore(1);
+		std::string s;
+		std::getline(ss, s);
+		_slots[i].push_back(Directive(*(dlal::Component*)output, s, 0));
+		return "";
+	});
+	Component::registerCommand("slot_connect", "slot input output", [this](std::stringstream& ss){
+		size_t i;
+		void* input;
+		void* output;
+		ss>>i>>input>>output;
+		if(i>=_slots.size()) return "error: no such slot";
+		_slots[i].push_back(Directive(*(dlal::Component*)input, *(dlal::Component*)output, 0));
+		return "";
+	});
+	Component::registerCommand("slot_disconnect", "slot input output", [this](std::stringstream& ss){
+		size_t i;
+		void* input;
+		void* output;
+		ss>>i>>input>>output;
+		if(i>=_slots.size()) return "error: no such slot";
+		_slots[i].push_back(Directive(*(dlal::Component*)input, *(dlal::Component*)output, 0).disconnect());
+		return "";
+	});
+	Component::registerCommand("slot_skip_to", "slot", [this](std::stringstream& ss){
+		size_t i;
+		ss>>i;
+		if(i>=_slots.size()) return "error: no such slot";
+		while(_slot!=i){
+			for(auto i: _slots[_slot]) dispatch(i);
+			++_slot;
+			_slot%=_slots.size();
+		}
+		return "";
+	});
+	registerCommand("serialize_commander", "", [this](std::stringstream&){
+		return ::str(_slots);
+	});
+	registerCommand("deserialize_commander", "<serialized>", [this](std::stringstream& ss){
+		::dstr(ss, _slots);
+		return "";
+	});
 	Component::registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _queue.lockless()?"lockless":"lockfull";
 	});
@@ -82,6 +185,12 @@ void Commander::evaluate(){
 	}
 	//update
 	if(!phase()) return;
+	//slots
+	if(_slots.size()&&_slotsEnable){
+		for(auto i: _slots[_slot]) dispatch(i);
+		++_slot;
+		_slot%=_slots.size();
+	}
 	//command
 	unsigned i=0;
 	while(i<_nDequeued){
@@ -102,8 +211,12 @@ void Commander::midi(const uint8_t* bytes, unsigned size){
 	_queue.write(Directive(0, ss.str(), 0));
 }
 
-void Commander::dispatch(const Directive& d){
+void Commander::dispatch(Directive& d){
 	std::string result;
+	if(!d._a)
+		d._a=_system->_nameToComponent.at(d._nameA);
+	if(!d._b&&d._nameB.size())
+		d._b=_system->_nameToComponent.at(d._nameB);
 	switch(d._type){
 		case Directive::COMMAND:
 			result=d._a->command(d._command);
@@ -116,13 +229,13 @@ void Commander::dispatch(const Directive& d){
 			result=_system->add(*d._a, d._slot);
 			break;
 		case Directive::CONNECT:
-			result=d._a->connect(*d._b);
+			result=_system->connect(*d._a, *d._b);
 			break;
 		case Directive::DISCONNECT:
-			result=d._a->disconnect(*d._b);
+			result=_system->connect(*d._a, *d._b, false);
 			break;
 	}
-	if(result.size()) std::cerr<<result<<std::endl;
+	if(result.size()) _system->_reports.write(result);
 }
 
 }//namespace dlal

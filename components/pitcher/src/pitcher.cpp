@@ -50,6 +50,7 @@ std::string Pitcher::disconnect(Component& output){
 	midiSend(&output, Midi{0xb0, 0x06,  2}.data(), 3);
 	midiSend(&output, Midi{0xb0, 0x26,  0}.data(), 3);
 	midiSend(&output, Midi{0xe0, 0x00, 0x20}.data(), 3);
+	midiSend(&output, Midi{0x80,   64, 0x40}.data(), 3);
 	return MultiOut::disconnect(output);
 }
 

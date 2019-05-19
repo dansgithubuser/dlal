@@ -55,6 +55,8 @@ class System{
 		System();
 		std::string add(Component& component, unsigned slot);
 		std::string remove(Component& component);
+		std::string reslot(Component& component, unsigned slot);
+		std::string connect(Component& a, Component& b, bool enable=true);
 		std::string check();
 		void evaluate();
 		std::string set(unsigned sampleRate, unsigned samplesPerEvaluation);

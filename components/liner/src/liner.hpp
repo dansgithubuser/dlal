@@ -25,6 +25,7 @@ class Liner: public MultiOut, public Periodic, public SampleRateGetter{
 		};
 		Liner();
 		std::string type() const override { return "liner"; }
+		std::string disconnect(Component& output) override;
 		void evaluate() override;
 		void midi(const uint8_t* bytes, unsigned size) override;
 		bool midiAccepted() override { return true; }
