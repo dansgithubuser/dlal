@@ -21,7 +21,7 @@ extern "C" {
 
 DLAL const char* dlalRequest(const char* request, bool immediate){
 	#if 0
-		printf("%d %s\n", immediate, request);
+		std::cout<<immediate<<" "<<request<<"\n";
 	#endif
 	static std::set<dlal::System*> systems;
 	static dlal::System* active=nullptr;
@@ -127,29 +127,54 @@ std::string System::add(Component& component, unsigned slot){
 }
 
 std::string System::remove(Component& component){
-	for(auto& i: _components){
-		auto j=std::find(i.begin(), i.end(), &component);
-		if(j!=i.end()){
-			i.erase(j);
-			_reports.write("remove "+component._name);
-			return "";
-		}
-	}
-	return "error: component was not added";
+	unsigned slot;
+	std::vector<Component*>::iterator it;
+	if(!findComponent(component, slot, it)) return "error: component was not added";
+	_components[slot].erase(it);
+	_reports.write("remove "+component._name);
+	return "";
 }
 
-std::string System::reslot(Component& component, unsigned slot){
-	for(auto& i: _components){
-		auto j=std::find(i.begin(), i.end(), &component);
-		if(j!=i.end()){
-			i.erase(j);
-			if(_components.size()<=slot) _components.resize(slot+1);
-			_components[slot].push_back(&component);
-			_reports.write(::str("reslot", component._name, slot));
-			return "";
-		}
+std::string System::reslot(Component& component, unsigned newSlot){
+	unsigned slot;
+	std::vector<Component*>::iterator it;
+	if(!findComponent(component, slot, it)) return "error: component was not added";
+	_components[slot].erase(it);
+	if(_components.size()<=newSlot) _components.resize(newSlot+1);
+	_components[newSlot].push_back(&component);
+	_reports.write(::str("reslot", component._name, slot));
+	return "";
+}
+
+std::string System::swap(Component& a, Component& b){
+	unsigned aSlot, bSlot;
+	std::vector<Component*>::iterator aIt, bIt;
+	if(!findComponent(a, aSlot, aIt)) return "error: component a was not added";
+	if(!findComponent(b, bSlot, bIt)) return "error: component b was not added";
+	*aIt=&b;
+	*bIt=&a;
+	auto aConnectors=OBV_FOR(
+		_connections,
+		if(i->second==a._name) r.push_back(i->first),
+		std::vector<std::string>()
+	);
+	auto bConnectors=OBV_FOR(
+		_connections,
+		if(i->second==b._name) r.push_back(i->first),
+		std::vector<std::string>()
+	);
+	for(auto i: aConnectors){
+		Component& c=*_nameToComponent.at(i);
+		connect(c, a, false);
+		connect(c, b, true);
 	}
-	return "error: component was not added";
+	for(auto i: bConnectors){
+		Component& c=*_nameToComponent.at(i);
+		connect(c, b, false);
+		connect(c, a, true);
+	}
+	_reports.write(::str("swap", a._name, b._name));
+	return "";
 }
 
 std::string System::connect(Component& a, Component& b, bool enable){
@@ -195,7 +220,13 @@ void System::evaluate(){
 		s=handleRequest(s);
 		_reports.write(requestNumber+": "+s);
 	}
-	for(auto i: _components) for(auto j: i) j->evaluate();
+	for(auto i: _components)
+		for(auto j: i){
+			#if 0
+				std::cout<<"evaluate "<<j->_name<<"\n";
+			#endif
+			j->evaluate();
+		}
 }
 
 std::string System::set(unsigned sampleRate, unsigned log2SamplesPerEvaluation){
@@ -236,6 +267,12 @@ std::string System::handleRequest(std::string request){
 	std::string s;
 	if(command=="system/report"){
 		if(_reports.read(s, true)) return s;
+	}
+	else if(command=="system/prep"){
+		return prep();
+	}
+	else if(command=="system/evaluate"){
+		evaluate();
 	}
 	else if(command=="variable/get"){
 		if(ss>>s){
@@ -299,6 +336,12 @@ std::string System::handleRequest(std::string request){
 		ss>>c>>slot;
 		return reslot(*c, slot);
 	}
+	else if(command=="component/swap"){
+		Component* a;
+		Component* b;
+		ss>>a>>b;
+		return swap(*a, *b);
+	}
 	else if(command=="component/rename"){
 		Component* c;
 		ss>>c>>s;
@@ -322,10 +365,22 @@ std::string System::handleRequest(std::string request){
 		std::getline(ss, s);
 		return c->command(s);
 	}
-	else return "error: no such command";
+	else return ::str("error: no such command", command);
 	return "";
 }
 
+bool System::findComponent(
+	const Component& component,
+	unsigned& slot,
+	std::vector<Component*>::iterator& it
+){
+	for(slot=0; slot<_components.size(); ++slot){
+		auto& s=_components[slot];
+		it=std::find(s.begin(), s.end(), &component);
+		if(it!=_components[slot].end()) return true;
+	}
+	return false;
+}
 //=====Component=====//
 Component::Component(): _system(nullptr) {
 	addJoinAction([this](System& system){

@@ -56,6 +56,7 @@ class System{
 		std::string add(Component& component, unsigned slot);
 		std::string remove(Component& component);
 		std::string reslot(Component& component, unsigned slot);
+		std::string swap(Component& a, Component& b);
 		std::string connect(Component& a, Component& b, bool enable=true);
 		std::string prep();
 		void evaluate();
@@ -70,6 +71,12 @@ class System{
 		std::vector<std::vector<Component*>> _components;
 		std::map<std::string, Component*> _nameToComponent;
 		Queue<std::string> _requests;//read in evaluation
+	private:
+		bool findComponent(
+			const Component& component,
+			unsigned& slot,
+			std::vector<Component*>::iterator& it
+		);
 };
 
 class Component{

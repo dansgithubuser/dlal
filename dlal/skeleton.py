@@ -111,6 +111,12 @@ class Skeleton:
     def system_report(self, immediate):
         return self._call(immediate, 'system/report')
 
+    def system_prep(self):
+        return self._call(True, 'system/prep')
+
+    def system_evaluate(self):
+        return self._call(True, 'system/evaluate')
+
     def variable_get_all(self, immediate):
         return self._call(immediate, 'variable/get')
 
@@ -133,8 +139,14 @@ class Skeleton:
         self._check_component(c)
         return self._call(immediate, 'component/add', c, slot)
 
+    def component_remove(self, immediate, c):
+        return self._call(immediate, 'component/remove', c)
+
     def component_reslot(self, immediate, c, slot):
         return self._call(immediate, 'component/reslot', c, slot)
+
+    def component_swap(self, immediate, a, b):
+        return self._call(immediate, 'component/swap', a, b)
 
     def component_connect(self, immediate, a, b):
         self._check_component(a, b)
@@ -215,6 +227,19 @@ class System:
                 setattr(self, name, arg)
         return result
 
+    def remove(self, *args, **kwargs):
+        immediate = kwargs.get('immediate', False)
+        result = ''
+        for arg in args:
+            result += _skeleton.component_remove(immediate, arg)
+            if len(result):
+                result += '\n'
+            name = arg.name(immediate=True)
+            del self.components[name]
+            if name in self.__dict__:
+                delattr(self, name)
+        return result
+
     def set(self, name, value, immediate=False):
         _skeleton.variable_set(immediate, name, value)
 
@@ -282,6 +307,12 @@ class System:
         if start:
             self.start()
         return state
+
+    def prep(self):
+        return _skeleton.system_prep()
+
+    def evaluate(self):
+        return _skeleton.system_evaluate()
 
     def start(self):
         if not hasattr(self, 'audio'):
@@ -388,6 +419,9 @@ class Component:
 
     def reslot(self, slot, immediate=False):
         return _skeleton.component_reslot(immediate, self, slot)
+
+    def swap(self, other, immediate=False):
+        return _skeleton.component_swap(immediate, self, other)
 
     def command(self, *command, immediate=False, detach=False):
         return _skeleton.component_command(immediate, self, *command, detach=detach)
