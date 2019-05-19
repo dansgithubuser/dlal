@@ -1,5 +1,6 @@
 from .audio import *
 from .buffer import *
+from .filea import *
 from .formant import *
 from .helpers import *
 from .liner import *
