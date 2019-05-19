@@ -171,7 +171,7 @@ def translate_lazy(lazy, obj):
     possibilities = dir(obj)
     candidates = []
     for i in possibilities:
-        if re.match('.*'.join(lazy), i):
+        if re.search('.*'.join(lazy), i):
             candidates.append(i)
     if len(candidates) > 1:
         same_end = [i for i in candidates if i.endswith(lazy[-1])]
@@ -211,7 +211,7 @@ class System:
                 result += '\n'
             name = arg.name(immediate=True)
             self.components[name] = arg
-            if not hasattr(self, name):
+            if name not in self.__dict__:
                 setattr(self, name, arg)
         return result
 
