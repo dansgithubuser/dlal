@@ -1,6 +1,6 @@
 from .skeleton import *
-from .helpers import *
-from .sonic import *
+from .helpers import SimpleSystem
+from .sonic import Sonic
 
 import math
 import os

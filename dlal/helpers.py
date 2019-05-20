@@ -2,6 +2,7 @@ from .buffer import *
 from .skeleton import *
 from .sonic import *
 
+import os
 import sys
 
 def midi_ports():

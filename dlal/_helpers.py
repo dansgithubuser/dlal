@@ -1,3 +1,5 @@
+import os
+
 def peruse(path, file_name=None, file_ext='.txt'):
     if not file_name:
         return os.listdir(path)
