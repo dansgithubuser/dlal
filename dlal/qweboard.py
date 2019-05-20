@@ -74,6 +74,7 @@ class Qweboard:
             if key not in qwe_to_note: return
             # mode
             if self.mode == 'normal' and self.last == key: return
+            if self.mode == 'sustain-one': self._note(self.last, False)
             # key down
             self._note(key, True)
             self.last = key
