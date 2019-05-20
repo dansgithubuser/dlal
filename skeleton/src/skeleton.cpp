@@ -596,9 +596,13 @@ std::string MultiOut::disconnect(Component& output){
 
 //=====MidiControllee=====//
 MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendControl::SENTINEL)){
-	registerCommand("control_set", "control number <min value> <max value>", [this](std::stringstream& ss){
+	registerCommand("control_set", "control number [min value] [max value]", [this](std::stringstream& ss){
+		if(peek(ss, 1)=="?") return
+			"Map MIDI controller with specified number to control with specified name.\n"
+			"To get a list of control names, use control_list.\n"
+			"If the controller doesn't have a full range from 0 to 127, its range can be specified.";
 		std::string control;
-		int number, min, max;
+		int number, min=0, max=127;
 		ss>>control>>number>>min>>max;
 		if(!_nameToControl.count(control)) return "error: unknown control";
 		if(number>127) return "error: controller number too high";
@@ -608,6 +612,9 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 		return "";
 	});
 	registerCommand("control_listen_start", "control", [this](std::stringstream& ss)->std::string{
+		if(peek(ss, 1)=="?") return
+			"Listen for MIDI controller events, to be committed with control_listen_set.\n"
+			"Make sure to send the full range of values with the controller you're mapping.";
 		std::string s;
 		ss>>s;
 		if(_nameToControl.count(s)){
@@ -618,6 +625,8 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 		return "error: no such control";
 	});
 	registerCommand("control_listen_set", "", [this](std::stringstream& ss)->std::string{
+		if(peek(ss, 1)=="?") return
+			"After control_listen_start is called and a MIDI controller events are sent, this function commits the mapping.";
 		if(_listeningControls.size()){
 			auto a=_listeningControls.begin();
 			int control=a->first;
@@ -642,11 +651,16 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 		return "";
 	});
 	registerCommand("control_listen_abort", "", [this](std::stringstream& ss)->std::string{
+		if(peek(ss, 1)=="?") return
+			"After control_listen_start is called, abort a mapping with this function.";
 		_listening=nullptr;
 		_listeningControls.clear();
 		return "";
 	});
 	registerCommand("control_function", "control y[1]..y[n]", [this](std::stringstream& ss){
+		if(peek(ss, 1)=="?") return
+			"By default, the MIDI controller values are mapped to the range [0, 1].\n"
+			"A piecewise linear function with equally divided pieces can be described with this function.";
 		std::string s;
 		ss>>s;
 		for(auto& i: _controls) if(i._control==_nameToControl[s]){
