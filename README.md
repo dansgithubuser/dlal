@@ -85,6 +85,8 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 	- midi remember port
 	- all components
 
+- audio select input and output
+
 - need to design for more than one person interacting at once with common devices (phones)
 	- webify interfaces
 		- system editor
@@ -93,14 +95,13 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 			- load system, bootstrap system (system commands)
 		- update readme arch
 
+- espeak?
+
 - music from formula with time as input
 
 - operations in frequency domain
 	- low pass amplitude of frequencies over time
 		- for example, to extract the choral part of "Gangster's Paradise" which has many other fast-changing parts
-
-- audio select input and output
-- soundscape: estimate amount of time that recording can last
 
 - vocoder
 - pitch shift component
