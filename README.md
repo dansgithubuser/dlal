@@ -80,8 +80,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- repair older systems
-
 - save and load system
 	- midi controllee
 	- midi remember port
