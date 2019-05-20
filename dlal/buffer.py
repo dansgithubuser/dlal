@@ -45,7 +45,7 @@ class Buffer(Component):
             if i == 128:
                 break
 
-    def lfo(self, period_in_samples):
+    def lfo(self, period_in_samples, immediate=False):
         period = [str(math.sin(2*math.pi*x/period_in_samples)) for x in range(period_in_samples)]
-        self.read_sound(0, ' '.join(period), immediate=True)
-        self.repeat_sound('y', immediate=True)
+        self.read_sound(0, ' '.join(period), immediate=immediate)
+        self.repeat_sound('y', immediate=immediate)

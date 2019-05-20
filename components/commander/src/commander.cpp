@@ -227,7 +227,7 @@ void Commander::midi(const uint8_t* bytes, unsigned size){
 
 void Commander::dispatch(Directive& d){
 	std::string result;
-	if(!d._a)
+	if(!d._a&&d._nameA.size())
 		d._a=_system->_nameToComponent.at(d._nameA);
 	if(!d._b&&d._nameB.size())
 		d._b=_system->_nameToComponent.at(d._nameB);

@@ -13,10 +13,6 @@ The highest-level description of it is something that enables the user to explor
 Try `python go.py -h` to get started.
 
 ## philosophy
-dlal uses C++ for audio processing and Python for audio system description.
-C++ is well-suited to the timing constraints of audio processing.
-Python is easily written and customized to create your ideal audio system.
-
 dlal is cross-platform.
 The benefit of being cross-platform is that as underlying systems change,
 dlal remains capable of taking whatever best suits it.
@@ -84,8 +80,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- repair older systems
-
 - save and load system
 	- midi controllee
 	- midi remember port

@@ -146,4 +146,4 @@ class Formant(Component):
                 self.live_command('formant {} {} {} {} 1'.format(i, p[i][0], p[i][1], p[i][2]))
 
     def live_command(self, command):
-        self.command(command)
+        self.command(command, detach=True)

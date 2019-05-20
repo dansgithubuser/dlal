@@ -1,6 +1,7 @@
 #include "liner.hpp"
 
 #include <cmath>
+#include <exception>
 
 #include <obvious.hpp>
 
@@ -41,7 +42,8 @@ Liner::Liner(){
 		unsigned track=1;
 		ss>>track;
 		dans::Midi midi;
-		midi.read(filePath);
+		try{ midi.read(filePath); }
+		catch(std::exception& e){ return ::str("error:", e.what()); }
 		return putMidi(midi, doResize, track);
 	});
 	registerCommand("clear", "", [this](std::stringstream& ss){
@@ -281,6 +283,7 @@ std::string Liner::putMidi(dans::Midi midi, bool doResize, unsigned track){
 	}
 	if(doResize) resize(latestSample);
 	setPhase(_phase);
+	if(!_line.size()) return "";
 	_index=0;
 	while(_line[_index].sample<_phase) ++_index;
 	return "";

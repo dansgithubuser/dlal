@@ -1,4 +1,5 @@
 from .skeleton import *
+from . import helpers
 
 try:
     import tkinter
@@ -143,13 +144,9 @@ class Sonic(Component):
                 i.set(float(cmd[3])**(1.0/osc.exponents[i]))
 
     def load(self, file_name=None, immediate=False):
-        if not file_name:
-            return os.listdir(os.path.join('..', '..', 'components', 'sonic', 'settings'))
-        if os.path.split(file_name)[1] == file_name:
-            file_name = os.path.join('..', '..', 'components', 'sonic', 'settings', file_name)
-        if file_name[-4:] != '.txt':
-            file_name += '.txt'
-        result = self.command('load', file_name, immediate=immediate)
+        x = helpers.peruse(os.path.join('..', '..', 'components', 'sonic', 'settings'), file_name)
+        if type(x) == list: return x
+        result = self.command('load', x, immediate=immediate)
         self.refresh_controls()
         return result
 

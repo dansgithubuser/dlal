@@ -62,6 +62,7 @@ class Skeleton:
         self.lib = obvious.load_lib('Skeleton')
         obvious.set_ffi_types(self.lib.dlalRequest, str, str, bool)
         obvious.python_3_string_prep(self.lib)
+        self.immediate = False
 
     def _check_component(self, *args):
         for arg in args:
@@ -69,6 +70,8 @@ class Skeleton:
                 raise Exception('{} is not a component'.format(arg))
 
     def _call(self, immediate, *args, sep=' ', detach=False):
+        if self.immediate:
+            immediate = True
         def convert(x):
             if isinstance(x, Component):
                 return x.component
@@ -162,6 +165,12 @@ class Skeleton:
     def component_demolish(self, c):
         return self._call(True, 'component/demolish', c)
 _skeleton = Skeleton()
+
+class ImmediateMode:
+    def __enter__(self):
+        _skeleton.immediate = True
+    def __exit__(self, exc_type, exc_value, traceback):
+        _skeleton.immediate = False
 
 class ReprMethod:
     def __init__(self, target, method, **kwargs):
@@ -443,9 +452,9 @@ class Component:
         else:
             return _skeleton.component_disconnect(immediate, self, output)
 
-    def phase(self): return int(self.periodic_get().split()[1])
+    def phase(self, immediate=False): return int(self.periodic_get(immediate=immediate).split()[1])
 
-    def period(self): return int(self.periodic_get().split()[0])
+    def period(self, immediate=False): return int(self.periodic_get(immediate=immediate).split()[0])
 
     def periodic_match(self, other, immediate=False):
         return self.command('periodic_match', other.periodic(immediate=True), immediate=immediate)
