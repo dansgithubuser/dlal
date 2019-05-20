@@ -16,10 +16,10 @@ system = dlal.SimpleSystem(
     test=True,
     test_duration=1000
 )
-pitcher.lfo(int(system.sample_rate/8.1757989156))
+pitcher.lfo(int(system.sample_rate/8.1757989156), immediate=True)
 pitcher.pitch_sound('y', immediate=True)
 pitcher.midi(0x90, 60, 0x40, immediate=True)
 buffer.clear_on_evaluate('y', immediate=True)
-lfo.lfo(system.sample_rate//30)
+lfo.lfo(system.sample_rate//30, immediate=True)
 lfo.midi(0x90, 0, 0x40, immediate=True)
 go, ports = system.standard_system_functionality()
