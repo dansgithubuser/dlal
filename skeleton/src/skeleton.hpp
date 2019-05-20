@@ -190,13 +190,17 @@ class MidiControllee: public virtual Component{
 		};
 		struct Control{
 			Control(): _control(NULL) { _f.push_back(0.0f); _f.push_back(1.0f); }
+			std::string str() const;
+			void dstr(std::stringstream& ss);
 			int _min, _max;
 			std::vector<float> _f;
 			float* _control;
+			std::string _name;
 		};
-		float* _listening;
+		void addControl(int number, std::string name, int min, int max);
+		std::string _listening;
 		std::map<int, Range> _listeningControls;
-		std::vector<Control> _controls;
+		std::map<int, Control> _controls;
 };
 
 class Dummy: public SamplesPerEvaluationGetter{
