@@ -27,6 +27,10 @@ if len(sys.argv) == 1:
     sys.exit()
 args = parser.parse_args()
 
+print('-- python --')
+print(sys.version)
+print('------------')
+
 # canned commands
 if args.can:
     canned_commands = {
