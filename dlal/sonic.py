@@ -1,5 +1,5 @@
 from .skeleton import *
-from . import helpers
+from ._helpers import peruse
 
 try:
     import tkinter
@@ -144,7 +144,7 @@ class Sonic(Component):
                 i.set(float(cmd[3])**(1.0/osc.exponents[i]))
 
     def load(self, file_name=None, immediate=False):
-        x = helpers.peruse(os.path.join('..', '..', 'components', 'sonic', 'settings'), file_name)
+        x = peruse(os.path.join('..', '..', 'components', 'sonic', 'settings'), file_name)
         if type(x) == list: return x
         result = self.command('load', x, immediate=immediate)
         self.refresh_controls()
