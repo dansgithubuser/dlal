@@ -452,9 +452,9 @@ class Component:
         else:
             return _skeleton.component_disconnect(immediate, self, output)
 
-    def phase(self): return int(self.periodic_get().split()[1])
+    def phase(self, immediate=False): return int(self.periodic_get(immediate=immediate).split()[1])
 
-    def period(self): return int(self.periodic_get().split()[0])
+    def period(self, immediate=False): return int(self.periodic_get(immediate=immediate).split()[0])
 
     def periodic_match(self, other, immediate=False):
         return self.command('periodic_match', other.periodic(immediate=True), immediate=immediate)

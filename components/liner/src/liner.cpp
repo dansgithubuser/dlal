@@ -283,6 +283,7 @@ std::string Liner::putMidi(dans::Midi midi, bool doResize, unsigned track){
 	}
 	if(doResize) resize(latestSample);
 	setPhase(_phase);
+	if(!_line.size()) return "";
 	_index=0;
 	while(_line[_index].sample<_phase) ++_index;
 	return "";
