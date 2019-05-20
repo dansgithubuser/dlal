@@ -11,13 +11,6 @@ peak_buffer = dlal.Buffer()
 output_buffer = dlal.Buffer()
 output_filea = dlal.Component('filea')
 
-input_filea.connect(peak_buffer)
-input_filea.connect(output_buffer)
-peak.connect(peak_buffer)
-multiplier.connect(peak_buffer)
-multiplier.connect(output_buffer)
-output_buffer.connect(output_filea)
-
 dlal.SimpleSystem.sample_rate = 8000
 dlal.SimpleSystem.log_2_samples_per_evaluation = 12
 system = dlal.SimpleSystem(
@@ -27,17 +20,27 @@ system = dlal.SimpleSystem(
     raw=True,
 )
 
-input_filea.open_read(input_file_path)
-peak.invert_coefficient(1)
-peak.coefficient(0)
-peak_buffer.clear_on_evaluate('y')
-output_buffer.clear_on_evaluate('y')
-x = input_file_path.split('.')
-x[-1] = 'out.'+x[-1]
-output_filea.open_write('.'.join(x))
-system.audio.duration(1000.0*int(input_filea.samples())/int(input_filea.sample_rate()))
-system.audio.set_print('y')
-system.audio.do_file('n')
+with dlal.ImmediateMode() as mode:
+    input_filea.connect(peak_buffer)
+    input_filea.connect(output_buffer)
+    peak.connect(peak_buffer)
+    multiplier.connect(peak_buffer)
+    multiplier.connect(output_buffer)
+    output_buffer.connect(output_filea)
+
+    input_filea.open_read(input_file_path)
+    peak.invert_coefficient(1)
+    peak.coefficient(0)
+    peak_buffer.clear_on_evaluate('y')
+    output_buffer.clear_on_evaluate('y')
+    x = input_file_path.split('.')
+    x[-1] = 'out.'+x[-1]
+    output_file_name = '.'.join(x)
+    print('writing to {}'.format(output_file_name))
+    output_filea.open_write(output_file_name)
+    system.audio.duration(1000.0*int(input_filea.samples())/int(input_filea.sample_rate()))
+    system.audio.set_print('y')
+    system.audio.do_file('n')
 
 go, ports = system.standard_system_functionality()
 output_filea.close_write()
