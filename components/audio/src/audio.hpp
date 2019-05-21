@@ -18,7 +18,7 @@ class Audio: public MultiOut{
 		float* _input;
 		float* _output;
 	private:
-		std::string start();
+		std::string start(int input=-1, int ouput=-1);
 		std::string finish();
 		unsigned _sampleRate, _log2SamplesPerEvaluation;
 		RtAudio _rtAudio;

@@ -1,4 +1,5 @@
 from .buffer import *
+from .audio import *
 from .skeleton import *
 from .sonic import *
 
@@ -114,7 +115,7 @@ class SimpleSystem:
             self.audio = Component('raw')
             self.audio.duration(test_duration, immediate=True)
         else:
-            self.audio = Component('audio')
+            self.audio = Audio()
         # command
         self.audio.set(self.sample_rate, self.log_2_samples_per_evaluation, immediate=True)
         # add

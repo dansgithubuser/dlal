@@ -80,8 +80,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- audio select input and output
-
 - need to design for more than one person interacting at once with common devices (phones)
 	- webify interfaces
 		- system editor

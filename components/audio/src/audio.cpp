@@ -71,12 +71,36 @@ Audio::Audio():
 			return "";
 		}
 	);
-	registerCommand("start", "", [this](std::stringstream& ss)->std::string{
+	registerCommand("probe", "", [this](std::stringstream&){
+		std::stringstream ss;
+		const auto devices=_rtAudio.getDeviceCount();
+		ss<<"[\n";
+		for(unsigned i=0; i<devices; ++i){
+			RtAudio::DeviceInfo info=_rtAudio.getDeviceInfo(i);
+			ss<<"\t{\n";
+			ss<<"\t\t\""<<"probed"<<"\" : "<<info.probed<<" ,\n";
+			ss<<"\t\t\""<<"name"<<"\" : \""<<info.name<<"\" ,\n";
+			ss<<"\t\t\""<<"outputChannels"<<"\" : "<<info.outputChannels<<" ,\n";
+			ss<<"\t\t\""<<"inputChannels"<<"\" : "<<info.inputChannels<<" ,\n";
+			ss<<"\t\t\""<<"duplexChannels"<<"\" : "<<info.duplexChannels<<" ,\n";
+			ss<<"\t\t\""<<"isDefaultOutput"<<"\" : "<<info.isDefaultOutput<<" ,\n";
+			ss<<"\t\t\""<<"isDefaultInput"<<"\" : "<<info.isDefaultInput<<" ,\n";
+			ss<<"\t\t\""<<"preferredSampleRate"<<"\" : "<<info.preferredSampleRate<<"\n";
+			ss<<"\t}";
+			if(i<devices-1) ss<<",";
+			ss<<"\n";
+		}
+		ss<<"]";
+		return ss.str();
+	});
+	registerCommand("start", "[input] [output]", [this](std::stringstream& ss)->std::string{
 		if(!_system) return "error: must add before starting";
 		if(_started) return "already started";
 		auto s=_system->prep();
 		if(isError(s)) return s;
-		return start();
+		int input=-1, output=-1;
+		ss>>input>>output;
+		return start(input, output);
 	});
 	registerCommand("finish", "", [this](std::stringstream& ss)->std::string{
 		if(!_started) return "not started";
@@ -116,11 +140,13 @@ void Audio::evaluate(){
 	#endif
 }
 
-std::string Audio::start(){
+std::string Audio::start(int input, int output){
+	if(input <0) input =_rtAudio.getDefaultInputDevice ();
+	if(output<0) output=_rtAudio.getDefaultOutputDevice();
 	if(_rtAudio.getDeviceCount()<1) return "error: no audio devices found";
 	RtAudio::StreamParameters iParams, oParams;
-	iParams.deviceId=_rtAudio.getDefaultInputDevice (); iParams.nChannels=1;
-	oParams.deviceId=_rtAudio.getDefaultOutputDevice(); oParams.nChannels=2;
+	iParams.deviceId=input ; iParams.nChannels=1;
+	oParams.deviceId=output; oParams.nChannels=2;
 	unsigned samples=1<<_log2SamplesPerEvaluation;
 	try{ _rtAudio.openStream(
 		&oParams,
