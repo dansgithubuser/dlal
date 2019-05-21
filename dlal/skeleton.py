@@ -194,9 +194,11 @@ def translate_lazy(lazy, obj):
     for i in possibilities:
         if re.search('.*'.join(lazy), i):
             candidates.append(i)
-    if len(candidates) > 1:
-        same_end = [i for i in candidates if i.endswith(lazy[-1])]
-        if same_end: candidates = same_end
+    def reduce(ls, f):
+        x = [i for i in candidates if f(i)]
+        return x if x else ls
+    candidates = reduce(candidates, lambda i: i.startswith(lazy[0]))
+    candidates = reduce(candidates, lambda i: i.endswith(lazy[-1]))
     if len(candidates) == 1: return getattr(obj, candidates[0])
     raise AttributeError("couldn't resolve {}, candidates:\n{}".format(
         lazy, '\n'.join(candidates),
