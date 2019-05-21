@@ -414,8 +414,12 @@ Component::Component(): _system(nullptr) {
 		return ss.str();
 	});
 	registerCommand("deserialize", "<serialized>", [this](std::stringstream& ss){
-		for(auto i: _commands) if(startsWith(i.first, "deserialize_"))
+		for(auto i: _commands) if(startsWith(i.first, "deserialize_")){
+			#if 0
+				std::cout<<_name<<" "<<i.first<<"\n";
+			#endif
 			i.second.command(ss);
+		}
 		return "";
 	});
 }
@@ -595,29 +599,36 @@ std::string MultiOut::disconnect(Component& output){
 }
 
 //=====MidiControllee=====//
-MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendControl::SENTINEL)){
-	registerCommand("control_set", "control number <min value> <max value>", [this](std::stringstream& ss){
+MidiControllee::MidiControllee(){
+	registerCommand("control_set", "control number [min value] [max value]", [this](std::stringstream& ss){
+		if(peek(ss, 1)=="?") return
+			"Map MIDI controller with specified number to control with specified name.\n"
+			"To get a list of control names, use control_list.\n"
+			"If the controller doesn't have a full range from 0 to 127, its range can be specified.";
 		std::string control;
-		int number, min, max;
+		int number, min=0, max=127;
 		ss>>control>>number>>min>>max;
 		if(!_nameToControl.count(control)) return "error: unknown control";
 		if(number>127) return "error: controller number too high";
-		_controls[number]._min=min;
-		_controls[number]._max=max;
-		_controls[number]._control=_nameToControl[control];
+		addControl(number, control, min, max);
 		return "";
 	});
 	registerCommand("control_listen_start", "control", [this](std::stringstream& ss)->std::string{
+		if(peek(ss, 1)=="?") return
+			"Listen for MIDI controller events, to be committed with control_listen_set.\n"
+			"Make sure to send the full range of values with the controller you're mapping.";
 		std::string s;
 		ss>>s;
 		if(_nameToControl.count(s)){
-			_listening=_nameToControl[s];
+			_listening=s;
 			_listeningControls.clear();
 			return "listening";
 		}
 		return "error: no such control";
 	});
 	registerCommand("control_listen_set", "", [this](std::stringstream& ss)->std::string{
+		if(peek(ss, 1)=="?") return
+			"After control_listen_start is called and a MIDI controller events are sent, this function commits the mapping.";
 		if(_listeningControls.size()){
 			auto a=_listeningControls.begin();
 			int control=a->first;
@@ -632,34 +643,34 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 				max=i.second._max;
 				maxRange=i.second;
 			}
-			_controls[control]._min=min;
-			_controls[control]._max=max;
-			_controls[control]._control=_listening;
-			_listening=nullptr;
+			addControl(control, _listening, min, max);
+			_listening.clear();
 			return "control "+std::to_string(control)+" range "+std::to_string(min)+".."+std::to_string(max);
 		}
 		else return "error: nothing to commit";
 		return "";
 	});
 	registerCommand("control_listen_abort", "", [this](std::stringstream& ss)->std::string{
-		_listening=nullptr;
+		if(peek(ss, 1)=="?") return
+			"After control_listen_start is called, abort a mapping with this function.";
+		_listening.clear();
 		_listeningControls.clear();
 		return "";
 	});
-	registerCommand("control_function", "control y[1]..y[n]", [this](std::stringstream& ss){
+	registerCommand("control_function", "control y[1]..y[n]", [this](std::stringstream& ss)->std::string{
+		if(peek(ss, 1)=="?") return
+			"By default, the MIDI controller values are mapped to the range [0, 1].\n"
+			"A piecewise linear function with equally divided pieces can be described with this function.";
 		std::string s;
 		ss>>s;
-		for(auto& i: _controls) if(i._control==_nameToControl[s]){
-			i._f.clear();
+		for(auto& i: _controls) if(i.second._name==s){
+			i.second._f.clear();
 			float f;
-			while(ss>>f) i._f.push_back(f);
-			if(i._f.empty()){
-				i._f.push_back(0.0f);
-				i._f.push_back(1.0f);
-			}
+			while(ss>>f) i.second._f.push_back(f);
+			if(i.second._f.empty()) return ::str(i.second._f);
 			return "";
 		}
-		return "error: unknown control";
+		return "error: invalid or unmapped control";
 	});
 	registerCommand("control_list", "", [this](std::stringstream&){
 		std::string result;
@@ -669,11 +680,19 @@ MidiControllee::MidiControllee(): _listening(nullptr), _controls(int(PretendCont
 	registerCommand("control_clear", "control", [this](std::stringstream& ss){
 		std::string s;
 		ss>>s;
-		for(auto& i: _controls) if(i._control==_nameToControl[s]){
-			i._control=nullptr;
+		for(auto& i: _controls) if(i.second._name==s){
+			i.second._control=nullptr;
 			return "";
 		}
 		return "error: unknown control";
+	});
+	registerCommand("serialize_midi_controllee", "", [this](std::stringstream& ss){
+		return ::str(_controls);
+	});
+	registerCommand("deserialize_midi_controllee", "<serialized>", [this](std::stringstream& ss){
+		::dstr(ss, _controls);
+		for(auto& i: _controls) i.second._control=_nameToControl.at(i.second._name);
+		return "";
 	});
 }
 
@@ -691,16 +710,15 @@ void MidiControllee::midi(const uint8_t* bytes, unsigned size){
 			break;
 		default: return;
 	}
-	if(_listening) _listeningControls[controller].value(value);
-	Control& control=_controls[controller];
-	if(control._control){
-		float f=1.0f*(value-control._min)/(control._max-control._min)*(control._f.size()-1);
-		int i=int(f);
-		float j=f-i;
-		if(i>=(int)control._f.size()-1) *control._control=control._f.back();
-		else if(i<0) *control._control=control._f.front();
-		else *control._control=(1-j)*control._f[i]+j*control._f[i+1];
-	}
+	if(_listening.size()) _listeningControls[controller].value(value);
+	if(!_controls.count(controller)) return;
+	Control& control=_controls.at(controller);
+	float f=1.0f*(value-control._min)/(control._max-control._min)*(control._f.size()-1);
+	int i=int(f);
+	float j=f-i;
+	if(i>=(int)control._f.size()-1) *control._control=control._f.back();
+	else if(i<0) *control._control=control._f.front();
+	else *control._control=(1-j)*control._f[i]+j*control._f[i+1];
 }
 
 void MidiControllee::Range::value(int v){
@@ -711,6 +729,22 @@ void MidiControllee::Range::value(int v){
 	}
 	if     (v<_min) _min=v;
 	else if(v>_max) _max=v;
+}
+
+std::string MidiControllee::Control::str() const {
+	return ::str(_name, _min, _max, _f);
+}
+
+void MidiControllee::Control::dstr(std::stringstream& ss){
+	_f.clear();
+	::dstr(ss, _name, _min, _max, _f);
+}
+
+void MidiControllee::addControl(int number, std::string name, int min, int max){
+	_controls[number]._min=min;
+	_controls.at(number)._max=max;
+	_controls.at(number)._control=_nameToControl[name];
+	_controls.at(number)._name=name;
 }
 
 }//namespace dlal

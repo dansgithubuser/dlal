@@ -50,6 +50,14 @@ Midi::Midi(): _rtMidiIn(nullptr), _rtQueue(7), _cmdQueue(7) {
 	registerCommand("lockless", "", [this](std::stringstream& ss){
 		return _rtQueue.lockless()?"lockless":"lockfull";
 	});
+	registerCommand("serialize_midi", "", [this](std::stringstream& ss){
+		return _portName;
+	});
+	registerCommand("deserialize_midi", "", [this](std::stringstream& ss)->std::string{
+		ss>>_portName;
+		if(_portName.size()) return command("open "+_portName);
+		return "";
+	});
 }
 
 Midi::~Midi(){ if(_rtMidiIn) delete _rtMidiIn; }

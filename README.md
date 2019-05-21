@@ -80,11 +80,6 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- save and load system
-	- midi controllee
-	- midi remember port
-	- all components
-
 - audio select input and output
 
 - need to design for more than one person interacting at once with common devices (phones)

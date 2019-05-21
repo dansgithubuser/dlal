@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(Lpf)
 
 namespace dlal{
@@ -10,6 +12,13 @@ Lpf::Lpf(): _lowness(0.5f) {
 	_checkAudio=true;
 	registerCommand("set", "lowness", [this](std::stringstream& ss){
 		ss>>_lowness;
+		return "";
+	});
+	registerCommand("serialize_lpf", "", [this](std::stringstream& ss){
+		return ::str(_lowness);
+	});
+	registerCommand("deserialize_lpf", "", [this](std::stringstream& ss){
+		::dstr(ss, _lowness);
 		return "";
 	});
 	_nameToControl["lowness"]=&_lowness;
