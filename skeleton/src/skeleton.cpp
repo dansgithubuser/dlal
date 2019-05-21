@@ -414,8 +414,12 @@ Component::Component(): _system(nullptr) {
 		return ss.str();
 	});
 	registerCommand("deserialize", "<serialized>", [this](std::stringstream& ss){
-		for(auto i: _commands) if(startsWith(i.first, "deserialize_"))
+		for(auto i: _commands) if(startsWith(i.first, "deserialize_")){
+			#if 0
+				std::cout<<_name<<" "<<i.first<<"\n";
+			#endif
 			i.second.command(ss);
+		}
 		return "";
 	});
 }
