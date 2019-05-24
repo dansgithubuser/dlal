@@ -22,12 +22,14 @@ class Buffer: public MultiOut, public Periodic, public SampleRateGetter{
 			Playing(){}
 			Playing(float volume): volume(volume), sample(0.0f) {}
 			float sample, volume;
+			bool forward=true;
 		};
 		std::string checkSize(uint64_t period);
 		std::vector<float> _audio;
-		bool _clearOnEvaluate, _repeatSound, _pitchSound;
+		bool _clearOnEvaluate, _repeatSound, _pitchSound, _elongateSound;
 		std::vector<std::vector<float>> _sounds;
 		std::map<unsigned, Playing> _playing;
+		float _elongateMargin=0.25f;
 };
 
 }//namespace dlal

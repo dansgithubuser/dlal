@@ -12,7 +12,7 @@ DLAL_BUILD_COMPONENT_DEFINITION(Buffer)
 
 namespace dlal{
 
-Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(false) {
+Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(false), _elongateSound(false) {
 	_checkAudio=true;
 	addJoinAction([this](System&){
 		if(_audio.size()==0) resize(_period?_period:_samplesPerEvaluation);
@@ -86,6 +86,17 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		_pitchSound=s=="y";
 		return "";
 	});
+	registerCommand("elongate_sound", "y/n", [this](std::stringstream& ss){
+		if(!_pitchSound) return "error: pitch_sound must be on\n";
+		std::string s;
+		ss>>s;
+		_elongateSound=s=="y";
+		return "";
+	});
+	registerCommand("elongate_margin", "value", [this](std::stringstream& ss){
+		ss>>_elongateMargin;
+		return ::str(_elongateMargin);
+	});
 	registerCommand("save", "<file name>", [this](std::stringstream& ss){
 		std::string fileName;
 		ss>>fileName;
@@ -117,7 +128,7 @@ void Buffer::evaluate(){
 		//pitch-sound
 		if(_pitchSound){
 			size=_sounds[0].size();
-			float m=pow(2.0f, i->first/12.0f);
+			float m=pow(2.0f, i->first/12.0f)*(i->second.forward?1:-1);
 			for(auto j: _outputs)
 				for(unsigned k=0; k<_samplesPerEvaluation; ++k)
 					j->audio()[k]+=_sounds[0][unsigned(i->second.sample+k*m)%size]*i->second.volume;
@@ -125,6 +136,13 @@ void Buffer::evaluate(){
 			//ensure repeat-sound logic will work correctly
 			auto x=i->second.sample/size;
 			if(x>2) i->second.sample-=floor(x-1)*size;
+			//elongate sound
+			if(_elongateSound){
+				if(i->second.sample>_sounds[0].size()*(1-_elongateMargin))
+					i->second.forward=false;
+				else if(i->second.sample<_sounds[0].size()*_elongateMargin)
+					i->second.forward=true;
+			}
 		}
 		//soundboarding
 		else{
@@ -176,6 +194,9 @@ void Buffer::midi(const uint8_t* bytes, unsigned size){
 				_playing.erase(bytes[1]);
 			else if(_pitchSound||bytes[1]<_sounds.size())
 				_playing[bytes[1]]=Playing(bytes[2]/127.0f);
+			break;
+		case 0xa0:
+			_playing[bytes[1]].volume=bytes[2]/127.0f;
 			break;
 		default: break;
 	}
