@@ -134,8 +134,12 @@ void Filea::evaluate(){
 	if(_o){
 		//write to file
 		if(samples.size()<_audio.size()) samples.resize(_audio.size());
-		for(unsigned i=0; i<_audio.size(); ++i)
-			samples[i]=short(_audio[i]*((1<<15)-1));
+		for(unsigned i=0; i<_audio.size(); ++i){
+			float f=_audio[i];
+			if(f<-1.0f) f=-1.0f;
+			else if(f>1.0f) f=1.0f;
+			samples[i]=short(f*((1<<15)-1));
+		}
 		sf::OutputSoundFile& file=*(sf::OutputSoundFile*)_o;
 		file.write(samples.data(), _audio.size());
 		//reset
