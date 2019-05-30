@@ -65,6 +65,18 @@ Buffer::Buffer(): _clearOnEvaluate(false), _repeatSound(false), _pitchSound(fals
 		while(ss>>s) _sounds[note].push_back(s);
 		return "";
 	});
+	registerCommand("copy_sound", "<MIDI note number> audio size", [this](std::stringstream& ss){
+		unsigned note;
+		ss>>note;
+		void* audio;
+		ss>>audio;
+		size_t size;
+		ss>>size;
+		if(_sounds.size()<note+1) _sounds.resize(note+1);
+		_sounds[note].clear();
+		for(size_t i=0; i<size; ++i) _sounds[note].push_back(((float*)audio)[i]);
+		return "";
+	});
 	registerCommand("sound_samples", "<MIDI note number>", [this](std::stringstream& ss){
 		unsigned note;
 		ss>>note;

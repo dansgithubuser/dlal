@@ -2,6 +2,8 @@
 
 #include <SFML/Audio.hpp>
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(Filea)
 
 namespace dlal{
@@ -27,6 +29,25 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
 		if(!file.openFromFile(fileName)) return "error: couldn't open file";
 		return "";
+	});
+	registerCommand("read", "<file name>", [this](std::stringstream& ss)->std::string{
+		ss>>std::ws;
+		std::string fileName;
+		std::getline(ss, fileName);
+		sf::InputSoundFile file;
+		if(!file.openFromFile(fileName)) return "error: couldn't open file";
+		//read file
+		std::vector<sf::Int16> samples(file.getSampleCount());
+		file.read(samples.data(), samples.size());
+		//handle relative sample rates
+		static std::vector<float> buffer;
+		buffer.resize(size_t(file.getSampleCount()*_sampleRate/file.getSampleRate()));
+		for(size_t i=0; i<buffer.size(); ++i){
+			unsigned j=i*file.getSampleRate()/_sampleRate;
+			if(j>=file.getSampleCount()) break;
+			buffer[i]=samples[j]/float(1<<15);
+		}
+		return ::str((void*)buffer.data(), buffer.size());
 	});
 	registerCommand("samples", "", [this](std::stringstream&){
 		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
@@ -59,6 +80,13 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 			delete (sf::OutputSoundFile*)_o;
 			_o=nullptr;
 		}
+		return "";
+	});
+	registerCommand("write_on_midi", "[enable, default 1]", [this](std::stringstream& ss){
+		int enable=1;
+		ss>>enable;
+		_writeOnMidi=(bool)enable;
+		_shouldWrite=!_writeOnMidi;
 		return "";
 	});
 	registerCommand("set_volume", "volume", [this](std::stringstream& ss){
@@ -131,11 +159,15 @@ void Filea::evaluate(){
 		//write to outputs
 		add(_audio.data(), _samplesPerEvaluation, _outputs);
 	}
-	if(_o){
+	if(_o&&_shouldWrite){
 		//write to file
 		if(samples.size()<_audio.size()) samples.resize(_audio.size());
-		for(unsigned i=0; i<_audio.size(); ++i)
-			samples[i]=short(_audio[i]*((1<<15)-1));
+		for(unsigned i=0; i<_audio.size(); ++i){
+			float f=_audio[i];
+			if(f<-1.0f) f=-1.0f;
+			else if(f>1.0f) f=1.0f;
+			samples[i]=short(f*((1<<15)-1));
+		}
 		sf::OutputSoundFile& file=*(sf::OutputSoundFile*)_o;
 		file.write(samples.data(), _audio.size());
 		//reset
@@ -150,6 +182,23 @@ void Filea::evaluate(){
 	){
 		_volume=_desiredVolume;
 		_deltaVolume=0.0f;
+	}
+}
+
+void Filea::midi(const uint8_t* bytes, unsigned size){
+	if(_writeOnMidi&&size==3){
+		switch(bytes[0]>>4){
+			case 9:
+				if(bytes[2])
+					_shouldWrite=true;
+				else
+					_shouldWrite=false;
+				break;
+			case 8:
+				_shouldWrite=false;
+				break;
+			default: break;
+		}
 	}
 }
 
