@@ -12,7 +12,6 @@ import copy
 
 class Oscillator:
     def __init__(self, i, oscillators, sonic):
-        self.sonic= sonic
         column = itertools.count()
         self.label = tkinter.Label(text=str(i)).grid(row=i, column=next(column))
         self.a = tkinter.Scale(command=lambda x: sonic.live_command('a {0:d} {1:f}'.format(i, self.a.get()**self.exponents[self.a])))
@@ -112,15 +111,15 @@ class Sonic(Component):
         oscillators = 4
         column = itertools.count(1)
         self.oscillators = [Oscillator(i, oscillators, self) for i in range(oscillators)]
-        self.a = tkinter.Label(text='a').grid(row=oscillators, column=next(column))
-        self.d = tkinter.Label(text='d').grid(row=oscillators, column=next(column))
-        self.s = tkinter.Label(text='s').grid(row=oscillators, column=next(column))
-        self.r = tkinter.Label(text='r').grid(row=oscillators, column=next(column))
-        self.m = tkinter.Label(text='m').grid(row=oscillators, column=next(column))
-        self.o = tkinter.Label(text='o').grid(row=oscillators, column=next(column))
-        self.i = [None]*oscillators
+        self._a = tkinter.Label(text='a').grid(row=oscillators, column=next(column))
+        self._d = tkinter.Label(text='d').grid(row=oscillators, column=next(column))
+        self._s = tkinter.Label(text='s').grid(row=oscillators, column=next(column))
+        self._r = tkinter.Label(text='r').grid(row=oscillators, column=next(column))
+        self._m = tkinter.Label(text='m').grid(row=oscillators, column=next(column))
+        self._o = tkinter.Label(text='o').grid(row=oscillators, column=next(column))
+        self._i = [None]*oscillators
         for j in range(oscillators):
-            self.i = tkinter.Label(text='i'+str(j)).grid(row=oscillators, column=next(column))
+            self._i[j] = tkinter.Label(text='i'+str(j)).grid(row=oscillators, column=next(column))
         self.set_range(default=True)
         self.refresh_controls()
 
