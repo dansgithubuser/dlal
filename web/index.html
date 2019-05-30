@@ -1,0 +1,46 @@
+<script>
+
+var gSocket;
+
+function e(name){ return document.getElementById(name) }
+function v(name){ return e(name).value }
+
+function send(path, args, kwargs){
+  gSocket.send(JSON.stringify({
+    path: path.split('.'),
+    args,
+    kwargs,
+  }));
+}
+
+function connect(){
+  gSocket = new WebSocket('ws://'+v('host')+':'+v('port'));
+  gSocket.onopen = () => {
+    send('diagram');
+  };
+  gSocket.onmessage = (event) => {
+    e('main').innerHTML = event.data.replace(/\n/g, '<br>');
+  };
+}
+
+window.onload = function(){
+  e('host').value = 'localhost';
+  e('port').value = 9121;
+}
+
+</script>
+<body>
+<div>
+  <div>
+    host: <input type='text' id='host'/>
+  </div>
+  <div>
+    port: <input type='text' id='port'/>
+  </div>
+  <div>
+    <button onclick='connect()'>connect</button>
+  </div>
+  <div id='main' style='font-family: "Monospace"'>
+  </div>
+</div>
+</body>

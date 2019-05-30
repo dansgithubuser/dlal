@@ -224,6 +224,10 @@ class System:
     def __getattr__(self, attr):
         return translate_lazy(attr, self)
 
+    def serve(self):
+        from ._websocket import DlalWebSocketServer
+        self.server = DlalWebSocketServer(self)
+
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
         immediate = kwargs.get('immediate', False)
@@ -350,18 +354,18 @@ class System:
                     if v in '┃┏┓┳┣┫╋':
                         band[i] = '┃'
                     else:
-                        band[i] = '-'
+                        band[i] = '┅'
         def lay_f(index):
             if band_f[index] == '┃':
                 band_f[index] = '┣'
-            elif band_f[index] == '-':
+            elif band_f[index] == '┅':
                 band_f[index] = '┏'
         def receive_f(index):
             band_f[index] = '┗'
         def lay_b(index):
             if band_b[index] == '┃':
                 band_b[index] = '┫'
-            elif band_b[index] == '-':
+            elif band_b[index] == '┅':
                 band_b[index] = '┓'
         def receive_b(index):
             band_b[index] = '┛'
@@ -372,7 +376,7 @@ class System:
         # loop
         result = []
         max_len = str(max(len(i) for i in self.components))
-        component_format = '{:-<' + max_len + '.' + max_len + '}'
+        component_format = '[{:|<' + max_len + '.' + max_len + '}]'
         for index, name in enumerate(self.components):
             advance()
             # forward connections
