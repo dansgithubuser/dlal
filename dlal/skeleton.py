@@ -465,6 +465,9 @@ class Component:
         for i in range(128):
             self.midi(0x80, i, 0, detach=True)
 
+    def help(self):
+        print(self.command('help', immediate=True))
+
 component_types = {}
 def inform_component_type(name, value): component_types[snake_case(name)] = value
 
