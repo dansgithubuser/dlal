@@ -14,3 +14,8 @@ class Filea(Component):
         time.sleep(duration/2)
         self.open_read(x)
         self.fade(1, duration/2)
+
+    def read_drum(self, file_name=None):
+        x = peruse(os.path.join('..', '..', 'components', 'filea', 'drum'), file_name, '.ogg')
+        if type(x) == list: return x
+        return self.read(x, immediate=True)

@@ -2,6 +2,8 @@
 
 #include <SFML/Audio.hpp>
 
+#include <obvious.hpp>
+
 DLAL_BUILD_COMPONENT_DEFINITION(Filea)
 
 namespace dlal{
@@ -27,6 +29,25 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
 		if(!file.openFromFile(fileName)) return "error: couldn't open file";
 		return "";
+	});
+	registerCommand("read", "<file name>", [this](std::stringstream& ss)->std::string{
+		ss>>std::ws;
+		std::string fileName;
+		std::getline(ss, fileName);
+		sf::InputSoundFile file;
+		if(!file.openFromFile(fileName)) return "error: couldn't open file";
+		//read file
+		std::vector<sf::Int16> samples(file.getSampleCount());
+		file.read(samples.data(), samples.size());
+		//handle relative sample rates
+		static std::vector<float> buffer;
+		buffer.resize(size_t(file.getSampleCount()*_sampleRate/file.getSampleRate()));
+		for(size_t i=0; i<buffer.size(); ++i){
+			unsigned j=i*file.getSampleRate()/_sampleRate;
+			if(j>=file.getSampleCount()) break;
+			buffer[i]=samples[j]/float(1<<15);
+		}
+		return ::str((void*)buffer.data(), buffer.size());
 	});
 	registerCommand("samples", "", [this](std::stringstream&){
 		sf::InputSoundFile& file=*(sf::InputSoundFile*)_i;
