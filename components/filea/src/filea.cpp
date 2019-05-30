@@ -61,6 +61,13 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 		}
 		return "";
 	});
+	registerCommand("write_on_midi", "[enable, default 1]", [this](std::stringstream& ss){
+		int enable=1;
+		ss>>enable;
+		_writeOnMidi=(bool)enable;
+		_shouldWrite=!_writeOnMidi;
+		return "";
+	});
 	registerCommand("set_volume", "volume", [this](std::stringstream& ss){
 		ss>>_volume;
 		return "";
@@ -131,7 +138,7 @@ void Filea::evaluate(){
 		//write to outputs
 		add(_audio.data(), _samplesPerEvaluation, _outputs);
 	}
-	if(_o){
+	if(_o&&_shouldWrite){
 		//write to file
 		if(samples.size()<_audio.size()) samples.resize(_audio.size());
 		for(unsigned i=0; i<_audio.size(); ++i){
@@ -154,6 +161,23 @@ void Filea::evaluate(){
 	){
 		_volume=_desiredVolume;
 		_deltaVolume=0.0f;
+	}
+}
+
+void Filea::midi(const uint8_t* bytes, unsigned size){
+	if(_writeOnMidi&&size==3){
+		switch(bytes[0]>>4){
+			case 9:
+				if(bytes[2])
+					_shouldWrite=true;
+				else
+					_shouldWrite=false;
+				break;
+			case 8:
+				_shouldWrite=false;
+				break;
+			default: break;
+		}
 	}
 }
 
