@@ -1,46 +1,84 @@
 <script>
 
 var gSocket;
+var gPromiseResolvers = {};
 
 function e(name){ return document.getElementById(name) }
 function v(name){ return e(name).value }
 
-function send(path, args, kwargs){
+// Math.random is probably good enough for this...
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.floor(Math.random() * 16), v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function send(path, options = {}){
+  const uuid = uuidv4();
   gSocket.send(JSON.stringify({
+    uuid,
     path: path.split('.'),
-    args,
-    kwargs,
+    args: options.args,
+    kwargs: options.kwargs,
+    op: options.op,
   }));
+  return new Promise(function(resolve, reject){
+    gPromiseResolvers[uuid] = { resolve, reject };
+  });
 }
 
 function connect(){
   gSocket = new WebSocket('ws://'+v('host')+':'+v('port'));
   gSocket.onopen = () => {
-    send('diagram');
+    diagram();
   };
   gSocket.onmessage = (event) => {
-    e('main').innerHTML = event.data.replace(/\n/g, '<br>');
+    response = JSON.parse(event.data);
+    gPromiseResolvers[response.uuid].resolve(response);
   };
+}
+
+async function diagram(){
+  e('diagram').innerHTML = (await send('system.diagram'))['result'].replace(/\n/g, '<br>');
+  e('main').style = '';
+  e('connect').style = 'display: none';
+}
+
+async function add(){
+  var r = await send('skeleton.component_builder', { args: [v('addType')], op: 'store' });
+  r = await send(r.uuid, { op: 'store' });
+  await send('system.add', { args: [r.uuid] });
+  diagram();
 }
 
 window.onload = function(){
   e('host').value = 'localhost';
   e('port').value = 9121;
+  e('addType').addEventListener('keyup', (event) => { if (event.keyCode == 13) add() });
 }
 
 </script>
 <body>
 <div>
-  <div>
-    host: <input type='text' id='host'/>
+  <div id='connect'>
+    <div>
+      <input type='text' id='host' placeholder='host'/>
+    </div>
+    <div>
+      <input type='text' id='port' placeholder='port'/>
+    </div>
+    <div>
+      <button onclick='connect()'>connect</button>
+    </div>
   </div>
-  <div>
-    port: <input type='text' id='port'/>
-  </div>
-  <div>
-    <button onclick='connect()'>connect</button>
-  </div>
-  <div id='main' style='font-family: "Monospace"'>
+  <div id='main' style='display: none'>
+    <div id='diagram' style='font-family: Monospace'>
+    </div>
+    <div>
+      <input type='text' id='addType' placeholder='type'/>
+      <button onclick='add()'>add</button>
+    </div>
   </div>
 </div>
 </body>
