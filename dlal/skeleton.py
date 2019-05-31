@@ -155,6 +155,10 @@ class Skeleton:
         self._check_component(a, b)
         return self._call(immediate, 'component/connect', a, b)
 
+    def component_connect_toggle(self, immediate, a, b):
+        self._check_component(a, b)
+        return self._call(immediate, 'component/connect/toggle', a, b)
+
     def component_disconnect(self, immediate, a, b):
         self._check_component(a, b)
         return self._call(immediate, 'component/disconnect', a, b)
@@ -441,8 +445,11 @@ class Component:
     def command(self, *command, immediate=False, detach=False):
         return _skeleton.component_command(immediate, self, *command, detach=detach)
 
-    def connect(self, output, immediate=False):
-        return _skeleton.component_connect(immediate, self, output)
+    def connect(self, output, toggle=False, immediate=False):
+        if toggle:
+            return _skeleton.component_connect_toggle(immediate, self, output)
+        else:
+            return _skeleton.component_connect(immediate, self, output)
 
     def disconnect(self, output=None, immediate=False):
         if output is None:

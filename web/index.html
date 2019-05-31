@@ -1,7 +1,16 @@
+<style>
+
+.wire {
+  cursor: crosshair;
+}
+
+</style>
 <script>
 
 var gSocket;
 var gPromiseResolvers = {};
+var gComponentOrder;
+var gConnecting;
 
 function e(name){ return document.getElementById(name) }
 function v(name){ return e(name).value }
@@ -14,8 +23,9 @@ function uuidv4() {
   });
 }
 
-function send(path, options = {}){
-  const uuid = uuidv4();
+//===== socket stuff =====//
+function socketSend(path, options = {}){
+  const uuid = options.uuid || uuidv4();
   gSocket.send(JSON.stringify({
     uuid,
     path: path.split('.'),
@@ -28,7 +38,7 @@ function send(path, options = {}){
   });
 }
 
-function connect(){
+function socketConnect(){
   gSocket = new WebSocket('ws://'+v('host')+':'+v('port'));
   gSocket.onopen = () => {
     diagram();
@@ -39,19 +49,59 @@ function connect(){
   };
 }
 
+function free(uuid){
+  return socketSend('free', { op: 'store', uuid });
+}
+
+//===== system stuff =====//
 async function diagram(){
-  e('diagram').innerHTML = (await send('system.diagram'))['result'].replace(/\n/g, '<br>');
+  gComponentOrder = {};
+  e('diagram').innerHTML = (await socketSend('system.diagram'))['result'].split('\n').map(i => {
+    return i.replace(/(.*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => { 
+      gComponentOrder[name] = Object.keys(gComponentOrder).length;
+      connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
+      return connectify(left, 'left', name) + name + space + connectify(right, 'right', name);
+    });
+  }).join('<br>');
   e('main').style = '';
-  e('connect').style = 'display: none';
+  e('socketConnect').style = 'display: none';
+}
+
+async function component(name){
+  const r = await socketSend(`system.${name}`, { op: 'store' });
+  return r.uuid;
 }
 
 async function add(){
-  var r = await send('skeleton.component_builder', { args: [v('addType')], op: 'store' });
-  r = await send(r.uuid, { op: 'store' });
-  await send('system.add', { args: [r.uuid] });
+  var r = await socketSend('skeleton.component_builder', { args: [v('addType')], op: 'store' });
+  var s = await socketSend(r.uuid, { op: 'store' });
+  await socketSend('system.add', { args: [s.uuid] });
   diagram();
+  free(r.uuid);
+  free(s.uuid);
 }
 
+//----- connect -----//
+async function connect(connector, connectee){
+  const a = await component(connector), b = await component(connectee);
+  await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
+  diagram();
+  free(a);
+  free(b);
+}
+
+function wire(name, side){
+  if (gConnecting) {
+    connect(gConnecting.name, name);
+    e(`${gConnecting.name}-${gConnecting.side}`).style = '';
+    gConnecting = undefined;
+  } else {
+    e(`${name}-${side}`).style = 'color:blue';
+    gConnecting = { name, side };
+  }
+}
+
+//===== onload =====//
 window.onload = function(){
   e('host').value = 'localhost';
   e('port').value = 9121;
@@ -60,8 +110,9 @@ window.onload = function(){
 
 </script>
 <body>
+
 <div>
-  <div id='connect'>
+  <div id='socketConnect'>
     <div>
       <input type='text' id='host' placeholder='host'/>
     </div>
@@ -69,7 +120,7 @@ window.onload = function(){
       <input type='text' id='port' placeholder='port'/>
     </div>
     <div>
-      <button onclick='connect()'>connect</button>
+      <button onclick='socketConnect()'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>
@@ -81,4 +132,5 @@ window.onload = function(){
     </div>
   </div>
 </div>
+
 </body>

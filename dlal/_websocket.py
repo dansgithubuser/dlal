@@ -29,15 +29,18 @@ class _DlalWebSocket(WebSocket):
     def handleMessage(self):
         try:
             request = json.loads(self.data)
-            method = self.server.root
+            value = self.server.root
             for i, v in enumerate(request['path']):
                 if i == 0 and v in self.server.store:
-                    method = self.server.store[v]
+                    value = self.server.store[v]
                 else:
-                    method = getattr(method, v)
+                    value = getattr(value, v)
             args = [self.sub(i) for i in request.get('args', [])]
-            kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {})}
-            result = method(*args, **kwargs)
+            kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
+            if callable(value):
+                result = value(*args, **kwargs)
+            else:
+                result = value
             if request.get('op') == 'store':
                 if result == FREE:
                     del self.server.store[request['uuid']]
