@@ -72,6 +72,20 @@ async function component(name){
   return r.uuid;
 }
 
+async function invoke(){
+  options = {};
+  if (v('invokeArgs'  )) options.args = v('invokeArgs'  );
+  if (v('invokeKwargs')) options.args = v('invokeKwargs');
+  if (v('invokeOp'    )) options.args = v('invokeOp'    );
+  if (v('invokeUuid'  )) options.args = v('invokeUuid'  );
+  const response = await socketSend(v('invokePath'), options);
+  e('invokeResponse').innerHTML = Object.keys(response).map((i) => {
+    var v = response[i];
+    if (i == 'path') v = v.join('.');
+    return `${i}: ${v}`;
+  }).join('<br>');
+}
+
 async function add(){
   var r = await socketSend('skeleton.component_builder', { args: [v('addType')], op: 'store' });
   var s = await socketSend(r.uuid, { op: 'store' });
@@ -102,10 +116,19 @@ function wire(name, side){
 }
 
 //===== onload =====//
+function enterFunction(id, f){
+  e(id).addEventListener('keyup', (event) => { if (event.keyCode == 13) f() });
+}
+
 window.onload = function(){
   e('host').value = 'localhost';
   e('port').value = 9121;
-  e('addType').addEventListener('keyup', (event) => { if (event.keyCode == 13) add() });
+  enterFunction('addType', add);
+  enterFunction('invokePath'  , invoke);
+  enterFunction('invokeArgs'  , invoke);
+  enterFunction('invokeKwargs', invoke);
+  enterFunction('invokeOp'    , invoke);
+  enterFunction('invokeUuid'  , invoke);
 }
 
 </script>
@@ -129,6 +152,16 @@ window.onload = function(){
     <div>
       <input type='text' id='addType' placeholder='type'/>
       <button onclick='add()'>add</button>
+    </div>
+    <div>
+      <input type='text' id='invokePath' placeholder='path'/>
+      <input type='text' id='invokeArgs' placeholder='args'/>
+      <input type='text' id='invokeKwargs' placeholder='kwargs'/>
+      <input type='text' id='invokeOp' placeholder='op'/>
+      <input type='text' id='invokeUuid' placeholder='UUID'/>
+      <button onclick='invoke()'>invoke</button>
+      <div id='invokeResponse' style='font-family: Monospace'>
+      </div>
     </div>
   </div>
 </div>
