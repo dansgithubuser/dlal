@@ -23,53 +23,11 @@
 }
 
 </style>
+<script src='common.js'></script>
 <script>
 
-var gSocket;
-var gPromiseResolvers = {};
 var gComponentOrder;
 var gConnecting;
-
-function e(name){ return document.getElementById(name) }
-function v(name){ return e(name).value }
-
-// Math.random is probably good enough for this...
-function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.floor(Math.random() * 16), v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-//===== socket stuff =====//
-function socketSend(path, options = {}){
-  const uuid = options.uuid || uuidv4();
-  gSocket.send(JSON.stringify({
-    uuid,
-    path: path.split('.'),
-    args: options.args,
-    kwargs: options.kwargs,
-    op: options.op,
-  }));
-  return new Promise(function(resolve, reject){
-    gPromiseResolvers[uuid] = { resolve, reject };
-  });
-}
-
-function socketConnect(){
-  gSocket = new WebSocket('ws://'+v('host')+':'+v('port'));
-  gSocket.onopen = () => {
-    diagram();
-  };
-  gSocket.onmessage = (event) => {
-    response = JSON.parse(event.data);
-    gPromiseResolvers[response.uuid].resolve(response);
-  };
-}
-
-function free(uuid){
-  return socketSend('free', { op: 'store', uuid });
-}
 
 //===== system stuff =====//
 async function diagram(){
@@ -141,8 +99,8 @@ async function add(){
   var s = await socketSend(r.uuid, { op: 'store' });
   await socketSend('system.add', { args: [s.uuid] });
   diagram();
-  free(r.uuid);
-  free(s.uuid);
+  socketFree(r.uuid);
+  socketFree(s.uuid);
 }
 
 //----- connect -----//
@@ -150,8 +108,8 @@ async function connect(connector, connectee){
   const a = await component(connector), b = await component(connectee);
   await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
   diagram();
-  free(a);
-  free(b);
+  socketFree(a);
+  socketFree(b);
 }
 
 function wire(name, side){
@@ -205,7 +163,7 @@ window.onload = function(){
       <input type='text' id='port' placeholder='port'/>
     </div>
     <div>
-      <button onclick='socketConnect()'>connect</button>
+      <button onclick='socketConnect(v("host"), v("port"), diagram)'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>

@@ -1,8 +1,8 @@
 <head>
   <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
+  <script src='common.js'></script>
   <script>
 
-var gSocket;
 var gWKey, gHKey;
 var gKeys;
 var gMessages = [];
@@ -14,16 +14,13 @@ function debugLog(message) {
   console.log(message);
 }
 
-function e(name) { return document.getElementById(name) }
-function v(name) { return e(name).value }
-
 function getUrlParam(name) {
   const params = new URLSearchParams(window.location.search);
   return params.get(name);
 }
 
 function connect() {
-  gSocket = new WebSocket(`ws://${getUrlParam('host')}:${getUrlParam('port')}`);
+  socketConnect(getUrlParam('host'), getUrlParam('port'));
   e('divInit').style.display = 'none';
   e('divBoard').style.display = '';
   resize();
@@ -31,13 +28,11 @@ function connect() {
 }
 
 function send(note, down) {
-  if (!gSocket) return;
   debugLog(`sending ${note}, ${down}`);
-  gSocket.send(JSON.stringify({
-    path: ['system', getUrlParam('component'), 'midi'],
+  socketSend(`system.${getUrlParam('component')}.midi`, {
     args: [`${down?0x90:0x80} ${note} 64`],
     kwargs: { detach: true },
-  }));
+  });
   debugLog(`sent ${note}, ${down}`);
 }
 
