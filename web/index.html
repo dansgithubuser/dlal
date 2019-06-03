@@ -22,19 +22,23 @@
   cursor: pointer;
 }
 
+.option:hover {
+  color: green;
+}
+
 </style>
 <script src='common.js'></script>
 <script>
 
-var gComponentOrder;
+var gSystemInfo;
 var gConnecting;
 
 //===== system stuff =====//
-async function diagram(){
-  gComponentOrder = {};
-  e('diagram').innerHTML = (await socketSend('system.diagram'))['result'].split('\n').map(i => {
+async function diagram() {
+  gSystemInfo = (await socketSend('system.info'))['result'];
+  const diagram = (await socketSend('system.diagram'))['result'];
+  e('diagram').innerHTML = diagram.split('\n').map(i => {
     return i.replace(/(.*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => { 
-      gComponentOrder[name] = Object.keys(gComponentOrder).length;
       connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
       return [
         connectify(left, 'left', name),
@@ -50,37 +54,42 @@ async function diagram(){
   e('socketConnect').style = 'display: none';
 }
 
-function context(componentName){
+function context(componentName) {
   const dropdown = document.createElement('div');
   dropdown.className = 'dropdown';
-  function addOption(dropdown, name, f){
+  function addOption(name, f, arg) {
     const option = document.createElement('div');
     option.className = 'option';
-    option.onclick = f;
+    option.onclick = () => f(arg);
     option.innerText = name;
     dropdown.appendChild(option);
   }
-  addOption(dropdown, 'webboard', webboard);
+  addOption('webboard', openPage, { url: 'webboard.html', componentName });
+  const specifics = {
+    'commander': { 'commander': 'commander.html' },
+  }[gSystemInfo['component_types'][componentName]];
+  for (const i in specifics) addOption(i, openPage, { url: specifics[i], componentName });
   e(`component-${componentName}`).appendChild(dropdown);
 }
 
-function contextDismiss(){
+function contextDismiss() {
   const dropdowns = document.getElementsByClassName('dropdown');
   for (const i of dropdowns) i.parentElement.removeChild(i);
 }
 
-function webboard(event){
-  const componentName = event.target.parentElement.parentElement.id.split('-')[1];
-  window.open(`webboard.html?host=${v('host')}&port=${v('port')}&component=${componentName}`, '_blank');
+function openPage(args) {
+  const url = args.url;
+  const componentName = args.componentName;
+  window.open(`${url}?host=${v('host')}&port=${v('port')}&component=${componentName}`, '_blank');
   contextDismiss();
 }
 
-async function component(name){
+async function component(name) {
   const r = await socketSend(`system.${name}`, { op: 'store' });
   return r.uuid;
 }
 
-async function invoke(){
+async function invoke() {
   options = {};
   if (v('invokeArgs'  )) options.args = v('invokeArgs'  );
   if (v('invokeKwargs')) options.args = v('invokeKwargs');
@@ -94,7 +103,7 @@ async function invoke(){
   }).join('<br>');
 }
 
-async function add(){
+async function add() {
   var r = await socketSend('skeleton.component_builder', { args: [v('addType')], op: 'store' });
   var s = await socketSend(r.uuid, { op: 'store' });
   await socketSend('system.add', { args: [s.uuid] });
@@ -104,7 +113,7 @@ async function add(){
 }
 
 //----- connect -----//
-async function connect(connector, connectee){
+async function connect(connector, connectee) {
   const a = await component(connector), b = await component(connectee);
   await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
   diagram();
@@ -112,7 +121,7 @@ async function connect(connector, connectee){
   socketFree(b);
 }
 
-function wire(name, side){
+function wire(name, side) {
   if (gConnecting) {
     connect(gConnecting.name, name);
     e(`${gConnecting.name}-${gConnecting.side}`).style = '';
@@ -124,11 +133,11 @@ function wire(name, side){
 }
 
 //===== onload =====//
-function enterFunction(id, f){
+function enterFunction(id, f) {
   e(id).addEventListener('keyup', (event) => { if (event.keyCode == 13) f() });
 }
 
-window.onload = function(){
+window.onload = function() {
   e('host').value = 'localhost';
   e('port').value = 9121;
   enterFunction('addType', add);
@@ -163,7 +172,7 @@ window.onload = function(){
       <input type='text' id='port' placeholder='port'/>
     </div>
     <div>
-      <button onclick='socketConnect(v("host"), v("port"), diagram)'>connect</button>
+      <button onclick='socketConnect({ host: v("host"), port: v("port"), onOpen: diagram})'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>

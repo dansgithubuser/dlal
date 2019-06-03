@@ -262,19 +262,21 @@ class System:
     def set(self, name, value, immediate=False):
         _skeleton.variable_set(immediate, name, value)
 
+    def info(self):
+        return {
+            'variables': json.loads(_skeleton.variable_get_all(immediate=True)),
+            'component_order': json.loads(_skeleton.component_get_all(immediate=True)),
+            'component_types': {k: v.type(immediate=True) for k, v in self.components.items()},
+            'connections': json.loads(_skeleton.component_get_connections(immediate=True)),
+        }
+
     def serialize(self):
-        state = {}
-        # variables
-        state['variables'] = json.loads(_skeleton.variable_get_all(immediate=True))
-        # components
-        state['component_order'] = json.loads(_skeleton.component_get_all(immediate=True))
-        state['component_types'] = {k: v.type(immediate=True) for k, v in self.components.items()}
+        # variables, components, connections
+        state = self.info()
         state['components'] = {
             k: re.sub('\n|\t', ' ', v.serialize(immediate=True))
             for k, v in self.components.items()
         }
-        # connections
-        state['connections'] = json.loads(_skeleton.component_get_connections(immediate=True))
         # python
         state['py'] = {
             k: v.py_serialize()

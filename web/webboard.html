@@ -14,13 +14,8 @@ function debugLog(message) {
   console.log(message);
 }
 
-function getUrlParam(name) {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name);
-}
-
 function connect() {
-  socketConnect(getUrlParam('host'), getUrlParam('port'));
+  socketConnect();
   e('divInit').style.display = 'none';
   e('divBoard').style.display = '';
   resize();

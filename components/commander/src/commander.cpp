@@ -41,31 +41,27 @@ std::string Commander::Directive::str() const {
 		nameA=_a->_name;
 	if(!nameB.size()&&_b)
 		nameB=_b->_name;
-	ss<<_type<<" "<<nameA<<" ";
+	ss<<::str("[", _type, ",", nameA, ", ");
 	switch(_type){
-		case COMMAND: ss<<_command.size()<<" "<<_command; break;
-		case CONNECT: ss<<nameB; break;
-		case DISCONNECT: ss<<nameB; break;
+		case COMMAND: ss<<::str(_command); break;
+		case CONNECT: ss<<::str(nameB); break;
+		case DISCONNECT: ss<<::str(nameB); break;
 		default: break;
 	}
+	ss<<" ]";
 	return ss.str();
 }
 
 void Commander::Directive::dstr(std::stringstream& ss){
 	unsigned t;
-	ss>>t>>_nameA;
+	::dstr(ss, "[", t, ",", _nameA, ", ");
 	_type=(Type)t;
 	switch(_type){
-		case COMMAND:{
-			size_t size;
-			ss>>size;
-			ss.ignore(1);
-			_command=read(ss, size);
-			break;
-		}
-		case CONNECT: ss>>_nameB; break;
-		case DISCONNECT: ss>>_nameB; break;
+		case COMMAND: ::dstr(ss, _command); break;
+		case CONNECT: ::dstr(ss, _nameB); break;
+		case DISCONNECT: ::dstr(ss, _nameB); break;
 	}
+	::dstr(ss, " ]");
 }
 
 Commander::Commander():
