@@ -1,7 +1,12 @@
+<link rel='stylesheet' type='text/css' href='style.css'>
 <style>
 
 .wire {
   cursor: crosshair;
+}
+
+.wire:hover {
+  color: green;
 }
 
 .component {
@@ -10,19 +15,7 @@
   font-weight: bold;
 }
 
-.dropdown {
-  position: absolute;
-  z-index: 1;
-  background-color: black;
-  color: white;
-  padding: 10px;
-}
-
-.option {
-  cursor: pointer;
-}
-
-.option:hover {
+.component:hover {
   color: green;
 }
 
@@ -42,7 +35,7 @@ async function diagram() {
       connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
       return [
         connectify(left, 'left', name),
-        `<span id="component-${name}" class='component' oncontextmenu='context("${name}"); return false'>`,
+        `<span id="component-${name}" class='component' oncontextmenu='componentContext("${name}"); return false'>`,
         name,
         '</span>',
         space,
@@ -54,39 +47,18 @@ async function diagram() {
   e('socketConnect').style = 'display: none';
 }
 
-function context(componentName) {
-  const dropdown = document.createElement('div');
-  dropdown.className = 'dropdown';
-  function addOption(name, f, arg) {
-    const option = document.createElement('div');
-    option.className = 'option';
-    option.onclick = () => f(arg);
-    option.innerText = name;
-    dropdown.appendChild(option);
-  }
-  addOption('webboard', openPage, { url: 'webboard.html', componentName });
+function componentContext(name) {
+  const dropdown = context(e(`component-${name}`));
+  contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
   const specifics = {
     'commander': { 'commander': 'commander.html' },
-  }[gSystemInfo['component_types'][componentName]];
-  for (const i in specifics) addOption(i, openPage, { url: specifics[i], componentName });
-  e(`component-${componentName}`).appendChild(dropdown);
-}
-
-function contextDismiss() {
-  const dropdowns = document.getElementsByClassName('dropdown');
-  for (const i of dropdowns) i.parentElement.removeChild(i);
+  }[gSystemInfo['component_types'][name]];
+  for (const i in specifics) contextOption(dropdown, i, openPage, { url: specifics[i], component: name });
 }
 
 function openPage(args) {
-  const url = args.url;
-  const componentName = args.componentName;
-  window.open(`${url}?host=${v('host')}&port=${v('port')}&component=${componentName}`, '_blank');
+  window.open(`${args.url}?host=${v('host')}&port=${v('port')}&component=${args.component}`, '_blank');
   contextDismiss();
-}
-
-async function component(name) {
-  const r = await socketSend(`system.${name}`, { op: 'store' });
-  return r.uuid;
 }
 
 async function invoke() {
@@ -108,8 +80,8 @@ async function add() {
   var s = await socketSend(r.uuid, { op: 'store' });
   await socketSend('system.add', { args: [s.uuid] });
   diagram();
-  socketFree(r.uuid);
-  socketFree(s.uuid);
+  free(r.uuid);
+  free(s.uuid);
 }
 
 //----- connect -----//
@@ -117,8 +89,8 @@ async function connect(connector, connectee) {
   const a = await component(connector), b = await component(connectee);
   await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
   diagram();
-  socketFree(a);
-  socketFree(b);
+  free(a);
+  free(b);
 }
 
 function wire(name, side) {

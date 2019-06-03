@@ -1,0 +1,16 @@
+.dropdown {
+  position: absolute;
+  z-index: 1;
+  background-color: black;
+  color: white;
+  padding: 10px;
+}
+
+.option {
+  cursor: pointer;
+}
+
+.option:hover {
+  color: green;
+}
+

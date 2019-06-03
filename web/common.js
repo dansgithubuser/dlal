@@ -43,7 +43,38 @@ function socketSend(path, options = {}) {
   });
 }
 
-function socketFree(uuid) {
+function free(uuid) {
   return socketSend('free', { op: 'store', uuid });
 }
 
+function context(element) {
+  contextDismiss();
+  const dropdown = document.createElement('div');
+  dropdown.className = 'dropdown';
+  element.appendChild(dropdown);
+  return dropdown;
+}
+
+function contextOption(dropdown, name, onClick, arg) {
+  const option = document.createElement('div');
+  option.className = 'option';
+  option.onclick = () => onClick(arg);
+  option.innerText = name;
+  dropdown.appendChild(option);
+}
+
+function contextDismiss() {
+  const dropdowns = document.getElementsByClassName('dropdown');
+  while (dropdowns.length) {
+    dropdowns[0].parentElement.removeChild(dropdowns[0]);
+  }
+}
+
+async function component(name) {
+  const r = await socketSend(`system.${name}`, { op: 'store' });
+  return r.uuid;
+}
+
+function clone(x) {
+  return JSON.parse(JSON.stringify(x));
+}

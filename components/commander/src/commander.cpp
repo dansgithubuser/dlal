@@ -122,7 +122,7 @@ Commander::Commander():
 	Component::registerCommand("slot_insert", "<before this slot>", [this](std::stringstream& ss){
 		size_t i;
 		ss>>i;
-		if(i>=_slots.size()) return "error: no such slot";
+		if(i>_slots.size()) return "error: no such slot";
 		_slots.insert(_slots.begin()+i, std::vector<Directive>());
 		return "";
 	});
@@ -153,6 +153,14 @@ Commander::Commander():
 		ss>>i>>input>>output;
 		if(i>=_slots.size()) return "error: no such slot";
 		_slots[i].push_back(Directive(*(dlal::Component*)input, *(dlal::Component*)output, 0).disconnect());
+		return "";
+	});
+	Component::registerCommand("slot_remove", "slot directive", [this](std::stringstream& ss){
+		size_t slot, directive;
+		ss>>slot>>directive;
+		if(slot>=_slots.size()) return "error: no such slot";
+		if(directive>=_slots[slot].size()) return "error: no such directive";
+		_slots[slot].erase(_slots[slot].begin()+directive);
 		return "";
 	});
 	Component::registerCommand("slot_skip_to", "slot", [this](std::stringstream& ss){

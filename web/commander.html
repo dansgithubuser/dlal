@@ -1,6 +1,7 @@
+<link rel='stylesheet' type='text/css' href='style.css'>
 <style>
 
-#body {
+#main {
   font-family: Monospace;
   line-height: 1;
   display: grid;
@@ -8,42 +9,145 @@
 }
 
 .slot {
-  background-color: lightgrey;
+  background-color: #eee;
   margin: 10px;
   padding: 10px;
   white-space: nowrap;
+}
+
+.slot:hover {
+  background-color: #efe;
+}
+
+.directive {
+  position: relative;
+}
+
+.directive:hover {
+  color: green;
 }
 
 </style>
 <script src='common.js'></script>
 <script>
 
+function command(c, args = []) {
+  return socketSend(`system.${getUrlParam('component')}.${c}`, { args });
+}
+
 async function slotsList() {
-  const slots = JSON.parse((await socketSend(`system.${getUrlParam('component')}.slots_list`))['result']);
-  function directiveDiv(html) {
+  const slots = JSON.parse((await command('slots_list'))['result']);
+  while (e('main').firstChild) e('main').removeChild(e('main').firstChild);
+  function directiveDiv(slot, directive, html) {
     const div = document.createElement('div');
+    div.className = 'directive';
     div.innerHTML = html;
+    div.oncontextmenu = () => {
+      directiveContext(div, slot, directive);
+      return false;
+    };
     return div;
   }
-  for (const slot of slots) {
+  for (var iSlot = 0; iSlot < slots.length; ++iSlot) {
+    const slot = slots[iSlot];
     const div = document.createElement('div');
     div.className = 'slot';
-    for (const directive of slot) {
+    for (var iDirective = 0; iDirective < slot.length; ++iDirective) {
+      const directive = slot[iDirective];
       switch (directive[0]) {
-        case 0: div.appendChild(directiveDiv(`${directive[1]} ${directive[2]}`)); break;
-        case 2: div.appendChild(directiveDiv(directive[1])); break;
-        case 3: div.appendChild(directiveDiv(`${directive[1]} <span style='color:blue'>┅┅┅</span> ${directive[2]}`)); break;
-        case 4: div.appendChild(directiveDiv(`${directive[1]} <span style='color:red'>┅ ┅</span> ${directive[2]}`)); break;
+        case 0: div.appendChild(directiveDiv(iSlot, iDirective, `${directive[1]} ${directive[2]}`)); break;
+        case 2: div.appendChild(directiveDiv(iSlot, iDirective, directive[1])); break;
+        case 3: div.appendChild(directiveDiv(iSlot, iDirective, `${directive[1]} <span style='color:blue'>┅┅┅</span> ${directive[2]}`)); break;
+        case 4: div.appendChild(directiveDiv(iSlot, iDirective, `${directive[1]} <span style='color:red'>┅ ┅</span> ${directive[2]}`)); break;
       }
     }
-    e('body').appendChild(div);
+    const iSlotClone = clone(iSlot);
+    div.oncontextmenu = (event) => {
+      if (event.target.className == 'slot') directiveContext(div, iSlotClone);
+      return false;
+    };
+    e('main').appendChild(div);
   }
+}
+
+function directiveContext(element, slot, directive) {
+  const dropdown = context(element);
+  contextOption(dropdown, 'skip to slot', slotSkipTo, slot);
+  contextOption(dropdown, 'insert slot before', slotInsert, slot);
+  contextOption(dropdown, 'insert slot after', slotInsert, slot + 1);
+  contextOption(dropdown, 'clear slot', slotClear, slot);
+  contextOption(dropdown, 'add command', directiveCommand, slot);
+  contextOption(dropdown, 'add connect', directiveConnect, slot);
+  contextOption(dropdown, 'add disconnect', directiveDisconnect, slot);
+  if (directive !== undefined)
+    contextOption(dropdown, 'remove directive', directiveRemove, { slot, directive });
+}
+
+async function slotSkipTo(arg) {
+  await command('slot_skip_to', [arg]);
+  slotsList();
+}
+
+async function slotInsert(arg) {
+  await command('slot_insert', [arg]);
+  slotsList();
+}
+
+async function slotClear(arg) {
+  if (!confirm('confirm slot clear')) return;
+  await command('slot_clear', [arg]);
+  slotsList();
+}
+
+async function directiveCommand(arg) {
+  const c = await component(v('component'));
+  await command('slot_command', [arg, c, v('command')]);
+  slotsList();
+  free(c);
+}
+
+async function directiveConnect(arg) {
+  const a = await component(v('component'));
+  const b = await component(v('connectee'));
+  await command('slot_connect', [arg, a, b]);
+  slotsList();
+  free(a);
+  free(b);
+}
+
+async function directiveDisconnect(arg) {
+  const a = await component(v('component'));
+  const b = await component(v('connectee'));
+  await command('slot_disconnect', [arg, a, b]);
+  slotsList();
+  free(a);
+  free(b);
+}
+
+async function directiveRemove(arg) {
+  await command('slot_remove', [arg.slot, arg.directive]);
+  slotsList();
 }
 
 window.onload = function () {
   socketConnect({ onOpen: slotsList });
+  window.onclick = (event) => {
+    contextDismiss();
+  };
+  window.onkeyup = (event) => {
+    if (event.keyCode == 27) {
+      contextDismiss();
+    }
+  }
 }
 
 </script>
-<body id='body'>
+<body>
+  <div style='padding:10px'>
+    <input type='text' id='component' placeholder='component'/>
+    <input type='text' id='command' placeholder='command'/>
+    <input type='text' id='connectee' placeholder='connectee'/>
+  </div>
+  <div id='main'>
+  </div>
 </body>
