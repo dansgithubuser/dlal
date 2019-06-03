@@ -119,6 +119,13 @@ Commander::Commander():
 		_slots[i].clear();
 		return "";
 	});
+	Component::registerCommand("slot_delete", "slot", [this](std::stringstream& ss){
+		size_t i;
+		ss>>i;
+		if(i>=_slots.size()) return "error: no such slot";
+		_slots.erase(_slots.begin()+i);
+		return "";
+	});
 	Component::registerCommand("slot_insert", "<before this slot>", [this](std::stringstream& ss){
 		size_t i;
 		ss>>i;

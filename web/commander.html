@@ -76,6 +76,7 @@ function directiveContext(element, slot, directive) {
   contextOption(dropdown, 'insert slot before', slotInsert, slot);
   contextOption(dropdown, 'insert slot after', slotInsert, slot + 1);
   contextOption(dropdown, 'clear slot', slotClear, slot);
+  contextOption(dropdown, 'delete slot', slotDelete, slot);
   contextOption(dropdown, 'add command', directiveCommand, slot);
   contextOption(dropdown, 'add connect', directiveConnect, slot);
   contextOption(dropdown, 'add disconnect', directiveDisconnect, slot);
@@ -96,6 +97,12 @@ async function slotInsert(arg) {
 async function slotClear(arg) {
   if (!confirm('confirm slot clear')) return;
   await command('slot_clear', [arg]);
+  slotsList();
+}
+
+async function slotDelete(arg) {
+  if (!confirm('confirm slot delete')) return;
+  await command('slot_delete', [arg]);
   slotsList();
 }
 
