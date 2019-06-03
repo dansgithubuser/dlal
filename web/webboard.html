@@ -31,6 +31,7 @@ function connect() {
 }
 
 function send(note, down) {
+  if (!gSocket) return;
   debugLog(`sending ${note}, ${down}`);
   gSocket.send(JSON.stringify({
     path: ['system', getUrlParam('component'), 'midi'],
@@ -62,7 +63,7 @@ function resize() {
     for (var k = 0; k < v('keysPerBoard'); ++k) {
       var x = gWKey * k;
       var y = canvas.height - hBoard * (b + 1) + (white[k % 12] ? gHKey : 0);
-      var n = parseInt(v('lowestNote')) + b * parseInt(v('octavesBetweenBoards')) * 12 + k;
+      var n = parseInt(v('lowestNote')) + b * v('octavesBetweenBoards') * 12 + k;
       gKeys.push({x: x, y: y, n: n, touches: 0, newTouches: 0});
       var g = white[k % 12] ? 255 : 127;
       rect(context, x, y, x + gWKey, y + gHKey, 0, g, 0);
@@ -173,6 +174,36 @@ function mouseMove(evt) {
   processNewTouches();
 }
 
+var gKeysDown = {};
+
+function key(evt, down) {
+  if (evt.repeat) return;
+  if (down) {
+    if (gKeysDown[evt.key]) return;
+    gKeysDown[evt.key] = true;
+  } else {
+    gKeysDown[evt.key] = false;
+  }
+  const note = {
+              z :  0,  v :  5, ',': 11,
+              s :  1,  g :  6,  l : 12,
+              x :  2,  b :  7, '.': 13,
+              d :  3,  h :  8, ';': 14,
+              c :  4,  n :  9, '/': 15,
+                       j : 10,
+                       m : 11,
+
+    '1': 10,  w : 12,  t : 17,  o : 24,
+     q : 11, '3': 13, '6': 18, '0': 25,
+              e : 14,  y : 19,  p : 26,
+             '4': 15, '7': 20, '-': 27,
+              r : 16,  u : 21, '[': 28,
+                      '8': 22,
+                       i : 23,
+  }[evt.key];
+  send(parseInt(v('lowestNote')) + note, down);
+}
+
 window.onload = function() {
   const canvas = e('canvas');
   canvas.addEventListener('touchstart' , touchStart);
@@ -182,6 +213,8 @@ window.onload = function() {
   canvas.addEventListener('mousedown', mouseDown);
   canvas.addEventListener('mouseup'  , mouseUp);
   canvas.addEventListener('mousemove', mouseMove);
+  window.onkeydown = (evt) => key(evt, true);
+  window.onkeyup   = (evt) => key(evt, false);
 }
 
   </script>
@@ -189,10 +222,10 @@ window.onload = function() {
 <body style='margin: 0' onresize='resize()'>
 
 <div id='divInit'>
-  <div>keys per board: <input type='text' id='keysPerBoard' value='13'/></div>
-  <div>boards: <input type='text' id='boards' value='1'/></div>
-  <div>octaves between boards: <input type='text' id='octavesBetweenBoards' value='1'/></div>
-  <div>lowest note: <input type='text' id='lowestNote' value='60'/></div>
+  <div>keys per board: <input type='number' id='keysPerBoard' value='13'/></div>
+  <div>boards: <input type='number' id='boards' value='1'/></div>
+  <div>octaves between boards: <input type='number' id='octavesBetweenBoards' value='1'/></div>
+  <div>lowest note: <input type='number' id='lowestNote' value='60'/></div>
   <div>
     <button onclick='connect()'>connect</button>
     debug: <input type='checkbox' id='debug'/>
