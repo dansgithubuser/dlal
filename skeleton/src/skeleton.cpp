@@ -165,31 +165,40 @@ std::string System::swap(Component& a, Component& b){
 	);
 	for(auto i: aConnectors){
 		Component& c=*_nameToComponent.at(i);
-		connect(c, a, false);
-		connect(c, b, true);
+		connect(c, a, "disable");
+		connect(c, b, "enable");
 	}
 	for(auto i: bConnectors){
 		Component& c=*_nameToComponent.at(i);
-		connect(c, b, false);
-		connect(c, a, true);
+		connect(c, b, "disable");
+		connect(c, a, "enable");
 	}
 	_reports.write(::str("swap", a._name, b._name));
 	return "";
 }
 
-std::string System::connect(Component& a, Component& b, bool enable){
-	std::string s;
-	s=enable?a.connect(b):a.disconnect(b);
+std::string System::connect(Component& a, Component& b, std::string action){
+	const auto pair=std::pair<std::string, std::string>(a._name, b._name);
+	bool enable;
+	//decide if it's a connect or a disconnect
+	if(action=="enable") enable=true;
+	else if(action=="disable") enable=false;
+	else if(action=="toggle") enable=!in(pair, _connections);
+	else return "error: invalid connect action";
+	//act
+	std::string s=enable?a.connect(b):a.disconnect(b);
+	//bookkeeping
 	if(!isError(s)){
 		_reports.write((enable?"connect ":"disconnect ")+a._name+" "+b._name);
-		if(enable) _connections.push_back(std::pair<std::string, std::string>(a._name, b._name));
+		if(enable) _connections.push_back(pair);
 		else for(unsigned i=0; i<_connections.size(); ++i)
-			if(_connections[i]==std::pair<std::string, std::string>(a._name, b._name)){
+			if(_connections[i]==pair){
 				_connections[i]=_connections.back();
 				_connections.pop_back();
 				break;
 			}
 	}
+	//
 	return s;
 }
 
@@ -357,7 +366,13 @@ std::string System::handleRequest(std::string request){
 		Component* a;
 		Component* b;
 		ss>>a>>b;
-		return connect(*a, *b, false);
+		return connect(*a, *b, "disable");
+	}
+	else if(command=="component/connect/toggle"){
+		Component* a;
+		Component* b;
+		ss>>a>>b;
+		return connect(*a, *b, "toggle");
 	}
 	else if(command=="component/command"){
 		Component* c;

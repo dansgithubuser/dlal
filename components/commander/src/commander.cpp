@@ -246,7 +246,7 @@ void Commander::dispatch(Directive& d){
 			result=_system->connect(*d._a, *d._b);
 			break;
 		case Directive::DISCONNECT:
-			result=_system->connect(*d._a, *d._b, false);
+			result=_system->connect(*d._a, *d._b, "disable");
 			break;
 	}
 	if(result.size()) _system->_reports.write(result);

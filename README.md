@@ -60,8 +60,7 @@ By wrapping the core in a Python environment, we get a nice language for audio s
 We can also beef up what our components do outside the audio loop.
 
 ### interfaces
-Interfaces communicate over the network and enrich the ways in which someone can interact with the system.
-Web interfaces allow for interfaces to run in a browser, increasing the possible devices that can interact.
+Interfaces enrich the ways in which someone can interact with the system. They communicate over the web, increasing the possible devices that can interact.
 
 ## file organization
 ### folders at multiple levels
@@ -80,13 +79,7 @@ Web interfaces allow for interfaces to run in a browser, increasing the possible
 - web: Web interfaces.
 
 ## todo
-- need to design for more than one person interacting at once with common devices (phones)
-	- webify interfaces
-		- system editor
-			- similar functionality to nonweb system editor
-			- queue and commit changes
-			- load system, bootstrap system (system commands)
-		- update readme arch
+- commander queue and commit
 
 - espeak?
 
