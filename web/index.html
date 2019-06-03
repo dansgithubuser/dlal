@@ -4,6 +4,24 @@
   cursor: crosshair;
 }
 
+.component {
+  position: relative;
+  display: inline-block;
+  font-weight: bold;
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 1;
+  background-color: black;
+  color: white;
+  padding: 10px;
+}
+
+.option {
+  cursor: pointer;
+}
+
 </style>
 <script>
 
@@ -60,11 +78,43 @@ async function diagram(){
     return i.replace(/(.*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => { 
       gComponentOrder[name] = Object.keys(gComponentOrder).length;
       connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
-      return connectify(left, 'left', name) + name + space + connectify(right, 'right', name);
+      return [
+        connectify(left, 'left', name),
+        `<span id="component-${name}" class='component' oncontextmenu='context("${name}"); return false'>`,
+        name,
+        '</span>',
+        space,
+        connectify(right, 'right', name),
+      ].join('');
     });
   }).join('<br>');
   e('main').style = '';
   e('socketConnect').style = 'display: none';
+}
+
+function context(componentName){
+  const dropdown = document.createElement('div');
+  dropdown.className = 'dropdown';
+  function addOption(dropdown, name, f){
+    const option = document.createElement('div');
+    option.className = 'option';
+    option.onclick = f;
+    option.innerText = name;
+    dropdown.appendChild(option);
+  }
+  addOption(dropdown, 'webboard', webboard);
+  e(`component-${componentName}`).appendChild(dropdown);
+}
+
+function contextDismiss(){
+  const dropdowns = document.getElementsByClassName('dropdown');
+  for (const i of dropdowns) i.parentElement.removeChild(i);
+}
+
+function webboard(event){
+  const componentName = event.target.parentElement.parentElement.id.split('-')[1];
+  window.open(`webboard.html?host=${v('host')}&port=${v('port')}&component=${componentName}`, '_blank');
+  contextDismiss();
 }
 
 async function component(name){
@@ -129,6 +179,18 @@ window.onload = function(){
   enterFunction('invokeKwargs', invoke);
   enterFunction('invokeOp'    , invoke);
   enterFunction('invokeUuid'  , invoke);
+  window.onclick = (event) => {
+    contextDismiss();
+  };
+  window.onkeyup = (event) => {
+    if (event.keyCode == 27) {
+      if (gConnecting) {
+        e(`${gConnecting.name}-${gConnecting.side}`).style = '';
+        gConnecting = undefined;
+      }
+      contextDismiss();
+    }
+  }
 }
 
 </script>
@@ -147,7 +209,7 @@ window.onload = function(){
     </div>
   </div>
   <div id='main' style='display: none'>
-    <div id='diagram' style='font-family: Monospace'>
+    <div id='diagram' style='font-family: Monospace; line-height: 1;'>
     </div>
     <div>
       <input type='text' id='addType' placeholder='type'/>
