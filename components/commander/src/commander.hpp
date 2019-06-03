@@ -33,8 +33,6 @@ class Commander: public MultiOut, public Periodic{
 		void* derived() override { return this; }
 		std::string prep() override;
 		void evaluate() override;
-		void midi(const uint8_t* bytes, unsigned size) override;
-		bool midiAccepted() override { return true; }
 		Queue<Directive> _queue;
 	private:
 		void dispatch(Directive&);
