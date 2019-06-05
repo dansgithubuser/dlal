@@ -151,17 +151,17 @@ class Skeleton:
     def component_swap(self, immediate, a, b):
         return self._call(immediate, 'component/swap', a, b)
 
-    def component_connect(self, immediate, a, b):
+    def component_connect(self, immediate, a, b, detach=False):
         self._check_component(a, b)
-        return self._call(immediate, 'component/connect', a, b)
+        return self._call(immediate, 'component/connect', a, b, detach=detach)
 
-    def component_connect_toggle(self, immediate, a, b):
+    def component_connect_toggle(self, immediate, a, b, detach=False):
         self._check_component(a, b)
-        return self._call(immediate, 'component/connect/toggle', a, b)
+        return self._call(immediate, 'component/connect/toggle', a, b, detach=detach)
 
-    def component_disconnect(self, immediate, a, b):
+    def component_disconnect(self, immediate, a, b, detach=False):
         self._check_component(a, b)
-        return self._call(immediate, 'component/disconnect', a, b)
+        return self._call(immediate, 'component/disconnect', a, b, detach=detach)
 
     def component_command(self, immediate, c, *command, detach=False):
         return self._call(immediate, 'component/command', c, *command, detach=detach)
@@ -461,8 +461,8 @@ class Component:
             for i, o in connections:
                 if i != name: continue
                 output = Component(empty=True)
-                output.component = _skeleton.component_get(immediate, o)
-                _skeleton.component_disconnect(immediate, self, output)
+                output.component = _skeleton.component_get(True, o)
+                _skeleton.component_disconnect(immediate, self, output, detach=True)
                 output.component = None
         else:
             return _skeleton.component_disconnect(immediate, self, output)
