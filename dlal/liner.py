@@ -7,6 +7,8 @@ class Liner(Component):
     def __init__(self, period_in_samples=0, samples_per_quarter=0, **kwargs):
         Component.__init__(self, 'liner', **kwargs)
         if period_in_samples:
+            if type(period_in_samples) != int:
+                raise TypeError('period_in_samples must be int')
             self.periodic_resize(period_in_samples)
         if samples_per_quarter:
             self.command('samples_per_quarter', samples_per_quarter, immediate=True)
@@ -40,7 +42,9 @@ class Liner(Component):
                     self.midi_event(nextSample, 0x80, note, 0x40, immediate=immediate)
                 sample = nextSample
 
-    def edit(self, resize=True, alongside=[]):
+    def edit(self, resize=None, alongside=[]):
+        if resize is None:
+            resize = self.period(True) == 0
         combined = midi.parse(json.loads(self.get_midi()))
         for i in alongside:
             combined = midi.combine(combined, midi.parse(json.loads(i.get_midi())))
@@ -49,3 +53,7 @@ class Liner(Component):
         editor = os.path.join(root, 'deps', 'dansmidieditor', 'src', 'dansmidieditor.py')
         invoke('{} --command "edit {}"'.format(editor, file_name))
         self.load(file_name, resize)
+
+    def match(self, other):
+        self.periodic_match(other)
+        self.samples_per_quarter(other.samples_per_quarter())
