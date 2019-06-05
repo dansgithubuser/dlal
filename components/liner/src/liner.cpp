@@ -76,6 +76,12 @@ Liner::Liner(){
 		}
 		return "";
 	});
+	registerCommand("get_midi", "", [this](std::stringstream&){
+		auto midi=getMidi();
+		std::vector<uint8_t> bytes;
+		midi.write(bytes);
+		return ::str(bytes);
+	});
 	registerCommand("serialize_liner", "", [this](std::stringstream&){
 		auto midi=getMidi();
 		std::vector<uint8_t> bytes;

@@ -1,6 +1,8 @@
 from .skeleton import *
 from .qweboard import qwe_to_note
 
+import json
+
 class Liner(Component):
     def __init__(self, period_in_samples=0, samples_per_quarter=0, **kwargs):
         Component.__init__(self, 'liner', **kwargs)
@@ -38,9 +40,12 @@ class Liner(Component):
                     self.midi_event(nextSample, 0x80, note, 0x40, immediate=immediate)
                 sample = nextSample
 
-    def edit(self, resize=True):
+    def edit(self, resize=True, alongside=[]):
+        combined = midi.parse(json.loads(self.get_midi()))
+        for i in alongside:
+            combined = midi.combine(combined, midi.parse(json.loads(i.get_midi())))
         file_name = '.liner.tmp.mid'
-        self.save(file_name)
+        midi.write(file_name, combined)
         editor = os.path.join(root, 'deps', 'dansmidieditor', 'src', 'dansmidieditor.py')
         invoke('{} --command "edit {}"'.format(editor, file_name))
         self.load(file_name, resize)
