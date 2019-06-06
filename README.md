@@ -79,9 +79,9 @@ Interfaces enrich the ways in which someone can interact with the system. They c
 - web: Web interfaces.
 
 ## todo
-- commander queue and commit
+- wide web
 
-- espeak?
+- espeak? LPC
 
 - music from formula with time as input
 
