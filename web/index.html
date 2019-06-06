@@ -13,10 +13,35 @@
   position: relative;
   display: inline-block;
   font-weight: bold;
+  background-image: linear-gradient(to top, #ccc, #fff);
 }
 
 .component:hover {
   color: green;
+}
+
+.component-audio {
+  background-image: linear-gradient(to top, #cc0, #ff0);
+}
+
+.component-midi {
+  background-image: linear-gradient(to top, #f88, #fff);
+}
+
+.component-liner {
+  background-image: linear-gradient(to top, #8f8, #fff);
+}
+
+.component-sonic {
+  background-image: linear-gradient(to top, #88f, #fff);
+}
+
+.component-buffer {
+  background-image: linear-gradient(to top, #fc8, #fff);
+}
+
+.component-commander {
+  background: white;
 }
 
 </style>
@@ -33,9 +58,10 @@ async function diagram() {
   e('diagram').innerHTML = diagram.split('\n').map(i => {
     return i.replace(/(.*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => { 
       connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
+      const type = gSystemInfo['component_types'][name];
       return [
         connectify(left, 'left', name),
-        `<span id="component-${name}" class='component' oncontextmenu='componentContext("${name}"); return false'>`,
+        `<span id="component-${name}" class='component component-${type}' oncontextmenu='componentContext("${name}"); return false'>`,
         name,
         '</span>',
         space,
