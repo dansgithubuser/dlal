@@ -86,18 +86,19 @@ class Skeleton:
         else:
             self.pump()
             request_number = self.lib.dlalRequest(request, False)
-            time.sleep(0.1)
-            r=self.pump(request_number)
+            r = self.pump(request_number, delay=0.1)
             return r
 
-    def pump(self, request_number = None):
-        for i in range(512):
+    def pump(self, request_number=None, delay=0):
+        n = 512
+        for i in range(n):
             r = self.system_report(True)
             if not r:
                 break
             if request_number is not None and r.startswith('{}:'.format(request_number)):
                 return r.split(': ', 1)[1]
             report(r)
+            if delay: time.sleep(delay/n)
 
     def test(self):
         return self._call(True, 'test')
