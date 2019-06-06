@@ -91,14 +91,18 @@ class Skeleton:
 
     def pump(self, request_number=None, delay=0):
         n = 512
-        for i in range(n):
+        i = 0
+        while i < n:
             r = self.system_report(True)
+            i += 1
             if not r:
+                if delay:
+                    time.sleep(delay/n)
+                    continue
                 break
             if request_number is not None and r.startswith('{}:'.format(request_number)):
                 return r.split(': ', 1)[1]
             report(r)
-            if delay: time.sleep(delay/n)
 
     def test(self):
         return self._call(True, 'test')
