@@ -83,6 +83,11 @@ Interfaces enrich the ways in which someone can interact with the system. They c
 
 - espeak? LPC
 
+- web midi editor
+- web index duplicate component
+
+- burgers
+
 - music from formula with time as input
 
 - operations in frequency domain
