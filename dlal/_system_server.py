@@ -19,6 +19,7 @@ class SystemServer:
 
     def handle_request(self, request):
         request = json.loads(request)
+        if 'result' in request: return
         value = self.root
         for i, v in enumerate(request['path']):
             if i == 0 and v in self.store:

@@ -83,7 +83,7 @@ function componentContext(name) {
 }
 
 function openPage(args) {
-  window.open(`${args.url}?host=${v('host')}&port=${v('port')}&component=${args.component}`, '_blank');
+  window.open(`${args.url}?ws-url=${v('ws-url')}&component=${args.component}`, '_blank');
   contextDismiss();
 }
 
@@ -136,8 +136,7 @@ function enterFunction(id, f) {
 }
 
 window.onload = function() {
-  e('host').value = 'localhost';
-  e('port').value = 9121;
+  e('ws-url').value = 'ws://localhost:9121';
   enterFunction('addType', add);
   enterFunction('invokePath'  , invoke);
   enterFunction('invokeArgs'  , invoke);
@@ -164,13 +163,11 @@ window.onload = function() {
 <div>
   <div id='socketConnect'>
     <div>
-      <input type='text' id='host' placeholder='host'/>
+      <input type='text' id='ws-url' placeholder='WebSocket URL' size=80/>
+      <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/>
     </div>
     <div>
-      <input type='text' id='port' placeholder='port'/>
-    </div>
-    <div>
-      <button onclick='socketConnect({ host: v("host"), port: v("port"), onOpen: diagram})'>connect</button>
+      <button onclick='socketConnect({ url: v("ws-url"), onOpen: diagram})'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>

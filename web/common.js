@@ -18,13 +18,11 @@ function uuidv4() {
 }
 
 function socketConnect(options = {}) {
-  const host = options.host || getUrlParam('host');
-  const port = options.port || getUrlParam('port');
-  gSocket = new WebSocket(`ws:${host}:${port}`);
+  gSocket = new WebSocket(options.url || getUrlParam('ws-url'));
   if (options.onOpen) gSocket.onopen = options.onOpen;
   gSocket.onmessage = (event) => {
     response = JSON.parse(event.data);
-    gPromiseResolvers[response.uuid].resolve(response);
+    if ('result' in response) gPromiseResolvers[response.uuid].resolve(response);
   };
 }
 
