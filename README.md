@@ -79,14 +79,12 @@ Interfaces enrich the ways in which someone can interact with the system. They c
 - web: Web interfaces.
 
 ## todo
-- wide web
-
-- espeak? LPC
-
 - web midi editor
 - web index duplicate component
 
 - burgers
+
+- espeak? LPC
 
 - music from formula with time as input
 
