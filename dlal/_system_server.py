@@ -35,13 +35,13 @@ class SystemServer:
         if request.get('op') == 'store':
             if result == FREE:
                 del self.store[request['uuid']]
+                request['result'] = True
             else:
                 self.store[request['uuid']] = result
-                response = json.dumps(request)
+                request['result'] = True
         else:
             request['result'] = result
-            response = json.dumps(request)
-        return response
+        return json.dumps(request)
 
     def sub(self, arg):
         return self.store.get(arg, arg)
