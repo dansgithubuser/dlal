@@ -76,3 +76,7 @@ async function component(name) {
 function clone(x) {
   return JSON.parse(JSON.stringify(x));
 }
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

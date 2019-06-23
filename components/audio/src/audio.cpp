@@ -19,10 +19,14 @@ static int rtAudioCallback(
 	audio->_output=(float*)output;
 	std::fill_n(audio->_output, samples, 0.0f);
 	audio->_system->evaluate();
-	for(int i=samples-1; i>=0; --i){
-		float f=audio->_output[i];
+	for(int i=0; i<samples; ++i){
+		float& f=audio->_output[i];
 		if(f<-1.0f) f=-1.0f;
 		else if(f>1.0f) f=1.0f;
+	}
+	audio->_queue.write(audio->_output, samples);
+	for(int i=samples-1; i>=0; --i){
+		float f=audio->_output[i];
 		audio->_output[2*i+0]=f;
 		audio->_output[2*i+1]=f;
 	}
@@ -42,6 +46,7 @@ static uint8_t ilog2(int x){
 namespace dlal{
 
 Audio::Audio():
+	_queue(0),
 	_sampleRate(0),
 	_started(false),
 	_underflows(0)
@@ -71,6 +76,28 @@ Audio::Audio():
 			return "";
 		}
 	);
+	registerCommand("buffer_resize", "log2Size", [this](std::stringstream& ss){
+		unsigned log2Size;
+		ss>>log2Size;
+		_queue.resize(log2Size);
+		return "";
+	});
+	registerCommand("buffer_get", "size", [this](std::stringstream& ss)->std::string{
+		size_t size;
+		ss>>size;
+		//read from queue
+		static std::vector<float> v;
+		if(v.size()<size) v.resize(size);
+		if(!_queue.read(v.data(), size, true)) return "error: underflow";
+		//serialize
+		std::stringstream result;
+		const std::string digits="./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+		for(auto i: v){
+			unsigned u=(i+1)*((1<<11)-1);
+			result<<digits[u&0x3f]<<digits[u>>6];
+		}
+		return result.str();
+	});
 	registerCommand("probe", "", [this](std::stringstream&){
 		std::stringstream ss;
 		const auto devices=_rtAudio.getDeviceCount();

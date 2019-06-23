@@ -8,7 +8,7 @@ import weakref
 
 class Server(swss.SimpleWebSocketServer):
     def __init__(self, system):
-        swss.SimpleWebSocketServer.__init__(self, '', 9121, _Socket)
+        swss.SimpleWebSocketServer.__init__(self, '0.0.0.0', 9121, _Socket)
         self.system_server = SystemServer(system)
         self.thread = threading.Thread(target=_serve, args=(weakref.ref(self),))
         self.thread.daemon = True
