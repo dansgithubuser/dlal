@@ -234,8 +234,12 @@ class System:
         return translate_lazy(attr, self)
 
     def serve(self):
-        from ._websocket import DlalWebSocketServer
-        self.server = DlalWebSocketServer(self)
+        from ._websocket_server import Server
+        self.server = Server(self)
+
+    def forward(self, url):
+        from ._websocket_client import Forwarder
+        self.forwarder = Forwarder(self, url)
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)

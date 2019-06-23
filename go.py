@@ -18,7 +18,6 @@ parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run (? to list systems)')
 parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments to pass to system (default -g)')
-parser.add_argument('--interface', '-i', action='append', help='interface:port')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands (? for help)')
 parser.add_argument('--python', default='python')
@@ -43,7 +42,6 @@ if args.can:
     canned_options = {
         'b': '-b',
         'd': '-d',
-        'i': '-i softboard',
     }
     import pprint
     if args.can == '?':
@@ -211,44 +209,6 @@ if args.test:
         print('TESTS HAVE FAILED!')
         sys.exit(1)
     print('ALL TESTS SUCCEEDED')
-
-# interfaces
-if args.interface:
-    def find_binary(name):
-        for root, dirs, files in os.walk('.'):
-            for file in files:
-                import re
-                if re.match(name.lower() + r'(\.exe)?$', file.lower()):
-                    return os.path.join(root, file)
-        py = os.path.join('..', '..', 'interfaces', name, 'src', name + '.py')
-        if os.path.exists(py):
-            return py
-        raise Exception("couldn't find binary for interface {}".format(name))
-    for i in args.interface:
-        extra = ''
-        if i == '?':
-            for j in os.listdir('interfaces'):
-                print(j)
-            break
-        elif ':' in i:
-            name, port = i.split(':')
-            if name == 'softboard':
-                if port.endswith('c'):
-                    port = port[:-1]
-                    extra = ' - computer'
-        else:
-            name = i
-            port = str({
-                'softboard': 9120,
-            }[name])
-        os.chdir(built_rel_path)
-        invocation = find_binary(name) + ' 127.0.0.1 ' + port + extra
-        print('invoking interface `{}`'.format(invocation))
-        if platform.system() == 'Windows':
-            os.system('start ' + invocation)
-        else:
-            subprocess.Popen(invocation, shell=True)
-        os.chdir(file_path)
 
 # run
 os.chdir(built_rel_path)

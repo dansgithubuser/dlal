@@ -1,6 +1,7 @@
 #ifndef DLAL_AUDIO_INCLUDED
 #define DLAL_AUDIO_INCLUDED
 
+#include <queue.hpp>
 #include <skeleton.hpp>
 
 #include <RtAudio.h>
@@ -17,6 +18,7 @@ class Audio: public MultiOut{
 		bool hasAudio() override { return true; }
 		float* _input;
 		float* _output;
+		Queue<float> _queue;
 	private:
 		std::string start(int input=-1, int ouput=-1);
 		std::string finish();

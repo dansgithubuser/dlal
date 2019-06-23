@@ -76,14 +76,18 @@ async function diagram() {
 function componentContext(name) {
   const dropdown = context(e(`component-${name}`));
   contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
-  const specifics = {
-    'commander': { 'commander': 'commander.html' },
-  }[gSystemInfo['component_types'][name]];
-  for (const i in specifics) contextOption(dropdown, i, openPage, { url: specifics[i], component: name });
+  switch (gSystemInfo['component_types'][name]) {
+    case 'audio':
+      contextOption(dropdown, 'play', play, name);
+      break;
+    case 'commander':
+      contextOption(dropdown, 'commander', openPage, { url: 'commander.html', component: name });
+      break;
+  }
 }
 
 function openPage(args) {
-  window.open(`${args.url}?host=${v('host')}&port=${v('port')}&component=${args.component}`, '_blank');
+  window.open(`${args.url}?ws-url=${v('ws-url')}&component=${args.component}`, '_blank');
   contextDismiss();
 }
 
@@ -130,14 +134,55 @@ function wire(name, side) {
   }
 }
 
+//----- play -----//
+function buffer_get(name, bufferSize, buffers) {
+  return socketSend(
+    `system.${name}.buffer_get`, { args: [bufferSize] }
+  ).then((r) => {
+    const buffer = []
+    function convert(code) {
+      if (code <= 57) return code - 46;// ./0123456789
+      if (code <= 90) return code - 53;// A-Z
+      return code - 59;// a-z
+    }
+    for (var i = 0; i < r.result.length; i += 2) {
+      const lo = convert(r.result.charCodeAt(i));
+      const hi = convert(r.result.charCodeAt(i + 1));
+      buffer.push((lo + (hi << 6)) / (1 << 11) - 1);
+    }
+    buffers.push(buffer);
+  });
+}
+
+async function play(name) {
+  const bufferSize = 1 << 14;
+  const buffersSize = 4;
+  await socketSend(`system.${name}.buffer_resize`, { args: [17] });
+  await sleep(2000);
+  var buffers = [];
+  for (var i = 0; i < buffersSize; ++i)
+    await buffer_get(name, bufferSize, buffers);
+  const context = new AudioContext({ sampleRate: 44100 });
+  const processor = context.createScriptProcessor(bufferSize, 0, 1);
+  processor.onaudioprocess = function(e) {
+    if (buffers.length) {
+      const audio = e.outputBuffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++)
+        audio[i] = buffers[0][i];
+      buffers.shift();
+    }
+    buffer_get(name, bufferSize, buffers);
+  }
+  processor.connect(context.destination);
+}
+
 //===== onload =====//
 function enterFunction(id, f) {
   e(id).addEventListener('keyup', (event) => { if (event.keyCode == 13) f() });
 }
 
 window.onload = function() {
-  e('host').value = 'localhost';
-  e('port').value = 9121;
+  e('ws-url').value = 'ws://localhost:9121';
   enterFunction('addType', add);
   enterFunction('invokePath'  , invoke);
   enterFunction('invokeArgs'  , invoke);
@@ -164,13 +209,11 @@ window.onload = function() {
 <div>
   <div id='socketConnect'>
     <div>
-      <input type='text' id='host' placeholder='host'/>
+      <input type='text' id='ws-url' placeholder='WebSocket URL' size=80/>
+      <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/>
     </div>
     <div>
-      <input type='text' id='port' placeholder='port'/>
-    </div>
-    <div>
-      <button onclick='socketConnect({ host: v("host"), port: v("port"), onOpen: diagram})'>connect</button>
+      <button onclick='socketConnect({ url: v("ws-url"), onOpen: diagram})'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>
