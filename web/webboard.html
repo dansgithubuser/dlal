@@ -1,40 +1,48 @@
 <head>
   <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
-  <script src='common.js'></script>
-  <script>
+  <script type='module'>
+
+import {
+  e,
+  getUrlParam,
+  listenToTouches,
+  rect,
+  v,
+} from './../deps/obvious/obvious.js';
+import {
+  socketConnect,
+  socketSend,
+} from './common.js';
 
 var gWKey, gHKey;
 var gKeys;
 var gMessages = [];
-var gDebug;
-
-function debugLog(message) {
-  if (!gDebug) return;
-  gMessages.push(message);
-  console.log(message);
-}
 
 function connect() {
+  listenToTouches(e('canvas'), {
+    onStart: (id, x, y) => touchHandle(x, y, true),
+    onDrag: (touches) => {
+      for (const touch of touches) {
+        touchHandle(touch.xi, touch.yi, false);
+        touchHandle(touch.xf, touch.yf, true)
+      }
+    },
+    onEnd: (id, x, y) => touchHandle(x, y, false),
+    after: processNewTouches,
+  });
+  window.onkeydown = (evt) => key(evt, true);
+  window.onkeyup   = (evt) => key(evt, false);
   socketConnect();
   e('divInit').style.display = 'none';
   e('divBoard').style.display = '';
   resize();
-  gDebug = e('debug').checked;
 }
 
 function send(note, down) {
-  debugLog(`sending ${note}, ${down}`);
   socketSend(`system.${getUrlParam('component')}.midi`, {
     args: [`${down?0x90:0x80} ${note} 64`],
     kwargs: { detach: true },
   });
-  debugLog(`sent ${note}, ${down}`);
-}
-
-function rect(context, xi, yi, xf, yf, r, g, b) {
-  context.fillStyle = `rgb(${r}, ${g}, ${b})`;
-  context.fillRect(xi, yi, xf - xi, yf - yi);
-  context.stroke();
 }
 
 function resize() {
@@ -82,86 +90,6 @@ function processNewTouches() {
       else if (oldTouches != 0 && gKeys[k].touches == 0) send(gKeys[k].n, false);
     }
   }
-  if (gDebug) {
-    var canvas = e('canvas');
-    var context = canvas.getContext('2d');
-    rect(context, 5, 0, 140, canvas.height * 0.75, 40, 0, 0);
-    context.fillStyle = 'rgb(255, 0, 0)';
-    for (var i = 0; i < gMessages.length; ++i)
-      context.fillText(gMessages[i], 10, canvas.height * 0.75 - (gMessages.length - i) * 16);
-  }
-}
-
-var gTouchHappened = false;
-var gTouches = {};
-
-function touchStart(evt) {
-  gTouchHappened = true;
-  for (var i = 0; i < evt.changedTouches.length; ++i) {
-    var touch = evt.changedTouches[i];
-    gTouches[touch.identifier] = {x: touch.clientX, y: touch.clientY};
-    debugLog(`touchStart ${touch.clientX} ${touch.clientY}`);
-    touchHandle(touch.clientX, touch.clientY, true);
-  }
-  processNewTouches();
-}
-
-function touchEnd(evt) {
-  gTouchHappened = true;
-  for(var i = 0; i < evt.changedTouches.length; ++i){
-    var touch = evt.changedTouches[i];
-    var oldTouch = gTouches[touch.identifier];
-    touchHandle(oldTouch.x, oldTouch.y, false);
-    delete gTouches[touch.identifier];
-    debugLog(`touchEnd ${touch.clientX} ${touch.clientY}`);
-  }
-  processNewTouches();
-}
-
-function touchMove(evt){
-  gTouchHappened = true;
-  for(var i = 0; i < evt.changedTouches.length; ++i){
-    var touch = evt.changedTouches[i];
-    var oldTouch = gTouches[touch.identifier];
-    debugLog(`touchMove ${touch.clientX} ${touch.clientY}`);
-    touchHandle(oldTouch.x, oldTouch.y, false);
-    touchHandle(touch.clientX, touch.clientY, true);
-    gTouches[touch.identifier] = {x: touch.clientX, y: touch.clientY};
-  }
-  processNewTouches();
-}
-
-var gMouseDragging = false;
-var gMouseXOld;
-var gMouseYOld;
-
-function mouseDown(evt) {
-  if (gTouchHappened) return;
-  debugLog(`mouseDown ${evt.clientX} ${evt.clientY}`);
-  gMouseXOld = evt.clientX;
-  gMouseYOld = evt.clientY;
-  gMouseDragging = true;
-  touchHandle(evt.clientX, evt.clientY, true);
-  processNewTouches();
-}
-
-function mouseUp(evt) {
-  if (gTouchHappened) return;
-  debugLog(`mouseUp ${evt.clientX} ${evt.clientY}`);
-  gMouseDragging = false;
-  touchHandle(evt.clientX, evt.clientY, false);
-  processNewTouches();
-}
-
-function mouseMove(evt) {
-  if (gTouchHappened) return;
-  debugLog(`mouseMove ${evt.clientX} ${evt.clientY}`);
-  if (!gMouseDragging) return;
-  touchHandle(gMouseXOld, gMouseYOld, false);
-  touchHandle(evt.clientX, evt.clientY, true);
-  gMouseXOld = evt.clientX;
-  gMouseYOld = evt.clientY;
-  processNewTouches();
 }
 
 var gKeysDown = {};
@@ -194,18 +122,7 @@ function key(evt, down) {
   send(parseInt(v('lowestNote')) + note, down);
 }
 
-window.onload = function() {
-  const canvas = e('canvas');
-  canvas.addEventListener('touchstart' , touchStart);
-  canvas.addEventListener('touchend'   , touchEnd);
-  canvas.addEventListener('touchcancel', touchEnd);
-  canvas.addEventListener('touchmove'  , touchMove);
-  canvas.addEventListener('mousedown', mouseDown);
-  canvas.addEventListener('mouseup'  , mouseUp);
-  canvas.addEventListener('mousemove', mouseMove);
-  window.onkeydown = (evt) => key(evt, true);
-  window.onkeyup   = (evt) => key(evt, false);
-}
+window.connect = connect;
 
   </script>
 </head>
@@ -216,10 +133,7 @@ window.onload = function() {
   <div>boards: <input type='number' id='boards' value='1'/></div>
   <div>octaves between boards: <input type='number' id='octavesBetweenBoards' value='1'/></div>
   <div>lowest note: <input type='number' id='lowestNote' value='60'/></div>
-  <div>
-    <button onclick='connect()'>connect</button>
-    debug: <input type='checkbox' id='debug'/>
-  </div>
+  <div><button onclick='connect()'>connect</button></div>
 </div>
 <div id='divBoard' style='display: none; height: 100%; width: 100%;'>
   <canvas id='canvas' style='height: 100%; width: 100%;'/>

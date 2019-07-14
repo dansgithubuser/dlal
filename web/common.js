@@ -1,32 +1,21 @@
+import {
+  getUrlParam,
+  uuidv4,
+} from './../deps/obvious/obvious.js';
+
 var gSocket;
 var gPromiseResolvers = {};
 
-function e(name){ return document.getElementById(name) }
-function v(name){ return e(name).value }
-
-function getUrlParam(name) {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name);
-}
-
-// Math.random is probably good enough for this...
-function uuidv4() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.floor(Math.random() * 16), v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-function socketConnect(options = {}) {
+export function socketConnect(options = {}) {
   gSocket = new WebSocket(options.url || getUrlParam('ws-url'));
   if (options.onOpen) gSocket.onopen = options.onOpen;
   gSocket.onmessage = (event) => {
-    response = JSON.parse(event.data);
+    const response = JSON.parse(event.data);
     if ('result' in response) gPromiseResolvers[response.uuid].resolve(response);
   };
 }
 
-function socketSend(path, options = {}) {
+export function socketSend(path, options = {}) {
   if (!gSocket) return;
   const uuid = options.uuid || uuidv4();
   gSocket.send(JSON.stringify({
@@ -41,11 +30,11 @@ function socketSend(path, options = {}) {
   });
 }
 
-function free(uuid) {
+export function free(uuid) {
   return socketSend('free', { op: 'store', uuid });
 }
 
-function context(element) {
+export function context(element) {
   contextDismiss();
   const dropdown = document.createElement('div');
   dropdown.className = 'dropdown';
@@ -53,30 +42,22 @@ function context(element) {
   return dropdown;
 }
 
-function contextOption(dropdown, name, onClick, arg) {
+export function contextOption(dropdown, name, onClick, arg) {
   const option = document.createElement('div');
   option.className = 'option';
   option.onclick = () => onClick(arg);
-  option.innerText = name;
+  option.innerHTML = name.replace(' ', '&nbsp;');
   dropdown.appendChild(option);
 }
 
-function contextDismiss() {
+export function contextDismiss() {
   const dropdowns = document.getElementsByClassName('dropdown');
   while (dropdowns.length) {
     dropdowns[0].parentElement.removeChild(dropdowns[0]);
   }
 }
 
-async function component(name) {
+export async function component(name) {
   const r = await socketSend(`system.${name}`, { op: 'store' });
   return r.uuid;
-}
-
-function clone(x) {
-  return JSON.parse(JSON.stringify(x));
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }

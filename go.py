@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
 import glob
+import http.server
 import os
 import platform
+import socketserver
 import subprocess
 import sys
+import webbrowser
 
 assert sys.version_info.major == 3
 
@@ -18,6 +21,7 @@ parser.add_argument('--test', '-t', help='run tests specified by glob')
 parser.add_argument('--test-runs', '--tr', help='custom number of runs for testing', default=10)
 parser.add_argument('--system', '-s', help='which system to run (? to list systems)')
 parser.add_argument('--system-arguments', '--sa', default='-g', help='arguments to pass to system (default -g)')
+parser.add_argument('--interface', '-i', action='store_true', help='open web interface')
 parser.add_argument('--debug', '-d', action='store_true', help='use debug configuration')
 parser.add_argument('--can', '-c', help='canned commands (? for help)')
 parser.add_argument('--python', default='python')
@@ -209,6 +213,12 @@ if args.test:
         print('TESTS HAVE FAILED!')
         sys.exit(1)
     print('ALL TESTS SUCCEEDED')
+
+# interface
+if args.interface:
+    webbrowser.open_new_tab('http://localhost:8000/web/index.html')
+    with socketserver.TCPServer(('', 8000), http.server.SimpleHTTPRequestHandler) as httpd:
+        httpd.serve_forever()
 
 # run
 os.chdir(built_rel_path)
