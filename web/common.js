@@ -50,6 +50,13 @@ export function contextOption(dropdown, name, onClick, arg) {
   dropdown.appendChild(option);
 }
 
+export function contextSpace(dropdown) {
+  const space = document.createElement('div');
+  space.className = 'option';
+  space.innerHTML = '&nbsp;';
+  dropdown.appendChild(space);
+}
+
 export function contextDismiss() {
   const dropdowns = document.getElementsByClassName('dropdown');
   while (dropdowns.length) {

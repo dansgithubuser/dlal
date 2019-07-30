@@ -65,6 +65,7 @@ import {
   context,
   contextDismiss,
   contextOption,
+  contextSpace,
   free,
   socketConnect,
   socketSend,
@@ -105,6 +106,8 @@ function componentContext(name) {
   switch (gSystemInfo['component_types'][name]) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
+      contextSpace(dropdown);
+      contextOption(dropdown, 'start', start, name);
       break;
     case 'commander':
       contextOption(dropdown, 'commander', openPage, { url: 'commander.html', component: name });
@@ -219,6 +222,12 @@ async function play(name) {
     buffer_get(name, bufferSize, buffers);
   }
   processor.connect(context.destination);
+}
+
+async function start(name) {
+  await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
+  updateDiagram();
+  contextDismiss();
 }
 
 //===== onload =====//
