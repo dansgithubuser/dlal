@@ -75,6 +75,17 @@ var gSystemInfo;
 var gConnecting;
 
 //===== system stuff =====//
+async function onSocketConnect() {
+  const componentTypes = (await socketSend('skeleton.component_types'))['result'];
+  for (const componentType of componentTypes) {
+    const option = document.createElement('option');
+    option.innerText = componentType;
+    e('addType').appendChild(option);
+    e('addType').value = 'audio';
+  }
+  await updateDiagram();
+}
+
 async function updateDiagram() {
   gSystemInfo = (await socketSend('system.info'))['result'];
   const diagram = (await socketSend('system.diagram'))['result'];
@@ -268,7 +279,7 @@ window.toggleImmediate = toggleImmediate;
 window.add = add;
 window.componentContext = componentContext;
 window.invoke = invoke;
-window.updateDiagram = updateDiagram;
+window.onSocketConnect = onSocketConnect;
 window.wire = wire;
 
 </script>
@@ -281,7 +292,7 @@ window.wire = wire;
       <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/>
     </div>
     <div>
-      <button onclick='socketConnect({ url: v("ws-url"), onOpen: updateDiagram})'>connect</button>
+      <button onclick='socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>
@@ -291,7 +302,8 @@ window.wire = wire;
       <button id='immediate' onclick='toggleImmediate()' class='toggle'>immediate</button>
     </div>
     <div>
-      <input type='text' id='addType' placeholder='type'/>
+      <select id='addType'>
+      </select>
       <button onclick='add()'>add</button>
     </div>
     <div>
