@@ -351,6 +351,7 @@ class System:
         return self.audio.start()
 
     def diagram(self):
+        if not self.components: return '┅'
         # setup
         connections_f = {}
         connections_b = {}
