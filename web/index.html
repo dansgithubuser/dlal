@@ -44,6 +44,14 @@
   background: white;
 }
 
+.toggle {
+  border-radius: 1em;
+}
+
+.toggle-on {
+  color: rgb(0, 128, 255);
+}
+
 </style>
 <script type='module'>
 
@@ -126,10 +134,26 @@ async function invoke() {
   }).join('<br>');
 }
 
+function setImmediate(pressed) {
+  const el = e('immediate');
+  el.pressed = pressed;
+  if (pressed) {
+    el.classList.add('toggle-on');
+    el.classList.remove('toggle-off');
+  } else {
+    el.classList.add('toggle-off');
+    el.classList.remove('toggle-on');
+  }
+}
+
+function toggleImmediate() {
+  setImmediate(!e('immediate').pressed);
+}
+
 async function add() {
   var r = await socketSend('skeleton.component_builder', { args: [v('addType')], op: 'store' });
   var s = await socketSend(r.uuid, { op: 'store' });
-  await socketSend('system.add', { args: [s.uuid] });
+  await socketSend('system.add', { args: [s.uuid], kwargs: { immediate: e('immediate').pressed } });
   updateDiagram();
   free(r.uuid);
   free(s.uuid);
@@ -222,6 +246,7 @@ window.onload = function() {
       contextDismiss();
     }
   }
+  setImmediate(false);
 }
 
 window.e = e;
@@ -230,6 +255,7 @@ window.uuidv4 = uuidv4;
 
 window.socketConnect = socketConnect;
 
+window.toggleImmediate = toggleImmediate;
 window.add = add;
 window.componentContext = componentContext;
 window.invoke = invoke;
@@ -251,6 +277,9 @@ window.wire = wire;
   </div>
   <div id='main' style='display: none'>
     <div id='diagram' style='font-family: Monospace; line-height: 1; white-space: nowrap;'>
+    </div>
+    <div>
+      <button id='immediate' onclick='toggleImmediate()' class='toggle'>immediate</button>
     </div>
     <div>
       <input type='text' id='addType' placeholder='type'/>
