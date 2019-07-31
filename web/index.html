@@ -136,14 +136,15 @@ function openPage(args) {
 
 async function invoke() {
   const options = {};
-  if (v('invokeArgs'  )) options.args = v('invokeArgs'  );
-  if (v('invokeKwargs')) options.args = v('invokeKwargs');
-  if (v('invokeOp'    )) options.args = v('invokeOp'    );
-  if (v('invokeUuid'  )) options.args = v('invokeUuid'  );
+  if (v('invokeArgs'  )) options.args   = JSON.parse('[' + v('invokeArgs'  ) + ']');
+  if (v('invokeKwargs')) options.kwargs = JSON.parse('{' + v('invokeKwargs') + '}');
+  if (v('invokeOp'    )) options.op     = v('invokeOp'    );
+  if (v('invokeUuid'  )) options.uuid   = v('invokeUuid'  );
   const response = await socketSend(v('invokePath'), options);
   e('invokeResponse').innerHTML = Object.keys(response).map((i) => {
     var v = response[i];
     if (i == 'path') v = v.join('.');
+    if (typeof v == 'string') v = v.replace(/\n/g, '<br>&nbsp;&nbsp;');
     return `${i}: ${v}`;
   }).join('<br>');
 }
