@@ -35,10 +35,12 @@ window.onload = function () {
 }
 
 window.durate = () => {
-  console.log(gMidi.duration, gMidi.quantizor, gMidi.ticksPerQuarter, +v('durationTop'), +v('durationBottom'));
   gMidi.duration  = gMidi.ticksPerQuarter * 4 * +v('durationTop') / +v('durationBottom');
   gMidi.quantizor = gMidi.ticksPerQuarter * 4                     / +v('durationBottom');
-  console.log(gMidi.duration, gMidi.quantizor, gMidi.ticksPerQuarter, +v('durationTop'), +v('durationBottom'));
+};
+
+window.addTrack = () => {
+  gMidi.addTrack();
 };
 
 window.save = () => {
@@ -58,6 +60,9 @@ window.save = () => {
   </div>
     duration: <input id='durationTop'    type='number' min=1 max=3600 value=1 onchange='durate()'>
     /         <input id='durationBottom' type='number' min=1 max=3600 value=4 onchange='durate()'>
+  </div>
+  <div>
+    <button onclick='addTrack()'>add track</button>
   </div>
   <div>
     <input type='button' value='save' onclick='save()'>
