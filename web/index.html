@@ -112,6 +112,13 @@ async function updateDiagram() {
 }
 
 function componentContext(name) {
+  async function start(name) {
+    await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
+    updateDiagram();
+  }
+  async function help(name) {
+    showResponse(await socketSend(`system.${name}.command`, { args: ['help'], kwargs: { immediate: true } }));
+  }
   const dropdown = context(e(`component-${name}`));
   contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
   switch (gSystemInfo['component_types'][name]) {
@@ -127,11 +134,12 @@ function componentContext(name) {
       contextOption(dropdown, 'midi editor', openPage, { url: 'midi-editor.html', component: name });
       break;
   }
+  contextSpace(dropdown);
+  contextOption(dropdown, 'help', help, name);
 }
 
 function openPage(args) {
   window.open(`${args.url}?ws-url=${v('ws-url')}&component=${args.component}`, '_blank');
-  contextDismiss();
 }
 
 async function invoke() {
@@ -140,11 +148,15 @@ async function invoke() {
   if (v('invokeKwargs')) options.kwargs = JSON.parse('{' + v('invokeKwargs') + '}');
   if (v('invokeOp'    )) options.op     = v('invokeOp'    );
   if (v('invokeUuid'  )) options.uuid   = v('invokeUuid'  );
-  const response = await socketSend(v('invokePath'), options);
+  showResponse(await socketSend(v('invokePath'), options));
+}
+
+function showResponse(response) {
   e('invokeResponse').innerHTML = Object.keys(response).map((i) => {
     var v = response[i];
     if (i == 'path') v = v.join('.');
     if (typeof v == 'string') v = v.replace(/\n/g, '<br>&nbsp;&nbsp;');
+    if (typeof v == 'object') v = JSON.stringify(v);
     return `${i}: ${v}`;
   }).join('<br>');
 }
@@ -234,12 +246,6 @@ async function play(name) {
     buffer_get(name, bufferSize, buffers);
   }
   processor.connect(context.destination);
-}
-
-async function start(name) {
-  await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
-  updateDiagram();
-  contextDismiss();
 }
 
 //===== onload =====//
