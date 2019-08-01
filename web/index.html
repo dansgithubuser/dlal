@@ -189,7 +189,7 @@ function wire(name, side) {
     e(`${gConnecting.name}-${gConnecting.side}`).style = '';
     gConnecting = undefined;
   } else {
-    e(`${name}-${side}`).style = 'color:blue';
+    e(`${name}-${side}`).style = 'background-image: linear-gradient(to top, #fff, rgba(0, 128, 255, 0.5), #fff)';
     gConnecting = { name, side };
   }
 }
