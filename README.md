@@ -79,11 +79,6 @@ Interfaces enrich the ways in which someone can interact with the system. They c
 - web: Web interfaces.
 
 ## todo
-- loop from scratch
-	- web midi editor set loop length
-	- sonic controller
-	- generic commanding
-
 - burgers
 
 - espeak? LPC
