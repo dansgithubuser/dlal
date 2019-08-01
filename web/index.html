@@ -73,6 +73,7 @@ import {
 
 var gSystemInfo;
 var gConnecting;
+var gComponents = {};
 
 //===== system stuff =====//
 async function onSocketConnect() {
@@ -112,20 +113,16 @@ async function updateDiagram() {
 }
 
 function componentContext(name) {
-  async function start(name) {
-    await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
-    updateDiagram();
-  }
-  async function help(name) {
-    showResponse(await socketSend(`system.${name}.command`, { args: ['help'], kwargs: { immediate: true } }));
-  }
   const dropdown = context(e(`component-${name}`));
   contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
   switch (gSystemInfo['component_types'][name]) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
       contextSpace(dropdown);
-      contextOption(dropdown, 'start', start, name);
+      contextOption(dropdown, 'start', async function(name) {
+        await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
+        updateDiagram();
+      }, name);
       break;
     case 'commander':
       contextOption(dropdown, 'commander', openPage, { url: 'commander.html', component: name });
@@ -135,7 +132,33 @@ function componentContext(name) {
       break;
   }
   contextSpace(dropdown);
-  contextOption(dropdown, 'help', help, name);
+  contextOption(dropdown, 'help', async function(name) {
+    showResponse(
+      await socketSend(`system.${name}.command`, { args: ['help'], kwargs: { immediate: true } }),
+      (html) => {
+        const lines = [];
+        for (var line of html.split('<br>')) {
+          const trimmed = line.replace(/&nbsp;/g, '');
+          if (line.startsWith('&nbsp;') && trimmed) {
+            const command = trimmed.split(' ')[0];
+            line = `<span
+              class='wire'
+              onclick='e("invokePath").value = "system.${name}.${command}"'
+            >${line}</span>`;
+          }
+          lines.push(line);
+        }
+        return lines.join('<br>');
+      },
+    );
+  }, name);
+  contextOption(dropdown, 'arg', async function(name) {
+    if (!(name in gComponents)) {
+      const response = await socketSend(`system.${name}`, { op: 'store' });
+      gComponents[name] = response.uuid;
+    }
+    e('invokeArgs').value = `"${gComponents[name]}"`;
+  }, name);
 }
 
 function openPage(args) {
@@ -151,14 +174,16 @@ async function invoke() {
   showResponse(await socketSend(v('invokePath'), options));
 }
 
-function showResponse(response) {
-  e('invokeResponse').innerHTML = Object.keys(response).map((i) => {
+function showResponse(response, extra) {
+  var html = Object.keys(response).map((i) => {
     var v = response[i];
     if (i == 'path') v = v.join('.');
     if (typeof v == 'string') v = v.replace(/\n/g, '<br>&nbsp;&nbsp;');
     if (typeof v == 'object') v = JSON.stringify(v);
     return `${i}: ${v}`;
   }).join('<br>');
+  if (extra) html = extra(html);
+  e('invokeResponse').innerHTML = html;
 }
 
 function setImmediate(pressed) {
