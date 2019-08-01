@@ -127,6 +127,10 @@ Liner::Liner(){
 		ss>>_samplesPerQuarter;
 		return ::str(_samplesPerQuarter);
 	});
+	registerCommand("period_to_line", "", [this](std::stringstream& ss){
+		resize(_line.size()?_line.back().sample:0);
+		return "";
+	});
 }
 
 std::string Liner::disconnect(Component& output){
