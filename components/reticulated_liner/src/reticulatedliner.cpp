@@ -43,13 +43,22 @@ ReticulatedLiner::ReticulatedLiner(){
 		_index=0;
 		return "";
 	});
-	registerCommand("serialize_reticulated_liner", "", [this](std::stringstream&){
+	registerCommand("get_midi", "", [this](std::stringstream&){
 		auto midi=getMidi();
 		std::vector<uint8_t> bytes;
 		midi.write(bytes);
-		std::stringstream ss;
-		ss<<::str(bytes);
-		return ss.str();
+		return ::str(bytes);
+	});
+	registerCommand("put_midi", "bytes", [this](std::stringstream& ss){
+		std::vector<uint8_t> bytes;
+		unsigned u;
+		while(ss>>u) bytes.push_back(u);
+		dans::Midi midi;
+		midi.read(bytes);
+		return putMidi(midi);
+	});
+	registerCommand("serialize_reticulated_liner", "", [this](std::stringstream&){
+		return command("get_midi");
 	});
 	registerCommand("deserialize_reticulated_liner", "<serialized>", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;

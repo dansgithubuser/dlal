@@ -45,9 +45,19 @@ export function context(element) {
 export function contextOption(dropdown, name, onClick, arg) {
   const option = document.createElement('div');
   option.className = 'option';
-  option.onclick = () => onClick(arg);
+  option.onclick = () => {
+    onClick(arg);
+    setTimeout(contextDismiss, 0);
+  }
   option.innerHTML = name.replace(' ', '&nbsp;');
   dropdown.appendChild(option);
+}
+
+export function contextSpace(dropdown) {
+  const space = document.createElement('div');
+  space.className = 'option';
+  space.innerHTML = '&nbsp;';
+  dropdown.appendChild(space);
 }
 
 export function contextDismiss() {

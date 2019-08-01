@@ -44,6 +44,14 @@
   background: white;
 }
 
+.toggle {
+  border-radius: 1em;
+}
+
+.toggle-on {
+  color: rgb(0, 128, 255);
+}
+
 </style>
 <script type='module'>
 
@@ -57,6 +65,7 @@ import {
   context,
   contextDismiss,
   contextOption,
+  contextSpace,
   free,
   socketConnect,
   socketSend,
@@ -64,8 +73,20 @@ import {
 
 var gSystemInfo;
 var gConnecting;
+var gComponents = {};
 
 //===== system stuff =====//
+async function onSocketConnect() {
+  const componentTypes = (await socketSend('skeleton.component_types'))['result'];
+  for (const componentType of componentTypes) {
+    const option = document.createElement('option');
+    option.innerText = componentType;
+    e('addType').appendChild(option);
+    e('addType').value = 'audio';
+  }
+  await updateDiagram();
+}
+
 async function updateDiagram() {
   gSystemInfo = (await socketSend('system.info'))['result'];
   const diagram = (await socketSend('system.diagram'))['result'];
@@ -97,39 +118,95 @@ function componentContext(name) {
   switch (gSystemInfo['component_types'][name]) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
+      contextSpace(dropdown);
+      contextOption(dropdown, 'start', async function(name) {
+        await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
+        updateDiagram();
+      }, name);
       break;
     case 'commander':
       contextOption(dropdown, 'commander', openPage, { url: 'commander.html', component: name });
       break;
     case 'liner':
+    case 'reticulated_liner':
       contextOption(dropdown, 'midi editor', openPage, { url: 'midi-editor.html', component: name });
       break;
   }
+  contextSpace(dropdown);
+  contextOption(dropdown, 'help', async function(name) {
+    showResponse(
+      await socketSend(`system.${name}.command`, { args: ['help'], kwargs: { immediate: true } }),
+      (html) => {
+        const lines = [];
+        for (var line of html.split('<br>')) {
+          const trimmed = line.replace(/&nbsp;/g, '');
+          if (line.startsWith('&nbsp;') && trimmed) {
+            const command = trimmed.split(' ')[0];
+            line = `<span
+              class='wire'
+              onclick='e("invokePath").value = "system.${name}.${command}"'
+            >${line}</span>`;
+          }
+          lines.push(line);
+        }
+        return lines.join('<br>');
+      },
+    );
+  }, name);
+  contextOption(dropdown, 'arg', async function(name) {
+    if (!(name in gComponents)) {
+      const response = await socketSend(`system.${name}`, { op: 'store' });
+      gComponents[name] = response.uuid;
+    }
+    e('invokeArgs').value = `"${gComponents[name]}"`;
+  }, name);
 }
 
 function openPage(args) {
   window.open(`${args.url}?ws-url=${v('ws-url')}&component=${args.component}`, '_blank');
-  contextDismiss();
 }
 
 async function invoke() {
   const options = {};
-  if (v('invokeArgs'  )) options.args = v('invokeArgs'  );
-  if (v('invokeKwargs')) options.args = v('invokeKwargs');
-  if (v('invokeOp'    )) options.args = v('invokeOp'    );
-  if (v('invokeUuid'  )) options.args = v('invokeUuid'  );
-  const response = await socketSend(v('invokePath'), options);
-  e('invokeResponse').innerHTML = Object.keys(response).map((i) => {
+  if (v('invokeArgs'  )) options.args   = JSON.parse('[' + v('invokeArgs'  ) + ']');
+  if (v('invokeKwargs')) options.kwargs = JSON.parse('{' + v('invokeKwargs') + '}');
+  if (v('invokeOp'    )) options.op     = v('invokeOp'    );
+  if (v('invokeUuid'  )) options.uuid   = v('invokeUuid'  );
+  showResponse(await socketSend(v('invokePath'), options));
+}
+
+function showResponse(response, extra) {
+  var html = Object.keys(response).map((i) => {
     var v = response[i];
     if (i == 'path') v = v.join('.');
+    else if (typeof v == 'string') v = v.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>&nbsp;&nbsp;');
+    else if (typeof v == 'object') v = JSON.stringify(v);
     return `${i}: ${v}`;
   }).join('<br>');
+  if (extra) html = extra(html);
+  e('invokeResponse').innerHTML = html;
+}
+
+function setImmediate(pressed) {
+  const el = e('immediate');
+  el.pressed = pressed;
+  if (pressed) {
+    el.classList.add('toggle-on');
+    el.classList.remove('toggle-off');
+  } else {
+    el.classList.add('toggle-off');
+    el.classList.remove('toggle-on');
+  }
+}
+
+function toggleImmediate() {
+  setImmediate(!e('immediate').pressed);
 }
 
 async function add() {
   var r = await socketSend('skeleton.component_builder', { args: [v('addType')], op: 'store' });
   var s = await socketSend(r.uuid, { op: 'store' });
-  await socketSend('system.add', { args: [s.uuid] });
+  await socketSend('system.add', { args: [s.uuid], kwargs: { immediate: e('immediate').pressed } });
   updateDiagram();
   free(r.uuid);
   free(s.uuid);
@@ -150,7 +227,7 @@ function wire(name, side) {
     e(`${gConnecting.name}-${gConnecting.side}`).style = '';
     gConnecting = undefined;
   } else {
-    e(`${name}-${side}`).style = 'color:blue';
+    e(`${name}-${side}`).style = 'background-image: linear-gradient(to top, #fff, rgba(0, 128, 255, 0.5), #fff)';
     gConnecting = { name, side };
   }
 }
@@ -222,6 +299,7 @@ window.onload = function() {
       contextDismiss();
     }
   }
+  setImmediate(true);
 }
 
 window.e = e;
@@ -230,10 +308,11 @@ window.uuidv4 = uuidv4;
 
 window.socketConnect = socketConnect;
 
+window.toggleImmediate = toggleImmediate;
 window.add = add;
 window.componentContext = componentContext;
 window.invoke = invoke;
-window.updateDiagram = updateDiagram;
+window.onSocketConnect = onSocketConnect;
 window.wire = wire;
 
 </script>
@@ -246,14 +325,18 @@ window.wire = wire;
       <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/>
     </div>
     <div>
-      <button onclick='socketConnect({ url: v("ws-url"), onOpen: updateDiagram})'>connect</button>
+      <button onclick='socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
     </div>
   </div>
   <div id='main' style='display: none'>
     <div id='diagram' style='font-family: Monospace; line-height: 1; white-space: nowrap;'>
     </div>
     <div>
-      <input type='text' id='addType' placeholder='type'/>
+      <button id='immediate' onclick='toggleImmediate()' class='toggle'>immediate</button>
+    </div>
+    <div>
+      <select id='addType'>
+      </select>
       <button onclick='add()'>add</button>
     </div>
     <div>

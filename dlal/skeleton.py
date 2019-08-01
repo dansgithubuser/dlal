@@ -351,6 +351,7 @@ class System:
         return self.audio.start()
 
     def diagram(self):
+        if not self.components: return '┅'
         # setup
         connections_f = {}
         connections_b = {}
@@ -490,19 +491,21 @@ class Component:
     def help(self):
         print(self.command('help', immediate=True))
 
-component_types = {}
-def inform_component_type(name, value): component_types[snake_case(name)] = value
+_py_component_types = {}
+def inform_component_type(name, value): _py_component_types[snake_case(name)] = value
 
 def component_builder(component_type):
-    cls = component_types.get(component_type)
+    cls = _py_component_types.get(component_type)
     if cls:
         return cls
     return lambda **kwargs: Component(component_type, **kwargs)
 
 def test(): _skeleton.test()
 
+component_types = []
 def regularize_component_constructors(globals):
     component_dirs = sorted(os.listdir(os.path.join(root, 'components')))
     for i in component_dirs:
-        if not component_types.get(i):
+        if not _py_component_types.get(i):
             globals[i.capitalize()] = functools.partial(Component, i)
+        component_types.append(i)

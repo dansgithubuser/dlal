@@ -7,6 +7,15 @@ FREE = uuid.uuid4()
 
 _Root = collections.namedtuple('_Root', 'system skeleton free')
 
+class _JsonEncoder(json.JSONEncoder):
+    def default(self, o):
+        if hasattr(o, 'to_json'):
+            return o.to_json()
+        elif o.__class__.__name__ == 'dict_keys':
+            return list(o)
+        else:
+            return super().default(o)
+
 class SystemServer:
     def __init__(self, system):
         from . import skeleton
@@ -41,7 +50,7 @@ class SystemServer:
                 request['result'] = True
         else:
             request['result'] = result
-        return json.dumps(request)
+        return _JsonEncoder().encode(request)
 
     def sub(self, arg):
         return self.store.get(arg, arg)

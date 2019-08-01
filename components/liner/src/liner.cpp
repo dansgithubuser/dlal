@@ -82,7 +82,7 @@ Liner::Liner(){
 		midi.write(bytes);
 		return ::str(bytes);
 	});
-	registerCommand("put_midi", "", [this](std::stringstream& ss){
+	registerCommand("put_midi", "bytes", [this](std::stringstream& ss){
 		std::vector<uint8_t> bytes;
 		unsigned u;
 		while(ss>>u) bytes.push_back(u);
@@ -126,6 +126,10 @@ Liner::Liner(){
 	registerCommand("samples_per_quarter", "[samples]", [this](std::stringstream& ss){
 		ss>>_samplesPerQuarter;
 		return ::str(_samplesPerQuarter);
+	});
+	registerCommand("period_to_line", "", [this](std::stringstream& ss){
+		resize(_line.size()?_line.back().sample:0);
+		return "";
 	});
 }
 
