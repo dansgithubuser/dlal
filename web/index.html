@@ -179,8 +179,8 @@ function showResponse(response, extra) {
   var html = Object.keys(response).map((i) => {
     var v = response[i];
     if (i == 'path') v = v.join('.');
-    if (typeof v == 'string') v = v.replace(/\n/g, '<br>&nbsp;&nbsp;');
-    if (typeof v == 'object') v = JSON.stringify(v);
+    else if (typeof v == 'string') v = v.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>&nbsp;&nbsp;');
+    else if (typeof v == 'object') v = JSON.stringify(v);
     return `${i}: ${v}`;
   }).join('<br>');
   if (extra) html = extra(html);
