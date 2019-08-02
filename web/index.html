@@ -57,6 +57,7 @@
 
 import {
   e,
+  sleep,
   uuidv4,
   v,
 } from './../deps/obvious/obvious.js';
@@ -233,7 +234,7 @@ function wire(name, side) {
 }
 
 //----- play -----//
-function buffer_get(name, bufferSize, buffers) {
+function bufferGet(name, bufferSize, buffers) {
   return socketSend(
     `system.${name}.buffer_get`, { args: [bufferSize] }
   ).then((r) => {
@@ -254,12 +255,11 @@ function buffer_get(name, bufferSize, buffers) {
 
 async function play(name) {
   const bufferSize = 1 << 14;
-  const buffersSize = 4;
   await socketSend(`system.${name}.buffer_resize`, { args: [17] });
-  await sleep(2000);
-  var buffers = [];
-  for (var i = 0; i < buffersSize; ++i)
-    await buffer_get(name, bufferSize, buffers);
+  for (var i = 0; i < 4; ++i) {
+    await sleep(400);
+    bufferGet(name, bufferSize, buffers);
+  }
   const context = new AudioContext({ sampleRate: 44100 });
   const processor = context.createScriptProcessor(bufferSize, 0, 1);
   processor.onaudioprocess = function(e) {
@@ -269,7 +269,7 @@ async function play(name) {
         audio[i] = buffers[0][i];
       buffers.shift();
     }
-    buffer_get(name, bufferSize, buffers);
+    bufferGet(name, bufferSize, buffers);
   }
   processor.connect(context.destination);
 }
