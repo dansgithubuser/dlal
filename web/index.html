@@ -256,6 +256,7 @@ function bufferGet(name, bufferSize, buffers) {
 async function play(name) {
   const bufferSize = 1 << 14;
   await socketSend(`system.${name}.buffer_resize`, { args: [17] });
+  var buffers = [];
   for (var i = 0; i < 4; ++i) {
     await sleep(400);
     bufferGet(name, bufferSize, buffers);
