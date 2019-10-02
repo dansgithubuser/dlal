@@ -1,4 +1,4 @@
-from ._system_server import SystemServer
+from ._system_server import pack_for_broadcast, SystemServer
 
 import websocket
 
@@ -21,6 +21,9 @@ class Forwarder:
         self.thread = threading.Thread(target=_run, args=(weakref.proxy(self.app),))
         self.thread.daemon = True
         self.thread.start()
+
+    def send(self, topic, message):
+        self.app.send(pack_for_broadcast(topic, message))
 
 def _run(app):
     app.run_forever()

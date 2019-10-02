@@ -5,13 +5,21 @@ import {
 
 var gSocket;
 var gPromiseResolvers = {};
+var gBroadcastListeners = {};
 
 export function socketConnect(options = {}) {
   gSocket = new WebSocket(options.url || getUrlParam('ws-url'));
   if (options.onOpen) gSocket.onopen = options.onOpen;
   gSocket.onmessage = (event) => {
     const response = JSON.parse(event.data);
-    if ('result' in response) gPromiseResolvers[response.uuid].resolve(response);
+    if ('result' in response) {
+      const resolver = gPromiseResolvers[response.uuid];
+      if (resolver) resolver.resolve(response);
+    }
+    if (response.op == 'broadcast') {
+      const listener = gBroadcastListeners[response.topic];
+      if (listener) for(const k in listener) listener[k](response);
+    }
   };
 }
 
@@ -28,6 +36,18 @@ export function socketSend(path, options = {}) {
   return new Promise(function (resolve, reject) {
     gPromiseResolvers[uuid] = { resolve, reject };
   });
+}
+
+export function socketBroadcastListenerAdd(topic, f) {
+  if (!gBroadcastListeners[topic])
+    gBroadcastListeners[topic] = {};
+  const uuid = uuidv4();
+  gBroadcastListeners[topic][uuid] = f;
+  return uuid;
+}
+
+export function socketBroadcastListenerRemove(topic, uuid) {
+  delete gBroadcastListeners[topic][uuid];
 }
 
 export function free(uuid) {

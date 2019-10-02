@@ -11,6 +11,7 @@ import platform
 import re
 import subprocess
 import sys
+import threading
 import time
 import weakref
 
@@ -248,6 +249,34 @@ class System:
     def forward(self, url):
         from ._websocket_client import Forwarder
         self.forwarder = Forwarder(self, url)
+
+    def start_broadcasting_audio(self):
+        buffer_size = 1 << 14
+        if not hasattr(self, 'broadcasting_thread!'):
+            self.audio.buffer_resize(17)
+            def f():
+                if hasattr(self, 'server!'):
+                    return self.server
+                elif hasattr(self, 'forwarder!'):
+                    return self.forwarder
+                else:
+                    raise Exception('nothing to broadcast audio to')
+            broadcaster = weakref.proxy(f())
+            audio = weakref.proxy(self.audio)
+            def broadcast():
+                while True:
+                    time.sleep(0.25)
+                    try:
+                        broadcaster.send('audio', audio.buffer_get(buffer_size))
+                    except RuntimeError as e:
+                        if 'underflow' in e.args[0]: continue
+                        raise
+                    except ReferenceError:
+                        break
+            self.broadcasting_thread = threading.Thread(target=broadcast)
+            time.sleep(1)
+            self.broadcasting_thread.start()
+        return buffer_size
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)

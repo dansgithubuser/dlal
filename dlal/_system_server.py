@@ -34,6 +34,7 @@ class SystemServer:
     def handle_request(self, request):
         request = json.loads(request)
         if 'result' in request: return
+        if request.get('op') == 'broadcast': return
         log('debug', lambda: 'SystemServer request '+pprint.pformat(request))
         value = self.root
         for i, v in enumerate(request['path']):
@@ -61,3 +62,11 @@ class SystemServer:
 
     def sub(self, arg):
         return self.store.get(arg, arg)
+
+def pack_for_broadcast(topic, message):
+    log('verbose', lambda: f'SystemServer broadcast {topic} {message}')
+    return _JsonEncoder().encode({
+        'op': 'broadcast',
+        'topic': topic,
+        'message': message,
+    })
