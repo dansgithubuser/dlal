@@ -13,8 +13,8 @@ import time
 import weakref
 
 root = os.path.join(os.path.split(os.path.realpath(__file__))[0], '..')
-sys.path.append(os.path.join(root, 'deps', 'dansmidilibs'))
-sys.path.append(os.path.join(root, 'deps', 'obvious'))
+sys.path.insert(0, os.path.join(root, 'deps', 'dansmidilibs'))
+sys.path.insert(0, os.path.join(root, 'deps', 'obvious'))
 
 import midi
 import obvious
