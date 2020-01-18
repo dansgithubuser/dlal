@@ -1,6 +1,5 @@
 'I wish I could turn off key repeat...'
 
-import tkinter
 import weakref
 
 qwe_to_note = {
@@ -40,6 +39,7 @@ class Qweboard:
         self.sustaining.clear()
 
     def show(self):
+        import tkinter
         self.root = tkinter.Tk()
         self.root.title('qweboard {}'.format(self.component().name(immediate=True)))
         def regularize(keysym):

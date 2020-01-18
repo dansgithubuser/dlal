@@ -1,17 +1,13 @@
 from .skeleton import *
 from ._helpers import peruse
 
-try:
-    import tkinter
-except ImportError:
-    import Tkinter as tkinter
-
 import itertools
 import pprint
 import copy
 
 class Oscillator:
     def __init__(self, i, oscillators, sonic):
+        import tkinter
         column = itertools.count()
         self.label = tkinter.Label(text=str(i)).grid(row=i, column=next(column))
         self.a = tkinter.Scale(command=lambda x: sonic.live_command('a {0:d} {1:f}'.format(i, self.a.get()**self.exponents[self.a])))
@@ -106,6 +102,7 @@ class Sonic(Component):
             self.load(setting, immediate=True)
 
     def show_controls(self, title='dlal sonic controls'):
+        import tkinter
         self.root = tkinter.Tk()
         self.root.title(title)
         oscillators = 4

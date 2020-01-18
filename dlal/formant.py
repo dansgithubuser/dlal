@@ -1,15 +1,11 @@
 from .skeleton import *
 
-try:
-    import tkinter
-except ImportError:
-    import Tkinter as tkinter
-
 class Formant(Component):
     def __init__(self, **kwargs):
         Component.__init__(self, 'fir', **kwargs)
 
     def show_controls(self, title='dlal formant synth controls'):
+        import tkinter
         root = tkinter.Tk(title)
         root.title()
         tkinter.Label(text='frequency 1').grid(row=0, column=0)
