@@ -71,3 +71,7 @@ export async function component(name) {
   const r = await socketSend(`system.${name}`, { op: 'store' });
   return r.uuid;
 }
+
+export function command(c, args = []) {
+  return socketSend(`system.${getUrlParam('component')}.${c}`, { args });
+}

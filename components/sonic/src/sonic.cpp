@@ -17,43 +17,43 @@ Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 	_oscillators[0]._output=1.0f;
 	_checkAudio=true;
 	addJoinAction([this](System&){ update(); return ""; });
-	registerCommand("a", "osc <attack (amplitude per sample)>", [this](std::stringstream& ss){
+	registerCommand("a", "osc <attack (amplitude per sample)>", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._attack;
-		return "";
+		return ::str(_oscillators[i]._attack);
 	});
-	registerCommand("d", "osc <decay (amplitude per sample)>", [this](std::stringstream& ss){
+	registerCommand("d", "osc <decay (amplitude per sample)>", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._decay;
-		return "";
+		return ::str(_oscillators[i]._decay);
 	});
-	registerCommand("s", "osc <sustain (amplitude)>", [this](std::stringstream& ss){
+	registerCommand("s", "osc <sustain (amplitude)>", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._sustain;
-		return "";
+		return ::str(_oscillators[i]._sustain);
 	});
-	registerCommand("r", "osc <release (amplitude per sample)>", [this](std::stringstream& ss){
+	registerCommand("r", "osc <release (amplitude per sample)>", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._release;
-		return "";
+		return ::str(_oscillators[i]._release);
 	});
-	registerCommand("m", "osc <frequency multiplier>", [this](std::stringstream& ss){
+	registerCommand("m", "osc <frequency multiplier>", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._frequencyMultiplier;
 		update();
-		return "";
+		return ::str(_oscillators[i]._frequencyMultiplier);
 	});
-	registerCommand("i", "osc input amplitude", [this](std::stringstream& ss){
+	registerCommand("i", "osc input amplitude", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
@@ -61,18 +61,18 @@ Sonic::Sonic(): _frequencyMultiplier(1.0f) {
 		ss>>j;
 		if(j>=OSCILLATORS) return "error: input out of range";
 		ss>>_oscillators[i]._inputs[j];
-		return "";
+		return ::str(_oscillators[i]._inputs[j]);
 	});
-	registerCommand("o", "osc <output (amplitude)>", [this](std::stringstream& ss){
+	registerCommand("o", "osc <output (amplitude)>", [this](std::stringstream& ss)->std::string{
 		unsigned i;
 		ss>>i;
 		if(i>=OSCILLATORS) return "error: osc out of range";
 		ss>>_oscillators[i]._output;
-		return "";
+		return ::str(_oscillators[i]._output);
 	});
 	registerCommand("frequency_multiplier", "<frequency multiplier>", [this](std::stringstream& ss){
 		ss>>_frequencyMultiplier;
-		return "";
+		return ::str(_frequencyMultiplier);
 	});
 	registerCommand("test", "", [this](std::stringstream& ss){
 		uint8_t m[3]={ 0x90, 0x3c, 0x7f };

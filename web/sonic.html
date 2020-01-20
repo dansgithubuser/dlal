@@ -1,0 +1,77 @@
+<script type='module'>
+
+import {
+  e,
+} from './../deps/obvious/obvious.js';
+import {
+  socketConnect,
+  command,
+} from './common.js';
+
+function controlChange(control) {
+  let ctrl = control.target.id.slice(0, -1);
+  const op = control.target.id.slice(-1);
+  let args;
+  if (!ctrl.startsWith('i')) {
+    args = [ctrl, op, control.target.value];
+  } else {
+    args = ['i', op, ctrl[1], control.target.value];
+  }
+  command('command', args).then(r => control.target.value = r.result);
+}
+
+function setupControls() {
+  let controlsHtml = '';
+  const maxes = {
+    'a': 1,
+    'd': 1,
+    's': 1,
+    'r': 1,
+    'm': 99,
+    'o': 1,
+    'i0': 1,
+    'i1': 1,
+    'i2': 1,
+    'i3': 1,
+  };
+  const ctrls = ['a', 'd', 's', 'r', 'm', 'o', 'i0', 'i1', 'i2', 'i3'];
+  for (const ctrl of ctrls) {
+    controlsHtml += `<tr><td style='font-weight: bold'>${ctrl}</td>`;
+    for (let op = 0; op < 4; ++op)
+      controlsHtml += `<td><input
+        id='${ctrl}${op}'
+        type='number'
+        min=0
+        max=${maxes[ctrl]}
+      ></td>`;
+    controlsHtml += '</tr>';
+  }
+  e('controls').innerHTML = controlsHtml;
+  for (const ctrl of ctrls)
+    for (let op = 0; op < 4; ++op) {
+      const control = e(ctrl + op);
+      control.addEventListener('change', controlChange);
+      controlChange({ target: control });
+    }
+}
+
+window.onload = function () {
+  socketConnect({ onOpen: setupControls });
+}
+
+</script>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>0</th>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+      </tr>
+    </thead>
+    <tbody id='controls'>
+    </tbody>
+  </table>
+</body>

@@ -116,6 +116,7 @@ async function updateDiagram() {
 function componentContext(name) {
   const dropdown = context(e(`component-${name}`));
   contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
+  const contextOptionPage = (name, url) => contextOption(dropdown, name, openPage, { url, component: name });
   switch (gSystemInfo['component_types'][name]) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
@@ -126,11 +127,16 @@ function componentContext(name) {
       }, name);
       break;
     case 'commander':
-      contextOption(dropdown, 'commander', openPage, { url: 'commander.html', component: name });
+      contextOptionPage('commander', 'commander.html');
       break;
     case 'liner':
+      contextOptionPage('midi editor', 'midi-editor.html');
+      break;
     case 'reticulated_liner':
-      contextOption(dropdown, 'midi editor', openPage, { url: 'midi-editor.html', component: name });
+      contextOptionPage('midi editor', 'midi-editor.html');
+      break;
+    case 'sonic':
+      contextOptionPage('sonic', 'sonic.html');
       break;
   }
   contextSpace(dropdown);

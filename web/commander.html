@@ -38,6 +38,7 @@ import {
 } from './../deps/obvious/obvious.js';
 import {
   component,
+  command,
   context,
   contextOption,
   contextDismiss,
@@ -45,10 +46,6 @@ import {
   socketConnect,
   socketSend,
 } from './common.js';
-
-function command(c, args = []) {
-  return socketSend(`system.${getUrlParam('component')}.${c}`, { args });
-}
 
 async function slotsList() {
   const slots = JSON.parse((await command('slots_list'))['result']);
