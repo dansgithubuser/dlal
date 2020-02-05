@@ -1,4 +1,4 @@
-from ._system_server import SystemServer
+from ._system_server import pack_for_broadcast, SystemServer
 
 import SimpleWebSocketServer as swss
 
@@ -13,6 +13,10 @@ class Server(swss.SimpleWebSocketServer):
         self.thread = threading.Thread(target=_serve, args=(weakref.ref(self),))
         self.thread.daemon = True
         self.thread.start()
+
+    def send(self, topic, message):
+        for i in self.connections.values():
+            i.sendMessage(pack_for_broadcast(topic, message))
 
 class _Socket(swss.WebSocket):
     def handleMessage(self):

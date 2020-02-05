@@ -1,3 +1,5 @@
+from ._logging import get_logger_names, set_logger_level
+
 import atexit
 import collections
 import ctypes
@@ -9,6 +11,7 @@ import platform
 import re
 import subprocess
 import sys
+import threading
 import time
 import weakref
 
@@ -198,11 +201,17 @@ class ReprMethod:
         return method(*args, **x)
 
 def translate_lazy(lazy, obj):
+    exact = False
+    if lazy.endswith('!'):
+        lazy = lazy[:-1]
+        exact = True
     possibilities = dir(obj)
     candidates = []
     for i in possibilities:
+        if lazy == i: return getattr(obj, i)
         if re.search('.*'.join(lazy), i):
             candidates.append(i)
+    if exact: raise AttributeError(f'no exact attribute {lazy}')
     def reduce(ls, f):
         x = [i for i in candidates if f(i)]
         return x if x else ls
@@ -240,6 +249,34 @@ class System:
     def forward(self, url):
         from ._websocket_client import Forwarder
         self.forwarder = Forwarder(self, url)
+
+    def start_broadcasting_audio(self):
+        buffer_size = 1 << 14
+        if not hasattr(self, 'broadcasting_thread!'):
+            self.audio.buffer_resize(17)
+            def f():
+                if hasattr(self, 'server!'):
+                    return self.server
+                elif hasattr(self, 'forwarder!'):
+                    return self.forwarder
+                else:
+                    raise Exception('nothing to broadcast audio to')
+            broadcaster = weakref.proxy(f())
+            audio = weakref.proxy(self.audio)
+            def broadcast():
+                while True:
+                    time.sleep(0.25)
+                    try:
+                        broadcaster.send('audio', audio.buffer_get(buffer_size))
+                    except RuntimeError as e:
+                        if 'underflow' in e.args[0]: continue
+                        raise
+                    except ReferenceError:
+                        break
+            self.broadcasting_thread = threading.Thread(target=broadcast)
+            time.sleep(1)
+            self.broadcasting_thread.start()
+        return buffer_size
 
     def add(self, *args, **kwargs):
         slot = kwargs.get('slot', 0)
@@ -290,7 +327,7 @@ class System:
         state['py'] = {
             k: v.py_serialize()
             for k, v in self.components.items()
-            if hasattr(v, 'py_serialize')
+            if hasattr(v, 'py_serialize!')
         }
         #
         return json.dumps(state)
@@ -327,7 +364,7 @@ class System:
             file.write(serialized)
 
     def load(self, file_name='system.state.txt', start=False):
-        if hasattr(self, 'audio'):
+        if hasattr(self, 'audio!'):
             return 'warning: already loaded, aborting load'
         potential_expansion = os.path.join('..', '..', 'states', file_name+'.txt')
         if os.path.exists(potential_expansion):
@@ -345,7 +382,7 @@ class System:
         return _skeleton.system_evaluate()
 
     def start(self):
-        if not hasattr(self, 'audio'):
+        if not hasattr(self, 'audio!'):
             raise Exception('no audio component')
         atexit.register(lambda: self.audio.finish())
         return self.audio.start()

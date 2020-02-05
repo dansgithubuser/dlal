@@ -70,6 +70,7 @@ import {
   free,
   socketConnect,
   socketSend,
+  socketBroadcastListenerAdd,
 } from './common.js';
 
 var gSystemInfo;
@@ -240,33 +241,23 @@ function wire(name, side) {
 }
 
 //----- play -----//
-function bufferGet(name, bufferSize, buffers) {
-  return socketSend(
-    `system.${name}.buffer_get`, { args: [bufferSize] }
-  ).then((r) => {
-    const buffer = []
+async function play(name) {
+  var buffers = [];
+  socketBroadcastListenerAdd('audio', (r) => {
+    const buffer = [];
     function convert(code) {
       if (code <= 57) return code - 46;// ./0123456789
       if (code <= 90) return code - 53;// A-Z
       return code - 59;// a-z
     }
-    for (var i = 0; i < r.result.length; i += 2) {
-      const lo = convert(r.result.charCodeAt(i));
-      const hi = convert(r.result.charCodeAt(i + 1));
+    for (var i = 0; i < r.message.length; i += 2) {
+      const lo = convert(r.message.charCodeAt(i));
+      const hi = convert(r.message.charCodeAt(i + 1));
       buffer.push((lo + (hi << 6)) / (1 << 11) - 1);
     }
     buffers.push(buffer);
   });
-}
-
-async function play(name) {
-  const bufferSize = 1 << 14;
-  await socketSend(`system.${name}.buffer_resize`, { args: [17] });
-  var buffers = [];
-  for (var i = 0; i < 4; ++i) {
-    await sleep(400);
-    bufferGet(name, bufferSize, buffers);
-  }
+  const bufferSize = (await socketSend('system.start_broadcasting_audio'))['result'];
   const context = new AudioContext({ sampleRate: 44100 });
   const processor = context.createScriptProcessor(bufferSize, 0, 1);
   processor.onaudioprocess = function(e) {
@@ -276,7 +267,6 @@ async function play(name) {
         audio[i] = buffers[0][i];
       buffers.shift();
     }
-    bufferGet(name, bufferSize, buffers);
   }
   processor.connect(context.destination);
 }
