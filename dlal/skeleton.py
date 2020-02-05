@@ -198,11 +198,17 @@ class ReprMethod:
         return method(*args, **x)
 
 def translate_lazy(lazy, obj):
+    exact = False
+    if lazy.endswith('!'):
+        lazy = lazy[:-1]
+        exact = True
     possibilities = dir(obj)
     candidates = []
     for i in possibilities:
+        if lazy == i: return getattr(obj, i)
         if re.search('.*'.join(lazy), i):
             candidates.append(i)
+    if exact: raise AttributeError(f'no exact attribute {lazy}')
     def reduce(ls, f):
         x = [i for i in candidates if f(i)]
         return x if x else ls
@@ -290,7 +296,7 @@ class System:
         state['py'] = {
             k: v.py_serialize()
             for k, v in self.components.items()
-            if hasattr(v, 'py_serialize')
+            if hasattr(v, 'py_serialize!')
         }
         #
         return json.dumps(state)
@@ -327,7 +333,7 @@ class System:
             file.write(serialized)
 
     def load(self, file_name='system.state.txt', start=False):
-        if hasattr(self, 'audio'):
+        if hasattr(self, 'audio!'):
             return 'warning: already loaded, aborting load'
         potential_expansion = os.path.join('..', '..', 'states', file_name+'.txt')
         if os.path.exists(potential_expansion):
@@ -345,7 +351,7 @@ class System:
         return _skeleton.system_evaluate()
 
     def start(self):
-        if not hasattr(self, 'audio'):
+        if not hasattr(self, 'audio!'):
             raise Exception('no audio component')
         atexit.register(lambda: self.audio.finish())
         return self.audio.start()
