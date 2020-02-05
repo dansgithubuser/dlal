@@ -79,8 +79,6 @@ Interfaces enrich the ways in which someone can interact with the system. They c
 - web: Web interfaces.
 
 ## todo
-- remote session with two clients
-
 - burgers
 
 - espeak? LPC
