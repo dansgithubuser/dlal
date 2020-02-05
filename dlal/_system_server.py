@@ -1,11 +1,16 @@
+from . import _logging
+
 import collections
 import json
+import pprint
 import uuid
 import weakref
 
 FREE = uuid.uuid4()
 
 _Root = collections.namedtuple('_Root', 'system skeleton free')
+
+log = _logging.get_log(__name__)
 
 class _JsonEncoder(json.JSONEncoder):
     def default(self, o):
@@ -29,6 +34,7 @@ class SystemServer:
     def handle_request(self, request):
         request = json.loads(request)
         if 'result' in request: return
+        log('debug', lambda: 'SystemServer request '+pprint.pformat(request))
         value = self.root
         for i, v in enumerate(request['path']):
             if i == 0 and v in self.store:
@@ -50,6 +56,7 @@ class SystemServer:
                 request['result'] = True
         else:
             request['result'] = result
+        log('debug', lambda: 'SystemServer response '+pprint.pformat(request))
         return _JsonEncoder().encode(request)
 
     def sub(self, arg):

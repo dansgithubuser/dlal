@@ -1,3 +1,5 @@
+from ._logging import get_logger_names, set_logger_level
+
 import atexit
 import collections
 import ctypes
