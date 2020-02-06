@@ -117,7 +117,7 @@ async function updateDiagram() {
 function componentContext(name) {
   const dropdown = context(e(`component-${name}`));
   contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
-  const contextOptionPage = (name, url) => contextOption(dropdown, name, openPage, { url, component: name });
+  const contextOptionPage = (optionName, optionUrl) => contextOption(dropdown, optionName, openPage, { url: optionUrl, component: name });
   switch (gSystemInfo['component_types'][name]) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
