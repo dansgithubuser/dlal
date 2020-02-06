@@ -15,6 +15,7 @@ class Filei: public MultiOut, SamplesPerEvaluationGetter{
 		uint64_t _evaluation;
 		std::vector<Page> _loaded;
 		unsigned _index;
+		std::ifstream _file;
 };
 
 }//namespace dlal

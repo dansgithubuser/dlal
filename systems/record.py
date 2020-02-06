@@ -2,6 +2,7 @@ import dlal
 
 import atexit
 import datetime
+import time
 
 def timestamp():
     return '{:%Y-%m-%b-%d_%H-%M-%S}'.format(datetime.datetime.now()).lower()
@@ -9,7 +10,7 @@ def timestamp():
 system = dlal.System()
 sample_rate = 44100
 log_2_samples_per_evaluation = 8
-recording_file_name = f'recording_{timestamp()}'
+recording_name = f'recording_{timestamp()}'
 
 with dlal.ImmediateMode() as mode:
     audio = dlal.Audio()
@@ -18,13 +19,20 @@ with dlal.ImmediateMode() as mode:
 
     recorder_a = dlal.Component('filea')
     system.add(recorder_a)
-    recorder_a.open_write(recording_file_name+'.flac')
+    recorder_a.open_write(recording_name+'.flac')
     audio.connect(recorder_a)
 
     recorder_o = dlal.Component('fileo')
-    recorder_o.file_name(recording_file_name+'.txt')
+    recorder_o.file_name(recording_name+'.txt')
     system.add(recorder_o)
     audio.connect(recorder_o)
 
 audio.start()
 atexit.register(lambda: audio.finish())
+
+time.sleep(1)
+
+monitor = dlal.Component('filei')
+monitor.stream(recording_name+'.txt')
+system.add(monitor)
+monitor.connect(audio)
