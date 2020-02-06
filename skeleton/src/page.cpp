@@ -64,6 +64,7 @@ void Page::toFile(std::ostream& file) const{
 			break;
 		default: break;
 	}
+	file<<'\n';
 }
 
 void Page::dispatch(
