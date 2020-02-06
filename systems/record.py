@@ -16,10 +16,15 @@ with dlal.ImmediateMode() as mode:
     audio.set(sample_rate, log_2_samples_per_evaluation)
     system.add(audio)
 
-    recorder = dlal.Component('filea')
-    system.add(recorder)
-    recorder.open_write(recording_file_name+'.flac')
-    audio.connect(recorder)
+    recorder_a = dlal.Component('filea')
+    system.add(recorder_a)
+    recorder_a.open_write(recording_file_name+'.flac')
+    audio.connect(recorder_a)
+
+    recorder_o = dlal.Component('fileo')
+    recorder_o.file_name(recording_file_name+'.txt')
+    system.add(recorder_o)
+    audio.connect(recorder_o)
 
 audio.start()
 atexit.register(lambda: audio.finish())
