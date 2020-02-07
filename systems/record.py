@@ -30,6 +30,7 @@ with dlal.ImmediateMode() as mode:
 audio.start()
 atexit.register(lambda: audio.finish())
 system.serve()
+system.started_at = time.time()
 
 time.sleep(1)
 

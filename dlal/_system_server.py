@@ -4,6 +4,7 @@ import collections
 import json
 import pprint
 import uuid
+import traceback
 import weakref
 
 FREE = uuid.uuid4()
@@ -41,7 +42,12 @@ class SystemServer:
             if i == 0 and v in self.store:
                 value = self.store[v]
             else:
-                value = getattr(value, v)
+                try:
+                    value = getattr(value, v)
+                except AttributeError:
+                    request['result'] = None
+                    request['error'] = traceback.format_exc()
+                    return _JsonEncoder().encode(request)
         args = [self.sub(i) for i in request.get('args', [])]
         kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
         if callable(value):

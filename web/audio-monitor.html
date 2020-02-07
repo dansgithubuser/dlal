@@ -5,26 +5,49 @@ import {
 } from './../deps/obvious/obvious.js';
 import {
   socketConnect,
+  socketSend,
   command,
 } from './common.js';
 
 const CANVAS = e('canvas');
 const CONTEXT = CANVAS.getContext('2d');
 
+const LINE_WIDTH = 3;
+const CLOCK_SIZE = 80;
+
 let levelX = 0;
+let startedAt;
 
 async function getLevel() {
   const [min, max] = (await command('input_level'))['result'].split(' ');
   // fade
   CONTEXT.fillStyle = 'rgba(0, 0, 0, 0.01)';
   CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
-  // draw
+  // level stroke
   CONTEXT.beginPath();
-  CONTEXT.lineWidth = 3;
+  CONTEXT.lineWidth = LINE_WIDTH;
   CONTEXT.strokeStyle = 'red';
   CONTEXT.moveTo(levelX, CANVAS.height / 2 + CANVAS.height / 2 * min);
   CONTEXT.lineTo(levelX, CANVAS.height / 2 + CANVAS.height / 2 * max);
   CONTEXT.stroke();
+  // time stroke
+  if (startedAt) {
+    const elapsed = new Date() - new Date(startedAt * 1000);
+    const hour = elapsed / (60 * 60 * 1000);
+    const hourAngle = hour / 12 * 2 * Math.PI;
+    const hourLength = CLOCK_SIZE / 4;
+    const minute = (elapsed / 1000 - Math.floor(hour) * 60 * 60) / 60;
+    const minuteAngle = minute / 60 * 2 * Math.PI;
+    const minuteLength = CLOCK_SIZE / 3;
+    CONTEXT.beginPath();
+    CONTEXT.lineWidth = LINE_WIDTH;
+    CONTEXT.strokeStyle = 'white';
+    CONTEXT.moveTo(CLOCK_SIZE / 2, CLOCK_SIZE / 2);
+    CONTEXT.lineTo(CLOCK_SIZE / 2 + hourLength * Math.sin(hourAngle), CLOCK_SIZE / 2 - hourLength * Math.cos(hourAngle));
+    CONTEXT.moveTo(CLOCK_SIZE / 2, CLOCK_SIZE / 2);
+    CONTEXT.lineTo(CLOCK_SIZE / 2 + minuteLength * Math.sin(minuteAngle), CLOCK_SIZE / 2 - minuteLength * Math.cos(minuteAngle));
+    CONTEXT.stroke();
+  }
   // bookkeep
   ++levelX;
   levelX %= CANVAS.width;
@@ -33,7 +56,15 @@ async function getLevel() {
 window.onload = function () {
   CONTEXT.fillStyle = 'black';
   CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
-  socketConnect({ onOpen: () => setInterval(getLevel, 100)});
+  socketConnect({
+    onOpen() {
+      setInterval(getLevel, 100);
+      socketSend('system.started_at').then(response => {
+        if (response['error']) return;
+        startedAt = response['result'];
+      });
+    },
+  });
 }
 
 </script>
