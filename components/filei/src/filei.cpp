@@ -6,7 +6,7 @@ namespace dlal{
 
 Filei::Filei(): _evaluation(0), _index(0) {
 	addJoinAction([this](System&){
-		if(_loaded.empty()) return "error: no file loaded!";
+		if(!_file.is_open()&&_loaded.empty()) return "error: no file loaded!";
 		for(auto page: _loaded)
 			if(page._type==Page::AUDIO&&page._audio.size()!=_samplesPerEvaluation)
 				return "error: samplesPerEvaluation and page audio size don't match";
@@ -26,10 +26,21 @@ Filei::Filei(): _evaluation(0), _index(0) {
 		if(!_loaded.size()) return "error: file is empty!";
 		return "";
 	});
+	registerCommand("stream", "<input file name>", [this](std::stringstream& ss){
+		std::string fileName;
+		ss>>fileName;
+		_file.open(fileName.c_str());
+		if(!_file.is_open()) return "error: couldn't open file!";
+		return "";
+	});
 }
 
 void Filei::evaluate(){
-	while(_index<_loaded.size()){
+	if(_file.is_open()){
+		Page page(_file);
+		page.dispatch(*this, _outputs, _samplesPerEvaluation);
+	}
+	else while(_index<_loaded.size()){
 		Page& page=_loaded[_index];
 		if(page._evaluation>_evaluation) break;
 		page.dispatch(*this, _outputs, _samplesPerEvaluation);

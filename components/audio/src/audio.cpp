@@ -129,6 +129,17 @@ Audio::Audio():
 		ss>>input>>output;
 		return start(input, output);
 	});
+	registerCommand("input_level", "", [this](std::stringstream&){
+		if(!_input) return std::string();
+		float min=0.0f, max=0.0f;
+		for(unsigned i=0; i<(1<<_log2SamplesPerEvaluation); ++i){
+			if(_input[i]<min) min=_input[i];
+			if(_input[i]>max) max=_input[i];
+		}
+		std::stringstream ss;
+		if(_input) ss<<min<<" "<<max;
+		return ss.str();
+	});
 	registerCommand("finish", "", [this](std::stringstream& ss)->std::string{
 		if(!_started) return "not started";
 		return finish();

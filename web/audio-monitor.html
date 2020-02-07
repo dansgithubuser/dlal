@@ -1,0 +1,43 @@
+<script type='module'>
+
+import {
+  e,
+} from './../deps/obvious/obvious.js';
+import {
+  socketConnect,
+  command,
+} from './common.js';
+
+const CANVAS = e('canvas');
+const CONTEXT = CANVAS.getContext('2d');
+
+let levelX = 0;
+
+async function getLevel() {
+  const [min, max] = (await command('input_level'))['result'].split(' ');
+  // fade
+  CONTEXT.fillStyle = 'rgba(0, 0, 0, 0.01)';
+  CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
+  // draw
+  CONTEXT.beginPath();
+  CONTEXT.lineWidth = 3;
+  CONTEXT.strokeStyle = 'red';
+  CONTEXT.moveTo(levelX, CANVAS.height / 2 + CANVAS.height / 2 * min);
+  CONTEXT.lineTo(levelX, CANVAS.height / 2 + CANVAS.height / 2 * max);
+  CONTEXT.stroke();
+  // bookkeep
+  ++levelX;
+  levelX %= CANVAS.width;
+}
+
+window.onload = function () {
+  CONTEXT.fillStyle = 'black';
+  CONTEXT.fillRect(0, 0, CANVAS.width, CANVAS.height);
+  socketConnect({ onOpen: () => setInterval(getLevel, 100)});
+}
+
+</script>
+<body>
+  <canvas id='canvas' width=800 height=600>
+  </canvas>
+</body>
