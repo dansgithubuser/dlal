@@ -121,6 +121,7 @@ function componentContext(name) {
   switch (gSystemInfo['component_types'][name]) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
+      contextOptionPage('monitor', 'audio-monitor.html');
       contextSpace(dropdown);
       contextOption(dropdown, 'start', async function(name) {
         await socketSend(`system.${name}.start`, { kwargs: { immediate: true } });
