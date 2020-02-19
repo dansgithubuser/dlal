@@ -18,32 +18,29 @@ Page::Page(const std::string& text, uint64_t evaluation):
 {}
 
 Page::Page(std::istream& file){
-	unsigned type;
-	file>>type;
-	_type=(Type)type;
-	file>>_evaluation;
-	unsigned size;
-	file>>size;
-	switch(_type){
+	unsigned type, size;
+	if(!(file>>type)||!(file>>_evaluation)||!(file>>size)) return;
+	switch(type){
 		case AUDIO:
 			_audio.resize(size);
-			for(unsigned i=0; i<size; ++i) file>>_audio[i];
+			for(unsigned i=0; i<size; ++i)
+				if(!(file>>_audio[i])) return;
 			break;
 		case MIDI:
 			_midi.resize(size);
 			for(unsigned i=0; i<size; ++i){
 				unsigned byte;
-				file>>byte;
+				if(!(file>>byte)) return;
 				_midi[i]=byte;
 			}
 			break;
 		case TEXT:
 			_text.resize(size);
-			file.ignore(1);
-			file.read(&_text[0], size);
+			if(!file.ignore(1)||!file.read(&_text[0], size)) return;
 			break;
 		default: break;
 	}
+	_type=(Type)type;
 }
 
 void Page::toFile(std::ostream& file) const{
@@ -73,6 +70,7 @@ void Page::dispatch(
 	int samplesPerEvaluation
 ) const{
 	switch(_type){
+		case Page::NONE: break;
 		case Page::AUDIO:
 			safeAdd(_audio.data(), samplesPerEvaluation, outputs);
 			break;

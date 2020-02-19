@@ -16,14 +16,15 @@ struct Page{
 	Page(const uint8_t* midi, unsigned size, uint64_t evaluation);
 	Page(const std::string& text, uint64_t evaluation);
 	Page(std::istream&);
+	operator bool() const { return _type != NONE; };
 	void toFile(std::ostream&) const;
 	void dispatch(
 		const Component& component,
 		std::vector<Component*>& outputs,
 		int samplesPerEvaluation
 	) const;
-	enum Type{ AUDIO, MIDI, TEXT };
-	Type _type;
+	enum Type{ NONE, AUDIO, MIDI, TEXT };
+	Type _type=NONE;
 	uint64_t _evaluation;
 	std::vector<float> _audio;
 	std::vector<uint8_t> _midi;

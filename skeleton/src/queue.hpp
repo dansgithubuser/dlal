@@ -48,6 +48,10 @@ template <typename T> class Queue{
 			return true;
 		}
 
+		unsigned readSize(){
+			return (_w-_r+_v.size())%_v.size();
+		}
+
 		bool write(const T& t){
 			unsigned w=_w.load(std::memory_order_relaxed);
 			unsigned r=_r.load(std::memory_order_consume);
