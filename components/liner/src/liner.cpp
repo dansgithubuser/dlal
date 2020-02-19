@@ -341,7 +341,7 @@ std::set<uint8_t> Liner::grabGene(std::vector<Liner::Midi>::iterator& i, std::ve
 int64_t Liner::noteEnd(std::vector<Midi>::iterator i, std::vector<Midi>::iterator end) const {
 	uint8_t note=i->midi[1];
 	while(++i!=end) if(
-		(i->midi[0]>>4==8||i->midi[0]>>4==9&&!i->midi[2])
+		(i->midi[0]>>4==8||(i->midi[0]>>4==9&&!i->midi[2]))
 		&&
 		i->midi[1]==note
 	) return i->sample;

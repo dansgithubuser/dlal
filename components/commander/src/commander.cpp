@@ -60,6 +60,7 @@ void Commander::Directive::dstr(std::stringstream& ss){
 		case COMMAND: ::dstr(ss, _command); break;
 		case CONNECT: ::dstr(ss, _nameB); break;
 		case DISCONNECT: ::dstr(ss, _nameB); break;
+		default: break;
 	}
 	::dstr(ss, " ]");
 }
