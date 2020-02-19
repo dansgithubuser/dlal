@@ -9,7 +9,7 @@ DLAL_BUILD_COMPONENT_DEFINITION(Filea)
 namespace dlal{
 
 Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
-	_volume(1.0f), _desiredVolume(1.0f), _deltaVolume(0.0f), _sample(0)
+	_volume(1.0f), _desiredVolume(1.0f), _deltaVolume(0.0f), _sample(0), _queue(16)
 {
 	_checkAudio=true;
 	addJoinAction([this](System&){
@@ -73,10 +73,12 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 		_o=new sf::OutputSoundFile;
 		sf::OutputSoundFile& file=*(sf::OutputSoundFile*)_o;
 		if(!file.openFromFile(fileName, _sampleRate, 1)) return "error: couldn't open file";
+		threadStart();
 		return "";
 	});
 	registerCommand("close_write", "", [this](std::stringstream&){
 		if(_o){
+			threadEnd();
 			delete (sf::OutputSoundFile*)_o;
 			_o=nullptr;
 		}
@@ -114,6 +116,7 @@ Filea::Filea(): _i(nullptr), _o(nullptr), _buffer(new std::vector<sf::Int16>),
 }
 
 Filea::~Filea(){
+	threadEnd();
 	delete (sf::InputSoundFile*)_i;
 	delete (sf::OutputSoundFile*)_o;
 	delete (std::vector<sf::Int16>*)_buffer;
@@ -160,17 +163,7 @@ void Filea::evaluate(){
 		add(_audio.data(), _samplesPerEvaluation, _outputs);
 	}
 	if(_o&&_shouldWrite){
-		//write to file
-		if(samples.size()<_audio.size()) samples.resize(_audio.size());
-		for(unsigned i=0; i<_audio.size(); ++i){
-			float f=_audio[i];
-			if(f<-1.0f) f=-1.0f;
-			else if(f>1.0f) f=1.0f;
-			samples[i]=short(f*((1<<15)-1));
-		}
-		sf::OutputSoundFile& file=*(sf::OutputSoundFile*)_o;
-		file.write(samples.data(), _audio.size());
-		//reset
+		_queue.write(_audio.data(), _audio.size());
 		std::fill(_audio.begin(), _audio.end(), 0.0f);
 	}
 	//volume
@@ -203,5 +196,30 @@ void Filea::midi(const uint8_t* bytes, unsigned size){
 }
 
 float* Filea::audio(){ return _audio.data(); }
+
+void Filea::threadStart(){
+	_thread=std::thread([this](){
+		std::vector<sf::Int16> samples;
+		bool done=false;
+		while(!done){
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			if(_quit) done=true;
+			float f;
+			while(_queue.read(f, true)){
+				if(f<-1.0f) f=-1.0f;
+				else if(f>1.0f) f=1.0f;
+				samples.push_back(sf::Int16(f*((1<<15)-1)));
+			}
+			sf::OutputSoundFile& file=*(sf::OutputSoundFile*)_o;
+			file.write(samples.data(), samples.size());
+			samples.clear();
+		}
+	});
+}
+
+void Filea::threadEnd(){
+	_quit=true;
+	_thread.join();
+}
 
 }//namespace dlal

@@ -3,6 +3,8 @@
 
 #include <skeleton.hpp>
 
+#include <thread>
+
 namespace dlal{
 
 class Filea: public MultiOut, public SamplesPerEvaluationGetter, public SampleRateGetter{
@@ -16,10 +18,15 @@ class Filea: public MultiOut, public SamplesPerEvaluationGetter, public SampleRa
 		float* audio() override;
 		bool hasAudio() override { return true; }
 	private:
+		void threadStart();
+		void threadEnd();
 		std::vector<float> _audio;
 		void* _i;
 		void* _o;
 		void* _buffer;
+		Queue<float> _queue;
+		std::thread _thread;
+		bool _quit=false;
 		float _volume, _desiredVolume, _deltaVolume;
 		std::vector<float> _loop_crossfade;
 		uint64_t _sample;
