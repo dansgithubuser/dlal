@@ -9,7 +9,7 @@ def timestamp():
 
 system = dlal.System()
 sample_rate = 44100
-log_2_samples_per_evaluation = 8
+log_2_samples_per_evaluation = 12
 recording_name = f'recording_{timestamp()}'
 
 with dlal.ImmediateMode() as mode:
