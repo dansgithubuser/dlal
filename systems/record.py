@@ -38,3 +38,5 @@ monitor = dlal.Component('filei')
 monitor.stream(recording_name+'.txt')
 system.add(monitor)
 monitor.connect(audio)
+
+atexit.register(lambda: print(f'underflows: {audio.underflows()}'))
