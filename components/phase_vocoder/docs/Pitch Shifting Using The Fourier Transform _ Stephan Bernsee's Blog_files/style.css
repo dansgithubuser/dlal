@@ -1,0 +1,656 @@
+/*
+Theme Name: Big City
+Theme URI:
+Description: WP Big City theme designed by AOE. A simple but very beautiful minimalistic design in blue, grey and white colors. Now also widget ready.
+Version: 3.1.4
+Author: AOE
+Author URI: https://www.aoe.com/en/lp/wordpress-themes.html
+License: GNU General Public License, version 3 (GPLv3)
+License URI: http://www.gnu.org/licenses/gpl-3.0.txt
+Tags: two-columns, fixed-layout, blue, dark, white, custom-header, custom-background
+By downloading and using this theme, you agree to the following terms:
+    - All variations of this theme have to remain GPL
+    - You may use this theme for personal or commercial projects
+    - You may modify, translate or distribute
+
+This theme, like WordPress, is licensed under the GPL.
+Use it to make something cool, have fun, and share what you've learned with others.
+
+If you encounter any bugs please contact: wordpress(at)aoe.com
+*********************************************************************
+ATTENTION
+If you don't need any logo in your theme, please find #header element
+and remove last two lines from it's decoration
+*********************************************************************
+
+************
+CSS CONTENTS
+************
+* --- reset
+* --- typography
+* --- text elements decoration
+* --- wordpress styles
+* --- layout
+* --- header
+* --- menu
+* --- navigation
+* --- content
+* --- sidebar
+* --- search form
+* --- comments
+* --- footer
+* --- helpers
+*
+*/
+
+/* Reset needed styles
+*******************************/
+
+*, *:before, *:after {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+ }
+
+html,body,div,span,form,h1,h2,h3,h4,p,blockquote{margin:0;padding:0;border:0;outline: 0;}
+:focus {outline: 0;}
+body {line-height: 1;}
+html {height: 100%;margin-bottom: 1px;}
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin-bottom: 1em;
+}
+table td,
+table th {
+    padding:5px;
+    border:1px solid #aaa;
+}
+blockquote    {
+    margin:0 0 1em 1em;
+    padding-left:1em;
+    border-left:2px solid #DBDBDB;
+}
+strong        { font-weight: bold; }
+em            { font-style: italic; }
+pre           { border: 1px solid #ddd; margin-bottom: 1.2em; padding:1.2em; }
+ins           { text-decoration:none; } /*remove underline from text*/
+del           { text-decoration:line-through; }
+acronym       { border-bottom:1px dotted #666; }
+fieldset      {margin: 0;padding: 0; border: 0;}
+/* Typography
+*******************************/
+body {
+    font:normal 75% Tahoma, Arial, Helvetica, sans-serif;
+}
+h1,h2,h3,h4,h5,h6 {
+    font:normal 1em/1 Georgia, "Times New Roman", Times, serif;
+}
+pre,
+var,
+code {
+    font-family:"Courier New", Courier, monospace;
+}
+h3,
+#sidebar,
+.postdata,
+.entry-content {
+	font-family:'helvetica neue',helvetica, arial, sans-serif;
+}
+#header h2 {
+    font-family: Tahoma, Arial, Helvetica, sans-serif;
+}
+
+/* Header elements
+*******************************/
+h1 {
+    font-size:2.67em;
+}
+h2 {
+    font-size:2.17em;
+    line-height:1.6;
+    color:#152942;
+    font-style: italic;
+}
+h3 {
+    font-size:1.5em;
+    color:#152942;
+}
+h4 {
+    font-size:1.25em;
+    color:#152942;
+}
+h5 {
+    font-size:1em;
+    color:#152942;
+}
+h6 {
+    font-size:.92em;
+    color:#152942;
+}
+
+/* Text elements
+*******************************/
+ul,ol,p,dl {
+    line-height:1.8;
+}
+ul,ol         {margin: 0 0 1em .8em;}
+ul            {list-style-type:disc;}
+ol            {list-style-type:decimal;}
+p,dl	      {margin: 0 0 1em 0; text-align: left;}
+strong        {font-weight: bold; }
+em            {font-style: italic; }
+ins           {text-decoration:none;}
+del           {text-decoration:line-through;}
+img           {border:0;outline:0;}
+blockquote {
+    border-left: 2px solid #D2D6D8;
+	margin:0 0 0 3.2em;
+	padding: 0 0 0 1.6em;
+	font: italic normal 1em georgia, 'times new roman', serif;
+	color: #888;
+}
+a:link,
+a:visited,
+a:hover,
+a:active{
+    color:#3b506b;
+    border-bottom: #3b506b;
+}
+
+/* Wordpress styles
+*******************************/
+.aligncenter,
+div.aligncenter {
+   display: block;
+   margin-left: auto;
+   margin-right: auto;
+}
+.alignleft {
+   float: left;
+   margin:0 1em 1em 0;
+}
+.alignright {
+   float: right;
+   margin:0 0 1em 1em;
+}
+.wp-caption {
+   border: 1px solid #ccc;
+   text-align: center;
+   padding: 4px;
+   margin-bottom: 1em;
+}
+.wp-caption img {
+   margin: 0;
+   padding: 0;
+   border: 0 none;
+}
+.wp-caption p.wp-caption-text {
+   font-size: .92em;
+   color: #444;
+   line-height:1.4;
+   margin: 0;
+}
+
+/* Layout
+*******************************/
+body {
+    color: #565656;
+/*    background:url(images/bg.gif) 0 0 repeat-x #fff;*/
+}
+#root{
+    width:900px;
+    margin:0 auto;
+}
+
+/* Header
+*******************************/
+#header-wrapper {
+    background: #0b1443;
+}
+#header {
+    width:900px;
+    margin:0 auto;
+    height:138px;
+    color:#fff;
+    padding:40px 0 0 0;
+    background:url(images/header.gif) 100% 100% no-repeat;
+}
+#header a {
+    color:#fff;
+    text-decoration:none;
+}
+#header h2 {
+    line-height:1.3;
+    font-size:1em;
+    color:#fff;
+}
+/*
+Menu
+*******************************/
+#access-wrapper {
+    background: #D2D6D8;
+}
+#access {
+    display: block;
+    width: 900px;
+    margin:0 auto;
+    list-style:none;
+
+}
+#access .menu-header,
+div.menu {
+	font-size: 13px;
+	width: 900px;
+}
+#access .menu-header ul,
+div.menu ul {
+	list-style: none;
+	margin: 0;
+	padding:0;
+}
+#access .menu-header li,
+div.menu li {
+	float: left;
+	position: relative;
+}
+#access a {
+	margin: 0;
+	float:left;
+	list-style:none;
+	padding:6px 0 0 0;
+	margin-right:18px;
+	height:38px;
+	border-bottom:4px solid #D2D6D8;
+	text-decoration:none;
+	font-size:1em;
+	line-height: 26px;
+	text-decoration: none;
+}
+#access ul ul {
+	box-shadow: 0px 3px 3px rgba(0,0,0,0.2);
+	-moz-box-shadow: 0px 3px 3px rgba(0,0,0,0.2);
+	-webkit-box-shadow: 0px 3px 3px rgba(0,0,0,0.2);
+	display: none;
+	position: absolute;
+	top: 35px;
+	left: 0;
+	float: left;
+	width: 180px;
+	z-index: 999;
+	background:#eee;
+	margin:0;
+	padding:0;
+}
+#access ul ul li {
+	min-width: 180px;
+	margin:0;
+	padding:0;
+}
+#access ul ul ul {
+	left: 100%;
+	top: 0;
+}
+#access ul ul a {
+	line-height: 1em;
+	padding: 10px;
+	width: 180px;
+	height: auto;
+	border:0;
+	margin:0;
+}
+#access ul ul a:hover {
+	background:#dadddf
+}
+#access li:hover > a,
+#access ul ul :hover > a {
+	color: #000;
+	border-color: #f90077;
+}
+#access ul li:hover > ul {
+	display: block;
+}
+#access ul li.current_page_item > a,
+#access ul li.current-menu-ancestor > a,
+#access ul li.current-menu-item > a,
+#access ul li.current-menu-parent > a,
+#access ul li.current_page_ancestor > a {
+	color: #000;
+	border-color: #fff;
+}
+* html #access ul li.current_page_item a,
+* html #access ul li.current-menu-ancestor a,
+* html #access ul li.current-menu-item a,
+* html #access ul li.current-menu-parent a,
+* html #access ul li a:hover {
+	color: #000;
+}
+
+/* Navigation
+*******************************/
+
+.navigation {
+	color: #888;
+	font-size: 12px;
+	line-height: 18px;
+	overflow: hidden;
+	font-family: "Lucida Sans Unicode", Verdana, Arial, Helvetica, sans-serif;
+}
+.navigation a:link,
+.navigation a:visited {
+	padding:6px 0 0 0;
+	margin-right:18px;
+	height:26px;
+	border-bottom:3px solid #D2D6D8;
+	text-decoration:none;
+	font-size:1.09em;
+	color: #888;
+	text-decoration: none;
+}
+.navigation a:active,
+.navigation a:hover {
+	color: #ff4b33;
+}
+.nav-previous {
+	float: left;
+	width: 50%;
+}
+.nav-next {
+	float: right;
+	text-align: right;
+	width: 50%;
+}
+#nav-above {
+	margin: 0 0 18px 0;
+}
+#nav-above {
+	display: none;
+}
+.paged #nav-above,
+.single #nav-above {
+	display: block;
+}
+#nav-below {
+	margin: -18px 0 0 0;
+}
+
+/* Content
+*******************************/
+#content {
+    width:590px;
+    margin:20px 50px 30px 0;
+    float:left;
+}
+
+#content .post {
+    /*padding-bottom:2em;*/
+    margin-bottom:4em;
+    /*border-bottom:1px solid #dde2e6;*/
+}
+#content .post *{
+    max-width: 100%;
+}
+#content .post img {
+    height: auto;
+}
+
+#content .single {
+    border-bottom:0;
+}
+#content h2 a {
+    text-decoration:none;
+}
+#content h3 {
+    margin-bottom:20px;
+    line-height:2.1;
+    border-bottom:2px solid #D2D6D8;
+}
+#content h2 a:hover {
+    color:#465c79;
+}
+.postdata {
+    padding:.67em 0;
+    margin-bottom:.67em;
+    border:1px solid #eee;
+    border-left:0;
+    border-right:0;
+    color:#898989;
+}
+.postdata a {
+    color:#26527C;
+    text-decoration:none;
+    font-size: .92em;
+    padding: .1em;
+}
+.postdata a:hover {
+	background: #5F747F;
+	color: #fff;
+}
+.postdata .vcard,
+.postdata .published {
+	font-family:georgia, 'times new roman', serif;
+	font-variant: small-caps;
+	text-transform: lowercase;
+}
+p.tags {
+    line-height:1.2;
+    margin-bottom: 0;
+    clear:both;
+	font: italic normal 1.17em georgia, 'times new roman', serif;
+}
+p.tags a {
+	text-decoration: none;
+}
+p.tags a:hover {
+	border-bottom: 1px solid #26527C;
+}
+.entry h1{color:#152942}
+
+.entry-content {
+    overflow: hidden;
+    zoom:1;
+}
+/* Sidebar
+*******************************/
+#sidebar {
+    width:248px;
+    float:left;
+    margin:30px 0;
+}
+#sidebar h3 {
+	margin-bottom:12px;
+    padding-bottom:6px;
+	border-bottom:1px solid #D2D6D8;
+}
+#sidebar .box {
+    margin-bottom:18px;
+}
+#sidebar .box a {
+	color:#465c79;
+	text-decoration:none;
+}
+#sidebar .box a:hover {
+	color:#0C225F;
+}
+#sidebar .box a:visited {
+	color:#7E929E;
+}
+#sidebar .box li li a {
+    padding-left:0px;
+}
+#sidebar .box li li li a {
+    padding-left:10px;
+}
+#sidebar .box .textwidget {
+	line-height:1.6;
+	font-size:.92em;
+}
+
+#sidebar ul {
+    margin:0;
+    padding:0;
+    list-style:none;
+}
+
+/*rss button*/
+#sidebar .rss {
+    height:59px;
+    margin-bottom:2px;
+}
+#sidebar .rss a {
+    float:right;
+    width:77px;
+    height:59px;
+    background:url(images/rss-icon.gif) 0 0 no-repeat;
+    text-indent:-9999px;
+}
+
+/*recent comments widget*/
+#sidebar #recentcomments {
+    padding-left:20px;
+}
+#sidebar  #recentcomments li.recentcomments {
+    display:block;
+}
+#recentcomments li.recentcomments a {
+    display:inline;
+    border:0;
+}
+
+#wp-calendar {
+	width:100%;
+}
+#wp-calendar caption {
+	font: italic 1.17em/1.83em georgia, 'times new roman', serif;
+	text-align:right;
+}
+#wp-calendar th,
+#wp-calendar td {
+	text-align:center;
+	font-size:.92em;
+}
+#wp-calendar a {
+	font-weight: bold;
+}
+#wp-calendar #today {
+	background:#eee;
+}
+#wp-calendar #prev {
+	text-align: left;
+}
+#wp-calendar #next {
+	text-align: right;
+}
+#sidebar .categories {
+	list-style:none;
+}
+
+
+/* Search Form
+*******************************/
+.search-form {
+	padding-bottom: 1em;
+}
+.search-field {
+    vertical-align:middle;
+    border:1px solid #ccc;
+    font-size:1em;
+    color:#152942;
+    padding: 3px;
+    height: 30px;
+    float: left;
+    width:188px;
+    margin: 0;
+    /*-webkit-appearance: textfield;
+    -moz-appearance: textfield;*/
+}
+.search-submit {
+    background:#D2D6D8;
+    border:1px solid #ccc;
+    float: right;
+    height: 30px;
+    font-size: 12px;
+    cursor: pointer;
+    margin: 0;
+    width: 60px;
+
+}
+
+/* Comments
+*******************************/
+#comments{list-style:none}
+#commentform {
+    margin-top:12px;
+}
+#commentform input.text,
+#commentform textarea {
+    border:1px solid #7E929E;
+    border-right-color:#E8E8E8;
+    border-bottom-color:#E8E8E8;
+    padding:2px;
+}
+#commentform input.text {
+    width:200px;
+}
+#commentform textarea {
+    width:400px;
+}
+#commentform input.submit {
+    border:1px solid #7E929E;
+    background:#E8E8E8;
+    color:#152942;
+}
+.comment {
+	list-style:none;
+	margin: 0 0 20px 0;
+	padding: 20px;
+	background: #f9f9f9;
+	border-left: 2px solid #D2D6D8;
+}
+.comment .details img {
+    vertical-align:middle;
+}
+
+/* Footer
+*******************************/
+#footer {
+    clear:both;
+    padding: 20px 0;
+    background:#E8E8E8;
+    border-top:1px solid #D2D6D8;
+}
+#footer .copyright {
+    padding-right:8px;
+    width:900px;
+    margin:0 auto;
+    display:block;
+}
+#footer img {
+    vertical-align:middle;
+    margin-right:10px;
+}
+#comments{clear:both}
+.comment-form-comment label,.comment-form-author,.comment-form-email,.comment-form-url{display:block;width:100px}
+.clearfix{clear:both}
+.gallery-caption {}
+.sticky{}
+.bypostauthor{}
+
+
+
+
+
+/* Helpers
+*******************************/
+.cf:before,
+.cf:after {
+    content: " ";
+    display: table;
+}
+.cf:after {
+    clear: both;
+}
+.cf {
+    *zoom: 1;
+}

@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<!-- saved from url=(0062)http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/ -->
+<html lang="en-US"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Pitch Shifting Using The Fourier Transform | Stephan Bernsee's Blog</title>
+<link rel="pingback" href="http://blogs.zynaptiq.com/bernsee/xmlrpc.php">
+	<link rel="archives" title="August 2018" href="http://blogs.zynaptiq.com/bernsee/2018/08/">
+	<link rel="archives" title="March 2016" href="http://blogs.zynaptiq.com/bernsee/2016/03/">
+	<link rel="archives" title="February 2016" href="http://blogs.zynaptiq.com/bernsee/2016/02/">
+	<link rel="archives" title="June 2015" href="http://blogs.zynaptiq.com/bernsee/2015/06/">
+	<link rel="archives" title="March 2015" href="http://blogs.zynaptiq.com/bernsee/2015/03/">
+	<link rel="archives" title="February 2014" href="http://blogs.zynaptiq.com/bernsee/2014/02/">
+	<link rel="archives" title="December 2011" href="http://blogs.zynaptiq.com/bernsee/2011/12/">
+	<link rel="archives" title="August 2009" href="http://blogs.zynaptiq.com/bernsee/2009/08/">
+	<link rel="archives" title="April 2009" href="http://blogs.zynaptiq.com/bernsee/2009/04/">
+	<link rel="archives" title="October 2007" href="http://blogs.zynaptiq.com/bernsee/2007/10/">
+	<link rel="archives" title="October 2006" href="http://blogs.zynaptiq.com/bernsee/2006/10/">
+	<link rel="archives" title="July 2005" href="http://blogs.zynaptiq.com/bernsee/2005/07/">
+	<link rel="archives" title="March 2004" href="http://blogs.zynaptiq.com/bernsee/2004/03/">
+	<link rel="archives" title="November 2003" href="http://blogs.zynaptiq.com/bernsee/2003/11/">
+	<link rel="archives" title="March 2000" href="http://blogs.zynaptiq.com/bernsee/2000/03/">
+	<link rel="archives" title="February 2000" href="http://blogs.zynaptiq.com/bernsee/2000/02/">
+	<link rel="archives" title="September 1999" href="http://blogs.zynaptiq.com/bernsee/1999/09/">
+	<link rel="archives" title="August 1999" href="http://blogs.zynaptiq.com/bernsee/1999/08/">
+<link rel="dns-prefetch" href="http://s.w.org/">
+<link rel="alternate" type="application/rss+xml" title="Stephan Bernsee&#39;s Blog » Feed" href="http://blogs.zynaptiq.com/bernsee/feed/">
+<link rel="alternate" type="application/rss+xml" title="Stephan Bernsee&#39;s Blog » Comments Feed" href="http://blogs.zynaptiq.com/bernsee/comments/feed/">
+<link rel="alternate" type="application/rss+xml" title="Stephan Bernsee&#39;s Blog » Pitch Shifting Using The Fourier Transform Comments Feed" href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/feed/">
+		<script type="text/javascript">
+			window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/11\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/11\/svg\/","svgExt":".svg","source":{"concatemoji":"http:\/\/blogs.zynaptiq.com\/bernsee\/wp-includes\/js\/wp-emoji-release.min.js?ver=4.9.8"}};
+			!function(a,b,c){function d(a,b){var c=String.fromCharCode;l.clearRect(0,0,k.width,k.height),l.fillText(c.apply(this,a),0,0);var d=k.toDataURL();l.clearRect(0,0,k.width,k.height),l.fillText(c.apply(this,b),0,0);var e=k.toDataURL();return d===e}function e(a){var b;if(!l||!l.fillText)return!1;switch(l.textBaseline="top",l.font="600 32px Arial",a){case"flag":return!(b=d([55356,56826,55356,56819],[55356,56826,8203,55356,56819]))&&(b=d([55356,57332,56128,56423,56128,56418,56128,56421,56128,56430,56128,56423,56128,56447],[55356,57332,8203,56128,56423,8203,56128,56418,8203,56128,56421,8203,56128,56430,8203,56128,56423,8203,56128,56447]),!b);case"emoji":return b=d([55358,56760,9792,65039],[55358,56760,8203,9792,65039]),!b}return!1}function f(a){var c=b.createElement("script");c.src=a,c.defer=c.type="text/javascript",b.getElementsByTagName("head")[0].appendChild(c)}var g,h,i,j,k=b.createElement("canvas"),l=k.getContext&&k.getContext("2d");for(j=Array("flag","emoji"),c.supports={everything:!0,everythingExceptFlag:!0},i=0;i<j.length;i++)c.supports[j[i]]=e(j[i]),c.supports.everything=c.supports.everything&&c.supports[j[i]],"flag"!==j[i]&&(c.supports.everythingExceptFlag=c.supports.everythingExceptFlag&&c.supports[j[i]]);c.supports.everythingExceptFlag=c.supports.everythingExceptFlag&&!c.supports.flag,c.DOMReady=!1,c.readyCallback=function(){c.DOMReady=!0},c.supports.everything||(h=function(){c.readyCallback()},b.addEventListener?(b.addEventListener("DOMContentLoaded",h,!1),a.addEventListener("load",h,!1)):(a.attachEvent("onload",h),b.attachEvent("onreadystatechange",function(){"complete"===b.readyState&&c.readyCallback()})),g=c.source||{},g.concatemoji?f(g.concatemoji):g.wpemoji&&g.twemoji&&(f(g.twemoji),f(g.wpemoji)))}(window,document,window._wpemojiSettings);
+		</script><script src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/wp-emoji-release.min.js" type="text/javascript" defer=""></script>
+		<style type="text/css">
+img.wp-smiley,
+img.emoji {
+	display: inline !important;
+	border: none !important;
+	box-shadow: none !important;
+	height: 1em !important;
+	width: 1em !important;
+	margin: 0 .07em !important;
+	vertical-align: -0.1em !important;
+	background: none !important;
+	padding: 0 !important;
+}
+</style>
+<link rel="stylesheet" id="wpstatistics-css-css" href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/frontend.css" type="text/css" media="all">
+<link rel="stylesheet" id="bigcity_style-css" href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/style.css" type="text/css" media="all">
+<script type="text/javascript" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/jquery.js"></script><script data-dapp-detection="">
+(function() {
+  let alreadyInsertedMetaTag = false
+
+  function __insertDappDetected() {
+    if (!alreadyInsertedMetaTag) {
+      const meta = document.createElement('meta')
+      meta.name = 'dapp-detected'
+      document.head.appendChild(meta)
+      alreadyInsertedMetaTag = true
+    }
+  }
+
+  if (window.hasOwnProperty('web3')) {
+    // Note a closure can't be used for this var because some sites like
+    // www.wnyc.org do a second script execution via eval for some reason.
+    window.__disableDappDetectionInsertion = true
+    // Likely oldWeb3 is undefined and it has a property only because
+    // we defined it. Some sites like wnyc.org are evaling all scripts
+    // that exist again, so this is protection against multiple calls.
+    if (window.web3 === undefined) {
+      return
+    }
+    __insertDappDetected()
+  } else {
+    var oldWeb3 = window.web3
+    Object.defineProperty(window, 'web3', {
+      configurable: true,
+      set: function (val) {
+        if (!window.__disableDappDetectionInsertion)
+          __insertDappDetected()
+        oldWeb3 = val
+      },
+      get: function () {
+        if (!window.__disableDappDetectionInsertion)
+          __insertDappDetected()
+        return oldWeb3
+      }
+    })
+  }
+})()</script>
+<script type="text/javascript" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/jquery-migrate.min.js"></script>
+<script type="text/javascript" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/wonderpluginaudioskins.js"></script>
+<script type="text/javascript" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/wonderpluginaudio.js"></script>
+<link rel="https://api.w.org/" href="http://blogs.zynaptiq.com/bernsee/wp-json/">
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://blogs.zynaptiq.com/bernsee/xmlrpc.php?rsd">
+<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://blogs.zynaptiq.com/bernsee/wp-includes/wlwmanifest.xml"> 
+<link rel="prev" title="The DFT “à Pied”: Mastering The Fourier Transform in One Day" href="http://blogs.zynaptiq.com/bernsee/dft-a-pied/">
+<link rel="next" title="On the Importance Of Formants In Pitch Shifting" href="http://blogs.zynaptiq.com/bernsee/formants-pitch-shifting/">
+<meta name="generator" content="WordPress 4.9.8">
+<link rel="canonical" href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/">
+<link rel="shortlink" href="http://blogs.zynaptiq.com/bernsee/?p=59">
+<link rel="alternate" type="application/json+oembed" href="http://blogs.zynaptiq.com/bernsee/wp-json/oembed/1.0/embed?url=http%3A%2F%2Fblogs.zynaptiq.com%2Fbernsee%2Fpitch-shifting-using-the-ft%2F">
+<link rel="alternate" type="text/xml+oembed" href="http://blogs.zynaptiq.com/bernsee/wp-json/oembed/1.0/embed?url=http%3A%2F%2Fblogs.zynaptiq.com%2Fbernsee%2Fpitch-shifting-using-the-ft%2F&amp;format=xml">
+<script type="text/javascript">
+	window._se_plugin_version = '8.1.9';
+</script>
+<style type="text/css">
+        #header {
+            background: url(http://blogs.zynaptiq.com/bernsee/wp-content/uploads/2015/03/cropped-cropped-zyn-logo-small28.png) 0 0 no-repeat;
+        }
+        #heading a,
+        #heading .description {
+            color: #ffffff;
+        }
+    </style><style type="text/css" id="custom-background-css">
+body.custom-background { background-color: #ededed; }
+</style>
+</head>
+<body class="post-template-default single single-post postid-59 single-format-standard custom-background">
+    <div id="header-wrapper">
+        <div id="header">
+            <h1><a href="http://blogs.zynaptiq.com/bernsee">Stephan Bernsee's Blog</a></h1>
+                            <h2>Gedanken About Digital Signal Processing</h2>
+                    </div>
+    </div>
+    <div id="access-wrapper">
+        <div id="access" role="navigation">
+            <div class="menu-header"><ul id="menu-main-menu" class="menu"><li id="menu-item-900" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-900"><a href="http://blogs.zynaptiq.com/bernsee/">Home</a></li>
+<li id="menu-item-914" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-914"><a href="http://blogs.zynaptiq.com/bernsee/category/news/">News</a></li>
+<li id="menu-item-912" class="menu-item menu-item-type-taxonomy menu-item-object-category current-post-ancestor current-menu-ancestor current-menu-parent current-custom-parent menu-item-has-children menu-item-912"><a href="http://blogs.zynaptiq.com/bernsee/category/tutorial/">Tutorials</a>
+<ul class="sub-menu">
+	<li id="menu-item-991" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-991"><a href="http://blogs.zynaptiq.com/bernsee/time-pitch-overview/">Time Stretching Techniques</a></li>
+	<li id="menu-item-989" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-989"><a href="http://blogs.zynaptiq.com/bernsee/dft-a-pied/">The DFT “à Pied”</a></li>
+	<li id="menu-item-990" class="menu-item menu-item-type-custom menu-item-object-custom current-menu-item menu-item-990"><a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/">Pitch Shifting Tutorial</a></li>
+	<li id="menu-item-992" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-992"><a href="http://blogs.zynaptiq.com/bernsee/formants-pitch-shifting/">Formants in Pitch Shifting</a></li>
+</ul>
+</li>
+<li id="menu-item-903" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-903"><a href="http://blogs.zynaptiq.com/bernsee/download/">Download</a></li>
+<li id="menu-item-988" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-988"><a href="http://www.zynaptiq.com/contact/">Legal</a>
+<ul class="sub-menu">
+	<li id="menu-item-913" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-913"><a href="http://www.zynaptiq.com/imprint/">Imprint…</a></li>
+	<li id="menu-item-993" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-993"><a href="http://www.zynaptiq.com/contact/">Contact Us…</a></li>
+</ul>
+</li>
+</ul></div>            <div class="clearfix"></div>
+        </div>
+    </div>
+    <div id="root">
+        <div id="main">
+    <div id="content">
+                	        		<div class="post-59 post type-post status-publish format-standard hentry category-tutorial tag-audio tag-dft tag-dsp tag-fft tag-fourier tag-fourier-transform tag-overview tag-pitch-change tag-pitch-shifting tag-time-stretching tag-tutorial" id="post-59">
+        		    <div class="entry-title">
+                    <h2><a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/" rel="bookmark" title="Permalink to: Pitch Shifting Using The Fourier Transform">Pitch Shifting Using The Fourier Transform</a></h2>
+                    </div>
+                    <div class="postdata">
+                        <span class="vcard">Posted by <span class="fn">neuronaut</span></span>
+                        <span class="published posted_date" title="1999-09-21 22:23:50+00:00">on September 21, 1999</span>
+                        <br>
+                        <a href="http://blogs.zynaptiq.com/bernsee/category/tutorial/" rel="category tag">Tutorials</a>                    </div>
+                    <div class="entry-content"><p><em><a href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/vector_cube_80.gif"><img class="size-full wp-image-181 alignleft" title="cube" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/vector_cube_80.gif" alt="cube" width="80" height="61"></a>With the increasing speed of todays desktop computer systems, a growing number of computationally intense tasks such as computing the Fourier transform of a sampled audio signal have become available to a broad base of users. Being a process traditionally implemented on dedicated DSP systems or rather powerful computers only available to a limited number of people, the Fourier transform can today be computed in real time on almost all average computer systems.<span id="more-59"></span> Introducing the concept of frequency into our signal representation, this process appears to be well suited for the rather specialized application of changing the pitch of an audio signal while keeping its length constant, or changing its length while retaining its original pitch. This application is of considerable practical use in todays audio processing systems. One process that implements this has been briefly mentioned in our Time Stretching and Pitch Shifting introductory course, namely the “Phase Vocoder”. Based on the representation of a signal in the “frequency domain”, we will explicitely discuss the process of pitch shifting in this article, under the premise that time compression/expansion is analogous. Usually, pitch shifting with the Phase Vocoder is implemented by changing the time base of the signal and using a sample rate conversion on the output to achieve a change in pitch while retaining duration. Also, some implementations use explicite additive oscillator bank resynthesis for pitch shifting, which is usually rather inefficient. We will not reproduce the Phase Vocoder in its known form here, but we will use a similar process to directly change the pitch of a Fourier transformed signal in the frequency domain while retaining the original duration. The process we will describe below uses an FFT / iFFT transform pair to implement pitch shifting and automatically incorporates appropriate anti-aliasing in the frequency domain. A C language implementation of this process is provided in a black-box type routine that is easily included in an existing development setup to demonstrate the effects discussed.</em></p>
+<h3><a href="http://blogs.zynaptiq.com/bernsee/repo/smbPitchShift.cpp" target="_blank" rel="noopener"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/download-source.png" alt="" align="right"></a></h3>
+<p><strong>1. The Short Time Fourier transform<br>
+</strong>As we have seen in our introductory course on the Fourier transform, any sampled signal can be represented by a mixture of sinusoid waves, which we called partials. Besides the most obvious manipulations that are possible based on this representation, such as filtering out unwanted frequencies, we will see that the “sum of sinusoids” model can be used to perform other interesting effects as well. It appears obvious that once we have a representation of a signal that describes it as a sum of pure frequencies, pitch shifting must be easy to implement. As we will see very soon, this is almost true.</p>
+<p>To understand how to go about implementing pitch shifting in the “frequency domain”*, we need to take into account the obvious fact that most signals we encounter in practice, such as speech or music, are changing over time. Actually, signals that do not change over time sound very boring and do not provide a means for transmitting meaningful auditory information. However, when we take a closer look at these signals, we will see that while they appear to be changing over time in many different ways with regard to their spectrum, they remain almost constant when we only look at small “excerpts”, or “frames” of the signal that are only several milliseconds long. Thus, we can call these signals “short time stationary”, since they are almost stationary within the time frame of several milliseconds.</p>
+<p>Because of this, it is not sensible to take the Fourier transform of our whole signal, since it will not be very meaningful: all the changes in the signals’ spectrum will be averaged together and thus individual features will not be readily observable. If we, on the other hand, split our signal into smaller “frames”, our analysis will see a rather constant signal in each frame. This way of seeing our input signal sliced into short pieces for each of which we take the DFT is called the <em>“Short Time Fourier Transform” (STFT)</em> of the signal.</p>
+<p><strong>2. Frequency Resolution Issues<br>
+</strong>To implement pitch shifting using the STFT, we need to expand our view of the traditional Fourier transform with its sinusoid basis functions a bit. In the last paragraph of our article on understanding the Fourier transform we have seen that we evaluate the Fourier transform of a signal by probing for sinusoids of known frequency and measuring the relation between the measured signal and our reference. In the article on the Fourier transform, we have chosen our reference frequencies to have an integer multiple of periods in one DFT frame. You remember that our analogy was that we have required our reference waves to use the two “nails” that are spanned by the first and last sample in our analysis “window”, like a string on a guitar that can only swing at frequencies that have their zero crossings where the string is attached to the body of the instrument. This means that the frequencies of all sinusoids we measure will be a multiple of the inverse of the analysis window length – so if our “nails” are N samples away, our <em>STFT bins</em> will have a spacing of sampleRate/N Hertz. As a result, this concept imposes an artificial frequency grid on our analysis by requiring the reference frequencies to be an integer multiple of our signal window in period to make them seamlessly fit into our analysis frame.</p>
+<p>This constraint will have no consequence for the frequencies in our signal under examination that are exactly centered on our reference frequencies (since they will be a perfect fit), but since we are dealing with realworld signals we can’t expect our signal to always fulfill this requirement. In fact, the probability that one of the frequencies in our measured signal hits exactly one of our STFT bins is rather small, even more so since although it is considered short time stationary it will still slightly change over time.</p>
+<p>So what happens to the frequencies that are between our frequency gridpoints? Well, we have briefly mentioned the effect of “smearing”, which means that they will make the largest contribution in magnitude to the bin that is closest in frequency, but they will have some of the energy “smeared” across the neighbouring bins as well. The graph below depicts how our magnitude spectrum will look like in this case.</p>
+<table border="0" cellpadding="2">
+<tbody>
+<tr>
+<td width="240" height="96"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/spectr1.gif" alt=""></td>
+<td width="240" height="96"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/spectr2.gif" alt=""></td>
+</tr>
+<tr>
+<td valign="top" width="240">
+<table border="0">
+<tbody>
+<tr>
+<td width="220"><span style="font-family: Verdana;"><span style="text-decoration: underline;">Graph 2.1</span>: Magnitude spectrum of a sinusoid whose frequency is exactly centered on a bin frequency. Horizontal axis is bin number, vertical axis is magnitude in log units</span></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p></td>
+<td valign="top" width="240">
+<table border="0">
+<tbody>
+<tr>
+<td width="220"><span style="font-family: Verdana;"><span style="text-decoration: underline;">Graph 2.2</span>: Magnitude spectrum of a sinusoid whose frequency is halfway between two bins. Horizontal axis is bin number, vertical axis is magnitude in log units</span></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p></td>
+</tr>
+</tbody>
+</table>
+<p>As we can see from the above graph, when the measured signal coincides with a bin frequency it will only contribute to that bin. If it is not exactly centered on one of the bin frequencies, its magnitude will get smeared over the neighbouring bins which is why the graph in 2.2. has such a broad basis while the graph in 2.1 shows just a peak at bin 50.</p>
+<p>The reason why I’m outlining this is that this effect is one of the key obstacles for most people who try to implement pitch shifting with the STFT. The main problem with this effect isn’t even really the magnitude spectrum, since the magnitude spectrum only tells us that a particular frequency is present in our signal. The main problem, as we will see in a minute, is the bin <em>phase</em>.</p>
+<p><strong>3. From Phase to Frequency<br>
+</strong>We have learned in our article on the Fourier transform that – with proper post-processing – it describes our signal in terms of sinusoids that have a well defined bin <em>frequency</em>, <em>phase</em> and <em>magnitude</em>. These three numbers alone characterize a sinusoid at any given time instant in our transform frame. We have seen that the frequency is given by the grid on which we probe the signal against our reference signal. Thus, any two bins will always be sampleRate/N Hertz away from each other in frequency. We have seen above that in the case where our measured signal coincides with the bin frequency everything is smooth – obviously it will have a frequency that is a multiple of sampleRate/N. However, what should we expect to see when it is not a multiple of sampleRate/N in frequency? Take a look at the following graph:</p>
+<table border="0" cellpadding="2">
+<tbody>
+<tr>
+<td width="273"><a href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig1.jpg" target="_blank" rel="noopener"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig1.jpg" alt="" width="251" height="82"></a></td>
+<td width="273"><a href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig2.jpg" target="_blank" rel="noopener"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig2.jpg" alt="" width="251" height="82"></a></td>
+</tr>
+<tr>
+<td valign="top" width="273">
+<table border="0">
+<tbody>
+<tr>
+<td width="220"><span style="font-family: Verdana;"><span style="text-decoration: underline;">Graph 3.1</span>: Let this be the waveform of a measured signal with a frequency that is </span><span style="font-family: Verdana; color: #af0000;">exactly</span><span style="font-family: Verdana;"> that of a bin (click to enlarge)</span></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p></td>
+<td valign="top" width="273">
+<table border="0">
+<tbody>
+<tr>
+<td width="220"><span style="font-family: Verdana;"><span style="text-decoration: underline;">Graph 3.2</span>: Let this be the waveform of a measured signal with a frequency that is </span><span style="font-family: Verdana; color: #af0000;">not</span><span style="font-family: Verdana;"> on a bin frequency (click to enlarge)</span></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p></td>
+</tr>
+</tbody>
+</table>
+<p>These two graphs look pretty normal, except that we see that the two signals obviously do not have the same frequency – the one depicted in 3.2 is of higher frequency than our sine wave in 3.1. We have announced that we will use short frames for analyzing our signals, so after splitting it up into our analysis frames it will look like this:</p>
+<table border="0" cellpadding="2">
+<tbody>
+<tr>
+<td width="273"><a href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig1a.jpg" target="_blank" rel="noopener"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig1a.jpg" alt="" width="251" height="82"></a></td>
+<td width="273"><a href="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig2a.jpg" target="_blank" rel="noopener"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/sig2a.jpg" alt="" width="251" height="82"></a></td>
+</tr>
+<tr>
+<td valign="top" width="273">
+<table border="0">
+<tbody>
+<tr>
+<td width="240"><span style="font-family: Verdana;"><span style="text-decoration: underline;">Graph 3.3</span>: Our signal of 3.1 now split into 7 frames. Each frame will be passed to our transform and be analyzed (click to enlarge)</span></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p></td>
+<td valign="top" width="273">
+<table border="0">
+<tbody>
+<tr>
+<td width="240"><span style="font-family: Verdana;"><span style="text-decoration: underline;">Graph 3.4</span>: Our signal of 3.2 now split into 7 frames. Each frame will be passed to our transform and be analyzed. We see that while the signal in 3.3 nicely fits into the frames, the second signal appears to have a <em>phase shift</em> in each window (click to enlarge).</span></td>
+</tr>
+</tbody>
+</table>
+<p>&nbsp;</p></td>
+</tr>
+</tbody>
+</table>
+<p>Our sampled signal from 3.1 that is exactly centered on a bin frequency nicely splits up into seven successive analysis frames. In each frame, the waveform starts out at zero and ends with zero. To put it more exactly: in each frame, the measured signal starts at the same point in its cycle, that is, <em>it starts with the same phase</em>.<br>
+Our sampled signal from 3.2 that is somewhere between two bins in frequency does not nicely split into our seven successive analysis frames. In each frame, the waveform has a clearly visible <em>phase offset</em>, ie. it begins at a different point in its cycle. The more off-center it is in frequency from the bin frequency, the larger this phase offset will be. So, what we see here is that while signals whose frequency is exactly on a bin frequency have the same phase offset in each frame, the phase of signals that have a frequency between two bin frequencies will have an offset that is different with each frame. So, <em>we can deduce that a difference in phase offset between two frames denotes a deviation in frequency from our bin frequencies</em>.</p>
+<p>In other words: if we measure our k-th sinusoid with its bin magnitude, frequency and phase, its <em>magnitude</em> will denote to what extent that particular frequency is present in our signal, the <em>frequency</em> will take on its bin frequency and the <em>phase</em> will change according to its deviation from that bin frequency. Clearly, since we now know that a change in phase with each frame means a deviation in frequency from the bin frequency, we could as well use the phase offset to calculate the sinusoids’ true frequency. So, we can reduce the three numbers we get back from our post-processed analysis for each sinusoid, namely <em>bin magnitude</em>, <em>bin frequency</em> and <em>bin phase</em> to just <em>magnitude</em> and <em>true frequency</em>**.</p>
+<p>Mathematically, computing the change of a parameter is known as <em>differentiation</em> (which means “taking the difference”, or, in the case of a function, computing the functions’ <em>derivative</em>), since we need to compute the difference between the current parameter value and the last parameter value, ie. how much it has <em>changed</em> since our last measurement. In our specific case, this parameter is the bin phase. Thus, we can say that the k-th partials’ deviation in frequency from its bin frequency is directly proportional to the <em>derivative of the bin phase</em>. We will use this knowledge later to compute the true frequency for that partial.</p>
+<p><strong>4. About The Choice of Stride</strong><br>
+As if this wasn’t enough to consider, we also have to worry about another problem. Simply splitting the signal into successive, non-overlapping frames like we have used in our above illustration does not suffice. For several reasons, most importantly the <em>windowing</em>*** that needs to be done to reduce the “smearing” of the bin magnitudes, and in order to be able to uniquely discriminate the bin phase derivative without ambiguity, we need to use overlapping frames. The typical overlap factor is at least 4, ie. two adjacent windows overlap by at least 75%. Fortunately, the significance of the frame overlap on bin phase and its derivative is easy to calculate and can be subtracted out before we compute the true bin frequency. We will see how this is done in the source code example below. Actually, it is pretty unspectacular since we simply calculate how far our bin phase derivative is expected to advance for a given overlap and then subtract this offset from our phase difference prior to computing the k-th partials’ true frequency.</p>
+<p>The other, more important thing we need to consider which is associated with this, however, is that the choice of the overlap affects the way our true partial frequencies are discriminated. If we have frames that are overlapping to a great extent, the range in which the true frequency of each of the sinusoids can vary will be larger than if we choose a smaller overlap.</p>
+<p>To see why this is the case, let us first consider how we actually <em>measure</em> the bin phase. As we can see from our source code example, we use the arc tangent of the quotient of sine and cosine part (in the source code example, they are referred to as <em>imaginary (im)</em> and <em>real (re)</em> part of each bin for mathematical terminology reasons). The sign of the sine and cosine parts denote the quadrant in which the phase angle is measured. Using this knowledge we can assume that the bin phase will always be between -π and +π at any time, since this is the range of our atan2() functions’ return value. Therefore, the increase in phase between any two adjacent frames has an upper limit, with a negative angle difference denoting a negative deviation from the bin frequency and a positive angle difference denoting a positive deviation in frequency from the bin frequency. To make sure the phase difference value is centered around 0 (ie. measured as an absolute value against the origin, that is, always in the range ±π which we need in order to measure the frequency deviation) we wrap the phase difference back into our ±π interval. This is necessary since the phase offset we subtract out to make up for the overlap may cause our phase difference to be outside that interval.</p>
+<p>Now, in the simple case that any two adjacent frames will not overlap and we know we have an interval of ±π to denote the deviation in frequency of one partial from our bin frequency, we would only be able to discriminate a frequency deviation that is ±0.5 bins since this is the maximum advance in phase between two frames we can unambiguously discriminate in this case. When the frequency of our measured signal crosses the boundary between the two adjacent STFT bins, the phase difference will wrap back to the beginning of our interval and that partials’ frequency will be far away from the actual frequency of our input sinusoid.</p>
+<table border="0" cellpadding="4">
+<tbody>
+<tr>
+<td bgcolor="#dddddd"><strong><span style="font-family: Verdana;">Pass #1: </span><span style="font-family: Verdana; color: #af0000;">2411.718750</span><span style="font-family: Verdana;"> Hz (bin 112.0):</span></strong><p></p>
+<table border="1">
+<tbody>
+<tr>
+<td bgcolor="#000066" width="73"><span style="font-family: Verdana; color: #ffffff;">Bin number</span></td>
+<td bgcolor="#000066" width="100"><span style="font-family: Verdana; color: #ffffff;">Bin frequency [Hz]</span></td>
+<td bgcolor="#000066" width="75"><span style="font-family: Verdana; color: #ffffff;">Bin magnitude</span></td>
+<td bgcolor="#000066" width="140"><span style="font-family: Verdana; color: #ffffff;">Bin phase difference</span></td>
+<td bgcolor="#000066"><span style="font-family: Verdana; color: #ffffff;">Estimated true frequency [Hz]</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">110</span></td>
+<td width="100"><span style="font-family: Verdana;">2368.652344</span></td>
+<td width="75"><span style="font-family: Verdana;">0.000000</span></td>
+<td width="140"><span style="font-family: Verdana;">-0.403069</span></td>
+<td><span style="font-family: Verdana;">2367.270980</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">111</span></td>
+<td width="100"><span style="font-family: Verdana;">2390.185547</span></td>
+<td width="75"><span style="font-family: Verdana;">0.500000</span></td>
+<td width="140"><span style="font-family: Verdana;">0.000000</span></td>
+<td><span style="font-family: Verdana;">2390.185547</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">112</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2411.718750</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">1.000000</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">0.000000</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2411.718750</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">113</span></td>
+<td width="100"><span style="font-family: Verdana;">2433.251953</span></td>
+<td width="75"><span style="font-family: Verdana;">0.500000</span></td>
+<td width="140"><span style="font-family: Verdana;">0.000000</span></td>
+<td><span style="font-family: Verdana;">2433.251953</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">114</span></td>
+<td width="100"><span style="font-family: Verdana;">2454.785156</span></td>
+<td width="75"><span style="font-family: Verdana;">0.000000</span></td>
+<td width="140"><span style="font-family: Verdana;">0.112989</span></td>
+<td><span style="font-family: Verdana;">2455.172383</span></td>
+</tr>
+</tbody>
+</table>
+<p><span style="font-family: Verdana;">See <a href="http://blogs.zynaptiq.com/bernsee/admin/frequently-asked-questions-faq/#numbers">FAQ</a> on how I got these numbers</span></p></td>
+</tr>
+</tbody>
+</table>
+<table border="0" cellpadding="4">
+<tbody>
+<tr>
+<td bgcolor="#dddddd"><strong><span style="font-family: Verdana;">Pass #2: </span><span style="font-family: Verdana; color: #af0000;">2416.025391</span><span style="font-family: Verdana;"> Hz (bin 112.2):</span></strong><p></p>
+<table border="1">
+<tbody>
+<tr>
+<td bgcolor="#000066" width="73"><span style="font-family: Verdana; color: #ffffff;">Bin number</span></td>
+<td bgcolor="#000066" width="100"><span style="font-family: Verdana; color: #ffffff;">Bin frequency [Hz]</span></td>
+<td bgcolor="#000066" width="75"><span style="font-family: Verdana; color: #ffffff;">Bin magnitude</span></td>
+<td bgcolor="#000066" width="140"><span style="font-family: Verdana; color: #ffffff;">Bin phase difference</span></td>
+<td bgcolor="#000066"><span style="font-family: Verdana; color: #ffffff;">Estimated true frequency [Hz]</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">110</span></td>
+<td width="100"><span style="font-family: Verdana;">2368.652344</span></td>
+<td width="75"><span style="font-family: Verdana;">0.022147</span></td>
+<td width="140"><span style="font-family: Verdana;">1.256637</span></td>
+<td><span style="font-family: Verdana;">2372.958983</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">111</span></td>
+<td width="100"><span style="font-family: Verdana;">2390.185547</span></td>
+<td width="75"><span style="font-family: Verdana;">0.354352</span></td>
+<td width="140"><span style="font-family: Verdana;">1.256637</span></td>
+<td><span style="font-family: Verdana;">2394.492187</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">112</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2411.718750</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.974468</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">1.256637</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2416.025391</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">113</span></td>
+<td width="100"><span style="font-family: Verdana;">2433.251953</span></td>
+<td width="75"><span style="font-family: Verdana;">0.649645</span></td>
+<td width="140"><span style="font-family: Verdana;">1.256637</span></td>
+<td><span style="font-family: Verdana;">2437.558594</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">114</span></td>
+<td width="100"><span style="font-family: Verdana;">2454.785156</span></td>
+<td width="75"><span style="font-family: Verdana;">0.046403</span></td>
+<td width="140"><span style="font-family: Verdana;">1.256637</span></td>
+<td><span style="font-family: Verdana;">2459.091797</span></td>
+</tr>
+</tbody>
+</table>
+<p><span style="font-family: Verdana;">See <a href="http://blogs.zynaptiq.com/bernsee/admin/frequently-asked-questions-faq/#numbers">FAQ</a> on how I got these numbers</span></p></td>
+</tr>
+</tbody>
+</table>
+<table border="0" cellpadding="4">
+<tbody>
+<tr>
+<td bgcolor="#dddddd"><strong><span style="font-family: Verdana;">Pass #3: </span><span style="font-family: Verdana; color: #af0000;">2422.270020</span><span style="font-family: Verdana;"> Hz (bin 112.49):</span></strong><p></p>
+<table border="1">
+<tbody>
+<tr>
+<td bgcolor="#000066" width="73"><span style="font-family: Verdana; color: #ffffff;">Bin number</span></td>
+<td bgcolor="#000066" width="100"><span style="font-family: Verdana; color: #ffffff;">Bin frequency [Hz]</span></td>
+<td bgcolor="#000066" width="75"><span style="font-family: Verdana; color: #ffffff;">Bin magnitude</span></td>
+<td bgcolor="#000066" width="140"><span style="font-family: Verdana; color: #ffffff;">Bin phase difference</span></td>
+<td bgcolor="#000066"><span style="font-family: Verdana; color: #ffffff;">Estimated true frequency [Hz]</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">110</span></td>
+<td width="100"><span style="font-family: Verdana;">2368.652344</span></td>
+<td width="75"><span style="font-family: Verdana;">0.024571</span></td>
+<td width="140"><span style="font-family: Verdana;">3.078761</span></td>
+<td><span style="font-family: Verdana;">2379.203614</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">111</span></td>
+<td width="100"><span style="font-family: Verdana;">2390.185547</span></td>
+<td width="75"><span style="font-family: Verdana;">0.175006</span></td>
+<td width="140"><span style="font-family: Verdana;">3.078761</span></td>
+<td><span style="font-family: Verdana;">2400.736816</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">112</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2411.718750</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.854443</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">3.078761</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2422.270020</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #660000;">113</span></td>
+<td width="100"><span style="font-family: Verdana; color: #660000;">2433.251953</span></td>
+<td width="75"><span style="font-family: Verdana; color: #660000;">0.843126</span></td>
+<td width="140"><span style="font-family: Verdana; color: #660000;">3.078761</span></td>
+<td><span style="font-family: Verdana; color: #660000;">2443.803223</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">114</span></td>
+<td width="100"><span style="font-family: Verdana;">2454.785156</span></td>
+<td width="75"><span style="font-family: Verdana;">0.164594</span></td>
+<td width="140"><span style="font-family: Verdana;">3.078761</span></td>
+<td><span style="font-family: Verdana;">2465.336426</span></td>
+</tr>
+</tbody>
+</table>
+<p><span style="font-family: Verdana;">See <a href="http://blogs.zynaptiq.com/bernsee/admin/frequently-asked-questions-faq/#numbers">FAQ</a> on how I got these numbers</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>We can see that when we start out at exactly the frequency of bin 112 as shown in the table of pass #1, the true frequencies for all channels that are significant (ie. have nonzero magnitude) are correctly centered on their bin frequencies as is to be expected considering we use a frequency that is a perfect fit. The 0.5 value for the magnitude of bin 111 and 113 is due to the windowing we use. When we increase the frequency of our measured signal in pass #2 to be 20% away from the 112th bin’s frequency, we see that bin 112 correctly tracks our signal, while the bin above, towards which the frequency moves, goes even farther away from the correct frequency although its magnitude increases. This is because it wraps back in its interval and actually goes into the opposite direction! This gets even more evident in pass #3 which shows that the 113th bin (which should actually be closer to the true frequency of our measured signal now according to its magnitude) goes even more into the wrong direction.</p>
+<table border="0" cellpadding="4">
+<tbody>
+<tr>
+<td bgcolor="#dddddd"><strong><span style="font-family: Verdana;">Pass #4: </span><span style="font-family: Verdana; color: #af0000;">2422.485352</span><span style="font-family: Verdana;"> Hz (bin 112.5):</span></strong><p></p>
+<table border="1">
+<tbody>
+<tr>
+<td bgcolor="#000066" width="73"><span style="font-family: Verdana; color: #ffffff;">Bin number</span></td>
+<td bgcolor="#000066" width="100"><span style="font-family: Verdana; color: #ffffff;">Bin frequency [Hz]</span></td>
+<td bgcolor="#000066" width="75"><span style="font-family: Verdana; color: #ffffff;">Bin magnitude</span></td>
+<td bgcolor="#000066" width="140"><span style="font-family: Verdana; color: #ffffff;">Bin phase difference</span></td>
+<td bgcolor="#000066"><span style="font-family: Verdana; color: #ffffff;">Estimated true frequency [Hz]</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">110</span></td>
+<td width="100"><span style="font-family: Verdana;">2368.652344</span></td>
+<td width="75"><span style="font-family: Verdana;">0.024252</span></td>
+<td width="140"><span style="font-family: Verdana;">-3.141593</span></td>
+<td><span style="font-family: Verdana;">2357.885742</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">111</span></td>
+<td width="100"><span style="font-family: Verdana;">2390.185547</span></td>
+<td width="75"><span style="font-family: Verdana;">0.169765</span></td>
+<td width="140"><span style="font-family: Verdana;">-3.141593</span></td>
+<td><span style="font-family: Verdana;">2379.418945</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #660000;">112</span></td>
+<td width="100"><span style="font-family: Verdana; color: #660000;">2411.718750</span></td>
+<td width="75"><span style="font-family: Verdana; color: #660000;">0.848826</span></td>
+<td width="140"><span style="font-family: Verdana; color: #660000;">-3.141593</span></td>
+<td><span style="font-family: Verdana; color: #660000;">2400.952148</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">113</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2433.251953</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.848826</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">-3.141593</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2422.485352</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">114</span></td>
+<td width="100"><span style="font-family: Verdana;">2454.785156</span></td>
+<td width="75"><span style="font-family: Verdana;">0.169765</span></td>
+<td width="140"><span style="font-family: Verdana;">-3.141593</span></td>
+<td><span style="font-family: Verdana;">2444.018555</span></td>
+</tr>
+</tbody>
+</table>
+<p><span style="font-family: Verdana;">See <a href="http://blogs.zynaptiq.com/bernsee/admin/frequently-asked-questions-faq/#numbers">FAQ</a> on how I got these numbers</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>In pass #4, the frequency of our measured signal is now halfway between two bins, namely between bin 112 and 113. We can see this from the bin magnitude, which reflects this fact by having an identical value for these two bins. Now bin 113 takes on the correct frequency, while bin 112 wraps back to the beginning of its interval (from 3.079 =~ 3.1415 [+π] to -3.1415 [-π]).</p>
+<p>For comparison, here’s how the numbers look like when we use an overlap of 75%:</p>
+<table border="0" cellpadding="4">
+<tbody>
+<tr>
+<td bgcolor="#dddddd"><strong><span style="font-family: Verdana;">Pass #5: </span><span style="font-family: Verdana; color: #af0000;">2422.485352</span><span style="font-family: Verdana;"> Hz (bin 112.5), 4x overlap:</span></strong><p></p>
+<table border="1">
+<tbody>
+<tr>
+<td bgcolor="#000066" width="73"><span style="font-family: Verdana; color: #ffffff;">Bin number</span></td>
+<td bgcolor="#000066" width="100"><span style="font-family: Verdana; color: #ffffff;">Bin frequency [Hz]</span></td>
+<td bgcolor="#000066" width="75"><span style="font-family: Verdana; color: #ffffff;">Bin magnitude</span></td>
+<td bgcolor="#000066" width="140"><span style="font-family: Verdana; color: #ffffff;">Bin phase difference</span></td>
+<td bgcolor="#000066"><span style="font-family: Verdana; color: #ffffff;">Estimated true frequency [Hz]</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">110</span></td>
+<td width="100"><span style="font-family: Verdana;">2368.652344</span></td>
+<td width="75"><span style="font-family: Verdana;">0.024252</span></td>
+<td width="140"><span style="font-family: Verdana;">-2.356196</span></td>
+<td><span style="font-family: Verdana;">2336.352516</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">111</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2390.185547</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.169765</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">2.356194</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2422.485348</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">112</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2411.718750</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.848826</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">0.785398</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2422.485352</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">113</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2433.251953</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.848826</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">-0.785398</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2422.485351</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana; color: #af0000;">114</span></td>
+<td width="100"><span style="font-family: Verdana; color: #af0000;">2454.785156</span></td>
+<td width="75"><span style="font-family: Verdana; color: #af0000;">0.169765</span></td>
+<td width="140"><span style="font-family: Verdana; color: #af0000;">-2.356194</span></td>
+<td><span style="font-family: Verdana; color: #af0000;">2422.485355</span></td>
+</tr>
+<tr>
+<td width="73"><span style="font-family: Verdana;">115</span></td>
+<td width="100"><span style="font-family: Verdana;">2476.318359</span></td>
+<td width="75"><span style="font-family: Verdana;">0.024252</span></td>
+<td width="140"><span style="font-family: Verdana;">2.356196</span></td>
+<td><span style="font-family: Verdana;">2508.618186</span></td>
+</tr>
+</tbody>
+</table>
+<p><span style="font-family: Verdana;">See <a href="http://blogs.zynaptiq.com/bernsee/admin/frequently-asked-questions-faq/#numbers">FAQ</a> on how I got these numbers</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>When we want to alter our signal (which we need to do in order to achieve the pitch shifting effect), we see that with no overlap we easily run into the scenario (depicted in pass #4 above) where on resynthesis we have two sinusoids of equal amplitude but actually one bin apart in frequency. In our case, this would amount to a difference in frequency of about 21.5 Hz. Thus, when putting our signal back together we would have <em>two</em> sinusoids that are apparently 21.5 Hz apart where we had <em>one single</em> sinusoid as input. It is not surprising that the synthesized signal will not sound very much like the original in this case. Clearly, when we just resynthesize the signal without pitch shifting we can expect that these effects will cancel out. However, this no longer holds in the case when we alter our signal by scaling the partial frequencies – we would expect that this will introduce an audible error in our signal since the wrapping will now happen at a different rate.</p>
+<p>When we look at pass #5 which uses a 4x overlap (ie. 75%), we see that all adjacent sinusoids down to a bin magnitude of 0.17 (approx. -15 dB) have about the same frequency, the error can be considered negligible. The next sinusoid that does not have the correct frequency is approximately -32dB down, which is much better than in the case where we used no overlap. Thus, we would expect this to sound considerably better. As you can easily verify with the code below, this is indeed the case.</p>
+<p>Summarizing the above, we see that choosing a larger overlap, which is actually <em>oversampling our STFT in time</em>, increases our ability to estimate the true frequency of our measured sinusoid signal by making the range in which each sinusoid can deviate from its bin frequency larger: a range of ±1/2 period (±π) has a different meaning when we space our frames more closely, as the same phase difference for 2x and 4x overlap means twice as high a frequency deviation in the 4x case than in the 2x case. Thus, the closer we space our frames, ie. the more they overlap, the better we will be able to determine our true sinusoid frequencies in our measured signal. Of course, the computational cost will also increase, since we need to perform twice as many STFTs when we increase our overlap from 50% to 75%.<br>
+As a consequence for its practical implementation we now see why we need an overlap that is sufficiently large: if we have a measured signal whose frequency is between two bins, we will have two bins with large magnitude. However, since the true frequency is somewhere between the two bins and each bin can only deviate by a fixed amount depending on the overlap, we may have two prominent sinusoids that play at two different, yet close frequencies. Even worse, if the true frequency of the sinusoid is between the two bins k and k+1 like in our example shown in pass #4, the frequency of the sinusoid k will move farther away from the true frequency since its phase difference will – trying to lock on the frequency of the input sinusoid – wrap into the opposite branch. This will produce audible beating in our resynthesized sound and thus scramble our result. A 75% overlap remedies this situation: adjacent sinusoids down to an acceptable magnitude are now able to always lock on the true frequency without wrapping – they have become more “flexible” in frequency which will yield a considerably better sonic quality. As a result, the beating is almost completely gone.</p>
+<p><strong>5. Shifting the Pitch</strong><br>
+Once we have mastered the difficulties of calculating the true partial frequencies for our bins, shifting the pitch is comparably easy. Let’s look at what we now have gained after calculating the partials’ true frequencies: first, we have an array of numbers that holds our magnitude values. When we scale the pitch to become sharp, we expect our magnitude array to expand by our pitch shift factor towards the upper frequency end. Likewise, when we scale our pitch to become flat, we expect our magnitude spectrum to contract towards the low frequency end. Obviously, the actual magnitude values stored in the array elements should not change, as a pure sine of -2dB at 1000 Hz is expected to become a pure sine of -2dB at 500 Hz after a 0.5 x pitch shift. Second, we also have an array that holds the true frequencies of our partial sinusoids. Like with the magnitude spectrum, we would also expect our frequency spectrum to expand or contract according to the scale factor. However, unlike the magnitude values, the values stored in our frequency array denote the true frequencies of our partials. Thus we would expect them to change according to the pitch shift factor as well.</p>
+<p>In the simplest of all cases, we can just put the scaled partial frequencies where they belong, and add the magnitudes for the new location together. This will also preserve most of the energy contained in the input.</p>
+<p>We also see why pitch shifting using this procedure automatically includes anti-aliasing: we simply do not compute bins that are above our Nyquist frequency by stopping at fftFrameSize2. This does not even need an additional processing step.</p>
+<p><strong>6. Back to where we came from…<br>
+</strong>To obtain our output signal, we need to undo all steps that we took to get our magnitude and frequency spectra. For converting from our magnitude and frequency representation back to bin magnitude, bin frequency and bin phase we follow the same path back that brought us here. Since the sine and cosine parts of the STFT are periodic and defined for all time and not just in a certain interval, we need not care for phase rewrapping explicitely – this is done by the basis functions automatically at no extra cost. After taking the inverse Fourier transform (for which we use the routine smbFft() from our DFT à Pied article) we string our overlapping frames together at the same choice of stride to get back our pitch shifted signal.</p>
+<p><strong>7. The Code</strong><br>
+So how do we actually implement it in software? First, we obtain our current STFT frame from a FIFO queue. This is required since we don’t want to be forced to use a particular input buffer size – this way we can process all data independent of the FFT frame size we use for the actual pitch shifting. The data is windowed and [re, im] interleaved into the gFFTworksp array where it gets transformed by the Fast Fourier Transform algorithm smbFft(). This FFT algorithm isn’t particularly efficient, it’s just there to demonstrate how to use the routine and to make it compile without modification. You might replace it by your flavor of the FFT later. smbFft() can be found at the end of our DFT à Pied article.</p>
+<p>Now we’re equipped with the complex output for the positive and negative frequencies of our DFT bins. Note that we only need the positive frequencies as our original signal was purely real. We convert them to magnitude and phase by rectangular to polar conversion and obtain the instantaneous bin frequency from the phase difference between two adjacent STFT frames. From that we deduce and compensate for the expected, frequency dependent advance in phase between two adjacent frames and obtain the true partial frequency. After doing the actual pitch shifting process described in (6) above, we undo our frequency domain wizardry and then transform to get back to our newly created time domain sequence. After de-interlacing the [re, im] array, windowing and rescaling we put the data into the output queue to make sure we have as much output data as we have input data. The global I/O delay is inFifoLatency samples (which means that the start of your output will contain that many samples of of silence!) – this has to be taken into account when we write the data out to a file.</p>
+<p>Worth noting: The routine smbPitchShift() uses static variables to store intermediate results. This is rather inelegant and should be replaced by appropriately allocated and initialized memory instead. Note also on routine parameters: The routine smbPitchShift() takes a pitchShift factor value which is between 0.5 (one octave down) and 2. (one octave up). A value of exactly 1 does not change the pitch. If you need a wider pitch shift range you need to tweak the code a bit. numSampsToProcess tells the routine how many samples in indata[0… numSampsToProcess-1] should be pitch shifted and moved to outdata[0 … numSampsToProcess-1]. This can be any number of samples. The two buffers can be identical (ie. it can process the data in-place). fftFrameSize defines the FFT frame size used for the processing. Typical values are 1024, 2048 and 4096. For a sample rate of 44.1kHz, a value of 1024 is generally fine for speech, while a value of 2048 works well with music. It may be any value &lt;= MAX_FFT_FRAME_LENGTH but it MUST be a power of 2 unless you use an FFT that can deal with other frame sizes as well.</p>
+<p><strong>8. Conclusion</strong><br>
+In this article we discussed a way to use the STFT for changing the perceived pitch of an audio signal by representing it as a sum of sinusoids and scaling the frequency of these sinusoids. We have detailed the steps necessary to convert the raw output of a discrete Fourier transform to a musically meaningful representation by making the STFT partials lock and track the actual harmonics in our input signal to the extent permitted by this ‘generic’ representation. We have then used this data to alter the pitch of the underlying signal. C source code for implementing the above process in a black-box type routine that takes and returns any number of sample values as provided by the calling application is given in Appendix A below, subject to the terms set forth in the <a title="WOL" href="http://www.dspguru.com/wol.htm" target="_blank" rel="noopener">WOL Wide Open software License</a>.</p>
+<p>Have fun!</p>
+<p><em>Stephan M. Bernsee, The DSP Dimension<br>
+</em></p>
+<hr size="1">
+<h5>*) The term “frequency domain” is a common yet somewhat imprecise nickname widely used for the raw output of the Fourier transform. We will use this term in this article only in conjunction with the notion of frequency as introduced by the pitch shifting process implemented below, where it denotes an array of numbers containing the true frequencies of our partials derived by properly post-processing the Fourier transform output.</h5>
+<h5>**) This steps assumes an initial condition for the bin phases which the computation of the sinusoids’ true frequency is based on. In our discussion we will always assume the initial phases are set to zero as the phase difference of the second to the first frame will make successive frequency estimates take on appropriate phase values.</h5>
+<h5>***) Windowing is a process where the signal is faded in and out during one STFT frame in a particular manner. This suppresses the energy that gets smeared over adjacent bins to some extent, since an in such a way tapered signal has less frequencies generated by the discontinuity at the frame boundaries. The interested reader is referred to Chris Bores’ course for a detailed introductory explanation of windowing.</h5>
+<p><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/empty-horiz.png" alt="Empty horizontal bar" width="650" height="10"></p>
+</div>
+                    <p class="tags">Tags: <a href="http://blogs.zynaptiq.com/bernsee/tag/audio/" rel="tag">audio</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/dft/" rel="tag">dft</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/dsp/" rel="tag">dsp</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/fft/" rel="tag">fft</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/fourier/" rel="tag">fourier</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/fourier-transform/" rel="tag">fourier transform</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/overview/" rel="tag">overview</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/pitch-change/" rel="tag">pitch change</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/pitch-shifting/" rel="tag">pitch shifting</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/time-stretching/" rel="tag">time stretching</a>, <a href="http://blogs.zynaptiq.com/bernsee/tag/tutorial/" rel="tag">Tutorials</a></p>        		</div>
+                
+
+
+<!-- You can start editing here. -->
+
+    <h3 id="comments">51 Comments to <em>Pitch Shifting Using The Fourier Transform</em></h3>
+    <ul class="comments-list">		<li id="comment-101" class="comment even thread-even depth-1">
+			<article id="div-comment-101" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/097f7fe552d124c202f414a8432ca1dd.png" srcset="http://0.gravatar.com/avatar/097f7fe552d124c202f414a8432ca1dd?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Sebastian Adolf</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-101">
+							<time datetime="2008-05-30T09:14:50+00:00">
+								May 30, 2008 at 9:14 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thanks for this great tutorial! One thing i don’t really get is the cause of windowing the signal two times…<br>
+and what is the matter for gOutputAccum[k] += 2.*window*gFFTworksp[k][0]/(fftFrameSize2*osamp); ? Why do you multiplicated the left part the divisor with 2 and why does the right part consist of (fftFrameSize2*osamp) and not just osamp?<br>
+Sorry if this is a dumb question <img draggable="false" class="emoji" alt="😉" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/1f609.svg"></p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-102" class="comment byuser comment-author-neuronaut bypostauthor odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-102" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.bernsee.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-102">
+							<time datetime="2008-06-03T13:12:44+00:00">
+								June 3, 2008 at 1:12 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>There may be stupid answers but I don’t think that I ever heard a dumb question.</p>
+<p>First, about windowing: you need to window the signal twice because in the case of any “realworld” signal the bin phases in your signal will lose sync after some time. IOW, upon resynthesis the individual bin phases are not aligned in the same way they were before the pitch was changed – this will introduce reverberation into the signal and will also smear any transient signal in time. An impulse will be spread out over several milliseconds and the same is true for your input window. So, you need to apply a synthesis window in order to make the individual buffers overlap in a way that doesn’t create discontinuities.</p>
+<p>Second, about the gain factor. We use only half the analysis bins in the reconstruction, which is why our signal will be reduced in gain on resynthesis. Using half the number of bins adds up to a factor of 2 that we need to apply to get the gain right. Also, if we overlap and add by a factor of osamp we need to reduce the volume by that same factor to avoid distortion.</p>
+<p>Our FFT has an output that isn’t normalized (that is just a particular feature of our FFT as well as one of many others), so we need to divide by fftFrameSize2 to correct for this. I think this topic is covered in more detail in the Fourier transform tutorial.</p>
+<p>Hope this helps<br>
+–smb</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-103" class="comment even thread-even depth-1">
+			<article id="div-comment-103" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/3731d5970d97dabfd012046b3a60a2f3.png" srcset="http://0.gravatar.com/avatar/3731d5970d97dabfd012046b3a60a2f3?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Loren Wilton</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-103">
+							<time datetime="2008-06-23T00:54:44+00:00">
+								June 23, 2008 at 12:54 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>A couple of questions, the first one trivial:  In the code where you compute magnitude from the first FFT result, why do you multiply the sqrt value by 2? I always thought magnitude was simply (a^2+b^2)^1/2?</p>
+<p>The second problem I’m having is perhaps less trivial.  If I implent this algorithm and set it to zero pitch shift, I cna run a sine wave frequency sweep through it with no obvious distortion.  But if I set for instance one semitone of pitch shift (about 1.06) and sweep a sine wave, I find many points that the signal will nearly or completely cancel.  I can hold one of these points and the signal will remain at a low unchanging amplitude, indicating that it isn’t an obvious roundoff problem.  Looking at the since wave reconstructed from the rfft before windowing, I see almost the inverse of the windowed sine wave presented to the input fft.  That is, the magnitude of the wave is 1 at the edges of the fft, and approaches 0 in the middle of the fft output.</p>
+<p>I suspect this has something to do with erroneous phase reconstruction, but I don’t understand the math well enough to see how to fix this.  Can you explain what is happening?  (I have fixed the problem with the ‘phase’ term being unbounded by constraining it using essentially the same algorithm used in the analysis phase; perhaps this is incorrect?)</p>
+<p>Thanks, and thanks a lot for the code and overall explanation!</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-104" class="comment byuser comment-author-neuronaut bypostauthor odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-104" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.bernsee.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-104">
+							<time datetime="2008-07-11T20:29:45+00:00">
+								July 11, 2008 at 8:29 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Sorry for the delay in replying to your comment and thank you for your interest in our tutorials.</p>
+<p>As for your questions: (1) we are only using half of the transform (due to symmetry) in our calculations, hence we need to multiply by 2 to keep the output level constant.</p>
+<p>(2) The reason for the amplitude modulation that you are observing as you run a sweep through the pitch shifter is that there is no synchronization between the individual DFT bins. In a nutshell, since the sinusoids used in the transform have a constant frequency across the entire transform window, a frequency sweep will be expressed by a series of adjacent bins changing frequency as the sweep moves through their channels. Since these bins are in “free run” (bin #100 knows nothing about bin #101) their phase will eventually be off with respect to each other. So, whenever your sweep crosses a channel boundary it will be expressed by two adjacent bins with essentially a random relative phase – this produces resonances and cancellations which lead to the amplitude modulation that you are observing.</p>
+<p>If you have more questions please don’t hesitate to reply here, I’m sure the other readers would appreciate it!</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-105" class="comment even thread-even depth-1">
+			<article id="div-comment-105" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/3731d5970d97dabfd012046b3a60a2f3.png" srcset="http://0.gravatar.com/avatar/3731d5970d97dabfd012046b3a60a2f3?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Loren Wilton</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-105">
+							<time datetime="2008-08-17T09:08:45+00:00">
+								August 17, 2008 at 9:08 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thank you for your reply.  I had suspected this was a phase reconstruction problem.</p>
+<p>We have presumably accurate input phase information in the analysis phase of the algorithm.  It seems to me there should be some way to transform this phase information through the shifting algorithm such that transformed input phase relationships would be used in the output buckets, rather than integrating to generate synthetic phase values.  There could clearly be problems when two input frequencies sum into a single output bucket due to decreasing the pitch.  But if the pitch is increasing the input frequencies become sparser, so it should be possible to place the output buckets at the correct output phases.  I am however unclear on how this might be accomplished. Can you offer any suggestions on how to do this?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-106" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-106" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/9d7677fdec22dc7d0fad815770ad4c6e.png" srcset="http://0.gravatar.com/avatar/9d7677fdec22dc7d0fad815770ad4c6e?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Tien</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-106">
+							<time datetime="2008-09-24T01:46:01+00:00">
+								September 24, 2008 at 1:46 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Dear Mr. Bernsee,</p>
+<p>After reading many material about DSP and Speech Processing. I reconize that you Pitch shift is sinousoid model pitch shift ABS/OLA, beside TD-PSOLA, FD-PSOLA,….But you are missing in explaination of windows Hanning (here I am also indouble with paraneter -0.5 of Hanning, because there are 0.5 in some material I have read…I don’t understand while Real Part and Imaginal part was assigned to alternative input() when you calculate by FFT…</p>
+<p>Acctually, How to understand and apply well your tutorial of pitcht shift. I would like to go through from DST – DFT – DFFT – pitch shift well. Can you give me material or some where I can find it with code to understand it well. About FFT I ound some source codes beside your but it is different in code, so I can not understand and get to understand.</p>
+<p>Thank you very much,<br>
+Tien</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-107" class="comment byuser comment-author-neuronaut bypostauthor even thread-even depth-1">
+			<article id="div-comment-107" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.bernsee.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-107">
+							<time datetime="2008-09-24T07:02:59+00:00">
+								September 24, 2008 at 7:02 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hello,</p>
+<p>I’m not entirely sure that I understand what part you need further clarification on. Generally, when using the FFT (which is complex valued on input and output) you need to supply both the real and imaginary part of your numbers. Since our input sequence is real the imaginary part is zero and since C/C++ doesn’t natively support the concept of complex numbers you end up having the real and imaginary part in alternating locations.</p>
+<p>Btw. there is no such thing as a “Hanning” window. The correct term is either “von Hann” or “Hamming” (which are two different things).</p>
+<p>HTH<br>
+–smb</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-108" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-108" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/9d7677fdec22dc7d0fad815770ad4c6e.png" srcset="http://0.gravatar.com/avatar/9d7677fdec22dc7d0fad815770ad4c6e?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Tien</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-108">
+							<time datetime="2008-09-24T21:25:00+00:00">
+								September 24, 2008 at 9:25 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Dear Mr Bernsee,</p>
+<p>Acctually, in material said Hanning is 0.5-0.5cos(2*pi*n/N-1) and Hamming is 0.54-0.46cos(2*pi*n/N-1). I mean you don’t explain this matter in your code. Other thing when I apply oitch shift with DST (it is very slow computation) if I use Index = i * pitchshift than I can not receive frequency changed output, it is some thing strange. But when i use index=i+ or – pitchshitf than I gain wave form changed in frequency. Unformtunately that i don’t not know how to use FFT for this I just pass one function of FFT instead of DST I receive so, but i don’t know this FFT can use in this case or not. Anout Imaginary part, I saw that you assigned odd value of input to zero that will be miss of information?</p>
+<p>By this way, I use your ptch shift but I receive a saw wave from wave of “hello”.</p>
+<p>I thin you should explain more about your code concretely step by step from DST to DFT,… FFT. That the way I go now to understand but I am not sure to be successfull because the code of FFT is very difficult to undestand even if I read many material in English and my native language.</p>
+<p>Sincerely,<br>
+Tien</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-109" class="comment even thread-even depth-1">
+			<article id="div-comment-109" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/a4489337936a7d3cc4d4fa7bdb97d324.png" srcset="http://1.gravatar.com/avatar/a4489337936a7d3cc4d4fa7bdb97d324?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">kuba</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-109">
+							<time datetime="2008-10-15T10:35:48+00:00">
+								October 15, 2008 at 10:35 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>hi,<br>
+what parameters should be used to PitchShift function if my Fs=8038Hz and in/out buffers are 32 length?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-110" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-110" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/cec570d7bd58cee9b300558ba6007190.png" srcset="http://0.gravatar.com/avatar/cec570d7bd58cee9b300558ba6007190?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Taj</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-110">
+							<time datetime="2008-10-15T11:12:25+00:00">
+								October 15, 2008 at 11:12 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>@Tien: What Stephan probably meant is that “Hanning window” is often used in the literature but there is no such thing. The guy’s name was “von Hann”. This is a good example of how it can happen that if people just copy text from one another without double checking this can lead to confusing and ultimately false statements and names. Not everything written in literature is true just because it is printed on paper.</p>
+<p>@kuba: you didn’t mention what unit your 32 buffer length is in. Samples? Frames? Bytes? If it is mono sample frames your call should be</p>
+<p>smbPitchShift(pitchShift, 32, 2048, 4, 8038, data, data);</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-111" class="comment even thread-even depth-1">
+			<article id="div-comment-111" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/a4489337936a7d3cc4d4fa7bdb97d324.png" srcset="http://1.gravatar.com/avatar/a4489337936a7d3cc4d4fa7bdb97d324?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">kuba</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-111">
+							<time datetime="2008-10-15T15:57:08+00:00">
+								October 15, 2008 at 3:57 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thx, I tried this on my dsPIC with different parameters, and program crashes:</p>
+<p>smbPitchShift(pitchShift, 32, 32, 4, 8038, indata, outdata);</p>
+<p>also:<br>
+#define MAX_FRAME_LENGTH 8192</p>
+<p>I have it defined as 32 – is that correct? (I cannot define it smaller, cause I don’t have enough RAM)</p>
+<p>And what I forget before – my buffer contain samples</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-112" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-112" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/9d7677fdec22dc7d0fad815770ad4c6e.png" srcset="http://0.gravatar.com/avatar/9d7677fdec22dc7d0fad815770ad4c6e?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.vietread.co.nr/" rel="external nofollow" class="url">Tien</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-112">
+							<time datetime="2008-10-17T16:11:19+00:00">
+								October 17, 2008 at 4:11 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Dear Mr Bernsee,</p>
+<p>The reason why I would like to master pitch shift is for my Vietnamese TTS. Nowadays, some institute and software company try to make Vietnamese TTS, but the result is not good now. I come with Vietnaese TTS 4 years ago, because I can not find it for my multi-languages reading program. You can see VietRead in my website. I am not a real programmer, because I study VB6.0 by myself and be attracted with TTS.</p>
+<p>Now, I can make simple pitch shift ( it is just only: FFT, shift frequency and iFFT). I would like to continute like yours, but it is not good for my TTS even if it is simple. If I can make it like your, it will be slower. If you can make real time pitch shift, then we can cooperate together for good Vietnamese TTS that will be potential market in US with about 2 millions oversea Vietnamese and plus in other country. Beside that I think we can sell my VietRead all over the world, because it can read most all of other languages that has existing TTS.</p>
+<p>I looking forward to hearing from you soon.</p>
+<p>Tien</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-113" class="comment even thread-even depth-1">
+			<article id="div-comment-113" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/097f7fe552d124c202f414a8432ca1dd.png" srcset="http://0.gravatar.com/avatar/097f7fe552d124c202f414a8432ca1dd?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Sebastian Adolf</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-113">
+							<time datetime="2008-10-17T18:21:22+00:00">
+								October 17, 2008 at 6:21 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>What happens to the phase if distribute the values of the FFT by linear or sinc-interpolation instead of joust plain round()? It’s easy to see what happens to the magnitude, but i don’t get the idea of what’s going on with the phase information…<br>
+greets&amp;thanks<br>
+basti</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-114" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-114" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/79d7475cfc0ea9994946212e2a85753d.png" srcset="http://1.gravatar.com/avatar/79d7475cfc0ea9994946212e2a85753d?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Dillon</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-114">
+							<time datetime="2008-10-25T10:57:34+00:00">
+								October 25, 2008 at 10:57 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Does anyone have an answer to Sebastian Adolf’s question above? I’m attempting to do pitch shifting by powers of 2 (i.e. something other than 2, 4, .5, .25, …) and I am interpolating in the spectra to accomplish this. I’ve tried linear and bicubic, and it sounds OK except for a reverb-ish problem that I’m quite sure is due to the phase, and the overall gain changes as I cycle through pitch shift rates (again due to phases not lining up and the bins partially cancelling eachother out depending on the pitch shift factor).</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-115" class="pingback even thread-even depth-1">
+			<article id="div-comment-115" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+												<b class="fn"><a href="http://pehrhovey.net/blog/2008/11/audio-pitch-shifting-vst-plugin/" rel="external nofollow" class="url">pehrhovey.net » Blog Archive » Audio Pitch Shifting VST Plugin</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-115">
+							<time datetime="2008-11-18T11:32:19+00:00">
+								November 18, 2008 at 11:32 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>[…] the various techniques and decided it would be interesting to try it with the Fourier transform. This article has very good information about the method as well as the FFT in general. The FFT method is […]</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-116" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-116" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/70eb24f34de61a3f717d3da985fcf30a.png" srcset="http://1.gravatar.com/avatar/70eb24f34de61a3f717d3da985fcf30a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">John</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-116">
+							<time datetime="2009-01-16T08:06:17+00:00">
+								January 16, 2009 at 8:06 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thank you very much for making these tutorials, and the corresponding C code, available to the public. It’s a fantastic resource. <img draggable="false" class="emoji" alt="🙂" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/1f642.svg"></p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-117" class="comment even thread-even depth-1">
+			<article id="div-comment-117" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/68a972eac48fbc57d7ac798f2fac4423.png" srcset="http://0.gravatar.com/avatar/68a972eac48fbc57d7ac798f2fac4423?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">B J Sokol</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-117">
+							<time datetime="2009-02-02T19:06:58+00:00">
+								February 2, 2009 at 7:06 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi,</p>
+<p>What will happen if your program is used in an attempt to pitch shift a band limited portion of frequency shaped noise — so clearly there will be a great many sinusoidal frequencies summed and represented in each dft bin?  The phase angle info taken from only one bin cannot give adequate information to reconstruct a frequency shifted replica of the original.  Moreover, what will happen if that noise is sometimes mixed with some periodic signals?  These are not idle questions — I am trying to further develop a frequency shifter to help deaf people with both music and speech.</p>
+<p>Many thanks for your reply. </p>
+<p>B. J. Sokol</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-118" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-118" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/8df36a92d2162bc52f10ff8472a6c5c6.png" srcset="http://2.gravatar.com/avatar/8df36a92d2162bc52f10ff8472a6c5c6?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Jim</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-118">
+							<time datetime="2009-02-10T02:05:25+00:00">
+								February 10, 2009 at 2:05 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi, and thank you for the tutorial. This procedure is really similar to the phase vocoder which is using the STFT as well. I am supposed to implement a pitch shifting code and then try and vary the scaling factor with an LFO and test it as a sound effect. would this be available in matlab as well? I am currently using the phase vocoder but seem to have problems.<br>
+Thank you, Jim.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-119" class="comment even thread-even depth-1">
+			<article id="div-comment-119" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/88e06c3f2cf927ab88cab249662aa677.png" srcset="http://2.gravatar.com/avatar/88e06c3f2cf927ab88cab249662aa677?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Taimoor Ahmed</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-119">
+							<time datetime="2009-02-11T07:51:01+00:00">
+								February 11, 2009 at 7:51 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hello ppl..<br>
+i m a new bie..<br>
+i m a student of electronics engg.<br>
+i have a project of “developling a voice converter in matlab which converts male voice to female voice in Real time &amp; then implement it on DSP Kit.<br>
+i m using the demo in Matlab 7 &amp; above with the call command of “dsppitchtime”<br>
+it is a PHASE VOCODER<br>
+i need to ask some basic conceptual questions.<br>
+1- How by changing or altering Phase we r changing the Pitch i mean what is the relation of Phase with Pitch??<br>
+2- In Phase Vocoder what do we mean by “Phase Calculation” and “Over-lap add”..i mean what is the theory behind it??<br>
+3- What is the theory behind “Analysis hop size” and “Synthesis Hop Size”??<br>
+plz reply…i;ll b thankful</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-120" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-120" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/cec570d7bd58cee9b300558ba6007190.png" srcset="http://0.gravatar.com/avatar/cec570d7bd58cee9b300558ba6007190?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Taj</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-120">
+							<time datetime="2009-02-11T08:48:02+00:00">
+								February 11, 2009 at 8:48 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>1. see <a href="http://en.wikipedia.org/wiki/Instantaneous_phase" rel="nofollow">http://en.wikipedia.org/wiki/Instantaneous_phase</a><br>
+2.+3. see <a href="http://www.cycling74.com/story/2006/11/2/113327/823" rel="nofollow">http://www.cycling74.com/story/2006/11/2/113327/823</a><br>
+A simple Google search will get you more results.<br>
+Cheers, Taj</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-121" class="comment even thread-even depth-1">
+			<article id="div-comment-121" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/bb3c841a6821de8bb804112bdd3b3815.png" srcset="http://2.gravatar.com/avatar/bb3c841a6821de8bb804112bdd3b3815?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">HyeeWang</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-121">
+							<time datetime="2009-02-12T08:16:19+00:00">
+								February 12, 2009 at 8:16 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>I often see DFT bin in some DFT/stft literature,What does the term<br>
+“bin” mean exactly?<br>
+Does it refer to a specific single frequency or a frequency range?<br>
+If we do N points DFT,then have N DFT bins, where do the 0-bin and N-1<br>
+bin refer to?<br>
+If N = 256,then where does 112.5 bin refer to?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-122" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-122" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/adbadd890c2ee08418eb6b652d22952a.png" srcset="http://1.gravatar.com/avatar/adbadd890c2ee08418eb6b652d22952a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Paul</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-122">
+							<time datetime="2009-02-12T08:22:56+00:00">
+								February 12, 2009 at 8:22 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>I think this is explained here: <a href="http://www.dspdimension.com/admin/dft-a-pied/" rel="nofollow">http://www.dspdimension.com/admin/dft-a-pied/</a></p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-123" class="comment even thread-even depth-1">
+			<article id="div-comment-123" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/aec301558e3a83cbc86e4b3e5fd43404.png" srcset="http://1.gravatar.com/avatar/aec301558e3a83cbc86e4b3e5fd43404?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">B</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-123">
+							<time datetime="2009-02-26T21:34:14+00:00">
+								February 26, 2009 at 9:34 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>In attempt to port this to Java from C++, I came across a few statements I am unfamiliar with. Could someone kindly provide an equivalent to the statement?:</p>
+<p>memmove(gOutputAccum, gOutputAccum+stepSize, fftFrameSize *sizeof(float));</p>
+<p>Would it be?:</p>
+<p>for(k=0; k&lt;fftFrameSize; k++)<br>
+    gOutputAccum[k] = gOutputAccum[k+stepSize];</p>
+<p>Ill provide the java source once I can get it working. <img draggable="false" class="emoji" alt="🙂" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/1f642.svg"></p>
+<p>Thanks.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-124" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-124" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/adbadd890c2ee08418eb6b652d22952a.png" srcset="http://1.gravatar.com/avatar/adbadd890c2ee08418eb6b652d22952a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Paul</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-124">
+							<time datetime="2009-02-26T21:36:20+00:00">
+								February 26, 2009 at 9:36 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Yes, that looks right.<br>
+-pt</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-125" class="comment byuser comment-author-neuronaut bypostauthor even thread-even depth-1">
+			<article id="div-comment-125" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.bernsee.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-125">
+							<time datetime="2009-03-19T07:54:49+00:00">
+								March 19, 2009 at 7:54 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi all, just another reminder to discuss lengthy questions in our forum (see the “Forum” category in the Contact area) and to not post code from other people / books as a comment, as this violates intellectual property rights. Thank you –smb</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-126" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-126" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/3620df2fda93d27c1ca3fc02b8996740.png" srcset="http://0.gravatar.com/avatar/3620df2fda93d27c1ca3fc02b8996740?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Todd</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-126">
+							<time datetime="2009-05-01T10:08:46+00:00">
+								May 1, 2009 at 10:08 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Great article! I’m looking to build a shift pitching pedal for my bass guitar (to allow me to play along with a DJ whose key shifts slightly every time a new record is mixed in). Can anyone give me any guidance on what CPU specs I might need (MIPS? clock speed?) to achieve this?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-127" class="comment even thread-even depth-1">
+			<article id="div-comment-127" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/d14550a8b38199c0b1c837203a5ea0e6.png" srcset="http://1.gravatar.com/avatar/d14550a8b38199c0b1c837203a5ea0e6?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://dsplogix.com/" rel="external nofollow" class="url">Yan Bellavance</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-127">
+							<time datetime="2009-05-06T06:00:48+00:00">
+								May 6, 2009 at 6:00 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi<br>
+I am about to vary the pitch value from frame to frame and I am wondering if that will create any phase or other type of problem.  Got any thoughts?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-128" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-128" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/20aa432ff94d17d0c95b502968c52c0a.png" srcset="http://2.gravatar.com/avatar/20aa432ff94d17d0c95b502968c52c0a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">ApplistarVN</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-128">
+							<time datetime="2009-05-23T15:53:07+00:00">
+								May 23, 2009 at 3:53 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi,<br>
+Thank you for your tutorial. I have met a problem with it, please help me!<br>
+I have tried it with my sound data having size as 65536 bytes. Its format is kAudioFormatLinearPCM, mSamplRate is 44100 Hz, 2channels/frame (it is stereo). I call the function as:<br>
+smbPitchShift (1.0, (long)65536/2, (long)2048, (long)32, 44100.0, inData,outData)<br>
+but the output voice is very very noisy.<br>
+inData and outData are float[65536/2] and inData contains all original sound data.<br>
+I also have scaled inData, outData (device and multi with 32768) but I don’t know why it is too noisy.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-129" class="comment byuser comment-author-neuronaut bypostauthor even thread-even depth-1">
+			<article id="div-comment-129" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.bernsee.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-129">
+							<time datetime="2009-05-23T16:02:13+00:00">
+								May 23, 2009 at 4:02 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>The most likely cause why this doesn’t work is that your buffer contains 2 channels that are interlaced (left, right, left, right). smbPitchShift can only process single channel (mono) sound data. I would recommend you post any followup questions to our forum, thank you!</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-130" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-130" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/20aa432ff94d17d0c95b502968c52c0a.png" srcset="http://2.gravatar.com/avatar/20aa432ff94d17d0c95b502968c52c0a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">ApplistarVN</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-130">
+							<time datetime="2009-05-25T06:01:06+00:00">
+								May 25, 2009 at 6:01 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thank you very much.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-131" class="comment even thread-even depth-1">
+			<article id="div-comment-131" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/df555bf42e675460f4ac9572573f9a26.png" srcset="http://1.gravatar.com/avatar/df555bf42e675460f4ac9572573f9a26?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Adam Sida</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-131">
+							<time datetime="2009-06-24T12:54:50+00:00">
+								June 24, 2009 at 12:54 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hello,<br>
+I’ve tried to compile in Visual C++ 2008 express and got error in smbFft function at row:<br>
+            for (k = 0, le = 2; k &lt; (long)(log(fftFrameSize)/log(2.)+.5); k++) {
+compiler error, log(long _x) is not exist.
+
+so I just replaced this by:
+	//updated by asida [AT] centrum [DOT] cz
+	long eol = (long)(log((double)fftFrameSize)/log(2.0)+.5);
+	//for (k = 0, le = 2; k &lt; (long)(log(fftFrameSize)/log(2.)+.5); k++) {
+	for (k = 0, le = 2; k &lt; eol; k++) {
+
+</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-132" class="comment odd alt thread-odd thread-alt depth-1">
+			<article id="div-comment-132" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/a807c0688ecc205ce9a7f0fd497577cf.png" srcset="http://1.gravatar.com/avatar/a807c0688ecc205ce9a7f0fd497577cf?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Ruben</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-132">
+							<time datetime="2009-07-14T01:07:52+00:00">
+								July 14, 2009 at 1:07 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Does this article require any background apart form your article “Mastering The Fourier Transform in One Day”?<br>
+I read that one but had real difficulties in following this one.</p>
+<p>I stopped at the deviation of the Kth partial’s phase from it’s bin frequency. Do you mean that if we devide the K’th partial to frame whose length is a multiple of the Kth bin frequency we can get the Kth partial’s true frequency from the deviation in phase from frame to frame?<br>
+Then I lost you on the computation of the true frequency when there is an overlap between frames.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-133" class="comment even thread-even depth-1">
+			<article id="div-comment-133" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/1faf1a9b45bf301b73918fe79ae2e8f4.png" srcset="http://1.gravatar.com/avatar/1faf1a9b45bf301b73918fe79ae2e8f4?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">tc</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-133">
+							<time datetime="2009-08-20T21:24:20+00:00">
+								August 20, 2009 at 9:24 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi,<br>
+please, comment some on Loren Wilton’s post on August 17, 2008 at 9:08.</p>
+<p>Thank you.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-134" class="comment odd alt thread-odd thread-alt depth-1 parent">
+			<article id="div-comment-134" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/a8190d8333d39c70d542f1de5642a7bb.png" srcset="http://1.gravatar.com/avatar/a8190d8333d39c70d542f1de5642a7bb?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Vivek</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-134">
+							<time datetime="2009-08-21T08:28:46+00:00">
+								August 21, 2009 at 8:28 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi,</p>
+<p>Has anyone been able to develop a Java version for this code ?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-135" class="comment even depth-2 parent">
+			<article id="div-comment-135" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/6d90e6630a3f622091dff18ccbb00b09.png" srcset="http://0.gravatar.com/avatar/6d90e6630a3f622091dff18ccbb00b09?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Basti</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-135">
+							<time datetime="2009-12-17T16:05:22+00:00">
+								December 17, 2009 at 4:05 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Yes, works like a charm.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-136" class="comment odd alt depth-3">
+			<article id="div-comment-136" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/adbadd890c2ee08418eb6b652d22952a.png" srcset="http://1.gravatar.com/avatar/adbadd890c2ee08418eb6b652d22952a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Paul</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-136">
+							<time datetime="2009-12-17T16:16:31+00:00">
+								December 17, 2009 at 4:16 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Care to share it?</p>
+<p>-P</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+		<li id="comment-138" class="comment even depth-2 parent">
+			<article id="div-comment-138" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/768a944f9688f40c6b53c922e01292d3.png" srcset="http://1.gravatar.com/avatar/768a944f9688f40c6b53c922e01292d3?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Bill Farmer</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-138">
+							<time datetime="2010-01-26T15:55:41+00:00">
+								January 26, 2010 at 3:55 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>I have implemented this algorithm twice, once some years ago in Java, and recently in C. Not for pitch shifting, but to accurately measure frequency. In both instances I have had to reverse the logic of the line of code which calculates the change of phase between passes from</p>
+<p>				/* compute phase difference */<br>
+				tmp = phase – gLastPhase[k];<br>
+to</p>
+<p>				/* compute phase difference */<br>
+				tmp = gLastPhase[k] – phase;</p>
+<p>to get the algorithm to work as it should. I get divergence in adjacent bins rather than convergence if I don’t.<br>
+Apart from that it’s wonderful stuff.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-139" class="comment byuser comment-author-neuronaut bypostauthor odd alt depth-3">
+			<article id="div-comment-139" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.dspdimension.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-139">
+							<time datetime="2010-01-26T21:26:20+00:00">
+								January 26, 2010 at 9:26 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hi Bill, thanks for your comment.</p>
+<p>If you have to reverse the subtraction you are most likely using a different FFT implementation or have a sign issue somewhere in your FFT code. If you use smbFft() you should get convergence with the code as it is – please let me know if you don’t, as this would be a bug (it seems to work ok on my test project on the Mac).</p>
+<p>Thanks!<br>
+-Stephan</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+		<li id="comment-137" class="comment even thread-even depth-1">
+			<article id="div-comment-137" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/24c2a085730b89051f9ba92b46e16e5a.png" srcset="http://2.gravatar.com/avatar/24c2a085730b89051f9ba92b46e16e5a?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Arab</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-137">
+							<time datetime="2010-01-06T05:22:25+00:00">
+								January 6, 2010 at 5:22 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thanks for a well commented piece of code (a skill sadly lacking in today’s world) it makes understanding the output of the Fourier transform a lot easier. cheers</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+		<li id="comment-140" class="comment odd alt thread-odd thread-alt depth-1 parent">
+			<article id="div-comment-140" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/dea24ff686e98bf82ab9e819f1b691b0.png" srcset="http://1.gravatar.com/avatar/dea24ff686e98bf82ab9e819f1b691b0?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">at_198x</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-140">
+							<time datetime="2010-02-08T10:03:26+00:00">
+								February 8, 2010 at 10:03 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>I tried to change the code into Java but it did’nt work. If anyone have Java version, please share. My email is at_198x [AT] yahoo [DOT] com. Thanks</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-141" class="comment byuser comment-author-neuronaut bypostauthor even depth-2">
+			<article id="div-comment-141" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.dspdimension.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-141">
+							<time datetime="2010-02-08T10:11:56+00:00">
+								February 8, 2010 at 10:11 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>You might want to email Jacob Blommestein, he has created a Java version: <a href="http://blommestein.net/" rel="nofollow">http://blommestein.net/</a></p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+		<li id="comment-142" class="comment odd alt thread-even depth-1 parent">
+			<article id="div-comment-142" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/dea24ff686e98bf82ab9e819f1b691b0.png" srcset="http://1.gravatar.com/avatar/dea24ff686e98bf82ab9e819f1b691b0?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">at_198x</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-142">
+							<time datetime="2010-02-10T10:30:01+00:00">
+								February 10, 2010 at 10:30 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>I has succeeded transfer the code to java. But I don’t use your smbFft function, it didn’t work in my code (don’t know why), so i use another Fft code i obtain from web. After working with some code to convert byte array to short array for little_endian and big-edian store, the program has run. But the audio stream i obtain has some noise, it didn’t sound smoothly like the original data. Can you tell me where should i focus to solve this problem?<br>
+Really thank for your help.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-143" class="comment byuser comment-author-neuronaut bypostauthor even depth-2">
+			<article id="div-comment-143" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.dspdimension.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-143">
+							<time datetime="2010-02-10T15:14:33+00:00">
+								February 10, 2010 at 3:14 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>I would recommend you post this question in our forum. There are plenty of people who have worked with the code who might be able to help you: <a href="http://www.surroundsfx.com/forum/viewforum.php?f=18" rel="nofollow">http://www.surroundsfx.com/forum/viewforum.php?f=18</a></p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+		<li id="comment-144" class="comment odd alt thread-odd thread-alt depth-1 parent">
+			<article id="div-comment-144" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/356538413e3edfe8018d81f9f8f52886.png" srcset="http://0.gravatar.com/avatar/356538413e3edfe8018d81f9f8f52886?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Robert Harris</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-144">
+							<time datetime="2010-02-10T21:14:23+00:00">
+								February 10, 2010 at 9:14 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>In order to slow down the tempo of a musical recording while maintaining the original pitch, your pitch-shifting function can be used by first raising the pitch of a recording by an octave, and then applying a resampling function to create a new signal with twice as many samples, thus lowering the pitch of the musical signal back to its original pitch.</p>
+<p>Now it also seems that the slowing down of tempo in music could also be achieved without a resampling function by using a second larger FFT for the synthesis stage. If the second FFT transform were 1024 in framesize, and the original analysis FFT transform was 512 in size, then the synthesis stage would create twice as many samples that could still play the music at its original pitch. </p>
+<p>Of course the crux of the problem is how to calculate the new FFT bin values(real, imaginary) for the second oversize FFT of the synthesis step. In the case above, having FFT framesizes of 512 and 1024, we can calculate accurate bin values for “every other” FFT frequency row in the second FFT, by using your gAnaMagn[]   gAnaFreq[] arrays and their respective calculations for phase and magnitude in the new bins of the second FFT (the ones that share the same frequency as those of the first FFT). </p>
+<p>However we would have only calculated values for half of the synthesis FFT bins, because the gAnaMagn[]  gAnaFreq[] arrays from the analysis only have half the values needed for the higher resolution of the synthesis FFT. At this point the second FFT would only have assigned values in “every other” frequency bin. </p>
+<p>It would be easy to interpolate magnitude between the synthesis FFT’s frequency bins, but how could we interpolate phase values (or even gAnaFreq[] values) for the in-between FFT frequency bins that received no assignment? Your article makes it sound like we should see the same Estimated True Frequency values in adjacent bins of the analysis FFT, but as I examine gAnaFreq[] values from data of polyphonic music, this does not seem to be the case. </p>
+<p>While it’s true that a reasonable signal can be synthesized with half of the second FFT frequency bins being empty, it seems that all the harmonic data of the original signal is not, and can not, be present.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-145" class="comment byuser comment-author-neuronaut bypostauthor even depth-2 parent">
+			<article id="div-comment-145" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.dspdimension.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-145">
+							<time datetime="2010-02-14T13:10:43+00:00">
+								February 14, 2010 at 1:10 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thank you for your interest in our articles and for your detailed feedback.</p>
+<p>Yes this is certainly possible but seems overly complicated if you’re only after an integer factor time stretch, because it involves a lot of redundancies (most notably expressing the operation as a pitch shift and the entire frequency computation associated with it). Also you would be restricted to changing the speed of the signal in steps of 2^n due to the size limitations of the FFT that we use (unless you would replace it by a non-2^n FFT of course, which is not implemented in the code that we provide). </p>
+<p>However, a similar method (different input/output transform sizes) is sometimes used for doing sinc interpolation for high quality sample rate conversion, but that does not involve keeping the speed of the signal constant.</p>
+<p>For a more in-depth discussion I would recommend taking this to our forum at <a href="http://www.surroundsfx.com/forum/viewforum.php?f=18" rel="nofollow">http://www.surroundsfx.com/forum/viewforum.php?f=18</a><br>
+I’d be happy to explain this in better detail there. </p>
+<p>Best wishes, Stephan Bernsee</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-147" class="comment odd alt depth-3">
+			<article id="div-comment-147" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/d58fc5564f4788bd1cf4ea7221403997.png" srcset="http://1.gravatar.com/avatar/d58fc5564f4788bd1cf4ea7221403997?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">kavan</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-147">
+							<time datetime="2010-05-12T19:51:07+00:00">
+								May 12, 2010 at 7:51 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Hello,<br>
+I am new to the STFT. I understand that if the frequency of a specific sinusoid within a window is not coinciding with the fundamental “analysis” frequency or multiples of it  determined by the window length and sample number, then that sinusoids will show different phase offsets in each window….</p>
+<p>We can calculate the difference between phase offsets from two consecutive windows for the same frequency w. What do we then do with that?<br>
+The phase vocoder uses that change in phase to do what exactly? I guess I do not really undestand what pitch shifting is….<br>
+Thanks for the patience,<br>
+Kavan</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+		<li id="comment-146" class="comment even thread-even depth-1 parent">
+			<article id="div-comment-146" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/ca0f4e93080ec51984d47f95d1d9c65d.png" srcset="http://0.gravatar.com/avatar/ca0f4e93080ec51984d47f95d1d9c65d?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Namekuji</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-146">
+							<time datetime="2010-04-07T09:17:28+00:00">
+								April 7, 2010 at 9:17 am							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>How can I pitch shift a sound of only 9 ms ?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-151" class="comment odd alt depth-2">
+			<article id="div-comment-151" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/cdcbaade8ec42087450684f1227ea3f6.png" srcset="http://0.gravatar.com/avatar/cdcbaade8ec42087450684f1227ea3f6?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Miroslav</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-151">
+							<time datetime="2010-06-30T17:00:29+00:00">
+								June 30, 2010 at 5:00 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Send to algorithm 9 ms of sound + additional fftFrameSize samples of silence. Then get fftFrameSize samples and ignore them and get 9 ms of shifted sound (not ideal but good enough).</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+		<li id="comment-148" class="comment even thread-odd thread-alt depth-1 parent">
+			<article id="div-comment-148" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/cdcbaade8ec42087450684f1227ea3f6.png" srcset="http://0.gravatar.com/avatar/cdcbaade8ec42087450684f1227ea3f6?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Miroslav</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-148">
+							<time datetime="2010-06-19T16:54:14+00:00">
+								June 19, 2010 at 4:54 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>[ If you need a wider pitch shift range you need to tweak the code a bit. ]</p>
+<p>How? I can just make several passes but may be there are more effective way?</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-149" class="comment byuser comment-author-neuronaut bypostauthor odd alt depth-2 parent">
+			<article id="div-comment-149" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/4f1c9346f0361ce7154061d0f9179c01.png" srcset="http://1.gravatar.com/avatar/4f1c9346f0361ce7154061d0f9179c01?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn"><a href="http://www.dspdimension.com/" rel="external nofollow" class="url">Bernsee</a></b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-149">
+							<time datetime="2010-06-29T17:12:56+00:00">
+								June 29, 2010 at 5:12 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Yes. You will need to increase the overlap for one thing. That should be the most important part.</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+<ul class="children">
+		<li id="comment-150" class="comment even depth-3">
+			<article id="div-comment-150" class="comment-body">
+				<footer class="comment-meta">
+					<div class="comment-author vcard">
+						<img alt="" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/cdcbaade8ec42087450684f1227ea3f6.png" srcset="http://0.gravatar.com/avatar/cdcbaade8ec42087450684f1227ea3f6?s=64&amp;d=blank&amp;r=g 2x" class="avatar avatar-32 photo" height="32" width="32">						<b class="fn">Miroslav</b> <span class="says">says:</span>					</div><!-- .comment-author -->
+
+					<div class="comment-metadata">
+						<a href="http://blogs.zynaptiq.com/bernsee/pitch-shifting-using-the-ft/#comment-150">
+							<time datetime="2010-06-30T16:50:48+00:00">
+								June 30, 2010 at 4:50 pm							</time>
+						</a>
+											</div><!-- .comment-metadata -->
+
+									</footer><!-- .comment-meta -->
+
+				<div class="comment-content">
+					<p>Thanks, seems it works</p>
+				</div><!-- .comment-content -->
+
+							</article><!-- .comment-body -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+</ul><!-- .children -->
+</li><!-- #comment-## -->
+</ul>
+    
+
+
+
+
+
+
+        	    	    </div>
+		<div id="sidebar">
+    <div class="box"><form role="search" method="get" class="search-form cf" action="http://blogs.zynaptiq.com/bernsee/">
+	<fieldset>
+		<input type="search" class="search-field" placeholder="Search …" value="" name="s" title="Search for:">
+		<input type="submit" class="search-submit" value="Search">
+	</fieldset>
+</form></div><div class="box"><div class="origin-widget origin-widget-button origin-widget-button-simple-white align-justify"><a href="https://twitter.com/stephanbernsee" target="_blank" rel="noopener noreferrer">
+	Twitter: @stephanbernsee</a></div></div><div class="box"><div class="origin-widget origin-widget-button origin-widget-button-simple-white align-justify"><a href="http://www.linkedin.com/pub/1/634/971" target="_blank" rel="noopener noreferrer">
+	Stephan on LinkedIn</a></div></div>		<div class="box">		<h3>Latest Chatter…</h3>		<ul>
+											<li>
+					<a href="http://blogs.zynaptiq.com/bernsee/evoked-melodies-in-auditory-illusion/">Evoked Melodies in Auditory Illusion</a>
+									</li>
+											<li>
+					<a href="http://blogs.zynaptiq.com/bernsee/interview-mit-stephan-bernsee-zum-thema-wieviel-analoge-hardware-braucht-das-tonstudio-heute-noch/">Interview mit Stephan Bernsee zum Thema „Wieviel analoge Hardware braucht das Tonstudio heute noch?“</a>
+									</li>
+											<li>
+					<a href="http://blogs.zynaptiq.com/bernsee/first-record-of-gravitational-waves-and-its-a-bassdrum/">First record of gravitational waves, and it’s a bassdrum</a>
+									</li>
+											<li>
+					<a href="http://blogs.zynaptiq.com/bernsee/what-would-the-neuron-synth-sound-like-today/">What would the Neuron synth sound like today?</a>
+									</li>
+											<li>
+					<a href="http://blogs.zynaptiq.com/bernsee/unbaking-cakes-since-1998/">Unbaking Cakes Since 1998</a>
+									</li>
+											<li>
+					<a href="http://blogs.zynaptiq.com/bernsee/technorazzi-interview-2013/">Technorazzi Interview (2013)</a>
+									</li>
+					</ul>
+		</div><div class="box"><h3>Articles by Category…</h3>		<ul>
+	<li class="cat-item cat-item-56"><a href="http://blogs.zynaptiq.com/bernsee/category/deutsch/" title="Deutsche Kommentare">Deutsch</a> (1)
+</li>
+	<li class="cat-item cat-item-3"><a href="http://blogs.zynaptiq.com/bernsee/category/interview/" title="Interviews that I&#39;ve done. Not sure if this really interests anyone.">Interviews</a> (4)
+</li>
+	<li class="cat-item cat-item-4"><a href="http://blogs.zynaptiq.com/bernsee/category/miniaiff/">MiniAiff</a> (1)
+</li>
+	<li class="cat-item cat-item-2"><a href="http://blogs.zynaptiq.com/bernsee/category/news/" title="Latest news and press releases">News</a> (10)
+</li>
+	<li class="cat-item cat-item-5"><a href="http://blogs.zynaptiq.com/bernsee/category/faq/" title="Frequently Asked Questions">Questions &amp; Answers</a> (1)
+</li>
+	<li class="cat-item cat-item-58"><a href="http://blogs.zynaptiq.com/bernsee/category/synthesizers/">Synthesizers</a> (1)
+</li>
+	<li class="cat-item cat-item-55"><a href="http://blogs.zynaptiq.com/bernsee/category/ld5/" title="Everything that is unrelated to everything else">The long dark 5 o'clock tea of the soul</a> (4)
+</li>
+	<li class="cat-item cat-item-6"><a href="http://blogs.zynaptiq.com/bernsee/category/tutorial/">Tutorials</a> (4)
+</li>
+	<li class="cat-item cat-item-1"><a href="http://blogs.zynaptiq.com/bernsee/category/uncategorized/">Uncategorized</a> (1)
+</li>
+		</ul>
+</div></div>	</div><!--#main-->
+</div>
+<div id="footer">
+	<p class="copyright"><img src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/cubes.gif">© 2020 Zynaptiq GmbH, All Rights Reserved. Use or reproduction of materials from this site prohibited unless explicitly granted in writing.</p>
+</div>
+<style type="text/css">.origin-widget.origin-widget-button-simple-white a{display:inline-block;padding:10px 45px;-webkit-border-radius:4px;-moz-border-radius:4px;border-radius:4px;color:#7B7B7B;font-size:0.875em;font-family:inherit;font-weight:500;text-decoration:none;text-shadow:0 1px 0 #FFFFFF;text-align:center;-webkit-box-shadow:inset 0 1px 0 #FFFFFF,0 1px 2px rgba(0,0,0,0.1);-moz-box-shadow:inset 0 1px 0 #FFFFFF,0 1px 2px rgba(0,0,0,0.1);box-shadow:inset 0 1px 0 #FFFFFF,0 1px 2px rgba(0,0,0,0.1);background:#F5F5F5;background:-webkit-gradient(linear,left bottom,left top,color-stop(0,#EBEBEB),color-stop(1,#FFFFFF));background:-ms-linear-gradient(bottom,#EBEBEB,#FFFFFF);background:-moz-linear-gradient(center bottom,#EBEBEB 0%,#FFFFFF 100%);background:-o-linear-gradient(#FFFFFF,#EBEBEB);border-top:solid 1px #CDCDCD;border-left:solid 1px #C2C2C2;border-right:solid 1px #C2C2C2;border-bottom:solid 1px #B7B7B7}.origin-widget.origin-widget-button-simple-white a:hover{background:#FAFAFA;background:-webkit-gradient(linear,left bottom,left top,color-stop(0,#F0F0F0),color-stop(1,#FFFFFF));background:-ms-linear-gradient(bottom,#F0F0F0,#FFFFFF);background:-moz-linear-gradient(center bottom,#F0F0F0 0%,#FFFFFF 100%);background:-o-linear-gradient(#FFFFFF,#F0F0F0);border-top:solid 1px #D2D2D2;border-left:solid 1px #C7C7C7;border-right:solid 1px #C7C7C7;border-bottom:solid 1px #BCBCBC}.origin-widget.origin-widget-button-simple-white a:active{background:#F0F0F0;background:-webkit-gradient(linear,left bottom,left top,color-stop(0,#F6F6F6),color-stop(1,#EAEAEA));background:-ms-linear-gradient(bottom,#F6F6F6,#EAEAEA);background:-moz-linear-gradient(center bottom,#F6F6F6 0%,#EAEAEA 100%);background:-o-linear-gradient(#EAEAEA,#F6F6F6);border-top:solid 1px #C9C9C9;border-left:solid 1px #BEBEBE;border-right:solid 1px #BEBEBE;border-bottom:solid 1px #B3B3B3;-webkit-box-shadow:none;-moz-box-shadow:none;box-shadow:none;padding-top:11px;padding-bottom:9px}.origin-widget.origin-widget-button-simple-white.align-left{text-align:left}.origin-widget.origin-widget-button-simple-white.align-right{text-align:right}.origin-widget.origin-widget-button-simple-white.align-center{text-align:center}.origin-widget.origin-widget-button-simple-white.align-justify a{display:block}</style><script type="text/javascript" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/comment-reply.min.js"></script>
+<script type="text/javascript" src="./Pitch Shifting Using The Fourier Transform _ Stephan Bernsee&#39;s Blog_files/wp-embed.min.js"></script>
+
+
+</body></html>
