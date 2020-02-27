@@ -4,5 +4,9 @@ version = "1.0.0"
 authors = ["Dan <dansonlinepresence@gmail.com>"]
 edition = "2018"
 
+[dependencies]
+pvoc-plugins = { git = "https://github.com/nwoeanhinnogaehr/pvoc-plugins", rev = "3a87c2756cddf92c00d6caf79c107528e41fd9db" }
+ladspa = "*"
+
 [lib]
 crate-type = ["staticlib"]

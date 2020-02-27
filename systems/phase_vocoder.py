@@ -10,15 +10,11 @@ with dlal.ImmediateMode() as mode:
     audio = dlal.Audio()
     audio.set(sample_rate, log_2_samples_per_evaluation)
     system.add(audio)
-
-    buffer = dlal.Buffer()
-    system.add(buffer)
-    audio.connect(buffer)
-    buffer.connect(audio)
+    audio.connect(audio)
 
     phase_vocoder = dlal.Component('phase_vocoder')
     system.add(phase_vocoder)
-    phase_vocoder.connect(buffer)
+    phase_vocoder.connect(audio)
 
 audio.start()
 atexit.register(lambda: audio.finish())
