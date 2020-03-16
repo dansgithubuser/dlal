@@ -1,0 +1,3 @@
+[submodule "deps/obvious"]
+	path = deps/obvious
+	url = git@github.com:dansgithubuser/obvious
