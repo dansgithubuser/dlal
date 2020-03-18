@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
+
 import argparse
 import datetime
+import glob
 import os
 import shutil
 import subprocess
@@ -8,6 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--venv-freshen', '--vf', action='store_true', help='delete venv and create a new one')
 parser.add_argument('--venv-update', '--vu', action='store_true', help='install human-reqs.txt and write result to requirements.txt, usually should be preceeded by --venv-freshen')
 parser.add_argument('--venv-install', '--vi', action='store_true', help="install what's specified in requirements.txt")
+parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--run', '-r', action='store_true')
 args = parser.parse_args()
 
@@ -35,6 +39,12 @@ if args.venv_update:
 
 if args.venv_install:
     invoke('pip', 'install', '-r', 'requirements.txt')
+
+#===== build =====#
+if args.build:
+    for component_path in glob.glob(os.path.join(DIR, 'components', '*')):
+        os.chdir(component_path)
+        invoke('cargo', 'build', '--release')
 
 #===== run =====#
 if args.run:

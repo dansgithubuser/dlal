@@ -8,4 +8,4 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-cpal = "0.11.0"
+portaudio = "0.7.0"
