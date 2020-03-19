@@ -4,6 +4,7 @@ import argparse
 import datetime
 import glob
 import os
+import re
 import shutil
 import subprocess
 
@@ -15,6 +16,7 @@ parser.add_argument('--venv-update', '--vu', action='store_true', help=(
     'and activation of venv'
 ))
 parser.add_argument('--venv-install', '--vi', action='store_true', help="install what's specified in requirements.txt")
+parser.add_argument('--component-new')
 parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--run', '-r', action='store_true')
 args = parser.parse_args()
@@ -43,6 +45,20 @@ if args.venv_update:
 
 if args.venv_install:
     invoke('pip', 'install', '-r', 'requirements.txt')
+
+#===== components =====#
+if args.component_new:
+    os.chdir(os.path.join(DIR, 'components'))
+    invoke('cargo', 'new', '--lib', args.component_new)
+    with open(os.path.join(args.component_new, 'Cargo.toml')) as file:
+        contents = file.read()
+    contents = re.sub('version.*'       , 'version = 1.0.0'                                 , contents)
+    contents = re.sub('#.*'             , ''                                                , contents)
+    contents = re.sub('\[dependencies\]', '[lib]\ncrate-type = ["cdylib"]\n\n[dependencies]', contents)
+    while '\n\n\n' in contents:
+        contents = re.sub('\n\n\n', '\n\n', contents)
+    with open(os.path.join(args.component_new, 'Cargo.toml'), 'w') as file:
+        file.write(contents)
 
 #===== build =====#
 if args.build:

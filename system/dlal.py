@@ -1,6 +1,7 @@
 import obvious
 
 import glob
+import json
 import os
 
 DIR = os.path.dirname(os.path.realpath(__file__))
@@ -28,6 +29,10 @@ class Component:
     def __del__(self):
         self.lib.destruct(self.raw)
 
-    def command(self, text):
-        result = self.lib.command(self.raw, text.encode('utf-8'))
-        if result: return result.decode('utf-8')
+    def command(self, name, *args, **kwargs):
+        result = self.lib.command(self.raw, json.dumps({
+            'name': name,
+            'args': args,
+            'kwargs': kwargs,
+        }).encode('utf-8'))
+        if result: return json.loads(result.decode('utf-8'))

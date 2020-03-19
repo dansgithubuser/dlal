@@ -1,0 +1,12 @@
+[package]
+name = "midi"
+version = "1.0.0"
+authors = ["Dan <dansonlinepresence@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+midir = "0.5.0"
+serde_json = "1.0.48"

@@ -26,15 +26,15 @@ Try `python do.py -h` to get started.
 ## todo
 - dlal universal linkage
 	- POC
-		- audio plugin
-		- python host
-			- connect mic to speakers
-		- audio runs other plugins
 		- midi
-		- simple osc
-		- serialization
-	- components
+		- audio runs other plugins
 	- web interface
+	- components
+		- refactor component logic
+		- serialization
+		- python component knows what commands are available
+		- flesh out existing component features
+		- other components
 	- audiobro
 
 - burgers
