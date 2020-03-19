@@ -1,5 +1,9 @@
 use portaudio as pa;
 
+use std::ffi::CString;
+use std::os::raw::c_char;
+use std::ptr;
+
 const SAMPLE_RATE: f64 = 44_100.0;
 const FRAMES: u32 = 64;
 const CHANNELS: i32 = 2;
@@ -94,7 +98,29 @@ fn run() -> Result<(), pa::Error> {
     Ok(())
 }
 
+pub struct Component {
+    result: CString,
+}
+
+impl Component {
+    fn set_result(&mut self, new_result: &str) -> *const c_char {
+        self.result = CString::new(new_result).expect("CString::new failed");
+        self.result.as_ptr()
+    }
+}
+
 #[no_mangle]
-pub extern "C" fn start() {
-    run().unwrap();
+pub extern "C" fn construct() -> *mut Component {
+    Box::into_raw(Box::new(Component { result: CString::new("").expect("CString::new failed") }))
+}
+
+#[no_mangle]
+pub extern "C" fn destruct(component: *mut Component) {
+    unsafe { Box::from_raw(component) };
+}
+
+#[no_mangle]
+pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *const c_char {
+    let component = unsafe { &mut *component };
+    component.set_result("Hello!")
 }

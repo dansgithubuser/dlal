@@ -24,10 +24,9 @@ dlal is cross-platform.
 Try `python do.py -h` to get started.
 
 ## todo
-- dlal lv2
+- dlal universal linkage
 	- POC
-		- audio lv2 plugin
-			- extension_data for command
+		- audio plugin
 		- python host
 			- connect mic to speakers
 		- audio runs other plugins

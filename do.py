@@ -9,7 +9,11 @@ import subprocess
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--venv-freshen', '--vf', action='store_true', help='delete venv and create a new one')
-parser.add_argument('--venv-update', '--vu', action='store_true', help='install human-reqs.txt and write result to requirements.txt, usually should be preceeded by --venv-freshen')
+parser.add_argument('--venv-update', '--vu', action='store_true', help=(
+    'install human-reqs.txt and write result to requirements.txt, '
+    'usually should be preceeded by --venv-freshen, '
+    'and activation of venv'
+))
 parser.add_argument('--venv-install', '--vi', action='store_true', help="install what's specified in requirements.txt")
 parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--run', '-r', action='store_true')
