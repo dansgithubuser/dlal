@@ -9,4 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 midir = "0.5.0"
+multiqueue2 = "0.1.6"
 serde_json = "1.0.48"

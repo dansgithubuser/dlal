@@ -1,4 +1,5 @@
 use midir::{MidiInput, MidiInputConnection};
+use multiqueue2::{MPMCSender, MPMCUniReceiver};
 use serde_json::{Value};
 
 use std::ffi::{CStr, CString};
@@ -9,7 +10,8 @@ fn new_midi_in() -> MidiInput {
 }
 
 pub struct Component {
-    conn: Option<MidiInputConnection<()>>,
+    conn: Option<MidiInputConnection<MPMCSender<u8>>>,
+    recv: Option<MPMCUniReceiver<u8>>,
     result: CString,
 }
 
@@ -21,13 +23,17 @@ impl Component {
 
     fn open(&mut self, port: usize) {
         let midi_in = new_midi_in();
+        let (send, recv) = multiqueue2::mpmc_queue(256);
+        self.recv = Some(recv.into_single().expect("into_single failed"));
         self.conn = Some(midi_in.connect(
             port,
             "dlal-midir-input",
-            move |_timestamp_us, message, _data| {
-                println!("{:?}", message);
+            move |_timestamp_us, message, send| {
+                for i in message {
+                    send.try_send(*i).expect("try_send failed");
+                }
             },
-            (),
+            send,
         ).expect("MidiIn::connect failed"));
     }
 
@@ -41,6 +47,7 @@ impl Component {
 pub extern "C" fn construct() -> *mut Component {
     Box::into_raw(Box::new(Component {
         conn: None,
+        recv: None,
         result: CString::new("").expect("CString::new failed"),
     }))
 }
@@ -73,5 +80,17 @@ pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *co
         _ => {
             component.set_result(r#"{"error": "no such command"}"#)
         },
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn evaluate(component: *mut Component) {
+    let component = unsafe { &mut *component };
+    if component.recv.is_none() { return }
+    loop {
+        match component.recv.as_ref().unwrap().try_recv() {
+            Ok(v) => println!("{}", v),
+            Err(_) => return,
+        }
     }
 }
