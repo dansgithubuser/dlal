@@ -1,7 +1,8 @@
 use portaudio as pa;
+use serde_json::Value;
 
-use std::ffi::CString;
-use std::os::raw::c_char;
+use std::ffi::{CStr, CString};
+use std::os::raw::{c_char, c_void};
 use std::ptr;
 
 const SAMPLE_RATE: f64 = 44_100.0;
@@ -122,5 +123,19 @@ pub extern "C" fn destruct(component: *mut Component) {
 #[no_mangle]
 pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *const c_char {
     let component = unsafe { &mut *component };
-    component.set_result("Hello!")
+    let body: Value = serde_json::from_str(unsafe { CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed")).expect("invalid command");
+    match body["name"].as_str().expect("command name isn't a string") {
+        "add" => {
+            let raw = body["args"][0].as_str().unwrap().parse::<usize>().unwrap();
+            let raw = unsafe { std::mem::transmute::<usize, *mut c_void>(raw) };
+            let cmd = body["args"][1].as_str().unwrap().parse::<usize>().unwrap();
+            let cmd = unsafe { std::mem::transmute::<usize, extern "C" fn(cmp: *mut c_void, text: *const c_char) -> *const c_char>(cmd) };
+            let text = CString::new(r#"{"name": "butts"}"#).unwrap();
+            println!("{:?}", unsafe { CStr::from_ptr(cmd(raw, text.as_ptr())) });
+            std::ptr::null()
+        },
+        _ => {
+            component.set_result(r#"{"error": "no such command"}"#)
+        },
+    }
 }

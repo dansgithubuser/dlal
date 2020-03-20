@@ -1,6 +1,6 @@
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
-use serde_json::{Value};
+use serde_json::Value;
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;

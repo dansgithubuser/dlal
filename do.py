@@ -18,7 +18,7 @@ parser.add_argument('--venv-update', '--vu', action='store_true', help=(
 parser.add_argument('--venv-install', '--vi', action='store_true', help="install what's specified in requirements.txt")
 parser.add_argument('--component-new')
 parser.add_argument('--build', '-b', action='store_true')
-parser.add_argument('--run', '-r', action='store_true')
+parser.add_argument('--run', '-r', nargs='?', const=True)
 args = parser.parse_args()
 
 DIR = os.path.dirname(os.path.realpath(__file__))
@@ -67,6 +67,13 @@ if args.build:
         invoke('cargo', 'build', '--release')
 
 #===== run =====#
-if args.run:
+if args.run == True:
     os.chdir(os.path.join(DIR, 'system'))
     invoke('python', '-i', '-c', 'import dlal')
+elif args.run:
+    if 'PYTHONPATH' in os.environ:
+        os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'system')
+    else:
+        os.environ['PYTHONPATH'] = os.path.join(DIR, 'system')
+    os.chdir(os.path.join(DIR))
+    invoke('python', '-i', args.run)

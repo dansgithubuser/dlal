@@ -26,11 +26,11 @@ Try `python do.py -h` to get started.
 ## todo
 - dlal universal linkage
 	- POC
-		- midi
+		- simple osc
+		- connect
 		- audio runs other plugins
 	- web interface
 	- components
-		- refactor component logic
 		- serialization
 		- python component knows what commands are available
 		- flesh out existing component features
