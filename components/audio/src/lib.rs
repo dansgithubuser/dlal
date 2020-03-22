@@ -1,122 +1,51 @@
-use portaudio as pa;
-
-const SAMPLE_RATE: f64 = 44_100.0;
-const FRAMES: u32 = 64;
-const CHANNELS: i32 = 2;
-const INTERLEAVED: bool = true;
-
-fn run() -> Result<(), pa::Error> {
-    let pa = pa::PortAudio::new()?;
-
-    println!("PortAudio:");
-    println!("version: {}", pa.version());
-    println!("version text: {:?}", pa.version_text());
-    println!("host count: {}", pa.host_api_count()?);
-
-    let default_host = pa.default_host_api()?;
-    println!("default host: {:#?}", pa.host_api_info(default_host));
-
-    let def_input = pa.default_input_device()?;
-    let input_info = pa.device_info(def_input)?;
-    println!("Default input device info: {:#?}", &input_info);
-
-    // Construct the input stream parameters.
-    let latency = input_info.default_low_input_latency;
-    let input_params = pa::StreamParameters::<f32>::new(def_input, CHANNELS, INTERLEAVED, latency);
-
-    let def_output = pa.default_output_device()?;
-    let output_info = pa.device_info(def_output)?;
-    println!("Default output device info: {:#?}", &output_info);
-
-    // Construct the output stream parameters.
-    let latency = output_info.default_low_output_latency;
-    let output_params = pa::StreamParameters::new(def_output, CHANNELS, INTERLEAVED, latency);
-
-    // Check that the stream format is supported.
-    pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
-
-    // Construct the settings with which we'll open our duplex stream.
-    let settings = pa::DuplexStreamSettings::new(input_params, output_params, SAMPLE_RATE, FRAMES);
-
-    // Once the countdown reaches 0 we'll close the stream.
-    let mut count_down = 3.0;
-
-    // Keep track of the last `current_time` so we can calculate the delta time.
-    let mut maybe_last_time = None;
-
-    // We'll use this channel to send the count_down to the main thread for fun.
-    let (sender, receiver) = ::std::sync::mpsc::channel();
-
-    // A callback to pass to the non-blocking stream.
-    let callback = move |pa::DuplexStreamCallbackArgs {
-                             in_buffer,
-                             out_buffer,
-                             frames,
-                             time,
-                             ..
-                         }| {
-        let current_time = time.current;
-        let prev_time = maybe_last_time.unwrap_or(current_time);
-        let dt = current_time - prev_time;
-        count_down -= dt;
-        maybe_last_time = Some(current_time);
-
-        assert!(frames == FRAMES as usize);
-        sender.send(count_down).ok();
-
-        // Pass the input straight to the output - BEWARE OF FEEDBACK!
-        for (output_sample, input_sample) in out_buffer.iter_mut().zip(in_buffer.iter()) {
-            *output_sample = *input_sample;
-        }
-
-        if count_down > 0.0 {
-            pa::Continue
-        } else {
-            pa::Complete
-        }
-    };
-
-    // Construct a stream with input and output sample types of f32.
-    let mut stream = pa.open_non_blocking_stream(settings, callback)?;
-
-    stream.start()?;
-
-    // Loop while the non-blocking stream is active.
-    while let true = stream.is_active()? {
-        // Do some stuff!
-        while let Ok(count_down) = receiver.try_recv() {
-            println!("count_down: {:?}", count_down);
-        }
-    }
-
-    stream.stop()?;
-
-    Ok(())
-}
-
 use dlal_base::{err, gen_component, json};
 
+use portaudio as pa;
+
+use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 
 type CommandView = extern "C" fn(*mut c_void, *const c_char) -> *const c_char;
+type EvaluateView = extern "C" fn(*mut c_void);
 
 struct ComponentView {
     raw: *mut c_void,
-    command: CommandView,
+    evaluate: EvaluateView,
 }
 
 pub struct Specifics {
+    samples_per_evaluation: u32,
     component_views: Vec<ComponentView>,
+    stream: Option<pa::Stream<
+        pa::NonBlocking,
+        pa::Duplex<f32, f32>
+    >>,
 }
 
 gen_component!(Specifics);
 
 impl Specifics {
     fn new() -> Self {
-        Specifics { component_views: vec![] }
+        Specifics {
+            samples_per_evaluation: 64,
+            component_views: vec![],
+            stream: None,
+        }
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
+        commands.insert("samples_per_evaluation", Command {
+            func: |soul, body| {
+                soul.samples_per_evaluation = match body["args"][0].as_str() {
+                    Some(samples_per_evaluation) => samples_per_evaluation.parse::<u32>()?,
+                    None => return Err(err("samples_per_evaluation isn't a string")),
+                };
+                Ok(Some(json!({"result": soul.samples_per_evaluation})))
+            },
+            info: json!({
+                "args": ["samples_per_evaluation"],
+            }),
+        });
         commands.insert("add", Command {
             func: |soul, body| {
                 let raw = match body["args"][0].as_str() {
@@ -128,12 +57,86 @@ impl Specifics {
                     Some(command) => command.parse::<usize>()?,
                     None => return Err(err("command isn't a string")),
                 };
-                let command = unsafe { std::mem::transmute::<usize, extern "C" fn(cmp: *mut c_void, text: *const c_char) -> *const c_char>(command) };
-                soul.component_views.push(ComponentView { raw, command });
+                let command = unsafe { std::mem::transmute::<usize, CommandView>(command) };
+                let evaluate = match body["args"][2].as_str() {
+                    Some(evaluate) => evaluate.parse::<usize>()?,
+                    None => return Err(err("evaluate isn't a string")),
+                };
+                let evaluate = unsafe { std::mem::transmute::<usize, EvaluateView>(evaluate) };
+                command(raw, CString::new(json!({"name": "join"}).to_string()).expect("CString::new failed").as_ptr());
+                soul.component_views.push(ComponentView { raw, evaluate });
                 Ok(None)
             },
             info: json!({
-                "args": ["component", "command"],
+                "args": ["component", "command", "evaluate"],
+            }),
+        });
+        commands.insert("start", Command {
+            func: |soul, _body| {
+                const SAMPLE_RATE: f64 = 44_100.0;
+                const CHANNELS: i32 = 1;
+                const INTERLEAVED: bool = true;
+                let pa = pa::PortAudio::new()?;
+                let input_device = pa.default_input_device()?;
+                let input_params = pa::StreamParameters::<f32>::new(
+                    input_device,
+                    CHANNELS,
+                    INTERLEAVED,
+                    pa.device_info(input_device)?.default_low_input_latency,
+                );
+                let output_device = pa.default_output_device()?;
+                let output_params = pa::StreamParameters::<f32>::new(
+                    output_device,
+                    CHANNELS,
+                    INTERLEAVED,
+                    pa.device_info(output_device)?.default_low_output_latency,
+                );
+                pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
+                let component_views_static = unsafe {
+                    std::mem::transmute::<
+                        &Vec<ComponentView>,
+                        &'static Vec<ComponentView>
+                    >(&soul.component_views)
+                };
+                let samples_per_evaluation = soul.samples_per_evaluation;
+                soul.stream = Some(pa.open_non_blocking_stream(
+                    pa::DuplexStreamSettings::new(input_params, output_params, SAMPLE_RATE, soul.samples_per_evaluation),
+                    move |pa::DuplexStreamCallbackArgs {
+                        in_buffer,
+                        out_buffer,
+                        frames,
+                        ..
+                    }| {
+                        assert!(frames == samples_per_evaluation as usize);
+                        for output_sample in out_buffer.iter_mut() {
+                            *output_sample = 0.0;
+                        }
+                        for i in component_views_static {
+                            (i.evaluate)(i.raw);
+                        }
+                        pa::Continue
+                    },
+                )?);
+                match &mut soul.stream {
+                    Some(stream) => stream.start()?,
+                    None => (),
+                }
+                Ok(None)
+            },
+            info: json!({
+                "args": [],
+            }),
+        });
+        commands.insert("stop", Command {
+            func: |soul, _body| {
+                match &mut soul.stream {
+                    Some(stream) => stream.stop()?,
+                    None => (),
+                }
+                Ok(None)
+            },
+            info: json!({
+                "args": [],
             }),
         });
     }

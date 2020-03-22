@@ -1,10 +1,10 @@
 import obvious
 
-import glob
 import json
 import os
 
 DIR = os.path.dirname(os.path.realpath(__file__))
+COMPONENTS_DIR = os.path.join(DIR, '..', '..', 'components')
 
 class Component:
     _libs = {}
@@ -13,7 +13,9 @@ class Component:
         if kind in Component._libs: return Component._libs[kind]
         lib = obvious.load_lib(
             kind,
-            paths=[os.path.join(DIR, '..', 'components', kind, 'target', 'release')],
+            paths=[
+                os.path.join(COMPONENTS_DIR, kind, 'target', 'release'),  # dev
+            ],
         )
         obvious.set_ffi_types(lib.construct, 'void*')
         obvious.set_ffi_types(lib.destruct, None, 'void*')
@@ -23,14 +25,14 @@ class Component:
 
     def __init__(self, kind, name=None):
         if name == None: name = kind
-        self.lib = Component._load_lib(kind)
-        self.raw = self.lib.construct()
+        self._lib = Component._load_lib(kind)
+        self._raw = self._lib.construct()
 
     def __del__(self):
-        self.lib.destruct(self.raw)
+        self._lib.destruct(self._raw)
 
     def command(self, name, *args, **kwargs):
-        result = self.lib.command(self.raw, json.dumps({
+        result = self._lib.command(self._raw, json.dumps({
             'name': name,
             'args': args,
             'kwargs': kwargs,

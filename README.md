@@ -28,7 +28,6 @@ Try `python do.py -h` to get started.
 	- POC
 		- simple osc
 		- connect
-		- audio runs other plugins
 	- web interface
 	- components
 		- serialization

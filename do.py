@@ -31,8 +31,8 @@ def invoke(*args, kwargs={}):
     print(timestamp(), os.getcwd(), args, kwargs)
     return subprocess.run(args, check=True, **kwargs)
 
-#===== system =====#
-os.chdir(os.path.join(DIR, 'system'))
+#===== skeleton =====#
+os.chdir(os.path.join(DIR, 'skeleton'))
 
 if args.venv_freshen:
     shutil.rmtree('venv', ignore_errors=True)
@@ -69,12 +69,12 @@ if args.build:
 
 #===== run =====#
 if args.run == True:
-    os.chdir(os.path.join(DIR, 'system'))
+    os.chdir(os.path.join(DIR, 'skeleton'))
     invoke('python', '-i', '-c', 'import dlal')
 elif args.run:
     if 'PYTHONPATH' in os.environ:
-        os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'system')
+        os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'skeleton')
     else:
-        os.environ['PYTHONPATH'] = os.path.join(DIR, 'system')
+        os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
     os.chdir(os.path.join(DIR))
     invoke('python', '-i', args.run)
