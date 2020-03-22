@@ -1,5 +1,4 @@
 use portaudio as pa;
-use serde_json::Value;
 
 const SAMPLE_RATE: f64 = 44_100.0;
 const FRAMES: u32 = 64;
@@ -95,7 +94,7 @@ fn run() -> Result<(), pa::Error> {
     Ok(())
 }
 
-use dlal_base::{gen_component, json};
+use dlal_base::{err, gen_component, json};
 
 use std::os::raw::{c_char, c_void};
 
@@ -120,12 +119,18 @@ impl Specifics {
     fn register_commands(&self, commands: &mut CommandMap) {
         commands.insert("add", Command {
             func: |soul, body| {
-                let raw = body["args"][0].as_str().unwrap().parse::<usize>().unwrap();
+                let raw = match body["args"][0].as_str() {
+                    Some(raw) => raw.parse::<usize>()?,
+                    None => return Err(err("component isn't a string")),
+                };
                 let raw = unsafe { std::mem::transmute::<usize, *mut c_void>(raw) };
-                let command = body["args"][1].as_str().unwrap().parse::<usize>().unwrap();
+                let command = match body["args"][1].as_str() {
+                    Some(command) => command.parse::<usize>()?,
+                    None => return Err(err("command isn't a string")),
+                };
                 let command = unsafe { std::mem::transmute::<usize, extern "C" fn(cmp: *mut c_void, text: *const c_char) -> *const c_char>(command) };
                 soul.component_views.push(ComponentView { raw, command });
-                None
+                Ok(None)
             },
             info: json!({
                 "args": ["component", "command"],
