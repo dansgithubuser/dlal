@@ -63,6 +63,7 @@ if args.component_new:
 #===== build =====#
 if args.build:
     for component_path in glob.glob(os.path.join(DIR, 'components', '*')):
+        if os.path.basename(component_path) == 'base': continue
         os.chdir(component_path)
         invoke('cargo', 'build', '--release')
 

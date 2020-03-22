@@ -4,6 +4,7 @@
 name = "audio"
 version = "1.0.0"
 dependencies = [
+ "dlal-base",
  "portaudio",
  "serde_json",
 ]
@@ -21,6 +22,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
 
 [[package]]
+name = "dlal-base"
+version = "1.0.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -28,9 +36,9 @@ checksum = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
 
 [[package]]
 name = "libc"
-version = "0.2.67"
+version = "0.2.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb147597cdf94ed43ab7a9038716637d2d1bf2bc571da995d0028dec06bd3018"
+checksum = "dea0c0405123bba743ee3f91f49b1c7cfb684eef0da0a50110f758ccf24cdff0"
 
 [[package]]
 name = "num"

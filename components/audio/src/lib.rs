@@ -1,10 +1,6 @@
 use portaudio as pa;
 use serde_json::Value;
 
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_void};
-use std::ptr;
-
 const SAMPLE_RATE: f64 = 44_100.0;
 const FRAMES: u32 = 64;
 const CHANNELS: i32 = 2;
@@ -99,43 +95,44 @@ fn run() -> Result<(), pa::Error> {
     Ok(())
 }
 
-pub struct Component {
-    result: CString,
+use dlal_base::{gen_component, json};
+
+use std::os::raw::{c_char, c_void};
+
+type CommandView = extern "C" fn(*mut c_void, *const c_char) -> *const c_char;
+
+struct ComponentView {
+    raw: *mut c_void,
+    command: CommandView,
 }
 
-impl Component {
-    fn set_result(&mut self, new_result: &str) -> *const c_char {
-        self.result = CString::new(new_result).expect("CString::new failed");
-        self.result.as_ptr()
+pub struct Specifics {
+    component_views: Vec<ComponentView>,
+}
+
+gen_component!(Specifics);
+
+impl Specifics {
+    fn new() -> Self {
+        Specifics { component_views: vec![] }
     }
-}
 
-#[no_mangle]
-pub extern "C" fn construct() -> *mut Component {
-    Box::into_raw(Box::new(Component { result: CString::new("").expect("CString::new failed") }))
-}
+    fn register_commands(&self, commands: &mut CommandMap) {
+        commands.insert("add", Command {
+            func: |soul, body| {
+                let raw = body["args"][0].as_str().unwrap().parse::<usize>().unwrap();
+                let raw = unsafe { std::mem::transmute::<usize, *mut c_void>(raw) };
+                let command = body["args"][1].as_str().unwrap().parse::<usize>().unwrap();
+                let command = unsafe { std::mem::transmute::<usize, extern "C" fn(cmp: *mut c_void, text: *const c_char) -> *const c_char>(command) };
+                soul.component_views.push(ComponentView { raw, command });
+                None
+            },
+            info: json!({
+                "args": ["component", "command"],
+            }),
+        });
+    }
 
-#[no_mangle]
-pub extern "C" fn destruct(component: *mut Component) {
-    unsafe { Box::from_raw(component) };
-}
-
-#[no_mangle]
-pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *const c_char {
-    let component = unsafe { &mut *component };
-    let body: Value = serde_json::from_str(unsafe { CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed")).expect("invalid command");
-    match body["name"].as_str().expect("command name isn't a string") {
-        "add" => {
-            let raw = body["args"][0].as_str().unwrap().parse::<usize>().unwrap();
-            let raw = unsafe { std::mem::transmute::<usize, *mut c_void>(raw) };
-            let cmd = body["args"][1].as_str().unwrap().parse::<usize>().unwrap();
-            let cmd = unsafe { std::mem::transmute::<usize, extern "C" fn(cmp: *mut c_void, text: *const c_char) -> *const c_char>(cmd) };
-            let text = CString::new(r#"{"name": "butts"}"#).unwrap();
-            println!("{:?}", unsafe { CStr::from_ptr(cmd(raw, text.as_ptr())) });
-            std::ptr::null()
-        },
-        _ => {
-            component.set_result(r#"{"error": "no such command"}"#)
-        },
+    fn evaluate(&mut self) {
     }
 }
