@@ -26,7 +26,9 @@ impl std::error::Error for Error {
 }
 
 pub fn err(msg: &str) -> Box<Error> {
-    Box::new(Error { msg: msg.to_string() })
+    Box::new(Error {
+        msg: msg.to_string(),
+    })
 }
 
 #[macro_export]

@@ -18,23 +18,29 @@ pub struct Component {
 impl Component {
     fn get_ports(&self) -> Vec<String> {
         let midi_in = new_midi_in();
-        (0..midi_in.port_count()).map(|i| midi_in.port_name(i).expect("port_name failed")).collect()
+        (0..midi_in.port_count())
+            .map(|i| midi_in.port_name(i).expect("port_name failed"))
+            .collect()
     }
 
     fn open(&mut self, port: usize) {
         let midi_in = new_midi_in();
         let (send, recv) = multiqueue2::mpmc_queue(256);
         self.recv = Some(recv.into_single().expect("into_single failed"));
-        self.conn = Some(midi_in.connect(
-            port,
-            "dlal-midir-input",
-            move |_timestamp_us, message, send| {
-                for i in message {
-                    send.try_send(*i).expect("try_send failed");
-                }
-            },
-            send,
-        ).expect("MidiIn::connect failed"));
+        self.conn = Some(
+            midi_in
+                .connect(
+                    port,
+                    "dlal-midir-input",
+                    move |_timestamp_us, message, send| {
+                        for i in message {
+                            send.try_send(*i).expect("try_send failed");
+                        }
+                    },
+                    send,
+                )
+                .expect("MidiIn::connect failed"),
+        );
     }
 
     fn set_result(&mut self, new_result: &str) -> *const c_char {
@@ -60,12 +66,18 @@ pub extern "C" fn destruct(component: *mut Component) {
 #[no_mangle]
 pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *const c_char {
     let component = unsafe { &mut *component };
-    let body: Value = serde_json::from_str(unsafe { CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed")).expect("invalid command");
+    let body: Value = serde_json::from_str(
+        unsafe { CStr::from_ptr(text) }
+            .to_str()
+            .expect("CStr::to_str failed"),
+    )
+    .expect("invalid command");
     match body["name"].as_str().expect("command name isn't a string") {
         "ports" => {
             let ports = component.get_ports();
-            component.set_result(&serde_json::to_string(&ports).expect("serde_json::to_string failed"))
-        },
+            component
+                .set_result(&serde_json::to_string(&ports).expect("serde_json::to_string failed"))
+        }
         "open" => {
             let port = body["args"][0].as_str().expect("port isn't a string");
             let ports = component.get_ports();
@@ -76,17 +88,17 @@ pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *co
                 }
             }
             component.set_result(r#"{"error": "no such port"}"#)
-        },
-        _ => {
-            component.set_result(r#"{"error": "no such command"}"#)
-        },
+        }
+        _ => component.set_result(r#"{"error": "no such command"}"#),
     }
 }
 
 #[no_mangle]
 pub extern "C" fn evaluate(component: *mut Component) {
     let component = unsafe { &mut *component };
-    if component.recv.is_none() { return }
+    if component.recv.is_none() {
+        return;
+    }
     loop {
         match component.recv.as_ref().unwrap().try_recv() {
             Ok(v) => println!("{}", v),
