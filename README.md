@@ -25,15 +25,20 @@ Try `python do.py -h` to get started.
 
 ## todo
 - dlal universal linkage
-	- POC
-		- simple osc
-		- connect
 	- web interface
-	- components
-		- serialization
 		- python component knows what commands are available
+		- command queuing
+	- serialization
+	- components
 		- flesh out existing component features
-		- other components
+		- buffer
+		- arpeggiator
+		- filei, fileo, filea
+		- lpf
+		- gain
+		- reverb
+		- liner
+		- pitcher
 	- audiobro
 
 - burgers

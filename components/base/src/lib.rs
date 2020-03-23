@@ -9,6 +9,7 @@ use std::mem::transmute;
 use std::os::raw::{c_char, c_void};
 use std::ptr::null;
 
+// ===== generic error ===== //
 #[derive(Debug)]
 pub struct Error {
     msg: String,
@@ -36,16 +37,28 @@ pub fn err(msg: &str) -> Box<Error> {
     })
 }
 
+// ===== generate ===== //
 #[macro_export]
 macro_rules! gen_component {
     ($specifics:ident) => {
+        // ===== specifics trait ===== //
+        pub trait SpecificsTrait {
+            fn new() -> Self;
+            fn register_commands(&self, commands: &mut CommandMap) {}
+            fn evaluate(&mut self) {}
+            fn midi(&mut self, _msg: &[u8]) {}
+            fn audio(&mut self) -> *mut f32 { std::ptr::null_mut() }
+        }
+
+        // ===== commands ===== //
         pub struct Command {
-            pub func: fn(&mut $specifics, dlal_base::JsonValue) -> Result<Option<dlal_base::JsonValue>, Box<dyn std::error::Error>>,
-            pub info: dlal_base::JsonValue,
+            pub func: fn(&mut $specifics, dlal_component_base::JsonValue) -> Result<Option<dlal_component_base::JsonValue>, Box<dyn std::error::Error>>,
+            pub info: dlal_component_base::JsonValue,
         }
 
         pub type CommandMap = std::collections::HashMap<&'static str, Command>;
 
+        // ===== component ===== //
         pub struct Component {
             specifics: $specifics,
             result: std::ffi::CString,
@@ -59,6 +72,7 @@ macro_rules! gen_component {
             }
         }
 
+        // ===== external functions ===== //
         #[no_mangle]
         pub extern "C" fn construct() -> *mut Component {
             let mut component = Component {
@@ -79,7 +93,7 @@ macro_rules! gen_component {
         pub extern "C" fn command(component: *mut Component, text: *const std::os::raw::c_char) -> *const std::os::raw::c_char {
             let component = unsafe { &mut *component };
             let text = unsafe { std::ffi::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
-            let body: dlal_base::JsonValue = match dlal_base::json_from_str(text) {
+            let body: dlal_component_base::JsonValue = match dlal_component_base::json_from_str(text) {
                 Ok(body) => body,
                 Err(err) => return component.set_result(&json!({"error": err.to_string()}).to_string()),
             };
@@ -101,6 +115,18 @@ macro_rules! gen_component {
         }
 
         #[no_mangle]
+        pub extern "C" fn midi(component: *mut Component, msg: *const u8, size: usize) {
+            let component = unsafe { &mut *component };
+            component.specifics.midi(unsafe { std::slice::from_raw_parts(msg, size) });
+        }
+
+        #[no_mangle]
+        pub extern "C" fn audio(component: *mut Component) -> *mut f32 {
+            let component = unsafe { &mut *component };
+            component.specifics.audio()
+        }
+
+        #[no_mangle]
         pub extern "C" fn evaluate(component: *mut Component) {
             let component = unsafe { &mut *component };
             component.specifics.evaluate();
@@ -108,17 +134,20 @@ macro_rules! gen_component {
     }
 }
 
+// ===== views ===== //
+pub const VIEW_ARGS: [&str; 5] = ["component", "command", "audio", "midi", "evaluate"];
+
 pub type CommandView = extern "C" fn(*const c_void, *const c_char) -> *const c_char;
 pub type MidiView = extern "C" fn(*const c_void, *const u8, usize);
 pub type AudioView = extern "C" fn(*const c_void) -> *mut f32;
 pub type EvaluateView = extern "C" fn(*const c_void);
 
-pub struct ComponentView {
+pub struct View {
     raw: *const c_void,
-    command_view: Option<CommandView>,
-    midi_view: Option<MidiView>,
-    audio_view: Option<AudioView>,
-    evaluate_view: Option<EvaluateView>,
+    command_view: CommandView,
+    midi_view: MidiView,
+    audio_view: AudioView,
+    evaluate_view: EvaluateView,
 }
 
 macro_rules! json_to_ptr {
@@ -131,29 +160,19 @@ macro_rules! json_to_ptr {
     }};
 }
 
-macro_rules! json_to_ptr_opt {
-    ($value:expr, $type:ty) => {{
-        if $value.is_null() {
-            None
-        } else {
-            Some(json_to_ptr!($value, $type))
-        }
-    }};
-}
-
-impl ComponentView {
+impl View {
     pub fn new(args: &JsonValue) -> Result<Self, Box<dyn error::Error>> {
         Ok(Self {
             raw: json_to_ptr!(&args[0], *const c_void),
-            command_view: json_to_ptr_opt!(&args[1], CommandView),
-            midi_view: json_to_ptr_opt!(&args[2], MidiView),
-            audio_view: json_to_ptr_opt!(&args[3], AudioView),
-            evaluate_view: json_to_ptr_opt!(&args[4], EvaluateView),
+            command_view: json_to_ptr!(&args[1], CommandView),
+            midi_view: json_to_ptr!(&args[2], MidiView),
+            audio_view: json_to_ptr!(&args[3], AudioView),
+            evaluate_view: json_to_ptr!(&args[4], EvaluateView),
         })
     }
 
     pub fn command(&self, body: JsonValue) -> Option<JsonValue> {
-        let result = self.command_view.unwrap()(
+        let result = (self.command_view)(
             self.raw,
             CString::new(body.to_string())
                 .expect("CString::new failed")
@@ -168,8 +187,8 @@ impl ComponentView {
         Some(json_from_str(result).expect("invalid result"))
     }
 
-    pub fn midi(&self) {
-        self.midi_view;
+    pub fn midi(&self, msg: &[u8]) {
+        (self.midi_view)(self.raw, msg.as_ptr(), msg.len());
     }
 
     pub fn audio(&self) {
@@ -177,6 +196,6 @@ impl ComponentView {
     }
 
     pub fn evaluate(&self) {
-        self.evaluate_view.unwrap()(self.raw);
+        (self.evaluate_view)(self.raw);
     }
 }

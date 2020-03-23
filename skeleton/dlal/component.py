@@ -1,5 +1,6 @@
 import obvious
 
+import ctypes
 import json
 import os
 
@@ -37,4 +38,20 @@ class Component:
             'args': args,
             'kwargs': kwargs,
         }).encode('utf-8'))
-        if result: return json.loads(result.decode('utf-8'))
+        if not result: return
+        result = json.loads(result.decode('utf-8'))
+        if 'error' in result:
+            raise Exception(result['error'])
+        return result
+
+    def connect(self, other):
+        return self.command('connect', *other._view())
+
+    def _view(self):
+        return [
+            str(self._raw),
+            str(ctypes.cast(self._lib.command , ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.midi    , ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.audio   , ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.evaluate, ctypes.c_void_p).value),
+        ]

@@ -1,20 +1,20 @@
-use dlal_base::{err, gen_component, json, ComponentView};
+use dlal_component_base::{err, gen_component, json, View};
 
 use portaudio as pa;
 
 pub struct Specifics {
     samples_per_evaluation: u32,
-    component_views: Vec<ComponentView>,
+    views: Vec<View>,
     stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
 }
 
 gen_component!(Specifics);
 
-impl Specifics {
+impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Specifics {
             samples_per_evaluation: 64,
-            component_views: vec![],
+            views: vec![],
             stream: None,
         }
     }
@@ -39,9 +39,9 @@ impl Specifics {
             "add",
             Command {
                 func: |soul, body| {
-                    let component_view = ComponentView::new(&body["args"])?;
-                    component_view.command(json!({"name": "join"}));
-                    soul.component_views.push(component_view);
+                    let view = View::new(&body["args"])?;
+                    println!("{:?}", view.command(json!({"name": "join"})));
+                    soul.views.push(view);
                     Ok(None)
                 },
                 info: json!({
@@ -72,10 +72,8 @@ impl Specifics {
                         pa.device_info(output_device)?.default_low_output_latency,
                     );
                     pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
-                    let component_views_static = unsafe {
-                        std::mem::transmute::<&Vec<ComponentView>, &'static Vec<ComponentView>>(
-                            &soul.component_views,
-                        )
+                    let views_static = unsafe {
+                        std::mem::transmute::<&Vec<View>, &'static Vec<View>>(&soul.views)
                     };
                     let samples_per_evaluation = soul.samples_per_evaluation;
                     soul.stream = Some(pa.open_non_blocking_stream(
@@ -90,7 +88,7 @@ impl Specifics {
                             for output_sample in args.out_buffer.iter_mut() {
                                 *output_sample = 0.0;
                             }
-                            for i in component_views_static {
+                            for i in views_static {
                                 i.evaluate()
                             }
                             pa::Continue

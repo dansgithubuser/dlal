@@ -1,5 +1,5 @@
 [package]
-name = "midi"
+name = "sonic"
 version = "1.0.0"
 authors = ["Dan <dansonlinepresence@gmail.com>"]
 edition = "2018"
@@ -9,5 +9,3 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlal-component-base = { path = "../base" }
-midir = "0.5.0"
-multiqueue2 = "0.1.6"

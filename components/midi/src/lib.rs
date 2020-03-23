@@ -1,4 +1,4 @@
-use dlal_base::{err, gen_component, json};
+use dlal_component_base::{err, gen_component, json, View};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -10,18 +10,13 @@ fn new_midi_in() -> MidiInput {
 pub struct Specifics {
     conn: Option<MidiInputConnection<MPMCSender<u8>>>,
     recv: Option<MPMCUniReceiver<u8>>,
+    msg: Vec<u8>,
+    views: Vec<View>,
 }
 
 gen_component!(Specifics);
 
 impl Specifics {
-    fn new() -> Self {
-        Specifics {
-            conn: None,
-            recv: None,
-        }
-    }
-
     fn get_ports(&self) -> Vec<String> {
         let midi_in = new_midi_in();
         (0..midi_in.port_count())
@@ -38,8 +33,8 @@ impl Specifics {
                 .connect(
                     port,
                     "dlal-midir-input",
-                    move |_timestamp_us, message, send| {
-                        for i in message {
+                    move |_timestamp_us, msg, send| {
+                        for i in msg {
                             send.try_send(*i).expect("try_send failed");
                         }
                     },
@@ -47,6 +42,17 @@ impl Specifics {
                 )
                 .expect("MidiIn::connect failed"),
         );
+    }
+}
+
+impl SpecificsTrait for Specifics {
+    fn new() -> Self {
+        Specifics {
+            conn: None,
+            recv: None,
+            msg: Vec::with_capacity(8),
+            views: Vec::with_capacity(1),
+        }
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
@@ -83,6 +89,18 @@ impl Specifics {
                 }),
             },
         );
+        commands.insert(
+            "connect",
+            Command {
+                func: |soul, body| {
+                    soul.views.push(View::new(&body["args"])?);
+                    Ok(None)
+                },
+                info: json!({
+                    "args": ["component", "command", "audio", "midi", "evaluate"],
+                }),
+            },
+        );
     }
 
     fn evaluate(&mut self) {
@@ -91,7 +109,15 @@ impl Specifics {
         }
         loop {
             match self.recv.as_ref().unwrap().try_recv() {
-                Ok(v) => println!("{}", v),
+                Ok(v) => {
+                    if v & 0x80 != 0 && !self.msg.is_empty() {
+                        for i in &self.views {
+                            i.midi(&self.msg);
+                        }
+                        self.msg.clear();
+                    }
+                    self.msg.push(v);
+                }
                 Err(_) => return,
             }
         }

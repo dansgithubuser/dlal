@@ -188,7 +188,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dlal-base"
+name = "dlal-component-base"
 version = "1.0.0"
 dependencies = [
  "serde_json",
@@ -258,7 +258,7 @@ dependencies = [
 name = "midi"
 version = "1.0.0"
 dependencies = [
- "dlal-base",
+ "dlal-component-base",
  "midir",
  "multiqueue2",
 ]

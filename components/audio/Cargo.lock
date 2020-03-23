@@ -4,7 +4,7 @@
 name = "audio"
 version = "1.0.0"
 dependencies = [
- "dlal-base",
+ "dlal-component-base",
  "portaudio",
  "serde_json",
 ]
@@ -22,7 +22,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
 
 [[package]]
-name = "dlal-base"
+name = "dlal-component-base"
 version = "1.0.0"
 dependencies = [
  "serde_json",

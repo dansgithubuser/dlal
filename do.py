@@ -63,7 +63,7 @@ if args.component_new:
         contents = file.read()
     contents = re.sub(
         'version.*',
-        'version = 1.0.0',
+        'version = "1.0.0"',
         contents,
     )
     contents = re.sub(
@@ -73,7 +73,13 @@ if args.component_new:
     )
     contents = re.sub(
         r'\[dependencies\]',
-        r'[lib]\ncrate-type = ["cdylib"]\n\n[dependencies]',
+        (
+            r'[lib]\n'
+            r'crate-type = ["cdylib"]\n'
+            r'\n'
+            r'[dependencies]\n'
+            r'dlal-component-base = { path = "../base" }'
+        ),
         contents,
     )
     while '\n\n\n' in contents:
