@@ -128,27 +128,26 @@ macro_rules! json_to_ptr {
             None => return Err(err("pointer isn't a string")),
         };
         unsafe { transmute::<usize, $type>(u) }
-    }}
+    }};
 }
 
 macro_rules! json_to_ptr_opt {
     ($value:expr, $type:ty) => {{
         if $value.is_null() {
             None
-        }
-        else {
+        } else {
             Some(json_to_ptr!($value, $type))
         }
-    }}
+    }};
 }
 
 impl ComponentView {
     pub fn new(args: &JsonValue) -> Result<Self, Box<dyn error::Error>> {
         Ok(Self {
-            raw:           json_to_ptr!    (&args[0], *const c_void),
-            command_view:  json_to_ptr_opt!(&args[1], CommandView),
-            midi_view:     json_to_ptr_opt!(&args[2], MidiView),
-            audio_view:    json_to_ptr_opt!(&args[3], AudioView),
+            raw: json_to_ptr!(&args[0], *const c_void),
+            command_view: json_to_ptr_opt!(&args[1], CommandView),
+            midi_view: json_to_ptr_opt!(&args[2], MidiView),
+            audio_view: json_to_ptr_opt!(&args[3], AudioView),
             evaluate_view: json_to_ptr_opt!(&args[4], EvaluateView),
         })
     }
@@ -156,10 +155,16 @@ impl ComponentView {
     pub fn command(&self, body: JsonValue) -> Option<JsonValue> {
         let result = self.command_view.unwrap()(
             self.raw,
-            CString::new(body.to_string()).expect("CString::new failed").as_ptr(),
+            CString::new(body.to_string())
+                .expect("CString::new failed")
+                .as_ptr(),
         );
-        if result == null() { return None; }
-        let result = unsafe { CStr::from_ptr(result) }.to_str().expect("CStr::to_str failed");
+        if result == null() {
+            return None;
+        }
+        let result = unsafe { CStr::from_ptr(result) }
+            .to_str()
+            .expect("CStr::to_str failed");
         Some(json_from_str(result).expect("invalid result"))
     }
 

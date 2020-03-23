@@ -1,4 +1,4 @@
-use dlal_base::{ComponentView, err, gen_component, json};
+use dlal_base::{err, gen_component, json, ComponentView};
 
 use portaudio as pa;
 
