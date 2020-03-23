@@ -9,5 +9,7 @@ class Audio(Component):
     def add(self, component):
         self.command('add', str(component._raw),
             str(ctypes.cast(component._lib.command , ctypes.c_void_p).value),
+            None,
+            None,
             str(ctypes.cast(component._lib.evaluate, ctypes.c_void_p).value),
         )

@@ -1,17 +1,6 @@
-use dlal_base::{err, gen_component, json};
+use dlal_base::{ComponentView, err, gen_component, json};
 
 use portaudio as pa;
-
-use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
-
-type CommandView = extern "C" fn(*mut c_void, *const c_char) -> *const c_char;
-type EvaluateView = extern "C" fn(*mut c_void);
-
-struct ComponentView {
-    raw: *mut c_void,
-    evaluate: EvaluateView,
-}
 
 pub struct Specifics {
     samples_per_evaluation: u32,
@@ -50,28 +39,9 @@ impl Specifics {
             "add",
             Command {
                 func: |soul, body| {
-                    let raw = match body["args"][0].as_str() {
-                        Some(raw) => raw.parse::<usize>()?,
-                        None => return Err(err("component isn't a string")),
-                    };
-                    let raw = unsafe { std::mem::transmute::<usize, *mut c_void>(raw) };
-                    let command = match body["args"][1].as_str() {
-                        Some(command) => command.parse::<usize>()?,
-                        None => return Err(err("command isn't a string")),
-                    };
-                    let command = unsafe { std::mem::transmute::<usize, CommandView>(command) };
-                    let evaluate = match body["args"][2].as_str() {
-                        Some(evaluate) => evaluate.parse::<usize>()?,
-                        None => return Err(err("evaluate isn't a string")),
-                    };
-                    let evaluate = unsafe { std::mem::transmute::<usize, EvaluateView>(evaluate) };
-                    command(
-                        raw,
-                        CString::new(json!({"name": "join"}).to_string())
-                            .expect("CString::new failed")
-                            .as_ptr(),
-                    );
-                    soul.component_views.push(ComponentView { raw, evaluate });
+                    let component_view = ComponentView::new(&body["args"])?;
+                    component_view.command(json!({"name": "join"}));
+                    soul.component_views.push(component_view);
                     Ok(None)
                 },
                 info: json!({
@@ -121,7 +91,7 @@ impl Specifics {
                                 *output_sample = 0.0;
                             }
                             for i in component_views_static {
-                                (i.evaluate)(i.raw);
+                                i.evaluate()
                             }
                             pa::Continue
                         },
