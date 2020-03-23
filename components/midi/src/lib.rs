@@ -1,21 +1,27 @@
+use dlal_base::{err, gen_component, json};
+
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
-use serde_json::Value;
-
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
 
 fn new_midi_in() -> MidiInput {
     MidiInput::new("midir test input").expect("MidiInput::new failed")
 }
 
-pub struct Component {
+pub struct Specifics {
     conn: Option<MidiInputConnection<MPMCSender<u8>>>,
     recv: Option<MPMCUniReceiver<u8>>,
-    result: CString,
 }
 
-impl Component {
+gen_component!(Specifics);
+
+impl Specifics {
+    fn new() -> Self {
+        Specifics {
+            conn: None,
+            recv: None,
+        }
+    }
+
     fn get_ports(&self) -> Vec<String> {
         let midi_in = new_midi_in();
         (0..midi_in.port_count())
@@ -43,66 +49,51 @@ impl Component {
         );
     }
 
-    fn set_result(&mut self, new_result: &str) -> *const c_char {
-        self.result = CString::new(new_result).expect("CString::new failed");
-        self.result.as_ptr()
+    fn register_commands(&self, commands: &mut CommandMap) {
+        commands.insert(
+            "ports",
+            Command {
+                func: |soul, _body| {
+                    Ok(Some(json!({
+                        "result": soul.get_ports(),
+                    })))
+                },
+                info: json!({}),
+            },
+        );
+        commands.insert(
+            "open",
+            Command {
+                func: |soul, body| {
+                    let port = match body["args"][0].as_str() {
+                        Some(port) => port,
+                        None => return Err(err("port isn't a string")),
+                    };
+                    let ports = soul.get_ports();
+                    for (i, v) in ports.iter().enumerate() {
+                        if v.starts_with(port) {
+                            soul.open(i);
+                            return Ok(None);
+                        }
+                    }
+                    Err(err("no such port"))
+                },
+                info: json!({
+                    "args": ["port_name_prefix"],
+                }),
+            },
+        );
     }
-}
 
-#[no_mangle]
-pub extern "C" fn construct() -> *mut Component {
-    Box::into_raw(Box::new(Component {
-        conn: None,
-        recv: None,
-        result: CString::new("").expect("CString::new failed"),
-    }))
-}
-
-#[no_mangle]
-pub extern "C" fn destruct(component: *mut Component) {
-    unsafe { Box::from_raw(component) };
-}
-
-#[no_mangle]
-pub extern "C" fn command(component: *mut Component, text: *const c_char) -> *const c_char {
-    let component = unsafe { &mut *component };
-    let body: Value = serde_json::from_str(
-        unsafe { CStr::from_ptr(text) }
-            .to_str()
-            .expect("CStr::to_str failed"),
-    )
-    .expect("invalid command");
-    match body["name"].as_str().expect("command name isn't a string") {
-        "ports" => {
-            let ports = component.get_ports();
-            component
-                .set_result(&serde_json::to_string(&ports).expect("serde_json::to_string failed"))
+    fn evaluate(&mut self) {
+        if self.recv.is_none() {
+            return;
         }
-        "open" => {
-            let port = body["args"][0].as_str().expect("port isn't a string");
-            let ports = component.get_ports();
-            for (i, v) in ports.iter().enumerate() {
-                if v.starts_with(port) {
-                    component.open(i);
-                    return std::ptr::null();
-                }
+        loop {
+            match self.recv.as_ref().unwrap().try_recv() {
+                Ok(v) => println!("{}", v),
+                Err(_) => return,
             }
-            component.set_result(r#"{"error": "no such port"}"#)
-        }
-        _ => component.set_result(r#"{"error": "no such command"}"#),
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn evaluate(component: *mut Component) {
-    let component = unsafe { &mut *component };
-    if component.recv.is_none() {
-        return;
-    }
-    loop {
-        match component.recv.as_ref().unwrap().try_recv() {
-            Ok(v) => println!("{}", v),
-            Err(_) => return,
         }
     }
 }

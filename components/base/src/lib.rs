@@ -87,7 +87,11 @@ macro_rules! gen_component {
                 Some(name) => name,
                 None => return component.set_result(&json!({"error": "command name isn't a string"}).to_string()),
             };
-            match (component.commands[name].func)(&mut component.specifics, body) {
+            let command = match component.commands.get(name) {
+                Some(command) => command,
+                None => return component.set_result(&json!({"error": format!(r#"no such command "{}""#, name)}).to_string()),
+            };
+            match (command.func)(&mut component.specifics, body) {
                 Ok(result) => match(result) {
                     Some(result) => component.set_result(&result.to_string()),
                     None => std::ptr::null(),
@@ -157,6 +161,14 @@ impl ComponentView {
         if result == null() { return None; }
         let result = unsafe { CStr::from_ptr(result) }.to_str().expect("CStr::to_str failed");
         Some(json_from_str(result).expect("invalid result"))
+    }
+
+    pub fn midi(&self) {
+        self.midi_view;
+    }
+
+    pub fn audio(&self) {
+        self.audio_view;
     }
 
     pub fn evaluate(&self) {

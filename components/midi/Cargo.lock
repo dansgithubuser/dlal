@@ -188,6 +188,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dlal-base"
+version = "1.0.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "fuchsia-cprng"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -251,9 +258,9 @@ dependencies = [
 name = "midi"
 version = "1.0.0"
 dependencies = [
+ "dlal-base",
  "midir",
  "multiqueue2",
- "serde_json",
 ]
 
 [[package]]

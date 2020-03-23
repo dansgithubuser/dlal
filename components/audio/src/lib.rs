@@ -45,7 +45,7 @@ impl Specifics {
                     Ok(None)
                 },
                 info: json!({
-                    "args": ["component", "command", "evaluate"],
+                    "args": ["component", "command", "audio", "midi", "evaluate"],
                 }),
             },
         );
@@ -102,9 +102,7 @@ impl Specifics {
                     }
                     Ok(None)
                 },
-                info: json!({
-                    "args": [],
-                }),
+                info: json!({}),
             },
         );
         commands.insert(
@@ -117,9 +115,7 @@ impl Specifics {
                     }
                     Ok(None)
                 },
-                info: json!({
-                    "args": [],
-                }),
+                info: json!({}),
             },
         );
     }
