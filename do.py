@@ -24,7 +24,8 @@ parser.add_argument('--venv-install', '--vi', action='store_true',
 parser.add_argument('--component-new')
 parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--run', '-r', nargs='?', const=True)
-parser.add_argument('--style-check', action='store_true')
+parser.add_argument('--style-check', '--style', action='store_true')
+parser.add_argument('--style-rust-fix', action='store_true')
 args = parser.parse_args()
 
 DIR = os.path.dirname(os.path.realpath(__file__))
@@ -107,13 +108,16 @@ elif args.run:
     invoke('python', '-i', args.run)
 
 # ===== style ===== #
-if args.style_check:
+if args.style_check or args.style_rust_fix:
     result = 0
     for i in glob.glob(os.path.join(DIR, 'components', '*')):
         os.chdir(i)
-        result |= invoke(
-            'cargo', 'fmt', '--', '--check', kwargs={'check': False}
-        ).returncode
+        invoke_args = ['cargo', 'fmt', '--',
+            '--config-path', os.path.join(DIR, '.rustfml.toml'),
+        ]
+        if args.style_check: invoke_args.append('--check')
+        result |= invoke(*invoke_args, kwargs={'check': False}).returncode
+    if not args.style_check: sys.exit(0)
     def check_py(path):
         global result
         result |= invoke(

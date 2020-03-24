@@ -40,7 +40,7 @@ class Component:
         }).encode('utf-8'))
         if not result: return
         result = json.loads(result.decode('utf-8'))
-        if 'error' in result:
+        if type(result) == dict and 'error' in result:
             raise Exception(result['error'])
         return result
 

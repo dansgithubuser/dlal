@@ -1,16 +1,17 @@
-use dlal_component_base::{err, gen_component, json, View};
+use dlal_component_base::{arg_str, args, err, gen_component, json, View};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
+
+const MSG_CAP: usize = 3;
 
 fn new_midi_in() -> MidiInput {
     MidiInput::new("midir test input").expect("MidiInput::new failed")
 }
 
 pub struct Specifics {
-    conn: Option<MidiInputConnection<MPMCSender<u8>>>,
-    recv: Option<MPMCUniReceiver<u8>>,
-    msg: Vec<u8>,
+    conn: Option<MidiInputConnection<MPMCSender<[u8; MSG_CAP]>>>,
+    recv: Option<MPMCUniReceiver<[u8; MSG_CAP]>>,
     views: Vec<View>,
 }
 
@@ -34,9 +35,11 @@ impl Specifics {
                     port,
                     "dlal-midir-input",
                     move |_timestamp_us, msg, send| {
-                        for i in msg {
-                            send.try_send(*i).expect("try_send failed");
+                        if msg[0] >= 0xf0 {
+                            return;
                         }
+                        send.try_send([msg[0], msg[1], *msg.get(2).unwrap_or(&(0 as u8))])
+                            .expect("try_send failed");
                     },
                     send,
                 )
@@ -50,7 +53,6 @@ impl SpecificsTrait for Specifics {
         Specifics {
             conn: None,
             recv: None,
-            msg: Vec::with_capacity(8),
             views: Vec::with_capacity(1),
         }
     }
@@ -59,11 +61,7 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "ports",
             Command {
-                func: |soul, _body| {
-                    Ok(Some(json!({
-                        "result": soul.get_ports(),
-                    })))
-                },
+                func: |soul, _body| Ok(Some(json!(soul.get_ports()))),
                 info: json!({}),
             },
         );
@@ -71,10 +69,7 @@ impl SpecificsTrait for Specifics {
             "open",
             Command {
                 func: |soul, body| {
-                    let port = match body["args"][0].as_str() {
-                        Some(port) => port,
-                        None => return Err(err("port isn't a string")),
-                    };
+                    let port = arg_str(&body, 0)?;
                     let ports = soul.get_ports();
                     for (i, v) in ports.iter().enumerate() {
                         if v.starts_with(port) {
@@ -93,7 +88,7 @@ impl SpecificsTrait for Specifics {
             "connect",
             Command {
                 func: |soul, body| {
-                    soul.views.push(View::new(&body["args"])?);
+                    soul.views.push(View::new(args(&body)?)?);
                     Ok(None)
                 },
                 info: json!({
@@ -109,14 +104,10 @@ impl SpecificsTrait for Specifics {
         }
         loop {
             match self.recv.as_ref().unwrap().try_recv() {
-                Ok(v) => {
-                    if v & 0x80 != 0 && !self.msg.is_empty() {
-                        for i in &self.views {
-                            i.midi(&self.msg);
-                        }
-                        self.msg.clear();
+                Ok(msg) => {
+                    for i in &self.views {
+                        i.midi(&msg);
                     }
-                    self.msg.push(v);
                 }
                 Err(_) => return,
             }

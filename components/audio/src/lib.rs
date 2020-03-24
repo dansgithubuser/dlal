@@ -1,11 +1,17 @@
-use dlal_component_base::{err, gen_component, json, View};
+use dlal_component_base::{arg_num, args, gen_component, json, View};
+
+use std::ptr::null_mut;
+use std::slice::from_raw_parts_mut;
 
 use portaudio as pa;
 
+const SAMPLE_RATE: f64 = 44100.0;
+
 pub struct Specifics {
-    samples_per_evaluation: u32,
+    samples_per_evaluation: usize,
     views: Vec<View>,
     stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
+    audio: *mut f32,
 }
 
 gen_component!(Specifics);
@@ -16,6 +22,7 @@ impl SpecificsTrait for Specifics {
             samples_per_evaluation: 64,
             views: vec![],
             stream: None,
+            audio: null_mut(),
         }
     }
 
@@ -24,14 +31,13 @@ impl SpecificsTrait for Specifics {
             "samples_per_evaluation",
             Command {
                 func: |soul, body| {
-                    soul.samples_per_evaluation = match body["args"][0].as_str() {
-                        Some(samples_per_evaluation) => samples_per_evaluation.parse::<u32>()?,
-                        None => return Err(err("samples_per_evaluation isn't a string")),
-                    };
-                    Ok(Some(json!({"result": soul.samples_per_evaluation})))
+                    if let Ok(v) = arg_num(&body, 0) {
+                        soul.samples_per_evaluation = v;
+                    }
+                    Ok(Some(json!(soul.samples_per_evaluation.to_string())))
                 },
                 info: json!({
-                    "args": ["samples_per_evaluation"],
+                    "args": [{"name": "samples_per_evaluation", "optional": true}],
                 }),
             },
         );
@@ -39,8 +45,21 @@ impl SpecificsTrait for Specifics {
             "add",
             Command {
                 func: |soul, body| {
-                    let view = View::new(&body["args"])?;
-                    println!("{:?}", view.command(json!({"name": "join"})));
+                    let view = View::new(args(&body)?)?;
+                    let join_result = view.command(json!({
+                        "name": "join",
+                        "kwargs": {
+                            "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
+                            "sample_rate": SAMPLE_RATE.to_string(),
+                        },
+                    }));
+                    if let Some(join_result) = join_result {
+                        if let Some(obj) = join_result.as_object() {
+                            if obj.get("error").is_some() {
+                                return Ok(Some(join_result));
+                            }
+                        }
+                    }
                     soul.views.push(view);
                     Ok(None)
                 },
@@ -52,8 +71,7 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "start",
             Command {
-                func: |soul, _body| {
-                    const SAMPLE_RATE: f64 = 44_100.0;
+                func: |mut soul, _body| {
                     const CHANNELS: i32 = 1;
                     const INTERLEAVED: bool = true;
                     let pa = pa::PortAudio::new()?;
@@ -72,24 +90,23 @@ impl SpecificsTrait for Specifics {
                         pa.device_info(output_device)?.default_low_output_latency,
                     );
                     pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
-                    let views_static = unsafe {
-                        std::mem::transmute::<&Vec<View>, &'static Vec<View>>(&soul.views)
-                    };
-                    let samples_per_evaluation = soul.samples_per_evaluation;
+                    let soul_scoped =
+                        unsafe { std::mem::transmute::<&mut Specifics, &mut Specifics>(&mut soul) };
                     soul.stream = Some(pa.open_non_blocking_stream(
                         pa::DuplexStreamSettings::new(
                             input_params,
                             output_params,
                             SAMPLE_RATE,
-                            soul.samples_per_evaluation,
+                            soul.samples_per_evaluation as u32,
                         ),
                         move |args| {
-                            assert!(args.frames == samples_per_evaluation as usize);
+                            assert!(args.frames == soul_scoped.samples_per_evaluation);
                             for output_sample in args.out_buffer.iter_mut() {
                                 *output_sample = 0.0;
                             }
-                            for i in views_static {
-                                i.evaluate()
+                            soul_scoped.audio = args.out_buffer.as_mut_ptr();
+                            for i in &mut soul_scoped.views {
+                                i.evaluate();
                             }
                             pa::Continue
                         },
@@ -119,4 +136,11 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {}
+
+    fn audio(&mut self) -> Option<&mut [f32]> {
+        if self.audio == null_mut() {
+            return Some(&mut []);
+        }
+        Some(unsafe { from_raw_parts_mut(self.audio, self.samples_per_evaluation) })
+    }
 }
