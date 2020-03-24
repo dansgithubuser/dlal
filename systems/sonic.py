@@ -1,5 +1,7 @@
 import dlal
 
+import atexit
+
 audio = dlal.Audio()
 midi = dlal.Midi()
 sonic = dlal.Sonic()
@@ -11,3 +13,4 @@ midi.connect(sonic)
 sonic.connect(audio)
 
 audio.command('start')
+atexit.register(lambda: audio.command('stop'))
