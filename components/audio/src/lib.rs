@@ -80,14 +80,14 @@ impl SpecificsTrait for Specifics {
                         input_device,
                         CHANNELS,
                         INTERLEAVED,
-                        pa.device_info(input_device)?.default_low_input_latency,
+                        pa.device_info(input_device)?.default_high_input_latency,
                     );
                     let output_device = pa.default_output_device()?;
                     let output_params = pa::StreamParameters::<f32>::new(
                         output_device,
                         CHANNELS,
                         INTERLEAVED,
-                        pa.device_info(output_device)?.default_low_output_latency,
+                        pa.device_info(output_device)?.default_high_output_latency,
                     );
                     pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
                     let soul_scoped =
