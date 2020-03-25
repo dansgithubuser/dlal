@@ -29,22 +29,23 @@ impl Specifics {
         let midi_in = new_midi_in();
         let (send, recv) = multiqueue2::mpmc_queue(256);
         self.recv = Some(recv.into_single().expect("into_single failed"));
-        self.conn = Some(
-            midi_in
-                .connect(
-                    port,
-                    "dlal-midir-input",
-                    move |_timestamp_us, msg, send| {
-                        if msg[0] >= 0xf0 {
-                            return;
-                        }
-                        send.try_send([msg[0], msg[1], *msg.get(2).unwrap_or(&(0 as u8))])
-                            .expect("try_send failed");
-                    },
-                    send,
-                )
-                .expect("MidiIn::connect failed"),
-        );
+        let conn = midi_in
+            .connect(
+                port,
+                "dlal-midir-input",
+                move |_timestamp_us, msg, send| {
+                    if msg[0] >= 0xf0 {
+                        return;
+                    }
+                    send.try_send([msg[0], msg[1], *msg.get(2).unwrap_or(&(0 as u8))])
+                        .expect("try_send failed");
+                },
+                send,
+            )
+            .expect("MidiIn::connect failed");
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        while self.recv.as_ref().unwrap().try_recv().is_ok() {}
+        self.conn = Some(conn);
     }
 }
 
