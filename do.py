@@ -3,27 +3,35 @@
 import argparse
 import datetime
 import glob
+import http.server
 import os
 import re
 import shutil
+import socketserver
 import subprocess
 import sys
+import webbrowser
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--venv-freshen', '--vf', action='store_true',
-    help='delete venv and create a new one'
-)
+parser.add_argument('--venv-freshen', '--vf', action='store_true', help=(
+    'delete venv and create a new one, '
+    '`. venv-off` to deactivate venv if necessary'
+))
 parser.add_argument('--venv-update', '--vu', action='store_true', help=(
     'install human-reqs.txt and write result to requirements.txt, '
-    'usually should be preceeded by --venv-freshen, '
-    'and activation of venv'
+    'usually should be preceeded by `./do.py --vf; . venv-on`, '
 ))
 parser.add_argument('--venv-install', '--vi', action='store_true',
     help="install what's specified in requirements.txt"
 )
 parser.add_argument('--component-new')
 parser.add_argument('--build', '-b', action='store_true')
-parser.add_argument('--run', '-r', nargs='?', const=True)
+parser.add_argument('--run', '-r', nargs='?', const=True,
+    help='run interactive Python with dlal imported, or run specified system'
+)
+parser.add_argument('--web', '-w', action='store_true',
+    help='open web interface and run web server'
+)
 parser.add_argument('--style-check', '--style', action='store_true')
 parser.add_argument('--style-rust-fix', action='store_true')
 args = parser.parse_args()
@@ -33,11 +41,19 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 def timestamp():
     return '{:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now()).lower()
 
-def invoke(*args, kwargs={}):
+def invoke(*args, kwargs={}, title='invoke', fmt='{ts} {cwd} {args} {kwargs}'):
     if 'check' not in kwargs: kwargs['check'] = True
-    print('-' * 20 + ' invoke ' + '-' * 20)
-    print(timestamp(), os.getcwd(), args, kwargs)
-    return subprocess.run(args, **kwargs)
+    if title:
+        title = ' ' + title + ' '
+    else:
+        title = ''
+    print('-' * 20 + title + '-' * 20)
+    ts = timestamp()
+    cwd = os.getcwd()
+    exec(f'print(f"{fmt}")')
+    result = subprocess.run(args, **kwargs)
+    print()
+    return result
 
 # ===== skeleton ===== #
 os.chdir(os.path.join(DIR, 'skeleton'))
@@ -129,6 +145,16 @@ elif args.run:
     os.chdir(os.path.join(DIR))
     invoke('python', '-i', args.run)
 
+# ===== web ===== #
+if args.web:
+    os.chdir(DIR)
+    webbrowser.open_new_tab('http://localhost:8000/web/index.html')
+    with socketserver.TCPServer(
+        ('', 8000),
+        http.server.SimpleHTTPRequestHandler
+    ) as httpd:
+        httpd.serve_forever()
+
 # ===== style ===== #
 if args.style_check or args.style_rust_fix:
     result = 0
@@ -138,16 +164,24 @@ if args.style_check or args.style_rust_fix:
             '--config-path', os.path.join(DIR, '.rustfml.toml'),
         ]
         if args.style_check: invoke_args.append('--check')
-        result |= invoke(*invoke_args, kwargs={'check': False}).returncode
+        result |= invoke(
+            *invoke_args,
+            kwargs={'check': False},
+            title=None,
+            fmt=os.path.relpath(i, DIR)
+        ).returncode
     if not args.style_check: sys.exit(0)
+    os.chdir(DIR)
     def check_py(path):
         global result
         result |= invoke(
             'pycodestyle',
             '--ignore',
-            'E124,E128,E203,E301,E302,E305,E306,E701,E704,E711',
+            'E124,E128,E203,E226,E301,E302,E305,E306,E701,E704,E711,E722',
             path,
             kwargs={'check': False},
+            title=None,
+            fmt=os.path.relpath(path, DIR),
         ).returncode
     for i in glob.glob(os.path.join(DIR, 'skeleton', 'dlal', '*.py')):
         check_py(i)

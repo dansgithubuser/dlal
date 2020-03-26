@@ -1,0 +1,353 @@
+<link rel='stylesheet' type='text/css' href='style.css'>
+<style>
+
+.wire {
+  cursor: crosshair;
+}
+
+.wire:hover {
+  color: green;
+}
+
+.component {
+  position: relative;
+  display: inline-block;
+  font-weight: bold;
+  background-image: linear-gradient(to top, #ccc, #fff);
+}
+
+.component:hover {
+  color: green;
+}
+
+.component-audio {
+  background-image: linear-gradient(to top, #cc0, #ff0);
+}
+
+.component-midi {
+  background-image: linear-gradient(to top, #f88, #fff);
+}
+
+.component-liner {
+  background-image: linear-gradient(to top, #8f8, #fff);
+}
+
+.component-sonic {
+  background-image: linear-gradient(to top, #88f, #fff);
+}
+
+.component-buffer {
+  background-image: linear-gradient(to top, #fc8, #fff);
+}
+
+.component-commander {
+  background: white;
+}
+
+.toggle {
+  border-radius: 1em;
+}
+
+.toggle-on {
+  color: rgb(0, 128, 255);
+}
+
+</style>
+<script type='module'>
+
+import {
+  e,
+  sleep,
+  uuidv4,
+  v,
+} from './../deps/obvious/obvious.js';
+import {
+  component,
+  context,
+  contextDismiss,
+  contextOption,
+  contextSpace,
+  free,
+  socketConnect,
+  socketSend,
+  socketBroadcastListenerAdd,
+} from './common.js';
+
+var gSystemInfo;
+var gConnecting;
+var gComponents = {};
+
+//===== system stuff =====//
+async function onSocketConnect() {
+  const kinds = (await socketSend('component_kinds'))['result'];
+  for (const kind of kinds) {
+    const option = document.createElement('option');
+    option.innerText = kind;
+    e('addKind').appendChild(option);
+    e('addKind').value = 'audio';
+  }
+  await updateDiagram();
+}
+
+async function updateDiagram() {
+  gSystemInfo = (await socketSend('system_info'))['result'];
+  const diagram = (await socketSend('system_diagram'))['result'];
+  e('diagram').innerHTML = diagram.split('\n').map(i => {
+    return i.replace(/(.*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => { 
+      const connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
+      const kind = gSystemInfo['components'][name].kind;
+      return [
+        connectify(left, 'left', name),
+        `<span
+          id="component-${name}"
+          class='component component-${kind}'
+          onclick='componentContext("${name}"); event.stopPropagation()'
+        >`,
+        name,
+        '</span>',
+        space,
+        connectify(right, 'right', name),
+      ].join('');
+    });
+  }).join('<br>');
+  e('main').style = '';
+  e('socketConnect').style = 'display: none';
+}
+
+function componentContext(name) {
+  const dropdown = context(e(`component-${name}`));
+  contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
+  const contextOptionPage = (optionName, optionUrl) => contextOption(dropdown, optionName, openPage, { url: optionUrl, component: name });
+  switch (gSystemInfo['components'][name].kind) {
+    case 'audio':
+      contextOption(dropdown, 'play', play, name);
+      contextOptionPage('monitor', 'audio-monitor.html');
+      contextSpace(dropdown);
+      contextOption(dropdown, 'start', async function(name) {
+        await socketSend(`${name}.start`);
+        updateDiagram();
+      }, name);
+      break;
+    case 'commander':
+      contextOptionPage('commander', 'commander.html');
+      break;
+    case 'liner':
+      contextOptionPage('midi editor', 'midi-editor.html');
+      break;
+    case 'reticulated_liner':
+      contextOptionPage('midi editor', 'midi-editor.html');
+      break;
+    case 'sonic':
+      contextOptionPage('sonic', 'sonic.html');
+      break;
+  }
+  contextSpace(dropdown);
+  contextOption(dropdown, 'help', async function(name) {
+    showResponse(
+      await socketSend(`${name}.command_immediate`, { args: ['help'] }),
+      (html) => {
+        const lines = [];
+        for (var line of html.split('<br>')) {
+          const trimmed = line.replace(/&nbsp;/g, '');
+          if (line.startsWith('&nbsp;') && trimmed) {
+            const command = trimmed.split(' ')[0];
+            line = `<span
+              class='wire'
+              onclick='e("invokePath").value = "system.${name}.${command}"'
+            >${line}</span>`;
+          }
+          lines.push(line);
+        }
+        return lines.join('<br>');
+      },
+    );
+  }, name);
+  contextOption(dropdown, 'arg', async function(name) {
+    if (!(name in gComponents)) {
+      const response = await socketSend(name, { op: 'store' });
+      gComponents[name] = response.uuid;
+    }
+    e('invokeArgs').value = `"${gComponents[name]}"`;
+  }, name);
+}
+
+function openPage(args) {
+  window.open(`${args.url}?ws-url=${v('ws-url')}&component=${args.component}`, '_blank');
+}
+
+async function invoke() {
+  const options = {};
+  if (v('invokeArgs'  )) options.args   = JSON.parse('[' + v('invokeArgs'  ) + ']');
+  if (v('invokeKwargs')) options.kwargs = JSON.parse('{' + v('invokeKwargs') + '}');
+  if (v('invokeOp'    )) options.op     = v('invokeOp'    );
+  if (v('invokeUuid'  )) options.uuid   = v('invokeUuid'  );
+  showResponse(await socketSend(v('invokePath'), options));
+}
+
+function showResponse(response, extra) {
+  var html = Object.keys(response).map((i) => {
+    var v = response[i];
+    if (i == 'path') v = v.join('.');
+    else if (typeof v == 'string') v = v.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>&nbsp;&nbsp;');
+    else if (typeof v == 'object') v = JSON.stringify(v);
+    return `${i}: ${v}`;
+  }).join('<br>');
+  if (extra) html = extra(html);
+  e('invokeResponse').innerHTML = html;
+}
+
+function setImmediate(pressed) {
+  const el = e('immediate');
+  el.pressed = pressed;
+  if (pressed) {
+    el.classList.add('toggle-on');
+    el.classList.remove('toggle-off');
+  } else {
+    el.classList.add('toggle-off');
+    el.classList.remove('toggle-on');
+  }
+}
+
+function toggleImmediate() {
+  setImmediate(!e('immediate').pressed);
+}
+
+async function add() {
+  var r = await socketSend('skeleton.component_builder', { args: [v('addKind')], op: 'store' });
+  var s = await socketSend(r.uuid, { op: 'store' });
+  await socketSend('system.add', { args: [s.uuid], kwargs: { immediate: e('immediate').pressed } });
+  updateDiagram();
+  free(r.uuid);
+  free(s.uuid);
+}
+
+//----- connect -----//
+async function connect(connector, connectee) {
+  const a = await component(connector), b = await component(connectee);
+  await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
+  updateDiagram();
+  free(a);
+  free(b);
+}
+
+function wire(name, side) {
+  if (gConnecting) {
+    connect(gConnecting.name, name);
+    e(`${gConnecting.name}-${gConnecting.side}`).style = '';
+    gConnecting = undefined;
+  } else {
+    e(`${name}-${side}`).style = 'background-image: linear-gradient(to top, #fff, rgba(0, 128, 255, 0.5), #fff)';
+    gConnecting = { name, side };
+  }
+}
+
+//----- play -----//
+async function play(name) {
+  var buffers = [];
+  socketBroadcastListenerAdd('audio', (r) => {
+    const buffer = [];
+    function convert(code) {
+      if (code <= 57) return code - 46;// ./0123456789
+      if (code <= 90) return code - 53;// A-Z
+      return code - 59;// a-z
+    }
+    for (var i = 0; i < r.message.length; i += 2) {
+      const lo = convert(r.message.charCodeAt(i));
+      const hi = convert(r.message.charCodeAt(i + 1));
+      buffer.push((lo + (hi << 6)) / (1 << 11) - 1);
+    }
+    buffers.push(buffer);
+  });
+  const bufferSize = (await socketSend('system.start_broadcasting_audio'))['result'];
+  const context = new AudioContext({ sampleRate: 44100 });
+  const processor = context.createScriptProcessor(bufferSize, 0, 1);
+  processor.onaudioprocess = function(e) {
+    if (buffers.length) {
+      const audio = e.outputBuffer.getChannelData(0);
+      for (var i = 0; i < bufferSize; i++)
+        audio[i] = buffers[0][i];
+      buffers.shift();
+    }
+  }
+  processor.connect(context.destination);
+}
+
+//===== onload =====//
+function enterFunction(id, f) {
+  e(id).addEventListener('keyup', (event) => { if (event.keyCode == 13) f() });
+}
+
+window.onload = function() {
+  e('ws-url').value = `ws://${location.hostname}:9121`;
+  enterFunction('addKind', add);
+  enterFunction('invokePath'  , invoke);
+  enterFunction('invokeArgs'  , invoke);
+  enterFunction('invokeKwargs', invoke);
+  enterFunction('invokeOp'    , invoke);
+  enterFunction('invokeUuid'  , invoke);
+  window.onclick = (event) => {
+    contextDismiss();
+  };
+  window.onkeyup = (event) => {
+    if (event.keyCode == 27) {
+      if (gConnecting) {
+        e(`${gConnecting.name}-${gConnecting.side}`).style = '';
+        gConnecting = undefined;
+      }
+      contextDismiss();
+    }
+  }
+  setImmediate(true);
+}
+
+window.e = e;
+window.v = v;
+window.uuidv4 = uuidv4;
+
+window.socketConnect = socketConnect;
+
+window.toggleImmediate = toggleImmediate;
+window.add = add;
+window.componentContext = componentContext;
+window.invoke = invoke;
+window.onSocketConnect = onSocketConnect;
+window.wire = wire;
+
+</script>
+<body>
+
+<div>
+  <div id='socketConnect'>
+    <div>
+      <input type='text' id='ws-url' placeholder='WebSocket URL' size=80/>
+      <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/>
+    </div>
+    <div>
+      <button onclick='socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
+    </div>
+  </div>
+  <div id='main' style='display: none'>
+    <div id='diagram' style='font-family: Monospace; line-height: 1; white-space: nowrap;'>
+    </div>
+    <div>
+      <button id='immediate' onclick='toggleImmediate()' class='toggle'>immediate</button>
+    </div>
+    <div>
+      <select id='addKind'>
+      </select>
+      <button onclick='add()'>add</button>
+    </div>
+    <div>
+      <input type='text' id='invokePath' placeholder='path'/>
+      <input type='text' id='invokeArgs' placeholder='args'/>
+      <input type='text' id='invokeKwargs' placeholder='kwargs'/>
+      <input type='text' id='invokeOp' placeholder='op'/>
+      <input type='text' id='invokeUuid' placeholder='UUID'/>
+      <button onclick='invoke()'>invoke</button>
+      <div id='invokeResponse' style='font-family: Monospace'>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>

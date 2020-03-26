@@ -1,17 +1,48 @@
 import obvious
 
+import collections
 import ctypes
 import json
 import os
+import weakref
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 COMPONENTS_DIR = os.path.join(DIR, '..', '..', 'components')
 
+def component_kinds(special=None):
+    avoid = []
+    if special is not None:
+        special_kinds = [
+            i[:-3]
+            for i in os.listdir(DIR)
+            if not i.startswith('_')
+        ]
+        if special is True: return special_kinds
+        avoid = special_kinds
+    return [
+        i
+        for i in os.listdir(COMPONENTS_DIR)
+        if not i.startswith('base') and i not in avoid
+    ]
+
 class Component:
     def __init__(self, kind, name=None):
-        if name == None: name = kind
+        # tracking
+        if name == None:
+            name = kind
+            num = 1
+            while name in Component._components:
+                num += 1
+                name = kind + str(num)
+        elif name in Component._components:
+            raise Exception('name must be unique')
+        self.name = name
+        self.kind = kind
+        Component._components[name] = weakref.proxy(self)
+        # raw
         self._lib = Component._load_lib(kind)
         self._raw = self._lib.construct()
+        # typical commands
         def str_num(x):
             if type(x) in [int, float]: return str(x)
             return x
@@ -29,6 +60,7 @@ class Component:
             )
 
     def __del__(self):
+        del Component._components[self.name]
         self._lib.destruct(self._raw)
 
     def command(self, name, *args, **kwargs):
@@ -50,6 +82,7 @@ class Component:
         return result
 
     def connect(self, other):
+        Component._connections[self.name].append(other.name)
         return self.command('connect', *other._view())
 
     def _load_lib(kind):
@@ -76,6 +109,8 @@ class Component:
         ]
 
     _libs = {}
+    _components = {}
+    _connections = collections.defaultdict(list)
     _comm = None
 
 def queue_set(comm):
