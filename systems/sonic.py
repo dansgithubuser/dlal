@@ -15,4 +15,5 @@ midi.connect(sonic)
 sonic.connect(audio)
 
 audio.start()
+dlal.queue_set(comm)
 atexit.register(lambda: audio.stop())

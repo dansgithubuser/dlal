@@ -1,3 +1,4 @@
+from ._component import queue_set
 from ._default_components import *
 from ._utils import snake_to_upper_camel_case
 

@@ -5,7 +5,7 @@ class Comm(Component):
         Component.__init__(self, 'comm', name)
 
     def queue(self, component, name, *args, **kwargs):
-        self.command('queue', *component._view(), {
+        return self.command_immediate('queue', *component._view(), {
             'name': name,
             'args': args,
             'kwargs': kwargs,
