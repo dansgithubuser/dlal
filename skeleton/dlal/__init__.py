@@ -1,3 +1,4 @@
+from ._default_components import *
 from ._utils import snake_to_upper_camel_case
 
 import os
@@ -8,5 +9,3 @@ for i in os.listdir(_DIR):
     if i.startswith('_'): continue
     kind = i[:-3]
     exec(f'from .{kind} import {snake_to_upper_camel_case(kind)}')
-
-from ._default_components import *

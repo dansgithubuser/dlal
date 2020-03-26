@@ -30,12 +30,12 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "samples_per_evaluation",
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     if let Ok(v) = arg_num(&body, 0) {
                         soul.samples_per_evaluation = v;
                     }
                     Ok(Some(json!(soul.samples_per_evaluation.to_string())))
-                },
+                }),
                 info: json!({
                     "args": [{"name": "samples_per_evaluation", "optional": true}],
                 }),
@@ -44,7 +44,7 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "add",
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     let view = View::new(args(&body)?)?;
                     let join_result = view.command(json!({
                         "name": "join",
@@ -62,7 +62,7 @@ impl SpecificsTrait for Specifics {
                     }
                     soul.views.push(view);
                     Ok(None)
-                },
+                }),
                 info: json!({
                     "args": ["component", "command", "audio", "midi", "evaluate"],
                 }),
@@ -71,7 +71,7 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "start",
             Command {
-                func: |mut soul, _body| {
+                func: Box::new(|mut soul, _body| {
                     const CHANNELS: i32 = 1;
                     const INTERLEAVED: bool = true;
                     let pa = pa::PortAudio::new()?;
@@ -116,20 +116,20 @@ impl SpecificsTrait for Specifics {
                         None => (),
                     }
                     Ok(None)
-                },
+                }),
                 info: json!({}),
             },
         );
         commands.insert(
             "stop",
             Command {
-                func: |soul, _body| {
+                func: Box::new(|soul, _body| {
                     match &mut soul.stream {
                         Some(stream) => stream.stop()?,
                         None => (),
                     }
                     Ok(None)
-                },
+                }),
                 info: json!({}),
             },
         );

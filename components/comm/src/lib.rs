@@ -33,7 +33,7 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "queue",
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     soul.to_audio_send
                         .try_send(QueuedCommand {
                             view: View::new(args(&body)?)?,
@@ -45,7 +45,7 @@ impl SpecificsTrait for Specifics {
                         Err(_) => return Ok(None),
                     };
                     Ok(*soul.fro_audio_recv.try_recv()?)
-                },
+                }),
                 info: json!({
                     "args": ["component", "command", "audio", "midi", "evaluate", "body", "timeout_ms"],
                 }),

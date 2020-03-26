@@ -168,13 +168,13 @@ macro_rules! op_command {
         $commands.insert(
             $name,
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     let op: usize = arg_num(&body, 0)?;
                     if let Ok(v) = arg_num::<$type>(&body, 1) {
                         soul.ops[op].$($member)+ = v;
                     }
                     Ok(Some(json!(soul.ops[op].$($member)+.to_string())))
-                },
+                }),
                 info: json!({"args": ["operator", $($info)+]}),
             },
         );
@@ -226,12 +226,12 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "join",
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
                     soul.sample_rate = kwarg_num(&body, "sample_rate")?;
                     soul.set(1.0);
                     Ok(None)
-                },
+                }),
                 info: json!({
                     "kwargs": ["samples_per_evaluation", "sample_rate"],
                 }),
@@ -240,14 +240,14 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "connect",
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     let view = View::new(&body["args"])?;
                     if view.audio(0) == None {
                         return Err(err("output must have audio"));
                     }
                     soul.view = Some(view);
                     Ok(None)
-                },
+                }),
                 info: json!({
                     "args": VIEW_ARGS,
                 }),

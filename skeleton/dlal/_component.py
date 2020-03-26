@@ -28,6 +28,21 @@ class Component:
         if name == None: name = kind
         self._lib = Component._load_lib(kind)
         self._raw = self._lib.construct()
+        def str_num(x):
+            if type(x) in [int, float]: return str(x)
+            return x
+        def make_command(name):
+            def command(self, *args, **kwargs):
+                args = [str_num(i) for i in args]
+                return self.command(name, *args, **kwargs)
+            return command
+        for item in self.command('list'):
+            if hasattr(self, item['name']): continue
+            setattr(
+                self,
+                item['name'],
+                make_command(item['name']),
+            )
 
     def __del__(self):
         self._lib.destruct(self._raw)

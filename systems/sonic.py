@@ -14,5 +14,5 @@ audio.add(comm)
 midi.connect(sonic)
 sonic.connect(audio)
 
-audio.command('start')
-atexit.register(lambda: audio.command('stop'))
+audio.start()
+atexit.register(lambda: audio.stop())

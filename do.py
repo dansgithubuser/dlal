@@ -57,6 +57,27 @@ if args.venv_install:
     invoke('pip', 'install', '-r', 'requirements.txt')
 
 # ===== components ===== #
+new_lib_rs = '''\
+use dlal_component_base::{gen_component};
+
+pub struct Specifics {
+}
+
+gen_component!(Specifics);
+
+impl SpecificsTrait for Specifics {
+    fn new() -> Self {
+        Self {
+        }
+    }
+
+    //optional
+    fn register_commands(&self, commands: &mut CommandMap) {}
+    fn evaluate(&mut self) {}
+    fn midi(&mut self, _msg: &[u8]) {}
+    fn audio(&mut self) -> Option<&mut[f32]> { None }
+}'''
+
 if args.component_new:
     os.chdir(os.path.join(DIR, 'components'))
     invoke('cargo', 'new', '--lib', args.component_new)
@@ -67,7 +88,8 @@ if args.component_new:
             while patt in contents:
                 contents = re.sub(patt, repl, contents)
         with open(path, 'w') as file: file.write(contents)
-    mod_file(os.path.join(args.component_new, 'Cargo.toml'),
+    mod_file(
+        os.path.join(args.component_new, 'Cargo.toml'),
         [
             ('version.*', 'version = "1.0.0"'),
             ('#.*', ''),
@@ -85,30 +107,7 @@ if args.component_new:
         [('\n\n\n', '\n\n')],
     )
     mod_file(os.path.join(args.component_new, 'src', 'lib.rs'),
-        [(
-            r'(.|\n)+',
-            (
-                r'use dlal_component_base::{gen_component};\n'
-                r'\n'
-                r'pub struct Specifics {\n'
-                r'}\n'
-                r'\n'
-                r'gen_component!(Specifics);\n'
-                r'\n'
-                r'impl SpecificsTrait for Specifics {\n'
-                r'    fn new() -> Self {\n'
-                r'        Self {\n'
-                r'        }\n'
-                r'    }\n'
-                r'\n'
-                r'    //optional\n'
-                r'    fn register_commands(&self, commands: &mut CommandMap) {}\n'
-                r'    fn evaluate(&mut self) {}\n'
-                r'    fn midi(&mut self, _msg: &[u8]) {}\n'
-                r'    fn audio(&mut self) -> Option<&mut[f32]> { None }\n'
-                r'}\n'
-            ),
-        )],
+        [(r'(.|\n)+', new_lib_rs)],
     )
 
 # ===== build ===== #
@@ -146,7 +145,7 @@ if args.style_check or args.style_rust_fix:
         result |= invoke(
             'pycodestyle',
             '--ignore',
-            'E124,E128,E203,E301,E302,E305,E701,E704,E711',
+            'E124,E128,E203,E301,E302,E305,E306,E701,E704,E711',
             path,
             kwargs={'check': False},
         ).returncode

@@ -178,7 +178,7 @@ macro_rules! gen_component {
 
         // ===== commands ===== //
         pub struct Command {
-            pub func: fn(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>,
+            pub func: Box<Fn(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>>,
             pub info: $crate::JsonValue,
         }
 
@@ -211,13 +211,29 @@ macro_rules! gen_component {
                 component.commands.insert(
                     "join",
                     Command {
-                        func: |_soul, _body| {
+                        func: Box::new(|_soul, _body| {
                             Ok(None)
-                        },
+                        }),
                         info: $crate::json!({}),
                     },
                 );
             }
+            let mut list: std::vec::Vec<$crate::JsonValue> = Default::default();
+            for (name, command) in &component.commands {
+                list.push(json!({
+                    "name": name,
+                    "info": command.info,
+                }));
+            }
+            component.commands.insert(
+                "list",
+                Command {
+                    func: Box::new(move |soul, _body| {
+                        Ok(Some($crate::json!(list)))
+                    }),
+                    info: $crate::json!({}),
+                },
+            );
             Box::into_raw(Box::new(component))
         }
 
