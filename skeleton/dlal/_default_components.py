@@ -1,12 +1,10 @@
-from .component import Component, COMPONENTS_DIR
+from ._component import Component, COMPONENTS_DIR
+from ._utils import snake_to_upper_camel_case
 
 import os
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 SPECIAL_COMPONENTS = [i[:-3] for i in os.listdir(DIR)]
-
-def snake_to_upper_camel_case(s):
-    return ''.join(i.capitalize() for i in s.split('_'))
 
 __all__ = []
 for i in os.listdir(COMPONENTS_DIR):

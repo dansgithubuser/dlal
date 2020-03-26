@@ -99,6 +99,7 @@ pub type MidiView = extern "C" fn(*const c_void, *const u8, usize);
 pub type AudioView = extern "C" fn(*const c_void) -> *mut f32;
 pub type EvaluateView = extern "C" fn(*const c_void);
 
+#[derive(Debug)]
 pub struct View {
     raw: *const c_void,
     command_view: CommandView,
@@ -177,8 +178,8 @@ macro_rules! gen_component {
 
         // ===== commands ===== //
         pub struct Command {
-            pub func: fn(&mut $specifics, dlal_component_base::JsonValue) -> Result<Option<dlal_component_base::JsonValue>, Box<dyn std::error::Error>>,
-            pub info: dlal_component_base::JsonValue,
+            pub func: fn(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>,
+            pub info: $crate::JsonValue,
         }
 
         pub type CommandMap = std::collections::HashMap<&'static str, Command>;
@@ -213,7 +214,7 @@ macro_rules! gen_component {
                         func: |_soul, _body| {
                             Ok(None)
                         },
-                        info: json!({}),
+                        info: $crate::json!({}),
                     },
                 );
             }
@@ -229,24 +230,24 @@ macro_rules! gen_component {
         pub extern "C" fn command(component: *mut Component, text: *const std::os::raw::c_char) -> *const std::os::raw::c_char {
             let component = unsafe { &mut *component };
             let text = unsafe { std::ffi::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
-            let body: dlal_component_base::JsonValue = match dlal_component_base::json_from_str(text) {
+            let body: $crate::JsonValue = match $crate::json_from_str(text) {
                 Ok(body) => body,
-                Err(err) => return component.set_result(&json!({"error": err.to_string()}).to_string()),
+                Err(err) => return component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),
             };
             let name = match body["name"].as_str() {
                 Some(name) => name,
-                None => return component.set_result(&json!({"error": "command name isn't a string"}).to_string()),
+                None => return component.set_result(&$crate::json!({"error": "command name isn't a string"}).to_string()),
             };
             let command = match component.commands.get(name) {
                 Some(command) => command,
-                None => return component.set_result(&json!({"error": format!(r#"no such command "{}""#, name)}).to_string()),
+                None => return component.set_result(&$crate::json!({"error": format!(r#"no such command "{}""#, name)}).to_string()),
             };
             match (command.func)(&mut component.specifics, body) {
                 Ok(result) => match(result) {
                     Some(result) => component.set_result(&result.to_string()),
                     None => std::ptr::null(),
                 },
-                Err(err) => component.set_result(&json!({"error": err.to_string()}).to_string()),
+                Err(err) => component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),
             }
         }
 

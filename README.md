@@ -27,7 +27,6 @@ Try `python do.py -h` to get started.
 - dlal universal linkage
 	- web interface
 		- python component knows what commands are available
-		- command queuing
 	- serialization
 	- components
 		- flesh out existing component features

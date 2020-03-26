@@ -60,33 +60,56 @@ if args.venv_install:
 if args.component_new:
     os.chdir(os.path.join(DIR, 'components'))
     invoke('cargo', 'new', '--lib', args.component_new)
-    with open(os.path.join(args.component_new, 'Cargo.toml')) as file:
-        contents = file.read()
-    contents = re.sub(
-        'version.*',
-        'version = "1.0.0"',
-        contents,
+    def mod_file(path, subs=[], reps=[]):
+        with open(path) as file: contents = file.read()
+        for patt, repl in subs: contents = re.sub(patt, repl, contents)
+        for patt, repl in reps:
+            while patt in contents:
+                contents = re.sub(patt, repl, contents)
+        with open(path, 'w') as file: file.write(contents)
+    mod_file(os.path.join(args.component_new, 'Cargo.toml'),
+        [
+            ('version.*', 'version = "1.0.0"'),
+            ('#.*', ''),
+            (
+                r'\[dependencies\]',
+                (
+                    r'[lib]\n'
+                    r'crate-type = ["cdylib"]\n'
+                    r'\n'
+                    r'[dependencies]\n'
+                    r'dlal-component-base = { path = "../base" }'
+                ),
+            ),
+        ],
+        [('\n\n\n', '\n\n')],
     )
-    contents = re.sub(
-        '#.*',
-        '',
-        contents,
+    mod_file(os.path.join(args.component_new, 'src', 'lib.rs'),
+        [(
+            r'(.|\n)+',
+            (
+                r'use dlal_component_base::{gen_component};\n'
+                r'\n'
+                r'pub struct Specifics {\n'
+                r'}\n'
+                r'\n'
+                r'gen_component!(Specifics);\n'
+                r'\n'
+                r'impl SpecificsTrait for Specifics {\n'
+                r'    fn new() -> Self {\n'
+                r'        Self {\n'
+                r'        }\n'
+                r'    }\n'
+                r'\n'
+                r'    //optional\n'
+                r'    fn register_commands(&self, commands: &mut CommandMap) {}\n'
+                r'    fn evaluate(&mut self) {}\n'
+                r'    fn midi(&mut self, _msg: &[u8]) {}\n'
+                r'    fn audio(&mut self) -> Option<&mut[f32]> { None }\n'
+                r'}\n'
+            ),
+        )],
     )
-    contents = re.sub(
-        r'\[dependencies\]',
-        (
-            r'[lib]\n'
-            r'crate-type = ["cdylib"]\n'
-            r'\n'
-            r'[dependencies]\n'
-            r'dlal-component-base = { path = "../base" }'
-        ),
-        contents,
-    )
-    while '\n\n\n' in contents:
-        contents = re.sub('\n\n\n', '\n\n', contents)
-    with open(os.path.join(args.component_new, 'Cargo.toml'), 'w') as file:
-        file.write(contents)
 
 # ===== build ===== #
 if args.build:

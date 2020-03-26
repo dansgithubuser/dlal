@@ -1,9 +1,9 @@
 use dlal_component_base::{arg_num, args, gen_component, json, View};
 
+use portaudio as pa;
+
 use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
-
-use portaudio as pa;
 
 const SAMPLE_RATE: f64 = 44100.0;
 

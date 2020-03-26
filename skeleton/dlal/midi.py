@@ -1,4 +1,4 @@
-from .component import Component
+from ._component import Component
 
 import os
 
