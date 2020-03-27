@@ -16,4 +16,5 @@ sonic.connect(audio)
 
 audio.start()
 dlal.queue_set(comm)
+dlal.serve()
 atexit.register(lambda: audio.stop())

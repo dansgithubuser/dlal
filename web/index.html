@@ -58,6 +58,7 @@
 import {
   e,
   sleep,
+  snakeToUpperCamelCase,
   uuidv4,
   v,
 } from './../deps/obvious/obvious.js';
@@ -79,7 +80,7 @@ var gComponents = {};
 
 //===== system stuff =====//
 async function onSocketConnect() {
-  const kinds = (await socketSend('component_kinds'))['result'];
+  const kinds = (await socketSend('component_kinds'))['result'].map(i => snakeToUpperCamelCase(i));
   for (const kind of kinds) {
     const option = document.createElement('option');
     option.innerText = kind;
@@ -197,12 +198,11 @@ function showResponse(response, extra) {
 }
 
 async function add() {
-  var r = await socketSend('skeleton.component_builder', { args: [v('addKind')], op: 'store' });
-  var s = await socketSend(r.uuid, { op: 'store' });
-  await socketSend('system.add', { args: [s.uuid] });
+  let component = await socketSend(v('addKind'), { op: 'store' });
+  if(v('addKind') != 'Audio')
+    await socketSend('components.audio.add', { args: [component.uuid] });
   updateDiagram();
-  free(r.uuid);
-  free(s.uuid);
+  free(component.uuid);
 }
 
 //----- connect -----//
