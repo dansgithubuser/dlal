@@ -97,6 +97,24 @@ impl SpecificsTrait for Specifics {
                 }),
             },
         );
+        commands.insert(
+            "disconnect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = View::new(args(&body)?)?;
+                    match soul.views.iter().position(|i| i == &view) {
+                        Some(i) => {
+                            soul.views.remove(i);
+                        }
+                        None => (),
+                    }
+                    Ok(None)
+                }),
+                info: json!({
+                    "args": ["component", "command", "audio", "midi", "evaluate"],
+                }),
+            },
+        );
     }
 
     fn evaluate(&mut self) {

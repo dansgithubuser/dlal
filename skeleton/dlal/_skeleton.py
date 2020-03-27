@@ -11,6 +11,9 @@ import os as _os
 def queue_set(comm):
     _Component._comm = comm
 
+def component(name):
+    return _Component._components[name]
+
 def system_info():
     return {
         'components': {

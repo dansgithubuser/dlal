@@ -99,7 +99,7 @@ pub type MidiView = extern "C" fn(*const c_void, *const u8, usize);
 pub type AudioView = extern "C" fn(*const c_void) -> *mut f32;
 pub type EvaluateView = extern "C" fn(*const c_void);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct View {
     raw: *const c_void,
     command_view: CommandView,

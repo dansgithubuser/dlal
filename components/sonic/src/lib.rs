@@ -253,6 +253,16 @@ impl SpecificsTrait for Specifics {
                 }),
             },
         );
+        commands.insert(
+            "disconnect",
+            Command {
+                func: Box::new(|soul, _body| {
+                    soul.view = None;
+                    Ok(None)
+                }),
+                info: json!({}),
+            },
+        );
         op_command!(commands, "a", f32, (a), {
             "name": "attack rate",
             "units": "amplitude per sample",

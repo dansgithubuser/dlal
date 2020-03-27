@@ -88,7 +88,7 @@ export function contextDismiss() {
 }
 
 export async function component(name) {
-  const r = await socketSend(name, { op: 'store' });
+  const r = await socketSend('component', { args: [name], op: 'store' });
   return r.uuid;
 }
 

@@ -6,12 +6,11 @@ import pprint
 import uuid
 import traceback
 
-FREE = uuid.UUID('86041f71-60f5-45f1-ae73-41217ad8bb48')
-
 log = _logging.get_log(__name__)
 
 class Server:
     def __init__(self, root):
+        root.free = uuid.UUID('86041f71-60f5-45f1-ae73-41217ad8bb48')
         self.root = root
         self.store = {}
 
@@ -30,6 +29,7 @@ class Server:
                 except AttributeError:
                     request['result'] = None
                     request['error'] = traceback.format_exc()
+                    log('debug', lambda: 'response '+pprint.pformat(request))
                     return json.dumps(request)
         args = [self.sub(i) for i in request.get('args', [])]
         kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
@@ -38,7 +38,7 @@ class Server:
         else:
             result = value
         if request.get('op') == 'store':
-            if result == FREE:
+            if result == self.root.free:
                 del self.store[request['uuid']]
                 request['result'] = True
             else:
@@ -68,11 +68,6 @@ def serve(url=None):
     # root
     class Namespace: pass
     root = Namespace()
-    from . import _component
-    components = Namespace()
-    for k, v in _component.Component._components.items():
-        setattr(components, k, v)
-    setattr(root, 'components', components)
     from . import _skeleton
     for k, v in _skeleton.__dict__.items():
         if k.startswith('_'): continue

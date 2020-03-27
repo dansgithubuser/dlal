@@ -125,7 +125,9 @@ function componentContext(name) {
       contextOptionPage('monitor', 'audio-monitor.html');
       contextSpace(dropdown);
       contextOption(dropdown, 'start', async function(name) {
-        await socketSend(`${name}.start`);
+        const audio = await component('audio');
+        await socketSend(`${audio}.start`);
+        free(audio);
         updateDiagram();
       }, name);
       break;
@@ -198,11 +200,13 @@ function showResponse(response, extra) {
 }
 
 async function add() {
-  let component = await socketSend(v('addKind'), { op: 'store' });
-  if(v('addKind') != 'Audio')
-    await socketSend('components.audio.add', { args: [component.uuid] });
+  let new_component = await socketSend(v('addKind'), { op: 'store' });
+  if(v('addKind') != 'Audio') {
+    let audio = await component('audio');
+    await socketSend(`${audio}.add`, { args: [new_component.uuid] });
+    free(audio);
+  }
   updateDiagram();
-  free(component.uuid);
 }
 
 //----- connect -----//

@@ -86,9 +86,14 @@ class Component:
             raise Exception(result['error'])
         return result
 
-    def connect(self, other):
-        Component._connections[self.name].append(other.name)
-        return self.command('connect', *other._view())
+    def connect(self, other, toggle=False):
+        if toggle and other.name in Component._connections.get(self.name, []):
+            result = self.command('disconnect', *other._view())
+            Component._connections[self.name].remove(other.name)
+        else:
+            result = self.command('connect', *other._view())
+            Component._connections[self.name].append(other.name)
+        return result
 
     def _load_lib(kind):
         if kind in Component._libs: return Component._libs[kind]
