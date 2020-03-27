@@ -196,26 +196,10 @@ function showResponse(response, extra) {
   e('invokeResponse').innerHTML = html;
 }
 
-function setImmediate(pressed) {
-  const el = e('immediate');
-  el.pressed = pressed;
-  if (pressed) {
-    el.classList.add('toggle-on');
-    el.classList.remove('toggle-off');
-  } else {
-    el.classList.add('toggle-off');
-    el.classList.remove('toggle-on');
-  }
-}
-
-function toggleImmediate() {
-  setImmediate(!e('immediate').pressed);
-}
-
 async function add() {
   var r = await socketSend('skeleton.component_builder', { args: [v('addKind')], op: 'store' });
   var s = await socketSend(r.uuid, { op: 'store' });
-  await socketSend('system.add', { args: [s.uuid], kwargs: { immediate: e('immediate').pressed } });
+  await socketSend('system.add', { args: [s.uuid] });
   updateDiagram();
   free(r.uuid);
   free(s.uuid);
@@ -297,7 +281,6 @@ window.onload = function() {
       contextDismiss();
     }
   }
-  setImmediate(true);
 }
 
 window.e = e;
@@ -306,7 +289,6 @@ window.uuidv4 = uuidv4;
 
 window.socketConnect = socketConnect;
 
-window.toggleImmediate = toggleImmediate;
 window.add = add;
 window.componentContext = componentContext;
 window.invoke = invoke;
@@ -324,10 +306,6 @@ window.wire = wire;
   </div>
   <div id='main' style='display: none'>
     <div id='diagram'>
-    </div>
-    <br>
-    <div>
-      <button id='immediate' onclick='toggleImmediate()' class='toggle'>immediate</button>
     </div>
     <br>
     <div>
