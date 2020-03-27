@@ -318,31 +318,30 @@ window.wire = wire;
 
 <div>
   <div id='socketConnect'>
-    <div>
-      <input type='text' id='ws-url' placeholder='WebSocket URL' size=80/>
-      <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/>
-    </div>
-    <div>
-      <button onclick='socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
-    </div>
+    <input type='text' id='ws-url' placeholder='WebSocket URL' size=80/><br>
+    <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/><br>
+    <button onclick='socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
   </div>
   <div id='main' style='display: none'>
-    <div id='diagram' style='font-family: Monospace; line-height: 1; white-space: nowrap;'>
+    <div id='diagram'>
     </div>
+    <br>
     <div>
       <button id='immediate' onclick='toggleImmediate()' class='toggle'>immediate</button>
     </div>
+    <br>
     <div>
       <select id='addKind'>
       </select>
       <button onclick='add()'>add</button>
     </div>
+    <br>
     <div>
-      <input type='text' id='invokePath' placeholder='path'/>
-      <input type='text' id='invokeArgs' placeholder='args'/>
-      <input type='text' id='invokeKwargs' placeholder='kwargs'/>
-      <input type='text' id='invokeOp' placeholder='op'/>
-      <input type='text' id='invokeUuid' placeholder='UUID'/>
+      <input type='text' id='invokePath' placeholder='path'/><br>
+      [<input type='text' id='invokeArgs' placeholder='args'/>]<br>
+      {<input type='text' id='invokeKwargs' placeholder='kwargs'/>}<br>
+      <input type='text' id='invokeOp' placeholder='op'/><br>
+      <input type='text' id='invokeUuid' placeholder='UUID'/><br>
       <button onclick='invoke()'>invoke</button>
       <div id='invokeResponse' style='font-family: Monospace'>
       </div>
