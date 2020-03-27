@@ -2,6 +2,7 @@ import obvious
 
 import collections
 import ctypes
+import functools
 import json
 import os
 import weakref
@@ -25,6 +26,16 @@ def component_kinds(special=None):
         if not i.startswith('base') and i not in avoid
     ]
 
+def _json_prep(args, kwargs):
+    def prep(x):
+        if type(x) == bool:
+            return '1' if x else '0'
+        elif type(x) in [int, float]:
+            return str(x)
+        else:
+            return x
+    return [prep(i) for i in args], {k: prep(v) for k, v in kwargs.items()}
+
 class Component:
     def __init__(self, kind, name=None):
         # tracking
@@ -43,20 +54,12 @@ class Component:
         self._lib = Component._load_lib(kind)
         self._raw = self._lib.construct()
         # typical commands
-        def str_num(x):
-            if type(x) in [int, float]: return str(x)
-            return x
-        def make_command(name):
-            def command(self, *args, **kwargs):
-                args = [str_num(i) for i in args]
-                return self.command(name, *args, **kwargs)
-            return command
         for item in self.command_immediate('list'):
             if hasattr(self, item['name']): continue
             setattr(
                 self,
                 item['name'],
-                make_command(item['name']),
+                functools.partial(self.command, item['name']),
             )
 
     def __del__(self):
@@ -64,12 +67,14 @@ class Component:
         self._lib.destruct(self._raw)
 
     def command(self, name, *args, **kwargs):
+        args, kwargs = _json_prep(args, kwargs)
         if Component._comm:
             return Component._comm.queue(self, name, *args, **kwargs)
         else:
             return self.command_immediate(name, *args, **kwargs)
 
     def command_immediate(self, name, *args, **kwargs):
+        args, kwargs = _json_prep(args, kwargs)
         result = self._lib.command(self._raw, json.dumps({
             'name': name,
             'args': args,
