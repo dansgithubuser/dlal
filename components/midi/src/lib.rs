@@ -102,11 +102,8 @@ impl SpecificsTrait for Specifics {
             Command {
                 func: Box::new(|soul, body| {
                     let view = View::new(args(&body)?)?;
-                    match soul.views.iter().position(|i| i == &view) {
-                        Some(i) => {
-                            soul.views.remove(i);
-                        }
-                        None => (),
+                    if let Some(i) = soul.views.iter().position(|i| i == &view) {
+                        soul.views.remove(i);
                     }
                     Ok(None)
                 }),

@@ -97,7 +97,7 @@ impl Op {
                 }
             }
         }
-        return self.o == 0.0;
+        self.o == 0.0
     }
 }
 
@@ -130,8 +130,8 @@ impl Note {
             return;
         }
         let step = frequency / sample_rate as f32;
-        for i in 0..OPS {
-            self.runners[i].step = step * ops[i].m;
+        for (i, op) in ops.iter().enumerate() {
+            self.runners[i].step = step * op.m;
         }
     }
 
@@ -314,7 +314,7 @@ impl SpecificsTrait for Specifics {
     }
 
     fn midi(&mut self, msg: &[u8]) {
-        if msg.len() == 0 {
+        if msg.is_empty() {
             return;
         }
         match msg[0] & 0xf0 {
@@ -357,7 +357,7 @@ impl SpecificsTrait for Specifics {
             0xe0 => {
                 if msg.len() >= 3 {
                     const CENTER: f32 = 0x2000 as f32;
-                    let value = (msg[1] + msg[2] << 7) as f32;
+                    let value = (msg[1] + (msg[2] << 7)) as f32;
                     let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
                     self.set((2.0 as f32).powf(octaves));
                 }
@@ -375,10 +375,10 @@ impl SpecificsTrait for Specifics {
             if note.done {
                 continue;
             }
-            for i in 0..self.samples_per_evaluation {
+            for i in audio.iter_mut() {
                 note.done = true;
                 for op in 0..OPS {
-                    audio[i] += note.advance(op, &self.ops, self.m);
+                    *i += note.advance(op, &self.ops, self.m);
                 }
             }
         }

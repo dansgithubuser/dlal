@@ -54,14 +54,10 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {
-        loop {
-            match self.to_audio_recv.try_recv() {
-                Ok(queued_command) => self
-                    .fro_audio_send
-                    .try_send(Box::new(queued_command.view.command(*queued_command.body)))
-                    .expect("try_send failed"),
-                Err(_) => break,
-            };
+        while let Ok(queued_command) = self.to_audio_recv.try_recv() {
+            self.fro_audio_send
+                .try_send(Box::new(queued_command.view.command(*queued_command.body)))
+                .expect("try_send failed");
         }
     }
 }

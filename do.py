@@ -34,6 +34,7 @@ parser.add_argument('--web', '-w', action='store_true',
 )
 parser.add_argument('--style-check', '--style', action='store_true')
 parser.add_argument('--style-rust-fix', action='store_true')
+parser.add_argument('--style-rust-clippy', action='store_true')
 args = parser.parse_args()
 
 DIR = os.path.dirname(os.path.realpath(__file__))
@@ -177,7 +178,7 @@ if args.style_check or args.style_rust_fix:
         result |= invoke(
             'pycodestyle',
             '--ignore',
-            'E124,E128,E203,E226,E301,E302,E305,E306,E701,E704,E711,E722',
+            'E124,E128,E131,E203,E226,E301,E302,E305,E306,E701,E704,E711,E722',
             path,
             kwargs={'check': False},
             title=None,
@@ -189,3 +190,16 @@ if args.style_check or args.style_rust_fix:
     for i in glob.glob(os.path.join(DIR, 'systems', '*.py')):
         check_py(i)
     if result: sys.exit(1)
+
+if args.style_rust_clippy:
+    for i in glob.glob(os.path.join(DIR, 'components', '*')):
+        os.chdir(i)
+        invoke(
+            'cargo', 'clippy', '--',
+                '-A', 'clippy::not_unsafe_ptr_arg_deref',
+                '-A', 'clippy::single_match',
+                '-A', 'clippy::unnecessary_cast',
+                '-A', 'clippy::transmute_ptr_to_ptr',
+            title=None,
+            fmt=os.path.relpath(i, DIR)
+        )

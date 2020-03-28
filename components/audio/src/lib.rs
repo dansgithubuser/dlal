@@ -138,7 +138,7 @@ impl SpecificsTrait for Specifics {
     fn evaluate(&mut self) {}
 
     fn audio(&mut self) -> Option<&mut [f32]> {
-        if self.audio == null_mut() {
+        if self.audio.is_null() {
             return Some(&mut []);
         }
         Some(unsafe { from_raw_parts_mut(self.audio, self.samples_per_evaluation) })
