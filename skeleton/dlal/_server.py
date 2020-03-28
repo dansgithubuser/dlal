@@ -4,7 +4,10 @@ from ._utils import snake_to_upper_camel_case
 import json
 import pprint
 import uuid
+import threading
+import time
 import traceback
+import weakref
 
 log = _logging.get_log(__name__)
 
@@ -54,6 +57,7 @@ class Server:
         return self.store.get(arg, arg)
 
     server = None
+    audio_broadcast = None
 
 def pack_for_broadcast(topic, message):
     log('verbose', lambda: f'broadcast {topic} {message}')
@@ -84,3 +88,39 @@ def serve(url=None):
     else:
         from ._websocket_server import WsServer
         Server.server = WsServer(root)
+
+class AudioBroadcast:
+    def __init__(self, tape, size, thread):
+        self.tape = tape
+        self.size = size
+        self.thread = thread
+
+def audio_broadcast_start(tape):
+    if not Server.server: raise Exception('nothing to broadcast audio to')
+    if Server.audio_broadcast:
+        if tape != Server.audio_broadcast.tape:
+            raise Exception('already broadcasting')
+        else:
+            return Server.audio_broadcast.size
+    size = tape.size() // 8
+    server = weakref.proxy(Server.server)
+    if not isinstance(tape, weakref.ProxyType):
+        tape = weakref.proxy(tape)
+    def broadcast():
+        digits = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        def encode(f):
+            if f < -1:
+                f = -1
+            elif f > 1:
+                f = 1
+            i = int((f + 1) * ((1 << 11) - 1))
+            return digits[i & 0x3f] + digits[i >> 6]
+        while True:
+            time.sleep(0.25)
+            server.send('audio', ''.join(encode(i) for i in tape.read(size)))
+    thread = threading.Thread(target=broadcast)
+    tape.clear()
+    time.sleep(1)
+    thread.start()
+    Server.audio_broadcast = AudioBroadcast(tape, size, thread)
+    return size

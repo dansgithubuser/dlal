@@ -108,21 +108,15 @@ async function updateDiagram() {
 
 async function componentContext(name) {
   const dropdown = context(e(`component-${name}`));
-  contextOption(dropdown, 'webboard', openPage, {
-    url: 'webboard.html',
-    component: await getComponent(name),
-  });
   const contextOptionPage = async (optionName, optionUrl) => contextOption(
     dropdown,
     optionName,
     openPage,
     { url: optionUrl, component: await getComponent(name) },
   );
+  let space = true;
   switch (gSystemInfo['components'][name].kind) {
     case 'audio':
-      contextOption(dropdown, 'play', play, name);
-      await contextOptionPage('monitor', 'audio-monitor.html');
-      contextSpace(dropdown);
       contextOption(dropdown, 'start', async function(name) {
         const audio = await getComponent('audio');
         await socketSend(`${audio}.start`);
@@ -134,9 +128,15 @@ async function componentContext(name) {
       break;
     case 'sonic':
       await contextOptionPage('sonic', 'sonic.html');
+      await contextOptionPage('webboard', 'webboard.html');
       break;
+    case 'tape':
+      contextOption(dropdown, 'play', play, name);
+      break;
+    default:
+      space = false;
   }
-  contextSpace(dropdown);
+  if (space) contextSpace(dropdown);
   contextOption(dropdown, 'list', async function(name) {
     const component = await getComponent(name);
     const response = await socketSend(`${component}.command_immediate`, { args: ['list'] });
@@ -225,7 +225,10 @@ async function play(name) {
     }
     buffers.push(buffer);
   });
-  const bufferSize = (await socketSend('system.start_broadcasting_audio'))['result'];
+  const bufferSize = (await socketSend(
+    'audio_broadcast_start',
+    { args: [await getComponent(name)] },
+  ))['result'];
   const context = new AudioContext({ sampleRate: 44100 });
   const processor = context.createScriptProcessor(bufferSize, 0, 1);
   processor.onaudioprocess = function(e) {
@@ -298,11 +301,11 @@ window.wire = wire;
     </div>
     <br>
     <div>
-      <input type='text' id='invokePath' placeholder='path' size=40/><br>
-      [<input type='text' id='invokeArgs' placeholder='args' size=40/>]<br>
-      {<input type='text' id='invokeKwargs' placeholder='kwargs' size=40/>}<br>
-      <input type='text' id='invokeOp' placeholder='op' size=40/><br>
-      <input type='text' id='invokeUuid' placeholder='UUID' size=40/><br>
+      <input type='text' id='invokePath' placeholder='path' size=80/><br>
+      [<input type='text' id='invokeArgs' placeholder='args' size=80/>]<br>
+      {<input type='text' id='invokeKwargs' placeholder='kwargs' size=80/>}<br>
+      <input type='text' id='invokeOp' placeholder='op' size=80/><br>
+      <input type='text' id='invokeUuid' placeholder='UUID' size=80/><br>
       <button onclick='invoke()'>invoke</button>
     </div>
     <br>

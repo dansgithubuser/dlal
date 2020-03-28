@@ -29,19 +29,16 @@ Try `python do.py -h` to get started.
 - dlal universal linkage
 	- web interface
 		- audio
+			- buffer
+			- tape
+			- broadcast
 	- serialization
 	- mic
-	- components
-		- buffer
-		- filei, fileo, filea
-		- lpf
-		- gain
-		- reverb
-		- liner
-		- pitcher
 	- audiobro
+		- liner
 		- midi editor
-		- chorus?
+		- pitcher
+		- reverb/chorus?
 
 - burgers
 	- arpeggiator
