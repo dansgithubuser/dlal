@@ -244,12 +244,12 @@ macro_rules! gen_component {
             // list
             let mut list: $crate::Vec<$crate::JsonValue> = Default::default();
             for (name, command) in &component.commands {
-                list.push(json!({
+                list.push($crate::json!({
                     "name": name,
                     "info": command.info,
                 }));
             }
-            list.push(json!({"name": "list", "info": {}}));
+            list.push($crate::json!({"name": "list", "info": {}}));
             list.sort_by_key(|i| {
                 match i["name"].as_str().unwrap() {
                     "list" => "~1",
@@ -323,5 +323,74 @@ macro_rules! gen_component {
             let component = unsafe { &mut *component };
             component.specifics.evaluate();
         }
+    }
+}
+
+#[macro_export]
+macro_rules! uniconnect {
+    ($commands:expr, $check_audio:expr) => {
+        $commands.insert(
+            "connect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = $crate::View::new($crate::args(&body)?)?;
+                    if $check_audio && view.audio(0) == None {
+                        return Err($crate::err("output must have audio"));
+                    }
+                    soul.view = Some(view);
+                    Ok(None)
+                }),
+                info: $crate::json!({
+                    "args": $crate::VIEW_ARGS,
+                }),
+            },
+        );
+        $commands.insert(
+            "disconnect",
+            Command {
+                func: Box::new(|soul, _body| {
+                    soul.view = None;
+                    Ok(None)
+                }),
+                info: $crate::json!({}),
+            },
+        );
+    }
+}
+
+#[macro_export]
+macro_rules! multiconnect {
+    ($commands:expr, $check_audio:expr) => {
+        $commands.insert(
+            "connect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = $crate::View::new($crate::args(&body)?)?;
+                    if $check_audio && view.audio(0) == None {
+                        return Err($crate::err("output must have audio"));
+                    }
+                    soul.views.push(view);
+                    Ok(None)
+                }),
+                info: $crate::json!({
+                    "args": $crate::VIEW_ARGS,
+                }),
+            },
+        );
+        $commands.insert(
+            "disconnect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = View::new($crate::args(&body)?)?;
+                    if let Some(i) = soul.views.iter().position(|i| i == &view) {
+                        soul.views.remove(i);
+                    }
+                    Ok(None)
+                }),
+                info: $crate::json!({
+                    "args": $crate::VIEW_ARGS,
+                }),
+            },
+        );
     }
 }

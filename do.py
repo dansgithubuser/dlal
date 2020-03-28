@@ -91,7 +91,7 @@ impl SpecificsTrait for Specifics {
     fn register_commands(&self, commands: &mut CommandMap) {}
     fn evaluate(&mut self) {}
     fn midi(&mut self, _msg: &[u8]) {}
-    fn audio(&mut self) -> Option<&mut[f32]> { None }
+    fn audio(&mut self) -> Option<&mut [f32]> { None }
 }'''
 
 if args.component_new:
@@ -186,6 +186,7 @@ if args.style_check or args.style_rust_fix:
                 '-A', 'clippy::single_match',
                 '-A', 'clippy::unnecessary_cast',
                 '-A', 'clippy::transmute_ptr_to_ptr',
+                '-A', 'clippy::needless_range_loop',
             title=None,
             fmt=os.path.relpath(path, DIR)
         ).returncode

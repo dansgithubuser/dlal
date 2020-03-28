@@ -162,7 +162,7 @@ impl Note {
     }
 }
 
-// ===== components ===== //
+// ===== component ===== //
 macro_rules! op_command {
     ($commands:ident, $name:literal, $type:ty, ($($member:tt)+), ($($info:tt)+), $set:expr) => {
         $commands.insert(
@@ -184,7 +184,7 @@ macro_rules! op_command {
     }
 }
 
-use dlal_component_base::{arg_num, err, gen_component, json, kwarg_num, View, VIEW_ARGS};
+use dlal_component_base::{arg_num, gen_component, json, kwarg_num, uniconnect, View};
 use std::f32;
 
 #[derive(Default)]
@@ -240,32 +240,7 @@ impl SpecificsTrait for Specifics {
                 }),
             },
         );
-        commands.insert(
-            "connect",
-            Command {
-                func: Box::new(|soul, body| {
-                    let view = View::new(&body["args"])?;
-                    if view.audio(0) == None {
-                        return Err(err("output must have audio"));
-                    }
-                    soul.view = Some(view);
-                    Ok(None)
-                }),
-                info: json!({
-                    "args": VIEW_ARGS,
-                }),
-            },
-        );
-        commands.insert(
-            "disconnect",
-            Command {
-                func: Box::new(|soul, _body| {
-                    soul.view = None;
-                    Ok(None)
-                }),
-                info: json!({}),
-            },
-        );
+        uniconnect!(commands, true);
         op_command!(commands, "a", f32, (a), ({
             "name": "amount",
             "desc": "attack rate",

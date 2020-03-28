@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_str, args, err, gen_component, json, View};
+use dlal_component_base::{arg_str, err, gen_component, json, multiconnect, View};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -85,33 +85,7 @@ impl SpecificsTrait for Specifics {
                 }),
             },
         );
-        commands.insert(
-            "connect",
-            Command {
-                func: Box::new(|soul, body| {
-                    soul.views.push(View::new(args(&body)?)?);
-                    Ok(None)
-                }),
-                info: json!({
-                    "args": ["component", "command", "audio", "midi", "evaluate"],
-                }),
-            },
-        );
-        commands.insert(
-            "disconnect",
-            Command {
-                func: Box::new(|soul, body| {
-                    let view = View::new(args(&body)?)?;
-                    if let Some(i) = soul.views.iter().position(|i| i == &view) {
-                        soul.views.remove(i);
-                    }
-                    Ok(None)
-                }),
-                info: json!({
-                    "args": ["component", "command", "audio", "midi", "evaluate"],
-                }),
-            },
-        );
+        multiconnect!(commands, false);
     }
 
     fn evaluate(&mut self) {

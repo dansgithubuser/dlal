@@ -29,7 +29,6 @@ Try `python do.py -h` to get started.
 - dlal universal linkage
 	- web interface
 		- audio
-			- buffer
 			- tape
 			- broadcast
 	- serialization
