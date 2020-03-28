@@ -225,6 +225,16 @@ macro_rules! gen_component {
                     "info": command.info,
                 }));
             }
+            list.push(json!({"name": "list", "info": {}}));
+            list.sort_by_key(|i| {
+                match i["name"].as_str().unwrap() {
+                    "list" => "~1",
+                    "join" => "~2",
+                    "connect" => "~3",
+                    "disconnect" => "~4",
+                    name => name,
+                }.to_string()
+            });
             component.commands.insert(
                 "list",
                 Command {

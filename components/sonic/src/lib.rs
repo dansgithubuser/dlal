@@ -264,41 +264,51 @@ impl SpecificsTrait for Specifics {
             },
         );
         op_command!(commands, "a", f32, (a), {
-            "name": "attack rate",
+            "name": "amount",
+            "desc": "attack rate",
             "units": "amplitude per sample",
             "range": "(0, 1]",
         });
         op_command!(commands, "d", f32, (d), {
-            "name": "decay rate",
+            "name": "amount",
+            "desc": "decay rate",
             "units": "amplitude per sample",
             "range": "(0, 1]",
         });
         op_command!(commands, "s", f32, (s), {
-            "name": "sustain level",
+            "name": "amount",
+            "desc": "sustain level",
             "range": "[0, 1]",
         });
         op_command!(commands, "r", f32, (r), {
-            "name": "release rate",
+            "name": "amount",
+            "desc": "release rate",
             "units": "amplitude per sample",
             "range": "(0, 1]",
         });
         op_command!(commands, "m", f32, (m), {
-            "name": "frequency multiplier",
+            "name": "amount",
+            "desc": "frequency multiplier",
         });
         op_command!(commands, "i0", f32, (i[0]), {
-            "name": "FM from operator 0",
+            "name": "amount",
+            "desc": "FM from operator 0",
         });
         op_command!(commands, "i1", f32, (i[1]), {
-            "name": "FM from operator 1",
+            "name": "amount",
+            "desc": "FM from operator 1",
         });
         op_command!(commands, "i2", f32, (i[2]), {
-            "name": "FM from operator 2",
+            "name": "amount",
+            "desc": "FM from operator 2",
         });
         op_command!(commands, "i3", f32, (i[3]), {
-            "name": "FM from operator 3",
+            "name": "amount",
+            "desc": "FM from operator 3",
         });
         op_command!(commands, "o", f32, (o), {
-            "name": "amount to contribute to output",
+            "name": "amount",
+            "desc": "amount to contribute to output",
             "range": "[0, 1]",
         });
     }

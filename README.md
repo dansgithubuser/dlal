@@ -26,7 +26,6 @@ Try `python do.py -h` to get started.
 ## todo
 - dlal universal linkage
 	- web interface
-		- help/arg
 		- two clients?
 		- webboard
 		- audio

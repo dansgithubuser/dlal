@@ -143,32 +143,22 @@ function componentContext(name) {
       break;
   }
   contextSpace(dropdown);
-  contextOption(dropdown, 'help', async function(name) {
-    showResponse(
-      await socketSend(`${name}.command_immediate`, { args: ['help'] }),
-      (html) => {
-        const lines = [];
-        for (var line of html.split('<br>')) {
-          const trimmed = line.replace(/&nbsp;/g, '');
-          if (line.startsWith('&nbsp;') && trimmed) {
-            const command = trimmed.split(' ')[0];
-            line = `<span
-              class='wire'
-              onclick='e("invokePath").value = "system.${name}.${command}"'
-            >${line}</span>`;
-          }
-          lines.push(line);
-        }
-        return lines.join('<br>');
-      },
-    );
-  }, name);
-  contextOption(dropdown, 'arg', async function(name) {
-    if (!(name in gComponents)) {
-      const response = await socketSend(name, { op: 'store' });
-      gComponents[name] = response.uuid;
+  contextOption(dropdown, 'list', async function(name) {
+    const component = await getComponent(name);
+    const response = await socketSend(`${component}.command_immediate`, { args: ['list'] });
+    let list = '';
+    for (const i of response.result) {
+      list += (
+        `<span
+          class='wire'
+          onclick='e("invokePath").value = "${component}.${i.name}"'
+        >`
+        +
+        `${i.name} ${JSON.stringify(i.info, null, 2)}</span>\n\n`
+          .replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')
+      );
     }
-    e('invokeArgs').value = `"${gComponents[name]}"`;
+    e('response').innerHTML = list;
   }, name);
 }
 
@@ -194,7 +184,7 @@ function showResponse(response, extra) {
     return `${i}: ${v}`;
   }).join('<br>');
   if (extra) html = extra(html);
-  e('invokeResponse').innerHTML = html;
+  e('response').innerHTML = html;
 }
 
 async function add() {
@@ -314,14 +304,15 @@ window.wire = wire;
     </div>
     <br>
     <div>
-      <input type='text' id='invokePath' placeholder='path'/><br>
-      [<input type='text' id='invokeArgs' placeholder='args'/>]<br>
-      {<input type='text' id='invokeKwargs' placeholder='kwargs'/>}<br>
-      <input type='text' id='invokeOp' placeholder='op'/><br>
-      <input type='text' id='invokeUuid' placeholder='UUID'/><br>
+      <input type='text' id='invokePath' placeholder='path' size=40/><br>
+      [<input type='text' id='invokeArgs' placeholder='args' size=40/>]<br>
+      {<input type='text' id='invokeKwargs' placeholder='kwargs' size=40/>}<br>
+      <input type='text' id='invokeOp' placeholder='op' size=40/><br>
+      <input type='text' id='invokeUuid' placeholder='UUID' size=40/><br>
       <button onclick='invoke()'>invoke</button>
-      <div id='invokeResponse' style='font-family: Monospace'>
-      </div>
+    </div>
+    <br>
+    <div id='response'>
     </div>
   </div>
 </div>
