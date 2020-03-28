@@ -6,6 +6,7 @@ import {
 var gSocket;
 var gPromiseResolvers = {};
 var gBroadcastListeners = {};
+var gComponents = {};
 
 export function socketConnect(options = {}) {
   gSocket = new WebSocket(options.url || getUrlParam('ws-url'));
@@ -87,9 +88,12 @@ export function contextDismiss() {
   }
 }
 
-export async function component(name) {
-  const r = await socketSend('component', { args: [name], op: 'store' });
-  return r.uuid;
+export async function getComponent(name) {
+  if (!(name in gComponents)) {
+    const r = await socketSend('component', { args: [name], op: 'store' });
+    gComponents[name] = r.uuid;
+  }
+  return gComponents[name];
 }
 
 export function command(c, args = []) {

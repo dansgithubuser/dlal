@@ -63,12 +63,12 @@ import {
   v,
 } from './../deps/obvious/obvious.js';
 import {
-  component,
   context,
   contextDismiss,
   contextOption,
   contextSpace,
   free,
+  getComponent,
   socketConnect,
   socketSend,
   socketBroadcastListenerAdd,
@@ -76,7 +76,6 @@ import {
 
 var gSystemInfo;
 var gConnecting;
-var gComponents = {};
 
 //===== system stuff =====//
 async function onSocketConnect() {
@@ -125,9 +124,8 @@ function componentContext(name) {
       contextOptionPage('monitor', 'audio-monitor.html');
       contextSpace(dropdown);
       contextOption(dropdown, 'start', async function(name) {
-        const audio = await component('audio');
+        const audio = await getComponent('audio');
         await socketSend(`${audio}.start`);
-        free(audio);
         updateDiagram();
       }, name);
       break;
@@ -200,22 +198,19 @@ function showResponse(response, extra) {
 }
 
 async function add() {
-  let new_component = await socketSend(v('addKind'), { op: 'store' });
+  const component = await socketSend(v('addKind'), { op: 'store' });
   if(v('addKind') != 'Audio') {
-    let audio = await component('audio');
-    await socketSend(`${audio}.add`, { args: [new_component.uuid] });
-    free(audio);
+    const audio = await getComponent('audio');
+    await socketSend(`${audio}.add`, { args: [component.uuid] });
   }
   updateDiagram();
 }
 
 //----- connect -----//
 async function connect(connector, connectee) {
-  const a = await component(connector), b = await component(connectee);
+  const a = await getComponent(connector), b = await getComponent(connectee);
   await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
   updateDiagram();
-  free(a);
-  free(b);
 }
 
 function wire(name, side) {
