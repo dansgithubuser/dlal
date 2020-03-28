@@ -40,16 +40,8 @@
   background-image: linear-gradient(to top, #fc8, #fff);
 }
 
-.component-commander {
+.component-comm {
   background: white;
-}
-
-.toggle {
-  border-radius: 1em;
-}
-
-.toggle-on {
-  color: rgb(0, 128, 255);
 }
 
 </style>
@@ -120,11 +112,16 @@ async function componentContext(name) {
     url: 'webboard.html',
     component: await getComponent(name),
   });
-  const contextOptionPage = (optionName, optionUrl) => contextOption(dropdown, optionName, openPage, { url: optionUrl, component: name });
+  const contextOptionPage = async (optionName, optionUrl) => contextOption(
+    dropdown,
+    optionName,
+    openPage,
+    { url: optionUrl, component: await getComponent(name) },
+  );
   switch (gSystemInfo['components'][name].kind) {
     case 'audio':
       contextOption(dropdown, 'play', play, name);
-      contextOptionPage('monitor', 'audio-monitor.html');
+      await contextOptionPage('monitor', 'audio-monitor.html');
       contextSpace(dropdown);
       contextOption(dropdown, 'start', async function(name) {
         const audio = await getComponent('audio');
@@ -132,17 +129,11 @@ async function componentContext(name) {
         updateDiagram();
       }, name);
       break;
-    case 'commander':
-      contextOptionPage('commander', 'commander.html');
-      break;
     case 'liner':
-      contextOptionPage('midi editor', 'midi-editor.html');
-      break;
-    case 'reticulated_liner':
-      contextOptionPage('midi editor', 'midi-editor.html');
+      await contextOptionPage('midi editor', 'midi-editor.html');
       break;
     case 'sonic':
-      contextOptionPage('sonic', 'sonic.html');
+      await contextOptionPage('sonic', 'sonic.html');
       break;
   }
   contextSpace(dropdown);
