@@ -114,9 +114,12 @@ async function updateDiagram() {
   e('socketConnect').style = 'display: none';
 }
 
-function componentContext(name) {
+async function componentContext(name) {
   const dropdown = context(e(`component-${name}`));
-  contextOption(dropdown, 'webboard', openPage, { url: 'webboard.html', component: name });
+  contextOption(dropdown, 'webboard', openPage, {
+    url: 'webboard.html',
+    component: await getComponent(name),
+  });
   const contextOptionPage = (optionName, optionUrl) => contextOption(dropdown, optionName, openPage, { url: optionUrl, component: name });
   switch (gSystemInfo['components'][name].kind) {
     case 'audio':

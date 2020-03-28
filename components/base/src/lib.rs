@@ -6,9 +6,10 @@ pub use std::collections::HashMap;
 use std::error;
 pub use std::ffi::{CStr, CString};
 use std::fmt;
-use std::mem::transmute;
+pub use std::mem::transmute;
 pub use std::os::raw::{c_char, c_void};
 use std::slice::from_raw_parts_mut;
+pub use std::vec::Vec;
 
 // ===== generic error ===== //
 #[derive(Debug)]
@@ -175,7 +176,7 @@ macro_rules! gen_component {
 
         // ===== commands ===== //
         pub struct Command {
-            pub func: Box<Fn(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>>,
+            pub func: Box<FnMut(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>>,
             pub info: $crate::JsonValue,
         }
 
@@ -186,6 +187,7 @@ macro_rules! gen_component {
             specifics: $specifics,
             result: $crate::CString,
             commands: CommandMap,
+            vec_u8: $crate::Vec<u8>,
         }
 
         impl Component {
@@ -202,8 +204,10 @@ macro_rules! gen_component {
                 specifics: $specifics::new(),
                 result: $crate::CString::new("").expect("CString::new failed"),
                 commands: CommandMap::new(),
+                vec_u8: $crate::Vec::new(),
             };
             component.specifics.register_commands(&mut component.commands);
+            // join
             if !component.commands.contains_key("join") {
                 component.commands.insert(
                     "join",
@@ -215,7 +219,30 @@ macro_rules! gen_component {
                     },
                 );
             }
-            let mut list: std::vec::Vec<$crate::JsonValue> = Default::default();
+            // midi
+            let vec_u8 = unsafe {// punting responsibility of write-exclusion to caller
+                $crate::transmute::<&$crate::Vec::<u8>, &mut $crate::Vec::<u8>>(&component.vec_u8)
+            };
+            if !component.commands.contains_key("midi") {
+                component.commands.insert(
+                    "midi",
+                    Command {
+                        func: Box::new(move |soul, body| {
+                            vec_u8.clear();
+                            for i in $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err("msg isn't an array"))? {
+                                vec_u8.push(i.as_str().ok_or_else(|| $crate::err("msg element isn't a str"))?.parse::<u8>()?);
+                            }
+                            soul.midi(vec_u8.as_slice());
+                            Ok(None)
+                        }),
+                        info: $crate::json!({
+                            "args": ["msg"],
+                        }),
+                    },
+                );
+            }
+            // list
+            let mut list: $crate::Vec<$crate::JsonValue> = Default::default();
             for (name, command) in &component.commands {
                 list.push(json!({
                     "name": name,
@@ -229,6 +256,7 @@ macro_rules! gen_component {
                     "join" => "~2",
                     "connect" => "~3",
                     "disconnect" => "~4",
+                    "midi" => "~5",
                     name => name,
                 }.to_string()
             });
@@ -241,6 +269,7 @@ macro_rules! gen_component {
                     info: $crate::json!({}),
                 },
             );
+            // done
             Box::into_raw(Box::new(component))
         }
 
@@ -261,7 +290,7 @@ macro_rules! gen_component {
                 Some(name) => name,
                 None => return component.set_result(&$crate::json!({"error": "command name isn't a string"}).to_string()),
             };
-            let command = match component.commands.get(name) {
+            let command = match component.commands.get_mut(name) {
                 Some(command) => command,
                 None => return component.set_result(&$crate::json!({"error": format!(r#"no such command "{}""#, name)}).to_string()),
             };

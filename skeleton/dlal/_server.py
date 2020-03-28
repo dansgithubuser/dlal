@@ -50,6 +50,7 @@ class Server:
         return json.dumps(request)
 
     def sub(self, arg):
+        if type(arg) != str: return arg
         return self.store.get(arg, arg)
 
     server = None

@@ -28,10 +28,12 @@ def component_kinds(special=None):
 
 def _json_prep(args, kwargs):
     def prep(x):
-        if type(x) == bool:
-            return '1' if x else '0'
-        elif type(x) in [int, float]:
+        if type(x) in [int, float]:
             return str(x)
+        elif type(x) == list:
+            return [prep(i) for i in x]
+        elif type(x) == dict:
+            return {k: prep(v) for k, v in x.items()}
         else:
             return x
     return [prep(i) for i in args], {k: prep(v) for k, v in kwargs.items()}
@@ -69,7 +71,14 @@ class Component:
     def command(self, name, *args, **kwargs):
         args, kwargs = _json_prep(args, kwargs)
         if Component._comm:
-            return Component._comm.queue(self, name, *args, **kwargs)
+            return Component._comm.queue(self, name, args, kwargs)
+        else:
+            return self.command_immediate(name, *args, **kwargs)
+
+    def command_detach(self, name, *args, **kwargs):
+        args, kwargs = _json_prep(args, kwargs)
+        if Component._comm:
+            return Component._comm.queue(self, name, args, kwargs, detach=True)
         else:
             return self.command_immediate(name, *args, **kwargs)
 

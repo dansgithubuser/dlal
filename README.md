@@ -28,7 +28,6 @@ Try `python do.py -h` to get started.
 ## todo
 - dlal universal linkage
 	- web interface
-		- webboard
 		- audio
 		- sonic
 	- serialization
