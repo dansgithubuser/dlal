@@ -27,10 +27,6 @@ Try `python do.py -h` to get started.
 
 ## todo
 - dlal universal linkage
-	- web interface
-		- audio
-			- tape
-			- broadcast
 	- serialization
 	- mic
 	- audiobro

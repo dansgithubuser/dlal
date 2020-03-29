@@ -323,7 +323,20 @@ macro_rules! gen_component {
             let component = unsafe { &mut *component };
             component.specifics.evaluate();
         }
-    }
+    };
+}
+
+#[macro_export]
+macro_rules! command {
+    ($commands:ident, $name:expr, $func:expr, $info:tt$(,)?) => {
+        $commands.insert(
+            $name,
+            Command {
+                func: Box::new($func),
+                info: $crate::json!($info),
+            },
+        );
+    };
 }
 
 #[macro_export]
@@ -355,7 +368,7 @@ macro_rules! uniconnect {
                 info: $crate::json!({}),
             },
         );
-    }
+    };
 }
 
 #[macro_export]
@@ -392,5 +405,5 @@ macro_rules! multiconnect {
                 }),
             },
         );
-    }
+    };
 }
