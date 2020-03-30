@@ -27,12 +27,14 @@ Try `python do.py -h` to get started.
 
 ## todo
 - dlal universal linkage
-	- sonic settings
 	- audiobro
+		- load file into buf
 		- liner
 		- midi editor
 		- pitcher
 		- reverb/chorus?
+		- non-audio driver
+		- tape to file
 
 - burgers
 	- arpeggiator
