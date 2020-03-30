@@ -387,7 +387,7 @@ impl SpecificsTrait for Specifics {
             0xe0 => {
                 if msg.len() >= 3 {
                     const CENTER: f32 = 0x2000 as f32;
-                    let value = (msg[1] + (msg[2] << 7)) as f32;
+                    let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
                     let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
                     self.set((2.0 as f32).powf(octaves));
                 }
