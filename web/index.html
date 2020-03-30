@@ -20,28 +20,50 @@
   color: green;
 }
 
+/*
+component styling guide
+
+all components have a vertical gradient background, by default the top is white
+
+I/O
+  input - offwhite top
+  command - green
+  MIDI - red
+  audio - yellow
+store - magenta
+synth - blue
+proc - orange
+*/
 .component-audio {
   background-image: linear-gradient(to top, #cc0, #ff0);
 }
 
-.component-midi {
-  background-image: linear-gradient(to top, #f88, #fff);
+.component-buf {
+  background-image: linear-gradient(to top, #f0f, #fff);
+}
+
+.component-comm {
+  background-image: linear-gradient(to top, #4f4, #cfc);
+}
+
+.component-gain {
+  background-image: linear-gradient(to top, #f80, #fff);
 }
 
 .component-liner {
-  background-image: linear-gradient(to top, #8f8, #fff);
+  background-image: linear-gradient(to top, #f0f, #fff);
+}
+
+.component-midi {
+  background-image: linear-gradient(to top, #f44, #fcc);
 }
 
 .component-sonic {
   background-image: linear-gradient(to top, #88f, #fff);
 }
 
-.component-buffer {
-  background-image: linear-gradient(to top, #fc8, #fff);
-}
-
-.component-comm {
-  background: white;
+.component-tape {
+  background-image: linear-gradient(to top, #aa0, #fff);
 }
 
 </style>
