@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_str, err, gen_component, json, multiconnect, View};
+use dlal_component_base::{arg_str, command, err, gen_component, json, multiconnect, View};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -59,31 +59,27 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        commands.insert(
+        command!(
+            commands,
             "ports",
-            Command {
-                func: Box::new(|soul, _body| Ok(Some(json!(soul.get_ports())))),
-                info: json!({}),
-            },
+            |soul, _body| Ok(Some(json!(soul.get_ports()))),
+            {},
         );
-        commands.insert(
+        command!(
+            commands,
             "open",
-            Command {
-                func: Box::new(|soul, body| {
-                    let port = arg_str(&body, 0)?;
-                    let ports = soul.get_ports();
-                    for (i, v) in ports.iter().enumerate() {
-                        if v.starts_with(port) {
-                            soul.open(i);
-                            return Ok(None);
-                        }
+            |soul, body| {
+                let port = arg_str(&body, 0)?;
+                let ports = soul.get_ports();
+                for (i, v) in ports.iter().enumerate() {
+                    if v.starts_with(port) {
+                        soul.open(i);
+                        return Ok(None);
                     }
-                    Err(err("no such port"))
-                }),
-                info: json!({
-                    "args": ["port_name_prefix"],
-                }),
+                }
+                Err(err("no such port"))
             },
+            { "args": ["port_name_prefix"] },
         );
         multiconnect!(commands, false);
     }

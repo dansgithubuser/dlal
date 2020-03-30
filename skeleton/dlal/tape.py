@@ -1,11 +1,9 @@
 from ._component import Component
 
-DEFAULT_SIZE = 1 << 17
-
 class Tape(Component):
-    def __init__(self, size=DEFAULT_SIZE, name=None):
+    def __init__(self, size=None, name=None):
         Component.__init__(self, 'tape', name)
-        self.command_immediate('resize', size)
+        if size: self.command_immediate('resize', size)
 
     def size(self):
         return int(self.command_immediate('size'))

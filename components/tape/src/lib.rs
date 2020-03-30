@@ -11,6 +11,15 @@ pub struct Specifics {
 
 gen_component!(Specifics);
 
+impl Specifics {
+    fn resize(&mut self, size: u64) {
+        let (send, recv) = multiqueue2::mpmc_queue(size);
+        self.send = Some(send);
+        self.recv = Some(recv.into_single().expect("into_single failed"));
+        self.size = size;
+    }
+}
+
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
@@ -35,10 +44,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "resize",
             |soul, body| {
-                soul.size = arg_num(&body, 0)?;
-                let (send, recv) = multiqueue2::mpmc_queue(soul.size);
-                soul.send = Some(send);
-                soul.recv = Some(recv.into_single().expect("into_single failed"));
+                soul.resize(arg_num(&body, 0)?);
                 Ok(None)
             },
             {
@@ -77,6 +83,21 @@ impl SpecificsTrait for Specifics {
             {
                 "args": ["size"],
             },
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| { Ok(Some(json!(soul.size.to_string()))) },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                soul.resize(arg_num(&body, 0)?);
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 

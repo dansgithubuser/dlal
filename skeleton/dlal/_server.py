@@ -107,7 +107,12 @@ def audio_broadcast_start(tape):
     if not isinstance(tape, weakref.ProxyType):
         tape = weakref.proxy(tape)
     def broadcast():
-        digits = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        digits = (
+            './'
+            '0123456789'
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            'abcdefghijklmnopqrstuvwxyz'
+        )
         def encode(f):
             if f < -1:
                 f = -1

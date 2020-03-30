@@ -1,3 +1,5 @@
+from . import _logging
+
 import obvious
 
 import collections
@@ -6,6 +8,8 @@ import functools
 import json
 import os
 import weakref
+
+log = _logging.get_log(__name__)
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 COMPONENTS_DIR = os.path.join(DIR, '..', '..', 'components')
@@ -49,6 +53,7 @@ class Component:
                 name = kind + str(num)
         elif name in Component._components:
             raise Exception('name must be unique')
+        log('debug', f'init {name}')
         self.name = name
         self.kind = kind
         Component._components[name] = weakref.proxy(self)
@@ -71,6 +76,7 @@ class Component:
     def command(self, name, *args, **kwargs):
         args, kwargs = _json_prep(args, kwargs)
         if Component._comm:
+            log('debug', f'{self.name} queue {name}')
             return Component._comm.queue(self, name, args, kwargs)
         else:
             return self.command_immediate(name, *args, **kwargs)
@@ -78,11 +84,13 @@ class Component:
     def command_detach(self, name, *args, **kwargs):
         args, kwargs = _json_prep(args, kwargs)
         if Component._comm:
+            log('debug', f'{self.name} queue (detach) {name}')
             return Component._comm.queue(self, name, args, kwargs, detach=True)
         else:
             return self.command_immediate(name, *args, **kwargs)
 
     def command_immediate(self, name, *args, **kwargs):
+        log('debug', f'{self.name} {name}')
         args, kwargs = _json_prep(args, kwargs)
         result = self._lib.command(self._raw, json.dumps({
             'name': name,
@@ -96,6 +104,7 @@ class Component:
         return result
 
     def connect(self, other, toggle=False):
+        log('debug', f'connect {self.name} {other.name}')
         if toggle and other.name in Component._connections.get(self.name, []):
             result = self.command('disconnect', *other._view())
             Component._connections[self.name].remove(other.name)

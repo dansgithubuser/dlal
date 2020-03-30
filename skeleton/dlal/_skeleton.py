@@ -6,7 +6,9 @@ It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
 from ._server import audio_broadcast_start
+from ._utils import snake_to_upper_camel_case
 
+import json as _json
 import os as _os
 
 def queue_set(comm):
@@ -90,3 +92,46 @@ def system_diagram():
         #
         result.append('\n')
     return ''.join(result)
+
+def system_save(file_path):
+    def call_or_none(value, member):
+        if hasattr(value, member):
+            return getattr(value, member)()
+    def map_components(f):
+        result = {}
+        for name, component in _Component._components.items():
+            value = f(component)
+            if value: result[name] = value
+        return result
+    j = _json.dumps(
+        {
+            'component_kinds':
+                map_components(lambda i: i.kind),
+            'components':
+                map_components(lambda i: call_or_none(i, 'to_json')),
+            'cross_state':
+                map_components(lambda i: call_or_none(i, 'get_cross_state')),
+            'connections':
+                _Component._connections,
+        },
+        indent=2
+    )
+    with open(file_path, 'w') as file: file.write(j)
+
+def system_load(file_path, namespace):
+    with open(file_path) as file: j = _json.loads(file.read())
+    from . import _skeleton
+    for name, kind in j['component_kinds'].items():
+        class_name = snake_to_upper_camel_case(kind)
+        exec(f'from . import {class_name}')
+        exec(f'namespace["{name}"] = {class_name}()')
+    for name, component in _Component._components.items():
+        jc = j['components'].get(name)
+        if jc: component.from_json(jc)
+    for name, component in _Component._components.items():
+        jc = j['cross_state'].get(name)
+        if jc: component.set_cross_state(jc)
+    for name, connectees in j['connections'].items():
+        component = namespace[name]
+        for connectee in connectees:
+            component.connect(namespace[connectee])

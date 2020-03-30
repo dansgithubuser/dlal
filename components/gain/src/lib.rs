@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, gen_component, json, kwarg_num, uniconnect, View};
+use dlal_component_base::{arg_num, command, gen_component, json, kwarg_num, uniconnect, View};
 
 pub struct Specifics {
     amount: f32,
@@ -18,30 +18,39 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        commands.insert(
+        command!(
+            commands,
             "join",
-            Command {
-                func: Box::new(|soul, body| {
-                    soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                    Ok(None)
-                }),
-                info: json!({
-                    "kwargs": ["samples_per_evaluation"],
-                }),
+            |soul, body| {
+                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
+                Ok(None)
             },
+            { "kwargs": ["samples_per_evaluation"] },
         );
         uniconnect!(commands, true);
-        commands.insert(
+        command!(
+            commands,
             "set",
-            Command {
-                func: Box::new(|soul, body| {
-                    soul.amount = arg_num(&body, 0)?;
-                    Ok(None)
-                }),
-                info: json!({
-                    "args": ["gain"],
-                }),
+            |soul, body| {
+                soul.amount = arg_num(&body, 0)?;
+                Ok(None)
             },
+            { "args": ["gain"] },
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| { Ok(Some(json!(soul.amount.to_string()))) },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                soul.amount = arg_num(&body, 0)?;
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 

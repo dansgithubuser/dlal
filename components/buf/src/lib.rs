@@ -1,4 +1,4 @@
-use dlal_component_base::{gen_component, json, kwarg_num, multiconnect, View};
+use dlal_component_base::{command, gen_component, kwarg_num, multiconnect, View};
 
 use std::vec::Vec;
 
@@ -18,18 +18,15 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        commands.insert(
+        command!(
+            commands,
             "join",
-            Command {
-                func: Box::new(|soul, body| {
-                    soul.audio
-                        .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
-                    Ok(None)
-                }),
-                info: json!({
-                    "kwargs": ["samples_per_evaluation"],
-                }),
+            |soul, body| {
+                soul.audio
+                    .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
+                Ok(None)
             },
+            { "kwargs": ["samples_per_evaluation"] },
         );
         multiconnect!(commands, true);
     }

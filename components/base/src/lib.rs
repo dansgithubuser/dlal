@@ -92,6 +92,25 @@ pub fn kwarg_num<T: std::str::FromStr>(body: &JsonValue, name: &str) -> Result<T
     }
 }
 
+pub fn json_get<'a>(value: &'a JsonValue, name: &str) -> Result<&'a JsonValue, Box<Error>> {
+    value
+        .get(name)
+        .ok_or_else(|| err(&format!("missing value {}", name)))
+}
+
+pub fn json_str(value: &JsonValue) -> Result<&str, Box<Error>> {
+    value
+        .as_str()
+        .ok_or_else(|| err("expected a string, but didn't get one"))
+}
+
+pub fn json_num<T: std::str::FromStr>(value: &JsonValue) -> Result<T, Box<Error>> {
+    match json_str(value)?.parse::<T>() {
+        Ok(num) => Ok(num),
+        Err(_) => Err(err("couldn't parse number")),
+    }
+}
+
 // ===== views ===== //
 pub const VIEW_ARGS: [&str; 5] = ["component", "command", "audio", "midi", "evaluate"];
 

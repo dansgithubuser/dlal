@@ -28,8 +28,9 @@ def set_logger_level(name, level):
 
 def get_log(name):
     logger = logging.getLogger(name)
-    def log(level, message_lambda):
+    def log(level, message):
         level = levels[level]
         if level >= logger.level:
-            logger.log(level, message_lambda())
+            if callable(message): message = message()
+            logger.log(level, message)
     return log

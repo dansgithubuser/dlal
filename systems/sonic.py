@@ -8,7 +8,7 @@ midi = dlal.Midi()
 gain = dlal.Gain()
 sonic = dlal.Sonic()
 buf = dlal.Buf()
-tape = dlal.Tape()
+tape = dlal.Tape(1 << 17)
 
 gain.set(0)
 sonic.i1(0, 1)

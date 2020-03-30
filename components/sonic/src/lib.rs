@@ -165,26 +165,30 @@ impl Note {
 // ===== component ===== //
 macro_rules! op_command {
     ($commands:ident, $name:literal, $type:ty, ($($member:tt)+), ($($info:tt)+), $set:expr) => {
-        $commands.insert(
+        command!(
+            $commands,
             $name,
-            Command {
-                func: Box::new(|soul, body| {
-                    let op: usize = arg_num(&body, 0)?;
-                    if let Ok(v) = arg_num::<$type>(&body, 1) {
-                        soul.ops[op].$($member)+ = v;
-                    }
-                    if ($set) {
-                        soul.set(soul.m);
-                    }
-                    Ok(Some(json!(soul.ops[op].$($member)+.to_string())))
-                }),
-                info: json!({"args": ["operator", $($info)+]}),
+            |soul, body| {
+                let op: usize = arg_num(&body, 0)?;
+                if let Ok(v) = arg_num::<$type>(&body, 1) {
+                    soul.ops[op].$($member)+ = v;
+                }
+                if ($set) {
+                    soul.set(soul.m);
+                }
+                Ok(Some(json!(soul.ops[op].$($member)+.to_string())))
             },
+            {"args": ["operator", $($info)+]},
         );
     }
 }
 
-use dlal_component_base::{arg_num, gen_component, json, kwarg_num, uniconnect, View};
+use dlal_component_base::{
+    arg, arg_num, command, gen_component, json, json_get, json_num, kwarg_num, uniconnect,
+    JsonValue, View,
+};
+
+use std::collections::HashMap;
 use std::f32;
 
 #[derive(Default)]
@@ -226,18 +230,17 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        commands.insert(
+        command!(
+            commands,
             "join",
-            Command {
-                func: Box::new(|soul, body| {
-                    soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                    soul.sample_rate = kwarg_num(&body, "sample_rate")?;
-                    soul.set(1.0);
-                    Ok(None)
-                }),
-                info: json!({
-                    "kwargs": ["samples_per_evaluation", "sample_rate"],
-                }),
+            |soul, body| {
+                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
+                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                soul.set(1.0);
+                Ok(None)
+            },
+            {
+                "kwargs": ["samples_per_evaluation", "sample_rate"],
             },
         );
         uniconnect!(commands, true);
@@ -289,6 +292,55 @@ impl SpecificsTrait for Specifics {
             "desc": "amount to contribute to output",
             "range": "[0, 1]",
         }), false);
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| {
+                let mut ops = HashMap::<String, JsonValue>::new();
+                for (i, op) in soul.ops.iter().enumerate() {
+                    ops.insert(
+                        i.to_string(),
+                        json!({
+                            "a": op.a,
+                            "d": op.d,
+                            "s": op.s,
+                            "r": op.r,
+                            "m": op.m,
+                            "i0": op.i[0],
+                            "i1": op.i[1],
+                            "i2": op.i[2],
+                            "i3": op.i[3],
+                            "o": op.o,
+                        }),
+                    );
+                }
+                Ok(Some(json!(ops)))
+            },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                let j = arg(&body, 0)?;
+                for i in 0..OPS {
+                    let op = json_get(j, &i.to_string())?;
+                    soul.ops[i].a = json_num(json_get(op, "a")?)?;
+                    soul.ops[i].d = json_num(json_get(op, "d")?)?;
+                    soul.ops[i].s = json_num(json_get(op, "s")?)?;
+                    soul.ops[i].r = json_num(json_get(op, "r")?)?;
+                    soul.ops[i].m = json_num(json_get(op, "m")?)?;
+                    soul.ops[i].i[0] = json_num(json_get(op, "i0")?)?;
+                    soul.ops[i].i[1] = json_num(json_get(op, "i1")?)?;
+                    soul.ops[i].i[2] = json_num(json_get(op, "i2")?)?;
+                    soul.ops[i].i[3] = json_num(json_get(op, "i3")?)?;
+                    soul.ops[i].o = json_num(json_get(op, "o")?)?;
+                }
+                soul.set(1.0);
+                Ok(None)
+            },
+            { "args": ["json"] },
+        );
     }
 
     fn midi(&mut self, msg: &[u8]) {

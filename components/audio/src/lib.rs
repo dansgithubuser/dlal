@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, args, gen_component, json, View};
+use dlal_component_base::{arg_num, args, command, gen_component, json, View};
 
 use portaudio as pa;
 
@@ -27,111 +27,118 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        commands.insert(
+        command!(
+            commands,
             "samples_per_evaluation",
-            Command {
-                func: Box::new(|soul, body| {
-                    if let Ok(v) = arg_num(&body, 0) {
-                        soul.samples_per_evaluation = v;
-                    }
-                    Ok(Some(json!(soul.samples_per_evaluation.to_string())))
-                }),
-                info: json!({
-                    "args": [{"name": "samples_per_evaluation", "optional": true}],
-                }),
+            |soul, body| {
+                if let Ok(v) = arg_num(&body, 0) {
+                    soul.samples_per_evaluation = v;
+                }
+                Ok(Some(json!(soul.samples_per_evaluation.to_string())))
             },
+            { "args": [{"name": "samples_per_evaluation", "optional": true}] },
         );
-        commands.insert(
+        command!(
+            commands,
             "add",
-            Command {
-                func: Box::new(|soul, body| {
-                    let view = View::new(args(&body)?)?;
-                    let join_result = view.command(json!({
-                        "name": "join",
-                        "kwargs": {
-                            "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
-                            "sample_rate": SAMPLE_RATE.to_string(),
-                        },
-                    }));
-                    if let Some(join_result) = join_result {
-                        if let Some(obj) = join_result.as_object() {
-                            if obj.get("error").is_some() {
-                                return Ok(Some(join_result));
-                            }
+            |soul, body| {
+                let view = View::new(args(&body)?)?;
+                let join_result = view.command(json!({
+                    "name": "join",
+                    "kwargs": {
+                        "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
+                        "sample_rate": SAMPLE_RATE.to_string(),
+                    },
+                }));
+                if let Some(join_result) = join_result {
+                    if let Some(obj) = join_result.as_object() {
+                        if obj.get("error").is_some() {
+                            return Ok(Some(join_result));
                         }
                     }
-                    soul.views.push(view);
-                    Ok(None)
-                }),
-                info: json!({
-                    "args": ["component", "command", "audio", "midi", "evaluate"],
-                }),
+                }
+                soul.views.push(view);
+                Ok(None)
             },
+            { "args": ["component", "command", "audio", "midi", "evaluate"] },
         );
-        commands.insert(
+        command!(
+            commands,
             "start",
-            Command {
-                func: Box::new(|mut soul, _body| {
-                    const CHANNELS: i32 = 1;
-                    const INTERLEAVED: bool = true;
-                    let pa = pa::PortAudio::new()?;
-                    let input_device = pa.default_input_device()?;
-                    let input_params = pa::StreamParameters::<f32>::new(
-                        input_device,
-                        CHANNELS,
-                        INTERLEAVED,
-                        pa.device_info(input_device)?.default_high_input_latency,
-                    );
-                    let output_device = pa.default_output_device()?;
-                    let output_params = pa::StreamParameters::<f32>::new(
-                        output_device,
-                        CHANNELS,
-                        INTERLEAVED,
-                        pa.device_info(output_device)?.default_high_output_latency,
-                    );
-                    pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
-                    let soul_scoped =
-                        unsafe { std::mem::transmute::<&mut Specifics, &mut Specifics>(&mut soul) };
-                    soul.stream = Some(pa.open_non_blocking_stream(
-                        pa::DuplexStreamSettings::new(
-                            input_params,
-                            output_params,
-                            SAMPLE_RATE,
-                            soul.samples_per_evaluation as u32,
-                        ),
-                        move |args| {
-                            assert!(args.frames == soul_scoped.samples_per_evaluation);
-                            for output_sample in args.out_buffer.iter_mut() {
-                                *output_sample = 0.0;
-                            }
-                            soul_scoped.audio = args.out_buffer.as_mut_ptr();
-                            for i in &mut soul_scoped.views {
-                                i.evaluate();
-                            }
-                            pa::Continue
-                        },
-                    )?);
-                    match &mut soul.stream {
-                        Some(stream) => stream.start()?,
-                        None => (),
-                    }
-                    Ok(None)
-                }),
-                info: json!({}),
+            |mut soul, _body| {
+                const CHANNELS: i32 = 1;
+                const INTERLEAVED: bool = true;
+                let pa = pa::PortAudio::new()?;
+                let input_device = pa.default_input_device()?;
+                let input_params = pa::StreamParameters::<f32>::new(
+                    input_device,
+                    CHANNELS,
+                    INTERLEAVED,
+                    pa.device_info(input_device)?.default_high_input_latency,
+                );
+                let output_device = pa.default_output_device()?;
+                let output_params = pa::StreamParameters::<f32>::new(
+                    output_device,
+                    CHANNELS,
+                    INTERLEAVED,
+                    pa.device_info(output_device)?.default_high_output_latency,
+                );
+                pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
+                let soul_scoped =
+                    unsafe { std::mem::transmute::<&mut Specifics, &mut Specifics>(&mut soul) };
+                soul.stream = Some(pa.open_non_blocking_stream(
+                    pa::DuplexStreamSettings::new(
+                        input_params,
+                        output_params,
+                        SAMPLE_RATE,
+                        soul.samples_per_evaluation as u32,
+                    ),
+                    move |args| {
+                        assert!(args.frames == soul_scoped.samples_per_evaluation);
+                        for output_sample in args.out_buffer.iter_mut() {
+                            *output_sample = 0.0;
+                        }
+                        soul_scoped.audio = args.out_buffer.as_mut_ptr();
+                        for i in &mut soul_scoped.views {
+                            i.evaluate();
+                        }
+                        pa::Continue
+                    },
+                )?);
+                match &mut soul.stream {
+                    Some(stream) => stream.start()?,
+                    None => (),
+                }
+                Ok(None)
             },
+            {},
         );
-        commands.insert(
+        command!(
+            commands,
             "stop",
-            Command {
-                func: Box::new(|soul, _body| {
-                    match &mut soul.stream {
-                        Some(stream) => stream.stop()?,
-                        None => (),
-                    }
-                    Ok(None)
-                }),
-                info: json!({}),
+            |soul, _body| {
+                match &mut soul.stream {
+                    Some(stream) => stream.stop()?,
+                    None => (),
+                }
+                Ok(None)
             },
+            {},
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| { Ok(Some(json!(soul.samples_per_evaluation.to_string()))) },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                soul.samples_per_evaluation = arg_num(&body, 0)?;
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 

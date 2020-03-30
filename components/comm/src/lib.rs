@@ -1,4 +1,4 @@
-use dlal_component_base::{arg, arg_num, args, err, gen_component, json, JsonValue, View};
+use dlal_component_base::{arg, arg_num, args, command, err, gen_component, JsonValue, View};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
@@ -31,31 +31,28 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        commands.insert(
+        command!(
+            commands,
             "queue",
-            Command {
-                func: Box::new(|soul, body| {
-                    let detach = match arg(&body, 7)?.as_bool() {
-                        Some(v) => v,
-                        None => return Err(err("detach isn't Boolean")),
-                    };
-                    soul.to_audio_send
-                        .try_send(QueuedCommand {
-                            view: View::new(args(&body)?)?,
-                            body: Box::new(arg(&body, 5)?.clone()),
-                            detach,
-                        })
-                        .expect("try_send failed");
-                    if detach {
-                        return Ok(None);
-                    }
-                    std::thread::sleep(std::time::Duration::from_millis(arg_num(&body, 6)?));
-                    Ok(*soul.fro_audio_recv.try_recv()?)
-                }),
-                info: json!({
-                    "args": ["component", "command", "audio", "midi", "evaluate", "body", "timeout_ms", "detach"],
-                }),
+            |soul, body| {
+                let detach = match arg(&body, 7)?.as_bool() {
+                    Some(v) => v,
+                    None => return Err(err("detach isn't Boolean")),
+                };
+                soul.to_audio_send
+                    .try_send(QueuedCommand {
+                        view: View::new(args(&body)?)?,
+                        body: Box::new(arg(&body, 5)?.clone()),
+                        detach,
+                    })
+                    .expect("try_send failed");
+                if detach {
+                    return Ok(None);
+                }
+                std::thread::sleep(std::time::Duration::from_millis(arg_num(&body, 6)?));
+                Ok(*soul.fro_audio_recv.try_recv()?)
             },
+            { "args": ["component", "command", "audio", "midi", "evaluate", "body", "timeout_ms", "detach"] },
         );
     }
 

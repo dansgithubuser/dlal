@@ -26,9 +26,10 @@ parser.add_argument('--venv-install', '--vi', action='store_true',
 )
 parser.add_argument('--component-new')
 parser.add_argument('--build', '-b', action='store_true')
-parser.add_argument('--run', '-r', nargs='?', const=True,
-    help='run interactive Python with dlal imported, or run specified system'
-)
+parser.add_argument('--run', '-r', nargs='*', help=(
+    'run interactive Python with dlal imported, '
+    'or run specified system, optionally with args'
+))
 parser.add_argument('--web', '-w', action='store_true',
     help='open web interface and run web server'
 )
@@ -134,7 +135,7 @@ if args.build:
         invoke('cargo', 'build', '--release')
 
 # ===== run ===== #
-if args.run is True:
+if args.run == []:
     os.chdir(os.path.join(DIR, 'skeleton'))
     invoke('python', '-i', '-c', 'import dlal')
 elif args.run:
@@ -143,7 +144,7 @@ elif args.run:
     else:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
     os.chdir(os.path.join(DIR))
-    invoke('python', '-i', args.run)
+    invoke('python', '-i', *args.run)
 
 # ===== web ===== #
 if args.web:
