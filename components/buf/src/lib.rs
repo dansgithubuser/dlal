@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, kwarg_num, multiconnect, View};
+use dlal_component_base::{command, gen_component, kwarg_num, multiaudio, multiconnect, View};
 
 use std::vec::Vec;
 
@@ -32,12 +32,7 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {
-        for output in &self.outputs {
-            let audio = output.audio(self.audio.len()).unwrap();
-            for i in 0..self.audio.len() {
-                audio[i] += self.audio[i];
-            }
-        }
+        multiaudio!(self.audio, self.outputs, self.audio.len());
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {

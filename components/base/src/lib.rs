@@ -429,3 +429,15 @@ macro_rules! multiconnect {
         );
     };
 }
+
+#[macro_export]
+macro_rules! multiaudio {
+    ($audio:expr, $outputs:expr, $samples_per_evaluation:expr) => {
+        for output in &$outputs {
+            let audio = output.audio($samples_per_evaluation).unwrap();
+            for i in 0..$samples_per_evaluation {
+                audio[i] += $audio[i];
+            }
+        }
+    };
+}

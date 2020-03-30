@@ -1,9 +1,11 @@
-use dlal_component_base::{arg_num, args, command, gen_component, json, View};
+use dlal_component_base::{
+    arg_num, args, command, gen_component, json, multiaudio, multiconnect, View,
+};
 
 use portaudio as pa;
 
-use std::ptr::null_mut;
-use std::slice::from_raw_parts_mut;
+use std::ptr::{null, null_mut};
+use std::slice::{from_raw_parts, from_raw_parts_mut};
 
 const SAMPLE_RATE: f64 = 44100.0;
 
@@ -11,7 +13,9 @@ pub struct Specifics {
     samples_per_evaluation: usize,
     addees: Vec<View>,
     stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
-    audio: *mut f32,
+    audio_i: *const f32,
+    audio_o: *mut f32,
+    outputs: Vec<View>,
 }
 
 gen_component!(Specifics);
@@ -20,9 +24,11 @@ impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Specifics {
             samples_per_evaluation: 64,
-            addees: vec![],
+            addees: Vec::new(),
             stream: None,
-            audio: null_mut(),
+            audio_i: null(),
+            audio_o: null_mut(),
+            outputs: Vec::new(),
         }
     }
 
@@ -62,6 +68,7 @@ impl SpecificsTrait for Specifics {
             },
             { "args": ["component", "command", "audio", "midi", "evaluate"] },
         );
+        multiconnect!(commands, true);
         command!(
             commands,
             "start",
@@ -98,7 +105,8 @@ impl SpecificsTrait for Specifics {
                         for output_sample in args.out_buffer.iter_mut() {
                             *output_sample = 0.0;
                         }
-                        soul_scoped.audio = args.out_buffer.as_mut_ptr();
+                        soul_scoped.audio_i = args.in_buffer.as_ptr();
+                        soul_scoped.audio_o = args.out_buffer.as_mut_ptr();
                         for i in &mut soul_scoped.addees {
                             i.evaluate();
                         }
@@ -142,12 +150,15 @@ impl SpecificsTrait for Specifics {
         );
     }
 
-    fn evaluate(&mut self) {}
+    fn evaluate(&mut self) {
+        let audio_i = unsafe { from_raw_parts(self.audio_i, self.samples_per_evaluation) };
+        multiaudio!(audio_i, self.outputs, self.samples_per_evaluation);
+    }
 
     fn audio(&mut self) -> Option<&mut [f32]> {
-        if self.audio.is_null() {
+        if self.audio_o.is_null() {
             return Some(&mut []);
         }
-        Some(unsafe { from_raw_parts_mut(self.audio, self.samples_per_evaluation) })
+        Some(unsafe { from_raw_parts_mut(self.audio_o, self.samples_per_evaluation) })
     }
 }
