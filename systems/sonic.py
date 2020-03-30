@@ -1,7 +1,5 @@
 import dlal
 
-import atexit
-
 audio = dlal.Audio()
 comm = dlal.Comm()
 midi = dlal.Midi()
@@ -26,7 +24,4 @@ sonic.connect(buf)
 buf.connect(audio)
 buf.connect(tape)
 
-audio.start()
-dlal.queue_set(comm)
-dlal.serve()
-atexit.register(lambda: audio.stop())
+dlal.typical_setup()

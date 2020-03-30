@@ -15,7 +15,19 @@ def queue_set(comm):
     _Component._comm = comm
 
 def component(name):
-    return _Component._components[name]
+    return _Component._components.get(name)
+
+def typical_setup():
+    from ._server import serve
+    import atexit
+    audio = component('audio')
+    comm = component('comm')
+    if audio:
+        audio.start()
+        atexit.register(lambda: audio.stop())
+    if comm:
+        queue_set(comm)
+    serve()
 
 def system_info():
     return {
