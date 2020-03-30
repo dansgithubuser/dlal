@@ -12,7 +12,7 @@ fn new_midi_in() -> MidiInput {
 pub struct Specifics {
     conn: Option<MidiInputConnection<MPMCSender<[u8; MSG_CAP]>>>,
     recv: Option<MPMCUniReceiver<[u8; MSG_CAP]>>,
-    views: Vec<View>,
+    outputs: Vec<View>,
 }
 
 gen_component!(Specifics);
@@ -54,7 +54,7 @@ impl SpecificsTrait for Specifics {
         Specifics {
             conn: None,
             recv: None,
-            views: Vec::with_capacity(1),
+            outputs: Vec::with_capacity(1),
         }
     }
 
@@ -91,7 +91,7 @@ impl SpecificsTrait for Specifics {
         loop {
             match self.recv.as_ref().unwrap().try_recv() {
                 Ok(msg) => {
-                    for i in &self.views {
+                    for i in &self.outputs {
                         i.midi(&msg);
                     }
                 }

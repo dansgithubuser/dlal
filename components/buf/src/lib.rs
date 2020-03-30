@@ -4,7 +4,7 @@ use std::vec::Vec;
 
 pub struct Specifics {
     audio: Vec<f32>,
-    views: Vec<View>,
+    outputs: Vec<View>,
 }
 
 gen_component!(Specifics);
@@ -13,7 +13,7 @@ impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
             audio: Vec::new(),
-            views: Vec::with_capacity(1),
+            outputs: Vec::with_capacity(1),
         }
     }
 
@@ -32,8 +32,8 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {
-        for view in &self.views {
-            let audio = view.audio(self.audio.len()).unwrap();
+        for output in &self.outputs {
+            let audio = output.audio(self.audio.len()).unwrap();
             for i in 0..self.audio.len() {
                 audio[i] += self.audio[i];
             }

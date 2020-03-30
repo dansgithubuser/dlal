@@ -3,7 +3,7 @@ use dlal_component_base::{arg_num, command, gen_component, json, kwarg_num, unic
 pub struct Specifics {
     amount: f32,
     samples_per_evaluation: usize,
-    view: Option<View>,
+    output: Option<View>,
 }
 
 gen_component!(Specifics);
@@ -13,7 +13,7 @@ impl SpecificsTrait for Specifics {
         Self {
             amount: 1.0,
             samples_per_evaluation: 0,
-            view: None,
+            output: None,
         }
     }
 
@@ -55,8 +55,8 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {
-        if let Some(view) = &self.view {
-            for i in view.audio(self.samples_per_evaluation).unwrap() {
+        if let Some(output) = &self.output {
+            for i in output.audio(self.samples_per_evaluation).unwrap() {
                 *i *= self.amount;
             }
         }

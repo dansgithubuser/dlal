@@ -365,11 +365,11 @@ macro_rules! uniconnect {
             "connect",
             Command {
                 func: Box::new(|soul, body| {
-                    let view = $crate::View::new($crate::args(&body)?)?;
-                    if $check_audio && view.audio(0) == None {
+                    let output = $crate::View::new($crate::args(&body)?)?;
+                    if $check_audio && output.audio(0) == None {
                         return Err($crate::err("output must have audio"));
                     }
-                    soul.view = Some(view);
+                    soul.output = Some(output);
                     Ok(None)
                 }),
                 info: $crate::json!({
@@ -380,8 +380,11 @@ macro_rules! uniconnect {
         $commands.insert(
             "disconnect",
             Command {
-                func: Box::new(|soul, _body| {
-                    soul.view = None;
+                func: Box::new(|soul, body| {
+                    let output = View::new($crate::args(&body)?)?;
+                    if soul.output == Some(output) {
+                        soul.output = None;
+                    }
                     Ok(None)
                 }),
                 info: $crate::json!({}),
@@ -397,11 +400,11 @@ macro_rules! multiconnect {
             "connect",
             Command {
                 func: Box::new(|soul, body| {
-                    let view = $crate::View::new($crate::args(&body)?)?;
-                    if $check_audio && view.audio(0) == None {
+                    let output = $crate::View::new($crate::args(&body)?)?;
+                    if $check_audio && output.audio(0) == None {
                         return Err($crate::err("output must have audio"));
                     }
-                    soul.views.push(view);
+                    soul.outputs.push(output);
                     Ok(None)
                 }),
                 info: $crate::json!({
@@ -413,9 +416,9 @@ macro_rules! multiconnect {
             "disconnect",
             Command {
                 func: Box::new(|soul, body| {
-                    let view = View::new($crate::args(&body)?)?;
-                    if let Some(i) = soul.views.iter().position(|i| i == &view) {
-                        soul.views.remove(i);
+                    let output = View::new($crate::args(&body)?)?;
+                    if let Some(i) = soul.outputs.iter().position(|i| i == &output) {
+                        soul.outputs.remove(i);
                     }
                     Ok(None)
                 }),

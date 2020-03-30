@@ -9,7 +9,7 @@ const SAMPLE_RATE: f64 = 44100.0;
 
 pub struct Specifics {
     samples_per_evaluation: usize,
-    views: Vec<View>,
+    addees: Vec<View>,
     stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
     audio: *mut f32,
 }
@@ -20,7 +20,7 @@ impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Specifics {
             samples_per_evaluation: 64,
-            views: vec![],
+            addees: vec![],
             stream: None,
             audio: null_mut(),
         }
@@ -57,7 +57,7 @@ impl SpecificsTrait for Specifics {
                         }
                     }
                 }
-                soul.views.push(view);
+                soul.addees.push(view);
                 Ok(None)
             },
             { "args": ["component", "command", "audio", "midi", "evaluate"] },
@@ -99,7 +99,7 @@ impl SpecificsTrait for Specifics {
                             *output_sample = 0.0;
                         }
                         soul_scoped.audio = args.out_buffer.as_mut_ptr();
-                        for i in &mut soul_scoped.views {
+                        for i in &mut soul_scoped.addees {
                             i.evaluate();
                         }
                         pa::Continue

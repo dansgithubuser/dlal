@@ -200,7 +200,7 @@ pub struct Specifics {
     pitch_bend_range: f32, //MIDI RPN 0x0000
     samples_per_evaluation: usize,
     sample_rate: u32,
-    view: Option<View>,
+    output: Option<View>,
 }
 
 impl Specifics {
@@ -397,8 +397,8 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {
-        let audio = match &self.view {
-            Some(view) => view.audio(self.samples_per_evaluation).unwrap(),
+        let audio = match &self.output {
+            Some(output) => output.audio(self.samples_per_evaluation).unwrap(),
             None => return,
         };
         for note in &mut self.notes {
