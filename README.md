@@ -17,7 +17,9 @@ dlal's goal is to enable experimentation with sound. Some example uses include
 	- apply an arbitrary effect chain to a recording
 	- replay the inputs of a jam session
 
-dlal is an audio system configuration module written in Python, that wrangles compiled audio processing components which abide the lv2 standard.
+dlal is an audio system configuration module written in Python, that wrangles compiled audio processing components which abide a dead-simple C-linkage interface.
+
+dlal's GUI is web-based.
 
 dlal is cross-platform.
 
@@ -25,33 +27,20 @@ Try `python do.py -h` to get started.
 
 ## todo
 - dlal universal linkage
-	- web interface
-		- python component knows what commands are available
-		- command queuing
 	- serialization
-	- components
-		- flesh out existing component features
-		- buffer
-		- arpeggiator
-		- filei, fileo, filea
-		- lpf
-		- gain
-		- reverb
-		- liner
-		- pitcher
+	- mic
 	- audiobro
+		- liner
+		- midi editor
+		- pitcher
+		- reverb/chorus?
 
 - burgers
+	- arpeggiator
+	- sample-based synth
 
-- espeak? LPC
+- speech synth
+	- LPC
+	- https://www.youtube.com/watch?v=Jcymn3RGkF4
 
-- music from formula with time as input
-
-- operations in frequency domain
-	- low pass amplitude of frequencies over time
-		- for example, to extract the choral part of "Gangster's Paradise" which has many other fast-changing parts
-
-- vocoder
 - pitch shift component
-- auto dj
-- https://mutable-instruments.net/modules/

@@ -1,0 +1,159 @@
+<link rel='stylesheet' type='text/css' href='style.css'>
+<head>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
+  <script type='module'>
+
+import {
+  e,
+  getUrlParam,
+  listenToTouches,
+  rect,
+  v,
+} from './../deps/obvious/obvious.js';
+import {
+  socketConnect,
+  command,
+} from './common.js';
+
+var gWKey, gHKey;
+var gKeys;
+var gMessages = [];
+
+function connect() {
+  listenToTouches(e('canvas'), {
+    onStart: (id, x, y) => touchHandle(x, y, true),
+    onDrag: (touches) => {
+      for (const touch of touches) {
+        touchHandle(touch.xi, touch.yi, false);
+        touchHandle(touch.xf, touch.yf, true)
+      }
+    },
+    onEnd: (id, x, y) => touchHandle(x, y, false),
+    after: processNewTouches,
+  });
+  window.onkeydown = (evt) => key(evt, true);
+  window.onkeyup   = (evt) => key(evt, false);
+  socketConnect();
+  e('divInit').style.display = 'none';
+  e('divBoard').style.display = '';
+  resize();
+}
+
+function send(note, down) {
+  command('command_detach', ['midi', [down?0x90:0x80, note, 0x40]]);
+}
+
+function resize() {
+  var divBoard = e('divBoard');
+  var canvas = e('canvas');
+  canvas.width  = divBoard.offsetWidth;
+  canvas.height = divBoard.offsetHeight;
+  var context = canvas.getContext('2d');
+  rect(context, 0, 0, canvas.width, canvas.height, 0, 0, 0);
+  const hBoard=canvas.height / v('boards');
+  const white = [1, 0, 1, 0, 1,  1, 0, 1, 0, 1, 0, 1];
+  gWKey = canvas.width / v('keysPerBoard');
+  gHKey = hBoard / 2;
+  gKeys = [];
+  for (var b = 0; b < v('boards'); ++b) {
+    for (var k = 0; k < v('keysPerBoard'); ++k) {
+      var x = gWKey * k;
+      var y = canvas.height - hBoard * (b + 1) + (white[k % 12] ? gHKey : 0);
+      var n = parseInt(v('lowestNote')) + b * v('octavesBetweenBoards') * 12 + k;
+      gKeys.push({x: x, y: y, n: n, touches: 0, newTouches: 0});
+      var g = white[k % 12] ? 255 : 127;
+      rect(context, x, y, x + gWKey, y + gHKey, 0, g, 0);
+    }
+  }
+}
+
+function touchHandle(x, y, down) {
+  for (var k = 0; k < gKeys.length; ++k) {
+    var dx = x - gKeys[k].x;
+    var dy = y - gKeys[k].y;
+    if (0 < dx && dx < gWKey && 0 < dy && dy < gHKey) {
+      gKeys[k].newTouches += down ? 1 : -1;
+      return;
+    }
+  }
+}
+
+function processNewTouches() {
+  for (var k = 0; k < gKeys.length; ++k) {
+    if (gKeys[k].newTouches != 0) {
+      var oldTouches = gKeys[k].touches;
+      gKeys[k].touches += gKeys[k].newTouches;
+      gKeys[k].newTouches = 0;
+      if (oldTouches == 0 && gKeys[k].touches != 0) send(gKeys[k].n, true);
+      else if (oldTouches != 0 && gKeys[k].touches == 0) send(gKeys[k].n, false);
+    }
+  }
+}
+
+var gKeysDown = {};
+
+function key(evt, down) {
+  if (evt.repeat) return;
+  if (down) {
+    if (gKeysDown[evt.key]) return;
+    gKeysDown[evt.key] = true;
+  } else {
+    gKeysDown[evt.key] = false;
+  }
+  const note = {
+              z :  0,  v :  5, ',': 11,
+              s :  1,  g :  6,  l : 12,
+              x :  2,  b :  7, '.': 13,
+              d :  3,  h :  8, ';': 14,
+              c :  4,  n :  9, '/': 15,
+                       j : 10,
+                       m : 11,
+
+    '1': 10,  w : 12,  t : 17,  o : 24,
+     q : 11, '3': 13, '6': 18, '0': 25,
+              e : 14,  y : 19,  p : 26,
+             '4': 15, '7': 20, '-': 27,
+              r : 16,  u : 21, '[': 28,
+                      '8': 22,
+                       i : 23,
+  }[evt.key];
+  if (!note) return;
+  send(parseInt(v('lowestNote')) + note, down);
+}
+
+window.connect = connect;
+window.resize = resize;
+
+  </script>
+</head>
+<body style='margin: 0' onresize='resize()'>
+
+<div id='divInit' style='margin: 1em'>
+  <table>
+    <tr>
+      <td>keys per board</td>
+      <td><input type='number' id='keysPerBoard' value='13'/></td>
+    </tr>
+    <tr>
+      <td>boards</td>
+      <td><input type='number' id='boards' value='1'/></td>
+    </tr>
+    <tr>
+      <td>octaves between boards</td>
+      <td><input type='number' id='octavesBetweenBoards' value='1'/></td>
+    </tr>
+    <tr>
+      <td>lowest note</td>
+      <td><input type='number' id='lowestNote' value='60'/></td>
+    </tr>
+    <tr>
+      <td></td>
+      <td><button style='width: 100%' onclick='connect()'>connect</button></td>
+    </td>
+  </table>
+</div>
+<div id='divBoard' style='display: none; height: 100%; width: 100%;'>
+  <canvas id='canvas' style='height: 100%; width: 100%;'/>
+</div>
+
+</body>

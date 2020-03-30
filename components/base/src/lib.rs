@@ -2,13 +2,14 @@ pub use serde_json::from_str as json_from_str;
 pub use serde_json::json;
 pub use serde_json::Value as JsonValue;
 
+pub use std::collections::HashMap;
 use std::error;
-use std::ffi::{CStr, CString};
+pub use std::ffi::{CStr, CString};
 use std::fmt;
-use std::mem::transmute;
-use std::os::raw::{c_char, c_void};
-use std::ptr::{null, null_mut};
+pub use std::mem::transmute;
+pub use std::os::raw::{c_char, c_void};
 use std::slice::from_raw_parts_mut;
+pub use std::vec::Vec;
 
 // ===== generic error ===== //
 #[derive(Debug)]
@@ -40,19 +41,19 @@ pub fn err(msg: &str) -> Box<Error> {
 
 // ===== arg handling ===== //
 pub fn args(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
-    body.get("args").ok_or(err("missing args"))
+    body.get("args").ok_or_else(|| err("missing args"))
 }
 
 pub fn arg(body: &JsonValue, index: usize) -> Result<&JsonValue, Box<Error>> {
     args(body)?
         .get(index)
-        .ok_or(err(&format!("missing arg {}", index)))
+        .ok_or_else(|| err(&format!("missing arg {}", index)))
 }
 
 pub fn arg_str(body: &JsonValue, index: usize) -> Result<&str, Box<Error>> {
     arg(body, index)?
         .as_str()
-        .ok_or(err(&format!("arg {} isn't a string", index)))
+        .ok_or_else(|| err(&format!("arg {} isn't a string", index)))
 }
 
 pub fn arg_num<T: std::str::FromStr>(body: &JsonValue, index: usize) -> Result<T, Box<Error>> {
@@ -66,19 +67,19 @@ pub fn arg_num<T: std::str::FromStr>(body: &JsonValue, index: usize) -> Result<T
 }
 
 pub fn kwargs(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
-    body.get("kwargs").ok_or(err("missing kwargs"))
+    body.get("kwargs").ok_or_else(|| err("missing kwargs"))
 }
 
 pub fn kwarg<'a>(body: &'a JsonValue, name: &str) -> Result<&'a JsonValue, Box<Error>> {
     kwargs(body)?
         .get(name)
-        .ok_or(err(&format!("missing kwarg {}", name)))
+        .ok_or_else(|| err(&format!("missing kwarg {}", name)))
 }
 
 pub fn kwarg_str<'a>(body: &'a JsonValue, name: &str) -> Result<&'a str, Box<Error>> {
     kwarg(body, name)?
         .as_str()
-        .ok_or(err(&format!("kwarg {} isn't a string", name)))
+        .ok_or_else(|| err(&format!("kwarg {} isn't a string", name)))
 }
 
 pub fn kwarg_num<T: std::str::FromStr>(body: &JsonValue, name: &str) -> Result<T, Box<Error>> {
@@ -99,6 +100,7 @@ pub type MidiView = extern "C" fn(*const c_void, *const u8, usize);
 pub type AudioView = extern "C" fn(*const c_void) -> *mut f32;
 pub type EvaluateView = extern "C" fn(*const c_void);
 
+#[derive(Debug, PartialEq)]
 pub struct View {
     raw: *const c_void,
     command_view: CommandView,
@@ -113,11 +115,12 @@ macro_rules! json_to_ptr {
             Some(s) => s.parse::<usize>()?,
             None => return Err(err("pointer isn't a string")),
         };
-        unsafe { transmute::<usize, $type>(u) }
+        unsafe { transmute::<*const c_void, $type>(u as *const c_void) }
     }};
 }
 
 impl View {
+    #[allow(clippy::useless_transmute)]
     pub fn new(args: &JsonValue) -> Result<Self, Box<dyn error::Error>> {
         Ok(Self {
             raw: json_to_ptr!(&args[0], *const c_void),
@@ -129,13 +132,9 @@ impl View {
     }
 
     pub fn command(&self, body: JsonValue) -> Option<JsonValue> {
-        let result = (self.command_view)(
-            self.raw,
-            CString::new(body.to_string())
-                .expect("CString::new failed")
-                .as_ptr(),
-        );
-        if result == null() {
+        let text = CString::new(body.to_string()).expect("CString::new failed");
+        let result = (self.command_view)(self.raw, text.as_ptr());
+        if result.is_null() {
             return None;
         }
         let result = unsafe { CStr::from_ptr(result) }
@@ -150,11 +149,11 @@ impl View {
 
     pub fn audio(&self, samples_per_evaluation: usize) -> Option<&mut [f32]> {
         let audio = (self.audio_view)(self.raw);
-        return if audio == null_mut() {
+        if audio.is_null() {
             None
         } else {
             Some(unsafe { from_raw_parts_mut(audio, samples_per_evaluation) })
-        };
+        }
     }
 
     pub fn evaluate(&self) {
@@ -177,22 +176,23 @@ macro_rules! gen_component {
 
         // ===== commands ===== //
         pub struct Command {
-            pub func: fn(&mut $specifics, dlal_component_base::JsonValue) -> Result<Option<dlal_component_base::JsonValue>, Box<dyn std::error::Error>>,
-            pub info: dlal_component_base::JsonValue,
+            pub func: Box<FnMut(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>>,
+            pub info: $crate::JsonValue,
         }
 
-        pub type CommandMap = std::collections::HashMap<&'static str, Command>;
+        pub type CommandMap = $crate::HashMap<&'static str, Command>;
 
         // ===== component ===== //
         pub struct Component {
             specifics: $specifics,
-            result: std::ffi::CString,
+            result: $crate::CString,
             commands: CommandMap,
+            vec_u8: $crate::Vec<u8>,
         }
 
         impl Component {
-            fn set_result(&mut self, result: &str) -> *const std::os::raw::c_char {
-                self.result = std::ffi::CString::new(result).expect("CString::new failed");
+            fn set_result(&mut self, result: &str) -> *const $crate::c_char {
+                self.result = $crate::CString::new(result).expect("CString::new failed");
                 self.result.as_ptr()
             }
         }
@@ -202,21 +202,74 @@ macro_rules! gen_component {
         pub extern "C" fn construct() -> *mut Component {
             let mut component = Component {
                 specifics: $specifics::new(),
-                result: std::ffi::CString::new("").expect("CString::new failed"),
+                result: $crate::CString::new("").expect("CString::new failed"),
                 commands: CommandMap::new(),
+                vec_u8: $crate::Vec::new(),
             };
             component.specifics.register_commands(&mut component.commands);
+            // join
             if !component.commands.contains_key("join") {
                 component.commands.insert(
                     "join",
                     Command {
-                        func: |_soul, _body| {
+                        func: Box::new(|_soul, _body| {
                             Ok(None)
-                        },
-                        info: json!({}),
+                        }),
+                        info: $crate::json!({}),
                     },
                 );
             }
+            // midi
+            let vec_u8 = unsafe {// punting responsibility of write-exclusion to caller
+                $crate::transmute::<&$crate::Vec::<u8>, &mut $crate::Vec::<u8>>(&component.vec_u8)
+            };
+            if !component.commands.contains_key("midi") {
+                component.commands.insert(
+                    "midi",
+                    Command {
+                        func: Box::new(move |soul, body| {
+                            vec_u8.clear();
+                            for i in $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err("msg isn't an array"))? {
+                                vec_u8.push(i.as_str().ok_or_else(|| $crate::err("msg element isn't a str"))?.parse::<u8>()?);
+                            }
+                            soul.midi(vec_u8.as_slice());
+                            Ok(None)
+                        }),
+                        info: $crate::json!({
+                            "args": ["msg"],
+                        }),
+                    },
+                );
+            }
+            // list
+            let mut list: $crate::Vec<$crate::JsonValue> = Default::default();
+            for (name, command) in &component.commands {
+                list.push($crate::json!({
+                    "name": name,
+                    "info": command.info,
+                }));
+            }
+            list.push($crate::json!({"name": "list", "info": {}}));
+            list.sort_by_key(|i| {
+                match i["name"].as_str().unwrap() {
+                    "list" => "~1",
+                    "join" => "~2",
+                    "connect" => "~3",
+                    "disconnect" => "~4",
+                    "midi" => "~5",
+                    name => name,
+                }.to_string()
+            });
+            component.commands.insert(
+                "list",
+                Command {
+                    func: Box::new(move |soul, _body| {
+                        Ok(Some($crate::json!(list)))
+                    }),
+                    info: $crate::json!({}),
+                },
+            );
+            // done
             Box::into_raw(Box::new(component))
         }
 
@@ -226,27 +279,27 @@ macro_rules! gen_component {
         }
 
         #[no_mangle]
-        pub extern "C" fn command(component: *mut Component, text: *const std::os::raw::c_char) -> *const std::os::raw::c_char {
+        pub extern "C" fn command(component: *mut Component, text: *const $crate::c_char) -> *const $crate::c_char {
             let component = unsafe { &mut *component };
-            let text = unsafe { std::ffi::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
-            let body: dlal_component_base::JsonValue = match dlal_component_base::json_from_str(text) {
+            let text = unsafe { $crate::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
+            let body: $crate::JsonValue = match $crate::json_from_str(text) {
                 Ok(body) => body,
-                Err(err) => return component.set_result(&json!({"error": err.to_string()}).to_string()),
+                Err(err) => return component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),
             };
             let name = match body["name"].as_str() {
                 Some(name) => name,
-                None => return component.set_result(&json!({"error": "command name isn't a string"}).to_string()),
+                None => return component.set_result(&$crate::json!({"error": "command name isn't a string"}).to_string()),
             };
-            let command = match component.commands.get(name) {
+            let command = match component.commands.get_mut(name) {
                 Some(command) => command,
-                None => return component.set_result(&json!({"error": format!(r#"no such command "{}""#, name)}).to_string()),
+                None => return component.set_result(&$crate::json!({"error": format!(r#"no such command "{}""#, name)}).to_string()),
             };
             match (command.func)(&mut component.specifics, body) {
                 Ok(result) => match(result) {
                     Some(result) => component.set_result(&result.to_string()),
                     None => std::ptr::null(),
                 },
-                Err(err) => component.set_result(&json!({"error": err.to_string()}).to_string()),
+                Err(err) => component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),
             }
         }
 
@@ -270,5 +323,87 @@ macro_rules! gen_component {
             let component = unsafe { &mut *component };
             component.specifics.evaluate();
         }
-    }
+    };
+}
+
+#[macro_export]
+macro_rules! command {
+    ($commands:ident, $name:expr, $func:expr, $info:tt$(,)?) => {
+        $commands.insert(
+            $name,
+            Command {
+                func: Box::new($func),
+                info: $crate::json!($info),
+            },
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! uniconnect {
+    ($commands:expr, $check_audio:expr) => {
+        $commands.insert(
+            "connect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = $crate::View::new($crate::args(&body)?)?;
+                    if $check_audio && view.audio(0) == None {
+                        return Err($crate::err("output must have audio"));
+                    }
+                    soul.view = Some(view);
+                    Ok(None)
+                }),
+                info: $crate::json!({
+                    "args": $crate::VIEW_ARGS,
+                }),
+            },
+        );
+        $commands.insert(
+            "disconnect",
+            Command {
+                func: Box::new(|soul, _body| {
+                    soul.view = None;
+                    Ok(None)
+                }),
+                info: $crate::json!({}),
+            },
+        );
+    };
+}
+
+#[macro_export]
+macro_rules! multiconnect {
+    ($commands:expr, $check_audio:expr) => {
+        $commands.insert(
+            "connect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = $crate::View::new($crate::args(&body)?)?;
+                    if $check_audio && view.audio(0) == None {
+                        return Err($crate::err("output must have audio"));
+                    }
+                    soul.views.push(view);
+                    Ok(None)
+                }),
+                info: $crate::json!({
+                    "args": $crate::VIEW_ARGS,
+                }),
+            },
+        );
+        $commands.insert(
+            "disconnect",
+            Command {
+                func: Box::new(|soul, body| {
+                    let view = View::new($crate::args(&body)?)?;
+                    if let Some(i) = soul.views.iter().position(|i| i == &view) {
+                        soul.views.remove(i);
+                    }
+                    Ok(None)
+                }),
+                info: $crate::json!({
+                    "args": $crate::VIEW_ARGS,
+                }),
+            },
+        );
+    };
 }

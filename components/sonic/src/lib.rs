@@ -97,7 +97,7 @@ impl Op {
                 }
             }
         }
-        return self.o == 0.0;
+        self.o == 0.0
     }
 }
 
@@ -130,8 +130,8 @@ impl Note {
             return;
         }
         let step = frequency / sample_rate as f32;
-        for i in 0..OPS {
-            self.runners[i].step = step * ops[i].m;
+        for (i, op) in ops.iter().enumerate() {
+            self.runners[i].step = step * op.m;
         }
     }
 
@@ -162,26 +162,29 @@ impl Note {
     }
 }
 
-// ===== components ===== //
+// ===== component ===== //
 macro_rules! op_command {
-    ($commands:ident, $name:literal, $type:ty, ($($member:tt)+), $($info:tt)+) => {
+    ($commands:ident, $name:literal, $type:ty, ($($member:tt)+), ($($info:tt)+), $set:expr) => {
         $commands.insert(
             $name,
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     let op: usize = arg_num(&body, 0)?;
                     if let Ok(v) = arg_num::<$type>(&body, 1) {
                         soul.ops[op].$($member)+ = v;
                     }
+                    if ($set) {
+                        soul.set(soul.m);
+                    }
                     Ok(Some(json!(soul.ops[op].$($member)+.to_string())))
-                },
+                }),
                 info: json!({"args": ["operator", $($info)+]}),
             },
         );
     }
 }
 
-use dlal_component_base::{arg_num, err, gen_component, json, kwarg_num, View, VIEW_ARGS};
+use dlal_component_base::{arg_num, gen_component, json, kwarg_num, uniconnect, View};
 use std::f32;
 
 #[derive(Default)]
@@ -226,75 +229,70 @@ impl SpecificsTrait for Specifics {
         commands.insert(
             "join",
             Command {
-                func: |soul, body| {
+                func: Box::new(|soul, body| {
                     soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
                     soul.sample_rate = kwarg_num(&body, "sample_rate")?;
                     soul.set(1.0);
                     Ok(None)
-                },
+                }),
                 info: json!({
                     "kwargs": ["samples_per_evaluation", "sample_rate"],
                 }),
             },
         );
-        commands.insert(
-            "connect",
-            Command {
-                func: |soul, body| {
-                    let view = View::new(&body["args"])?;
-                    if view.audio(0) == None {
-                        return Err(err("output must have audio"));
-                    }
-                    soul.view = Some(view);
-                    Ok(None)
-                },
-                info: json!({
-                    "args": VIEW_ARGS,
-                }),
-            },
-        );
-        op_command!(commands, "a", f32, (a), {
-            "name": "attack rate",
+        uniconnect!(commands, true);
+        op_command!(commands, "a", f32, (a), ({
+            "name": "amount",
+            "desc": "attack rate",
             "units": "amplitude per sample",
             "range": "(0, 1]",
-        });
-        op_command!(commands, "d", f32, (d), {
-            "name": "decay rate",
+        }), false);
+        op_command!(commands, "d", f32, (d), ({
+            "name": "amount",
+            "desc": "decay rate",
             "units": "amplitude per sample",
             "range": "(0, 1]",
-        });
-        op_command!(commands, "s", f32, (s), {
-            "name": "sustain level",
+        }), false);
+        op_command!(commands, "s", f32, (s), ({
+            "name": "amount",
+            "desc": "sustain level",
             "range": "[0, 1]",
-        });
-        op_command!(commands, "r", f32, (r), {
-            "name": "release rate",
+        }), false);
+        op_command!(commands, "r", f32, (r), ({
+            "name": "amount",
+            "desc": "release rate",
             "units": "amplitude per sample",
             "range": "(0, 1]",
-        });
-        op_command!(commands, "m", f32, (m), {
-            "name": "frequency multiplier",
-        });
-        op_command!(commands, "i0", f32, (i[0]), {
-            "name": "FM from operator 0",
-        });
-        op_command!(commands, "i1", f32, (i[1]), {
-            "name": "FM from operator 1",
-        });
-        op_command!(commands, "i2", f32, (i[2]), {
-            "name": "FM from operator 2",
-        });
-        op_command!(commands, "i3", f32, (i[3]), {
-            "name": "FM from operator 3",
-        });
-        op_command!(commands, "o", f32, (o), {
-            "name": "amount to contribute to output",
+        }), false);
+        op_command!(commands, "m", f32, (m), ({
+            "name": "amount",
+            "desc": "frequency multiplier",
+        }), true);
+        op_command!(commands, "i0", f32, (i[0]), ({
+            "name": "amount",
+            "desc": "FM from operator 0",
+        }), false);
+        op_command!(commands, "i1", f32, (i[1]), ({
+            "name": "amount",
+            "desc": "FM from operator 1",
+        }), false);
+        op_command!(commands, "i2", f32, (i[2]), ({
+            "name": "amount",
+            "desc": "FM from operator 2",
+        }), false);
+        op_command!(commands, "i3", f32, (i[3]), ({
+            "name": "amount",
+            "desc": "FM from operator 3",
+        }), false);
+        op_command!(commands, "o", f32, (o), ({
+            "name": "amount",
+            "desc": "amount to contribute to output",
             "range": "[0, 1]",
-        });
+        }), false);
     }
 
     fn midi(&mut self, msg: &[u8]) {
-        if msg.len() == 0 {
+        if msg.is_empty() {
             return;
         }
         match msg[0] & 0xf0 {
@@ -337,7 +335,7 @@ impl SpecificsTrait for Specifics {
             0xe0 => {
                 if msg.len() >= 3 {
                     const CENTER: f32 = 0x2000 as f32;
-                    let value = (msg[1] + msg[2] << 7) as f32;
+                    let value = (msg[1] + (msg[2] << 7)) as f32;
                     let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
                     self.set((2.0 as f32).powf(octaves));
                 }
@@ -355,10 +353,10 @@ impl SpecificsTrait for Specifics {
             if note.done {
                 continue;
             }
-            for i in 0..self.samples_per_evaluation {
+            for i in audio.iter_mut() {
                 note.done = true;
                 for op in 0..OPS {
-                    audio[i] += note.advance(op, &self.ops, self.m);
+                    *i += note.advance(op, &self.ops, self.m);
                 }
             }
         }

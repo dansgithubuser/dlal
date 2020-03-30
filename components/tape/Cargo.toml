@@ -1,0 +1,12 @@
+[package]
+name = "tape"
+version = "1.0.0"
+authors = ["Dan <dansonlinepresence@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dlal-component-base = { path = "../base" }
+multiqueue2 = "0.1.6"
