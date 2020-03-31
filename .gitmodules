@@ -1,3 +1,6 @@
 [submodule "deps/obvious"]
 	path = deps/obvious
 	url = https://github.com/dansgithubuser/obvious
+[submodule "deps/dansmidilibs"]
+	path = deps/dansmidilibs
+	url = https://github.com/dansgithubuser/dansmidilibs

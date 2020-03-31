@@ -71,7 +71,7 @@ impl SpecificsTrait for Specifics {
             "read",
             |soul, body| {
                 if soul.recv.is_none() {
-                    return Err(err("not initialized"));
+                    return err!("not initialized");
                 }
                 let size: usize = arg_num(&body, 0)?;
                 let mut audio = Vec::<String>::new();

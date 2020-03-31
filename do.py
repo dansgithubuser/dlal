@@ -25,7 +25,7 @@ parser.add_argument('--venv-install', '--vi', action='store_true',
     help="install what's specified in requirements.txt"
 )
 parser.add_argument('--component-new')
-parser.add_argument('--build', '-b', action='store_true')
+parser.add_argument('--build', '-b', nargs='*')
 parser.add_argument('--run', '-r', nargs='*', help=(
     'run interactive Python with dlal imported, '
     'or run specified system, optionally with args'
@@ -51,7 +51,7 @@ def invoke(*args, kwargs={}, title='invoke', fmt='{ts} {cwd} {args} {kwargs}'):
     print('-' * 20 + title + '-' * 20)
     ts = timestamp()
     cwd = os.getcwd()
-    exec(f'print(f"{fmt}")')
+    if fmt: exec(f'print(f"{fmt}")')
     result = subprocess.run(args, **kwargs)
     print()
     return result
@@ -128,23 +128,29 @@ if args.component_new:
     )
 
 # ===== build ===== #
-if args.build:
+if args.build is not None:
     for component_path in glob.glob(os.path.join(DIR, 'components', '*')):
-        if os.path.basename(component_path) == 'base': continue
+        component = os.path.basename(component_path)
+        if args.build and component not in args.build: continue
+        if component == 'base': continue
         os.chdir(component_path)
-        invoke('cargo', 'build', '--release')
+        invoke(
+            'cargo', 'build', '--release',
+            title=component,
+            fmt=None,
+        )
 
 # ===== run ===== #
-if args.run == []:
-    os.chdir(os.path.join(DIR, 'skeleton'))
-    invoke('python', '-i', '-c', 'import dlal')
-elif args.run:
+if args.run or args.run == []:
+    os.chdir(os.path.join(DIR))
     if 'PYTHONPATH' in os.environ:
         os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'skeleton')
     else:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
-    os.chdir(os.path.join(DIR))
-    invoke('python', '-i', *args.run)
+    if args.run:
+        invoke('python', '-i', *args.run)
+    else:
+        invoke('python', '-i', '-c', 'import dlal')
 
 # ===== web ===== #
 if args.web:
@@ -174,7 +180,7 @@ if args.style_check or args.style_rust_fix:
         return invoke(
             *invoke_args,
             kwargs={'check': False},
-            title=None,
+            title='fmt',
             fmt=os.path.relpath(path, DIR)
         ).returncode
     run_on_components(rust_fmt)
@@ -188,7 +194,9 @@ if args.style_check or args.style_rust_fix:
                 '-A', 'clippy::unnecessary_cast',
                 '-A', 'clippy::transmute_ptr_to_ptr',
                 '-A', 'clippy::needless_range_loop',
-            title=None,
+                '-A', 'clippy::vec_box',
+            kwargs={'check': False},
+            title='clippy',
             fmt=os.path.relpath(path, DIR)
         ).returncode
     run_on_components(rust_clippy)
@@ -199,10 +207,16 @@ if args.style_check or args.style_rust_fix:
         result |= invoke(
             'pycodestyle',
             '--ignore',
-            'E124,E128,E131,E203,E226,E301,E302,E305,E306,E701,E704,E711,E722',
+            ','.join([
+                'E124', 'E128', 'E131',
+                'E203', 'E226',
+                'E301', 'E302', 'E305', 'E306',
+                'E402',
+                'E701', 'E704', 'E711', 'E722',
+            ]),
             path,
             kwargs={'check': False},
-            title=None,
+            title='pycodestyle',
             fmt=os.path.relpath(path, DIR),
         ).returncode
     for i in glob.glob(os.path.join(DIR, 'skeleton', 'dlal', '*.py')):

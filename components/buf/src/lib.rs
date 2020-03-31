@@ -67,7 +67,7 @@ impl SpecificsTrait for Specifics {
                 let file_path = arg_str(&body, 0)?;
                 let note: usize = arg_num(&body, 1)?;
                 if note >= 128 {
-                    return Err(err("invalid note"));
+                    return err!("invalid note");
                 }
                 let mut reader = hound::WavReader::open(file_path)?;
                 let spec = reader.spec();

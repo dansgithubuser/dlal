@@ -77,7 +77,7 @@ impl SpecificsTrait for Specifics {
                         return Ok(None);
                     }
                 }
-                Err(err("no such port"))
+                err!("no such port")
             },
             { "args": ["port_name_prefix"] },
         );

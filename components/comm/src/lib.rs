@@ -37,7 +37,7 @@ impl SpecificsTrait for Specifics {
             |soul, body| {
                 let detach = match arg(&body, 7)?.as_bool() {
                     Some(v) => v,
-                    None => return Err(err("detach isn't Boolean")),
+                    None => return err!("detach isn't Boolean"),
                 };
                 soul.to_audio_send
                     .try_send(QueuedCommand {

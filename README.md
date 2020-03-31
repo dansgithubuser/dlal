@@ -26,21 +26,20 @@ dlal is cross-platform.
 Try `python do.py -h` to get started.
 
 ## todo
-- dlal universal linkage
-	- audiobro
-		- liner
-		- midi editor
-		- pitcher
-		- reverb/chorus?
-		- non-audio driver
-		- tape to file
+- audiobro
+	- pitcher
+	- reverb/chorus?
+	- non-audio driver
+	- tape to file
 
 - burgers
 	- arpeggiator
 	- sample-based synth
 
-- speech synth
-	- LPC
-	- https://www.youtube.com/watch?v=Jcymn3RGkF4
-
-- pitch shift component
+- audiobro
+	- legend of bass
+		- speech synth
+			- LPC
+			- https://www.youtube.com/watch?v=Jcymn3RGkF4
+	- haunted by bass
+	- bassindaface / funky funky bass

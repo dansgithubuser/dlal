@@ -73,6 +73,9 @@ class Component:
         del Component._components[self.name]
         self._lib.destruct(self._raw)
 
+    def __repr__(self):
+        return self.name
+
     def command(self, name, *args, **kwargs):
         args, kwargs = _json_prep(args, kwargs)
         if Component._comm:
@@ -111,6 +114,13 @@ class Component:
         else:
             result = self.command('connect', *other._view())
             Component._connections[self.name].append(other.name)
+        return result
+
+    def disconnect(self, other):
+        log('debug', f'disconnect {self.name} {other.name}')
+        result = self.command('disconnect', *other._view())
+        connections = Component._connections[self.name]
+        if other.name in connections: connections.remove(other.name)
         return result
 
     def _load_lib(kind):

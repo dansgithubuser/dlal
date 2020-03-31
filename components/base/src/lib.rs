@@ -17,6 +17,12 @@ pub struct Error {
     msg: String,
 }
 
+impl Error {
+    pub fn new(msg: String) -> Self {
+        Self { msg }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.msg)
@@ -33,81 +39,79 @@ impl error::Error for Error {
     }
 }
 
-pub fn err(msg: &str) -> Box<Error> {
-    Box::new(Error {
-        msg: msg.to_string(),
-    })
+#[macro_export]
+macro_rules! err {
+    (box $($arg:tt)+) => {
+        Box::new($crate::Error::new(format!($($arg)+)))
+    };
+    ($($arg:tt)+) => {
+        Err($crate::err!(box $($arg)+))
+    };
 }
 
 // ===== arg handling ===== //
 pub fn args(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
-    body.get("args").ok_or_else(|| err("missing args"))
+    body.get("args").ok_or_else(|| err!(box "missing args"))
 }
 
 pub fn arg(body: &JsonValue, index: usize) -> Result<&JsonValue, Box<Error>> {
     args(body)?
         .get(index)
-        .ok_or_else(|| err(&format!("missing arg {}", index)))
+        .ok_or_else(|| err!(box "missing arg {}", index))
 }
 
 pub fn arg_str(body: &JsonValue, index: usize) -> Result<&str, Box<Error>> {
     arg(body, index)?
         .as_str()
-        .ok_or_else(|| err(&format!("arg {} isn't a string", index)))
+        .ok_or_else(|| err!(box "arg {} isn't a string", index))
 }
 
 pub fn arg_num<T: std::str::FromStr>(body: &JsonValue, index: usize) -> Result<T, Box<Error>> {
     match arg_str(body, index)?.parse::<T>() {
         Ok(num) => Ok(num),
-        Err(_) => Err(err(&format!(
-            "couldn't parse arg {} as appropriate number",
-            index
-        ))),
+        Err(_) => err!("couldn't parse arg {} as appropriate number", index),
     }
 }
 
 pub fn kwargs(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
-    body.get("kwargs").ok_or_else(|| err("missing kwargs"))
+    body.get("kwargs").ok_or_else(|| err!(box "missing kwargs"))
 }
 
 pub fn kwarg<'a>(body: &'a JsonValue, name: &str) -> Result<&'a JsonValue, Box<Error>> {
     kwargs(body)?
         .get(name)
-        .ok_or_else(|| err(&format!("missing kwarg {}", name)))
+        .ok_or_else(|| err!(box "missing kwarg {}", name))
 }
 
 pub fn kwarg_str<'a>(body: &'a JsonValue, name: &str) -> Result<&'a str, Box<Error>> {
     kwarg(body, name)?
         .as_str()
-        .ok_or_else(|| err(&format!("kwarg {} isn't a string", name)))
+        .ok_or_else(|| err!(box "kwarg {} isn't a string", name))
 }
 
 pub fn kwarg_num<T: std::str::FromStr>(body: &JsonValue, name: &str) -> Result<T, Box<Error>> {
     match kwarg_str(body, name)?.parse::<T>() {
         Ok(num) => Ok(num),
-        Err(_) => Err(err(&format!(
-            "couldn't parse kwarg {} as appropriate number",
-            name
-        ))),
+        Err(_) => err!("couldn't parse kwarg {} as appropriate number", name),
     }
 }
 
 pub fn json_get<'a>(value: &'a JsonValue, name: &str) -> Result<&'a JsonValue, Box<Error>> {
     value
         .get(name)
-        .ok_or_else(|| err(&format!("missing value {}", name)))
+        .ok_or_else(|| err!(box "missing value {}", name))
 }
 
 pub fn json_str(value: &JsonValue) -> Result<&str, Box<Error>> {
     value
         .as_str()
-        .ok_or_else(|| err("expected a string, but didn't get one"))
+        .ok_or_else(|| err!(box "expected a string, but didn't get one"))
 }
 
 pub fn json_num<T: std::str::FromStr>(value: &JsonValue) -> Result<T, Box<Error>> {
     match json_str(value)?.parse::<T>() {
         Ok(num) => Ok(num),
-        Err(_) => Err(err("couldn't parse number")),
+        Err(_) => err!("couldn't parse number"),
     }
 }
 
@@ -132,7 +136,7 @@ macro_rules! json_to_ptr {
     ($value:expr, $type:ty) => {{
         let u = match $value.as_str() {
             Some(s) => s.parse::<usize>()?,
-            None => return Err(err("pointer isn't a string")),
+            None => return err!("pointer isn't a string"),
         };
         unsafe { transmute::<*const c_void, $type>(u as *const c_void) }
     }};
@@ -248,8 +252,8 @@ macro_rules! gen_component {
                     Command {
                         func: Box::new(move |soul, body| {
                             vec_u8.clear();
-                            for i in $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err("msg isn't an array"))? {
-                                vec_u8.push(i.as_str().ok_or_else(|| $crate::err("msg element isn't a str"))?.parse::<u8>()?);
+                            for i in $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err!(box "msg isn't an array"))? {
+                                vec_u8.push(i.as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?);
                             }
                             soul.midi(vec_u8.as_slice());
                             Ok(None)
@@ -347,7 +351,7 @@ macro_rules! gen_component {
 
 #[macro_export]
 macro_rules! command {
-    ($commands:ident, $name:expr, $func:expr, $info:tt$(,)?) => {
+    ($commands:expr, $name:expr, $func:expr, $info:tt$(,)?) => {
         $commands.insert(
             $name,
             Command {
@@ -361,34 +365,30 @@ macro_rules! command {
 #[macro_export]
 macro_rules! uniconnect {
     ($commands:expr, $check_audio:expr) => {
-        $commands.insert(
+        command!(
+            $commands,
             "connect",
-            Command {
-                func: Box::new(|soul, body| {
-                    let output = $crate::View::new($crate::args(&body)?)?;
-                    if $check_audio && output.audio(0) == None {
-                        return Err($crate::err("output must have audio"));
-                    }
-                    soul.output = Some(output);
-                    Ok(None)
-                }),
-                info: $crate::json!({
-                    "args": $crate::VIEW_ARGS,
-                }),
+            |soul, body| {
+                let output = $crate::View::new($crate::args(&body)?)?;
+                if $check_audio && output.audio(0) == None {
+                    return $crate::err!("output must have audio");
+                }
+                soul.output = Some(output);
+                Ok(None)
             },
+            { "args": $crate::VIEW_ARGS },
         );
-        $commands.insert(
+        command!(
+            $commands,
             "disconnect",
-            Command {
-                func: Box::new(|soul, body| {
-                    let output = View::new($crate::args(&body)?)?;
-                    if soul.output == Some(output) {
-                        soul.output = None;
-                    }
-                    Ok(None)
-                }),
-                info: $crate::json!({}),
+            |soul, body| {
+                let output = View::new($crate::args(&body)?)?;
+                if soul.output == Some(output) {
+                    soul.output = None;
+                }
+                Ok(None)
             },
+            {},
         );
     };
 }
@@ -396,36 +396,30 @@ macro_rules! uniconnect {
 #[macro_export]
 macro_rules! multiconnect {
     ($commands:expr, $check_audio:expr) => {
-        $commands.insert(
+        $crate::command!(
+            $commands,
             "connect",
-            Command {
-                func: Box::new(|soul, body| {
-                    let output = $crate::View::new($crate::args(&body)?)?;
-                    if $check_audio && output.audio(0) == None {
-                        return Err($crate::err("output must have audio"));
-                    }
-                    soul.outputs.push(output);
-                    Ok(None)
-                }),
-                info: $crate::json!({
-                    "args": $crate::VIEW_ARGS,
-                }),
+            |soul, body| {
+                let output = $crate::View::new($crate::args(&body)?)?;
+                if $check_audio && output.audio(0) == None {
+                    return $crate::err!("output must have audio");
+                }
+                soul.outputs.push(output);
+                Ok(None)
             },
+            { "args": $crate::VIEW_ARGS },
         );
-        $commands.insert(
+        $crate::command!(
+            $commands,
             "disconnect",
-            Command {
-                func: Box::new(|soul, body| {
-                    let output = View::new($crate::args(&body)?)?;
-                    if let Some(i) = soul.outputs.iter().position(|i| i == &output) {
-                        soul.outputs.remove(i);
-                    }
-                    Ok(None)
-                }),
-                info: $crate::json!({
-                    "args": $crate::VIEW_ARGS,
-                }),
+            |soul, body| {
+                let output = View::new($crate::args(&body)?)?;
+                if let Some(i) = soul.outputs.iter().position(|i| i == &output) {
+                    soul.outputs.remove(i);
+                }
+                Ok(None)
             },
+            { "args": $crate::VIEW_ARGS },
         );
     };
 }
