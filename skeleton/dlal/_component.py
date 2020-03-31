@@ -1,4 +1,5 @@
 from . import _logging
+from ._utils import DIR
 
 import obvious
 
@@ -11,7 +12,6 @@ import weakref
 
 log = _logging.get_log(__name__)
 
-DIR = os.path.dirname(os.path.realpath(__file__))
 COMPONENTS_DIR = os.path.join(DIR, '..', '..', 'components')
 
 def component_kinds(special=None):
@@ -20,7 +20,7 @@ def component_kinds(special=None):
         special_kinds = [
             i[:-3]
             for i in os.listdir(DIR)
-            if not i.startswith('_')
+            if not i.startswith('_') and i.endswith('.py')
         ]
         if special is True: return special_kinds
         avoid = special_kinds

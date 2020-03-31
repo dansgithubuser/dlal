@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlal-component-base = { path = "../base" }
+hound = "3.4.0"
