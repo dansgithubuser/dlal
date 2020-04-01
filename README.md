@@ -28,6 +28,9 @@ Try `python do.py -h` to get started.
 ## todo
 - audiobro
 	- pitcher
+		- slide: midi to audio [0, 127] -> [0, 1]
+		- lfo
+		- oracle: audio to control or command
 	- reverb/chorus?
 	- non-audio driver
 	- tape to file
