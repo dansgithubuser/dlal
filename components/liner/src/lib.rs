@@ -106,7 +106,7 @@ impl Line {
         samples: u32,
         samples_per_evaluation: usize,
         sample_rate: u32,
-        output: &View,
+        output: Option<&View>,
     ) -> bool {
         let mut delta = self.calculate_delta(samples, sample_rate);
         loop {
@@ -129,7 +129,9 @@ impl Line {
                 self.ticks_aft_last_tempo = 0;
             } else {
                 // other msgs get forwarded
-                output.midi(msg);
+                if let Some(output) = output {
+                    output.midi(msg);
+                }
                 self.ticks_aft_last_tempo += deltamsg.delta; // count ticks since last tempo
             }
             // prepare for next
@@ -245,6 +247,22 @@ impl SpecificsTrait for Specifics {
                 ],
             },
         );
+        command!(
+            commands,
+            "advance",
+            |soul, body| {
+                let seconds: f32 = arg_num(&body, 0)?;
+                let evaluations_per_second = soul.sample_rate as f32 / soul.samples_per_evaluation as f32;
+                let evaluations = (seconds * evaluations_per_second) as u32;
+                for _ in 0..evaluations {
+                    soul.evaluate();
+                }
+                Ok(None)
+            },
+            {
+                "args": ["seconds"],
+            },
+        );
     }
 
     fn evaluate(&mut self) {
@@ -256,14 +274,15 @@ impl SpecificsTrait for Specifics {
         self.samples += self.samples_per_evaluation as u32;
         let mut done = true;
         for i in 0..self.lines.len() {
-            if i >= self.outputs.len() || self.outputs[i].is_none() {
-                continue;
-            }
             done &= self.lines[i].advance(
                 self.samples,
                 self.samples_per_evaluation,
                 self.sample_rate,
-                self.outputs[i].as_ref().unwrap(),
+                if i >= self.outputs.len() {
+                    None
+                } else {
+                    self.outputs[i].as_ref()
+                },
             );
         }
         if done {
