@@ -5,11 +5,10 @@
 It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
-from ._server import audio_broadcast_start
+from ._server import audio_broadcast_start, serve
 from ._utils import snake_to_upper_camel_case
 
 import json as _json
-import os as _os
 
 def queue_set(comm):
     _Component._comm = comm
@@ -18,7 +17,6 @@ def component(name):
     return _Component._components.get(name)
 
 def typical_setup():
-    from ._server import serve
     import atexit
     audio = component('audio')
     comm = component('comm')
@@ -132,7 +130,6 @@ def system_save(file_path):
 
 def system_load(file_path, namespace):
     with open(file_path) as file: j = _json.loads(file.read())
-    from . import _skeleton
     for name, kind in j['component_kinds'].items():
         class_name = snake_to_upper_camel_case(kind)
         exec(f'from . import {class_name}')

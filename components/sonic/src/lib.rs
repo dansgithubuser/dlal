@@ -1,6 +1,4 @@
 /*
-A synth inspired by the YM2612 chip, used on the Sega Genesis.
-
 The YM2612 has:
 - 6 monophonic voices
 - four FM operators per voice
