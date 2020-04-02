@@ -149,6 +149,8 @@ Components interact in 3 ways:
 - MIDI
 - audio (constant-size arrays)
 
+Audio is unique because it is exposed as a value, whereas the command and MIDI interfaces are functions. For this reason, audio is useful for conveying quantities other than actual audio. For example, components may share control voltage via the audio interface. Arguably, audio is one example of control voltage, but it is named for how it is usually, or at least necessarily, used.
+
 Additionally, components have an `evaluate` function called regularly when audio is being produced.
 
 Components may register a `connect` command defining how to connect to another component. The other component is always connected as an _output_. That is, during evaluation, information should flow from this component to the other component. If a component registers `connect`, it should register a `disconnect` command as well.
@@ -185,7 +187,7 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - audiobro
 	- pitcher
-		- slide: midi to audio [0, 127] -> [0, 1]
+		- lpf
 		- lfo
 		- oracle: audio to control or command
 	- reverb/chorus?

@@ -1,0 +1,1 @@
+A rhymel splits MIDI into rhythm (MIDI) and melody (control voltage). It is meant to work on single-voice lines. It will extract a single voice from multiple-voice lines, but no guarantees are made about _which_ voice.

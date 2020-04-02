@@ -182,8 +182,7 @@ macro_rules! op_command {
 }
 
 use dlal_component_base::{
-    arg, arg_num, command, gen_component, json, json_get, json_num, kwarg_num, uniconnect,
-    JsonValue, View,
+    arg, arg_num, command, gen_component, join, json, json_get, json_num, uni, JsonValue, View,
 };
 
 use std::collections::HashMap;
@@ -228,20 +227,17 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                join!(samples_per_evaluation soul, body);
+                join!(sample_rate soul, body);
                 soul.set(1.0);
                 Ok(None)
             },
-            {
-                "kwargs": ["samples_per_evaluation", "sample_rate"],
-            },
+            ["samples_per_evaluation", "sample_rate"],
         );
-        uniconnect!(commands, true);
+        uni!(connect commands, true);
         op_command!(commands, "a", f32, (a), ({
             "name": "amount",
             "desc": "attack rate",

@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_str, command, err, gen_component, json, multiconnect, View};
+use dlal_component_base::{arg_str, command, err, gen_component, json, multi, View};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -81,7 +81,7 @@ impl SpecificsTrait for Specifics {
             },
             { "args": ["port_name_prefix"] },
         );
-        multiconnect!(commands, false);
+        multi!(connect commands, false);
     }
 
     fn evaluate(&mut self) {
@@ -91,9 +91,7 @@ impl SpecificsTrait for Specifics {
         loop {
             match self.recv.as_ref().unwrap().try_recv() {
                 Ok(msg) => {
-                    for i in &self.outputs {
-                        i.midi(&msg);
-                    }
+                    multi!(midi msg, self.outputs);
                 }
                 Err(_) => return,
             }

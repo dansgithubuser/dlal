@@ -1,6 +1,4 @@
-use dlal_component_base::{
-    arg_num, args, command, gen_component, json, multiaudio, multiconnect, View,
-};
+use dlal_component_base::{arg_num, args, command, gen_component, json, multi, View};
 
 use portaudio as pa;
 
@@ -68,7 +66,7 @@ impl SpecificsTrait for Specifics {
             },
             { "args": ["component", "command", "audio", "midi", "evaluate"] },
         );
-        multiconnect!(commands, true);
+        multi!(connect commands, true);
         command!(
             commands,
             "start",
@@ -152,7 +150,7 @@ impl SpecificsTrait for Specifics {
 
     fn evaluate(&mut self) {
         let audio_i = unsafe { from_raw_parts(self.audio_i, self.samples_per_evaluation) };
-        multiaudio!(audio_i, self.outputs, self.samples_per_evaluation);
+        multi!(audio audio_i, self.outputs, self.samples_per_evaluation);
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {

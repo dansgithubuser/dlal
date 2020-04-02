@@ -1,5 +1,5 @@
 use dlal_component_base::{
-    arg, arg_num, args, command, err, gen_component, kwarg_num, JsonValue, View, VIEW_ARGS,
+    arg, arg_num, args, command, err, gen_component, join, JsonValue, View, VIEW_ARGS,
 };
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -187,15 +187,14 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                join!(samples_per_evaluation soul, body);
+                join!(sample_rate soul, body);
                 Ok(None)
             },
-            { "kwargs": ["samples_per_evaluation", "sample_rate"] },
+            ["samples_per_evaluation", "sample_rate"],
         );
         command!(
             commands,

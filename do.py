@@ -89,10 +89,17 @@ impl SpecificsTrait for Specifics {
     }
 
     //optional
-    fn register_commands(&self, commands: &mut CommandMap) {}
-    fn evaluate(&mut self) {}
-    fn midi(&mut self, _msg: &[u8]) {}
-    fn audio(&mut self) -> Option<&mut [f32]> { None }
+    fn register_commands(&self, commands: &mut CommandMap) {
+    }
+
+    fn evaluate(&mut self) {
+    }
+
+    fn midi(&mut self, msg: &[u8]) {
+    }
+
+    fn audio(&mut self) -> Option<&mut [f32]> {
+    }
 }'''
 
 if args.component_new:

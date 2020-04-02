@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, command, err, gen_component, json, kwarg_num};
+use dlal_component_base::{arg_num, command, err, gen_component, join, json, kwarg_num};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
@@ -31,14 +31,14 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
-                soul.audio.resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
+                soul.audio
+                    .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
                 Ok(None)
             },
-            { "kwargs": ["samples_per_evaluation"] },
+            ["samples_per_evaluation"],
         );
         command!(
             commands,

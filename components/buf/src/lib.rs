@@ -1,6 +1,5 @@
 use dlal_component_base::{
-    arg_num, arg_str, command, err, gen_component, json, kwarg_num, multiaudio, multiconnect,
-    JsonValue, View,
+    arg_num, arg_str, command, err, gen_component, join, json, kwarg_num, multi, JsonValue, View,
 };
 
 use std::collections::HashMap;
@@ -48,18 +47,17 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
                 soul.audio
                     .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
                 soul.sample_rate = kwarg_num(&body, "sample_rate")?;
                 Ok(None)
             },
-            { "kwargs": ["samples_per_evaluation", "sample_rate"] },
+            ["samples_per_evaluation", "sample_rate"],
         );
-        multiconnect!(commands, true);
+        multi!(connect commands, true);
         command!(
             commands,
             "load",
@@ -130,7 +128,7 @@ impl SpecificsTrait for Specifics {
                 }
             }
         }
-        multiaudio!(self.audio, self.outputs, self.audio.len());
+        multi!(audio self.audio, self.outputs, self.audio.len());
     }
 
     fn midi(&mut self, msg: &[u8]) {

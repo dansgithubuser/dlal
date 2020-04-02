@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, command, gen_component, json, kwarg_num, uniconnect, View};
+use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
 
 pub struct Specifics {
     amount: f32,
@@ -18,16 +18,15 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
+                join!(samples_per_evaluation soul, body);
                 Ok(None)
             },
-            { "kwargs": ["samples_per_evaluation"] },
+            ["samples_per_evaluation"],
         );
-        uniconnect!(commands, true);
+        uni!(connect commands, true);
         command!(
             commands,
             "set",

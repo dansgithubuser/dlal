@@ -363,8 +363,28 @@ macro_rules! command {
 }
 
 #[macro_export]
-macro_rules! uniconnect {
-    ($commands:expr, $check_audio:expr) => {
+macro_rules! join {
+    ($commands:expr, $func:expr, $kwargs:tt$(,)?) => {
+        $crate::command!(
+            $commands,
+            "join",
+            $func,
+            {
+                "kwargs": $kwargs,
+            },
+        );
+    };
+    (samples_per_evaluation $soul:ident, $body:ident) => {
+        $soul.samples_per_evaluation = $crate::kwarg_num(&$body, "samples_per_evaluation")?;
+    };
+    (sample_rate $soul:ident, $body:ident) => {
+        $soul.sample_rate = $crate::kwarg_num(&$body, "sample_rate")?;
+    };
+}
+
+#[macro_export]
+macro_rules! uni {
+    (connect $commands:expr, $check_audio:expr) => {
         command!(
             $commands,
             "connect",
@@ -394,8 +414,8 @@ macro_rules! uniconnect {
 }
 
 #[macro_export]
-macro_rules! multiconnect {
-    ($commands:expr, $check_audio:expr) => {
+macro_rules! multi {
+    (connect $commands:expr, $check_audio:expr) => {
         $crate::command!(
             $commands,
             "connect",
@@ -413,7 +433,7 @@ macro_rules! multiconnect {
             $commands,
             "disconnect",
             |soul, body| {
-                let output = View::new($crate::args(&body)?)?;
+                let output = $crate::View::new($crate::args(&body)?)?;
                 if let Some(i) = soul.outputs.iter().position(|i| i == &output) {
                     soul.outputs.remove(i);
                 }
@@ -422,11 +442,12 @@ macro_rules! multiconnect {
             { "args": $crate::VIEW_ARGS },
         );
     };
-}
-
-#[macro_export]
-macro_rules! multiaudio {
-    ($audio:expr, $outputs:expr, $samples_per_evaluation:expr) => {
+    (midi $msg:expr, $outputs:expr) => {
+        for output in &$outputs {
+            output.midi(&$msg);
+        }
+    };
+    (audio $audio:expr, $outputs:expr, $samples_per_evaluation:expr) => {
         for output in &$outputs {
             let audio = output.audio($samples_per_evaluation).unwrap();
             for i in 0..$samples_per_evaluation {
