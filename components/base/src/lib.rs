@@ -8,6 +8,7 @@ pub use std::ffi::{CStr, CString};
 use std::fmt;
 pub use std::mem::transmute;
 pub use std::os::raw::{c_char, c_void};
+pub use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 pub use std::vec::Vec;
 
@@ -341,7 +342,7 @@ macro_rules! gen_component {
         pub extern "C" fn midi(component: *mut Component, msg: *const u8, size: usize) {
             let component = unsafe { &mut *component };
             let msg = unsafe { std::slice::from_raw_parts(msg, size) };
-            if let Some(_) = std::option_env!("DLAL_SNOOP_MIDI") {
+            if std::option_env!("DLAL_SNOOP_MIDI").is_some() {
                 println!("{:?} midi {:02x?}", component, msg);
             }
             component.specifics.midi(msg);
@@ -352,13 +353,28 @@ macro_rules! gen_component {
             let component = unsafe { &mut *component };
             match component.specifics.audio() {
                 Some(audio) => audio.as_mut_ptr(),
-                None => std::ptr::null_mut(),
+                None => $crate::null_mut(),
             }
         }
 
         #[no_mangle]
         pub extern "C" fn evaluate(component: *mut Component) {
             let component = unsafe { &mut *component };
+            if let Some(percent) = std::option_env!("DLAL_SNOOP_AUDIO") {
+                let audio = audio(component);
+                if audio != $crate::null_mut() {
+                    use std::time::{SystemTime, UNIX_EPOCH};
+                    let timestamp = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .expect("duration_since failed")
+                        .as_millis();
+                    let percent = percent.parse::<u8>()
+                        .expect(&format!("couldn't parse DLAL_SNOOP_AUDIO={} as u8", percent));
+                    if (timestamp % 100 < percent as u128) {
+                        println!("{:?} audio {}", component, unsafe { *audio });
+                    }
+                }
+            }
             component.specifics.evaluate();
         }
     };
