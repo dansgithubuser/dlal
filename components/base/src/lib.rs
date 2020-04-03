@@ -212,7 +212,6 @@ macro_rules! gen_component {
             specifics: $specifics,
             result: $crate::CString,
             commands: CommandMap,
-            vec_u8: $crate::Vec<u8>,
         }
 
         impl Component {
@@ -239,7 +238,6 @@ macro_rules! gen_component {
                 specifics: $specifics::new(),
                 result: $crate::CString::new("").expect("CString::new failed"),
                 commands: CommandMap::new(),
-                vec_u8: $crate::Vec::new(),
             };
             component.specifics.register_commands(&mut component.commands);
             // join
@@ -255,19 +253,25 @@ macro_rules! gen_component {
                 );
             }
             // midi
-            let vec_u8 = unsafe {// punting responsibility of write-exclusion to caller
-                $crate::transmute::<&$crate::Vec::<u8>, &mut $crate::Vec::<u8>>(&component.vec_u8)
-            };
             if !component.commands.contains_key("midi") {
                 component.commands.insert(
                     "midi",
                     Command {
                         func: Box::new(move |soul, body| {
-                            vec_u8.clear();
-                            for i in $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err!(box "msg isn't an array"))? {
-                                vec_u8.push(i.as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?);
+                            let arr = $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err!(box "msg isn't an array"))?;
+                            if arr.len() <= 3 {
+                                let mut slice = [0 as u8; 3];
+                                for i in 0..arr.len() {
+                                    slice[i] = arr[i].as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?;
+                                }
+                                soul.midi(&slice);
+                            } else {
+                                let mut vec = Vec::<u8>::new();
+                                for i in arr {
+                                    vec.push(i.as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?);
+                                }
+                                soul.midi(vec.as_slice());
                             }
-                            soul.midi(vec_u8.as_slice());
                             Ok(None)
                         }),
                         info: $crate::json!({
