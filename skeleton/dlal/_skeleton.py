@@ -14,7 +14,7 @@ def queue_set(comm):
     _Component._comm = comm
 
 def component(name):
-    return _Component._components.get(name)
+    return _Component._components[name]
 
 def component_class(kind):
     class_name = snake_to_upper_camel_case(kind)
@@ -137,7 +137,7 @@ def system_save(file_path):
 def system_load(file_path, namespace):
     with open(file_path) as file: j = _json.loads(file.read())
     for name, kind in j['component_kinds'].items():
-        namespace[name] = component_class(kind)()
+        namespace[name] = component_class(kind)(name)
     for name, component in _Component._components.items():
         jc = j['components'].get(name)
         if jc: component.from_json(jc)

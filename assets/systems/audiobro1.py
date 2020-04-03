@@ -57,7 +57,7 @@ driver.add(liner)
 driver.add(lpf)
 
 # commands
-liner.load('assets/midis/audiobro1.mid')
+liner.load('assets/midis/audiobro1.mid', immediate=True)
 liner.advance(sys_arg(1, float, 0))
 
 drum.buf.load('assets/sounds/animal/cricket.wav', 56)

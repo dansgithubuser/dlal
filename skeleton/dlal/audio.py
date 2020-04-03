@@ -6,7 +6,7 @@ class Audio(Component):
         self.components = []
 
     def add(self, component):
-        result = self.command('add', *component._view())
+        result = self.command('add', component._view())
         self.components.append(component.name)
         return result
 

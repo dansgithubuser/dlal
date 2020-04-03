@@ -1,5 +1,6 @@
 use dlal_component_base::{
-    arg_num, arg_str, command, gen_component, join, json, json_from_str, kwarg_num, multi, View,
+    arg, arg_num, arg_str, command, gen_component, join, json, json_from_str, json_get, json_num,
+    json_str, kwarg_num, multi, View,
 };
 
 use std::vec::Vec;
@@ -84,6 +85,32 @@ impl SpecificsTrait for Specifics {
             {
                 "args": ["b"],
             },
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| {
+                Ok(Some(json!({
+                    "m": soul.m,
+                    "b": soul.b,
+                    "mode": soul.mode,
+                    "format": soul.format,
+                })))
+            },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                let j = arg(&body, 0)?;
+                soul.m = json_num(json_get(j, "m")?)?;
+                soul.b = json_num(json_get(j, "b")?)?;
+                soul.mode = json_num(json_get(j, "mode")?)?;
+                soul.format = json_str(json_get(j, "format")?)?.to_string();
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 

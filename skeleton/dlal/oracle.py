@@ -19,12 +19,12 @@ class Oracle(Component):
     def mode(self, mode=None):
         args = []
         if mode is not None: args.append(MODE.dict[mode])
-        return MODE.list[int(self.command('mode', *args))]
+        return MODE.list[int(self.command('mode', args))]
 
     def format(self, name, *args, **kwargs):
         args, kwargs = json_prep(args, kwargs)
-        return self.command('format', json.dumps({
+        return self.command('format', [json.dumps({
             'name': name,
             'args': args,
             'kwargs': kwargs,
-        }))
+        })])

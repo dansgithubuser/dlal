@@ -1,5 +1,6 @@
 use dlal_component_base::{
-    arg_num, arg_str, command, err, gen_component, join, json, kwarg_num, multi, JsonValue, View,
+    arg, arg_num, arg_str, command, err, gen_component, join, json, json_get, json_num, kwarg_num,
+    multi, JsonValue, View,
 };
 
 use std::collections::HashMap;
@@ -103,12 +104,36 @@ impl SpecificsTrait for Specifics {
                     sounds.insert(
                         note.to_string(),
                         json!({
-                            "samples": sound.samples,
+                            "samples": sound.samples.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
                             "sample_rate": sound.sample_rate.to_string(),
                         }),
                     );
                 }
                 Ok(Some(json!(sounds)))
+            },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                soul.sounds = vec![Sound::default(); 128];
+                let arg_sounds = arg(&body, 0)?
+                    .as_object()
+                    .ok_or_else(|| err!(box "sounds isn't an object"))?;
+                for (note, arg_sound) in arg_sounds.iter() {
+                    let note: usize = note.parse()?;
+                    let mut sound = Sound::default();
+                    sound.sample_rate = json_num(json_get(arg_sound, "sample_rate")?)?;
+                    let arg_samples = json_get(arg_sound, "samples")?
+                        .as_array()
+                        .ok_or_else(|| err!(box "samples isn't an array"))?;
+                    for sample in arg_samples {
+                        sound.samples.push(json_num(sample)?);
+                    }
+                    soul.sounds[note] = sound;
+                }
+                Ok(None)
             },
             {},
         );

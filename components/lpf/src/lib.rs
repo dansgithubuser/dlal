@@ -44,6 +44,21 @@ impl SpecificsTrait for Specifics {
                 }],
             }
         );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| { Ok(Some(json!(soul.lowness.to_string()))) },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                soul.lowness = arg_num(&body, 0)?;
+                Ok(None)
+            },
+            { "args": ["json"] },
+        );
     }
 
     fn evaluate(&mut self) {

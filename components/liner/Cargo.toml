@@ -10,3 +10,4 @@ crate-type = ["cdylib"]
 [dependencies]
 dlal-component-base = { path = "../base" }
 multiqueue2 = "0.1.6"
+serde = { version = "1.0.106", features = ["derive"] }

@@ -1,13 +1,15 @@
 use dlal_component_base::{
-    arg, arg_num, args, command, err, gen_component, join, JsonValue, View, VIEW_ARGS,
+    arg, arg_num, args, command, err, gen_component, join, json, json_from_str, json_get, kwarg,
+    JsonValue, View, VIEW_ARGS,
 };
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
+use serde::{Deserialize, Serialize};
 
 use std::error::Error;
 use std::vec::Vec;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 enum Msg {
     Short([u8; 3]),
     Long(Vec<u8>),
@@ -49,7 +51,7 @@ impl Msg {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Deltamsg {
     delta: u32,
     msg: Msg,
@@ -69,7 +71,7 @@ impl Deltamsg {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 struct Line {
     deltamsgs: Vec<Deltamsg>,
     ticks_per_quarter: u32,
@@ -232,6 +234,13 @@ impl SpecificsTrait for Specifics {
                 if line_index >= soul.lines.len() {
                     return err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len());
                 }
+                if let Ok(immediate) = kwarg(&body, "immediate") {
+                    if immediate.as_bool().ok_or_else(|| err!(box "immediate isn't a bool"))? {
+                        soul.lines[line_index] = Box::new(Line::new(
+                            deltamsgs, ticks_per_quarter, soul.lines[line_index].index
+                        )?);
+                    }
+                }
                 soul.send.try_send(Box::new(Line::new(deltamsgs, ticks_per_quarter, line_index)?))?;
                 Ok(None)
             },
@@ -242,6 +251,13 @@ impl SpecificsTrait for Specifics {
                     {
                         "name": "deltamsgs",
                         "desc": "[{delta, msg: [..]}, ..]",
+                    },
+                ],
+                "kwargs": [
+                    {
+                        "name": "immediate",
+                        "default": false,
+                        "desc": "immediately enact the line after loading",
                     },
                 ],
             },
@@ -261,6 +277,25 @@ impl SpecificsTrait for Specifics {
             {
                 "args": ["seconds"],
             },
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| { Ok(Some(json!({ "lines": soul.lines }))) },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                let j = arg(&body, 0)?;
+                let lines = json_get(j, "lines")?.as_array().ok_or_else(|| err!(box "lines isn't an array"))?;
+                for i in 0..lines.len() {
+                    soul.lines[i] = json_from_str(&lines[i].to_string())?;
+                }
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 
