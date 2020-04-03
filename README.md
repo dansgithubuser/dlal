@@ -188,7 +188,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - audiobro
 	- pitcher
-		- lpf
 		- lfo
 	- reverb/chorus?
 	- non-audio driver

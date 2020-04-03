@@ -33,10 +33,11 @@ comm = dlal.Comm()
 Voice('drum', 'buf', 'gain', output=['buf'])
 Voice('piano', 'sonic')
 Voice('bass', 'sonic')
-Voice('ghost', 'gain', 'rhymel', 'oracle', 'sonic', input=['rhymel'])
+Voice('ghost', 'gain', 'rhymel', 'lpf', 'oracle', 'sonic', input=['rhymel'])
 Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 liner = dlal.Liner()
+lpf = dlal.Lpf()
 
 voices = [
     drum,
@@ -53,6 +54,7 @@ for voice in voices:
     for i in voice.components.values():
         driver.add(i)
 driver.add(liner)
+driver.add(lpf)
 
 # commands
 liner.load('assets/midis/audiobro1.mid')
@@ -104,6 +106,7 @@ piano.sonic.from_json({
 })
 
 ghost.gain.set(0)
+ghost.lpf.set(0.9992)
 ghost.oracle.mode('pitch_wheel')
 ghost.oracle.m(0x4000)
 ghost.oracle.format('midi', [0xe0, '%l', '%h'])
@@ -170,12 +173,14 @@ drum.gain.connect(drum.buf)
 ghost.gain.connect(ghost.oracle)
 ghost.rhymel.connect(ghost.sonic)
 ghost.rhymel.connect(ghost.oracle)
+ghost.lpf.connect(ghost.oracle)
 ghost.oracle.connect(ghost.sonic)
 for voice in voices:
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
         i.connect(driver)
+lpf.connect(driver)
 
 # setup
 dlal.typical_setup()
