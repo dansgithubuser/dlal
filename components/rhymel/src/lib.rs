@@ -15,7 +15,7 @@ pub struct Specifics {
     fresh
     |
     +--> note, when a note is played
-            - rhythm: start middle C with same velocity
+            - rhythm: start E5 with same velocity
             - store the number
 
     note
@@ -34,7 +34,7 @@ pub struct Specifics {
     |       - store the number
     |       - forget the velocity
     +--> fresh, when silence timer exceeds grace period
-            - rhythm: end middle C with stored velocity
+            - rhythm: end E5 with stored velocity
             - forget the note
             - forget the velocity
 
@@ -84,7 +84,7 @@ impl SpecificsTrait for Specifics {
             self.silence += self.samples_per_evaluation as f32 / self.sample_rate as f32;
             // grace -> fresh
             if self.silence > self.grace {
-                multi!(midi [0x80, 0x3c, self.velocity], self.outputs);
+                multi!(midi [0x80, 0x40, self.velocity], self.outputs);
                 self.note = SENTINEL;
                 self.velocity = SENTINEL;
             }
@@ -115,12 +115,12 @@ impl SpecificsTrait for Specifics {
         } else if type_nibble == 0x90 {
             // fresh -> note
             if self.note == SENTINEL && self.velocity == SENTINEL {
-                multi!(midi [0x90, 0x3c, msg[2]], self.outputs);
+                multi!(midi [0x90, 0x40, msg[2]], self.outputs);
                 self.note = msg[1];
             }
             // (note, grace) -> note
             else {
-                multi!(midi [0xa0, 0x3c, msg[2]], self.outputs);
+                multi!(midi [0xa0, 0x40, msg[2]], self.outputs);
                 self.note = msg[1];
                 self.velocity = SENTINEL;
             }

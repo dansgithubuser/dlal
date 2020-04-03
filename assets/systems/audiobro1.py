@@ -1,5 +1,7 @@
 import dlal
 
+import midi
+
 import sys
 
 def sys_arg(i, f=str, default=None):
@@ -8,15 +10,15 @@ def sys_arg(i, f=str, default=None):
     return default
 
 class Voice:
-    def __init__(self, **kwargs):
+    def __init__(self, name, *kinds, input=None, output=None):
+        globals()[name] = self
         self.components = {}
-        for k, v in kwargs.items():
-            if k in 'io': continue
-            self.components[k] = v
-            setattr(self, k, v)
-        items = list(self.components.items())
-        self.i = self.pick(kwargs.get('i', items[ 0][0]))
-        self.o = self.pick(kwargs.get('o', items[-1][0]))
+        for kind in kinds:
+            component = dlal.component_class(kind)(name=f'{name}.{kind}')
+            self.components[kind] = component
+            setattr(self, kind, component)
+        self.input = self.pick(input or [kinds[0]])
+        self.output = self.pick(output or [kinds[-1]])
 
     def pick(self, ks):
         return [
@@ -28,12 +30,12 @@ class Voice:
 # init
 driver = dlal.Audio()
 comm = dlal.Comm()
-drum = Voice(buf=dlal.Buf(), gain=dlal.Gain(), o=['buf'])
-piano = Voice(sonic=dlal.Sonic())
-bass = Voice(sonic=dlal.Sonic())
-ghost = Voice(sonic=dlal.Sonic())
-bell = Voice(sonic=dlal.Sonic())
-goon = Voice(sonic=dlal.Sonic())
+Voice('drum', 'buf', 'gain', output=['buf'])
+Voice('piano', 'sonic')
+Voice('bass', 'sonic')
+Voice('ghost', 'gain', 'rhymel', 'oracle', 'sonic', input=['rhymel'])
+Voice('bell', 'sonic')
+Voice('goon', 'sonic')
 liner = dlal.Liner()
 
 voices = [
@@ -48,8 +50,8 @@ voices = [
 # add
 driver.add(comm)
 for voice in voices:
-    for c in voice.components.values():
-        driver.add(c)
+    for i in voice.components.values():
+        driver.add(i)
 driver.add(liner)
 
 # commands
@@ -81,6 +83,7 @@ bass.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
+
 piano.sonic.from_json({
     "0": {
         "a": "4e-3", "d": "3e-5", "s": "0", "r": "3e-4", "m": "1",
@@ -99,6 +102,11 @@ piano.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
+
+ghost.gain.set(0)
+ghost.oracle.mode('pitch_wheel')
+ghost.oracle.m(0x4000)
+ghost.oracle.format('midi', [0xe0, '%l', '%h'])
 ghost.sonic.from_json({
     "0": {
         "a": "7e-4", "d": "5e-3", "s": "1", "r": "6e-5", "m": "1",
@@ -117,6 +125,8 @@ ghost.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.125",
     },
 })
+ghost.sonic.midi(midi.msg.pitch_bend_range(64))
+
 bell.sonic.from_json({
     "0": {
         "a": "0.01", "d": "3e-5", "s": "0", "r": "3e-5", "m": "1",
@@ -135,6 +145,7 @@ bell.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
+
 goon.sonic.from_json({
     "0": {
         "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "1",
@@ -156,11 +167,15 @@ goon.sonic.from_json({
 
 # connect
 drum.gain.connect(drum.buf)
+ghost.gain.connect(ghost.oracle)
+ghost.rhymel.connect(ghost.sonic)
+ghost.rhymel.connect(ghost.oracle)
+ghost.oracle.connect(ghost.sonic)
 for voice in voices:
-    for i in voice.i:
+    for i in voice.input:
         liner.connect(i)
-    for o in voice.o:
-        o.connect(driver)
+    for i in voice.output:
+        i.connect(driver)
 
 # setup
 dlal.typical_setup()

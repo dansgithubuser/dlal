@@ -154,7 +154,7 @@ impl View {
         })
     }
 
-    pub fn command(&self, body: JsonValue) -> Option<JsonValue> {
+    pub fn command(&self, body: &JsonValue) -> Option<JsonValue> {
         let text = CString::new(body.to_string()).expect("CString::new failed");
         let result = (self.command_view)(self.raw, text.as_ptr());
         if result.is_null() {
@@ -207,6 +207,7 @@ macro_rules! gen_component {
 
         // ===== component ===== //
         pub struct Component {
+            name: String,
             specifics: $specifics,
             result: $crate::CString,
             commands: CommandMap,
@@ -220,10 +221,20 @@ macro_rules! gen_component {
             }
         }
 
+        impl std::fmt::Debug for Component {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_struct("Component")
+                    .field("name", &self.name)
+                    .finish()
+            }
+        }
+
         // ===== external functions ===== //
         #[no_mangle]
-        pub extern "C" fn construct() -> *mut Component {
+        pub extern "C" fn construct(name: *const $crate::c_char) -> *mut Component {
+            let name = unsafe { $crate::CStr::from_ptr(name) }.to_str().expect("CStr::to_str failed");
             let mut component = Component {
+                name: name.to_string(),
                 specifics: $specifics::new(),
                 result: $crate::CString::new("").expect("CString::new failed"),
                 commands: CommandMap::new(),
@@ -329,7 +340,11 @@ macro_rules! gen_component {
         #[no_mangle]
         pub extern "C" fn midi(component: *mut Component, msg: *const u8, size: usize) {
             let component = unsafe { &mut *component };
-            component.specifics.midi(unsafe { std::slice::from_raw_parts(msg, size) });
+            let msg = unsafe { std::slice::from_raw_parts(msg, size) };
+            if let Some(_) = std::option_env!("DLAL_SNOOP_MIDI") {
+                println!("{:?} midi {:02x?}", component, msg);
+            }
+            component.specifics.midi(msg);
         }
 
         #[no_mangle]

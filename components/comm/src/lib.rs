@@ -58,7 +58,7 @@ impl SpecificsTrait for Specifics {
 
     fn evaluate(&mut self) {
         while let Ok(queued_command) = self.to_audio_recv.try_recv() {
-            let result = queued_command.view.command(*queued_command.body);
+            let result = queued_command.view.command(&*queued_command.body);
             if !queued_command.detach {
                 self.fro_audio_send
                     .try_send(Box::new(result))

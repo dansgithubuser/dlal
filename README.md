@@ -77,7 +77,8 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | | _server |                                        |
 | +=========+                                        |
 |                                                    |
-+-> ( _skeleton.system_load )                        |
++-> ( _skeleton.component_class )                    |
+|                                                    |
 |                                                    |
 |# components                                        |
 |                                                    |
@@ -189,10 +190,14 @@ The `audio` component is the driver component for interactive audio.
 	- pitcher
 		- lpf
 		- lfo
-		- oracle: audio to control or command
 	- reverb/chorus?
 	- non-audio driver
 	- tape to file
+
+- component matrix
+	- in vs out: cmd/cmd+mid/mid/mid+aud/aud/aud+cmd/all/?
+	- i/o: *
+	- live i/o: **
 
 - burgers
 	- arpeggiator

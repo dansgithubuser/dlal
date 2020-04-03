@@ -16,6 +16,12 @@ def queue_set(comm):
 def component(name):
     return _Component._components.get(name)
 
+def component_class(kind):
+    class_name = snake_to_upper_camel_case(kind)
+    locals = {}
+    exec(f'from . import {class_name} as result', globals(), locals)
+    return locals['result']
+
 def typical_setup():
     import atexit
     audio = component('audio')
@@ -131,9 +137,7 @@ def system_save(file_path):
 def system_load(file_path, namespace):
     with open(file_path) as file: j = _json.loads(file.read())
     for name, kind in j['component_kinds'].items():
-        class_name = snake_to_upper_camel_case(kind)
-        exec(f'from . import {class_name}')
-        exec(f'namespace["{name}"] = {class_name}()')
+        namespace[name] = component_class(kind)()
     for name, component in _Component._components.items():
         jc = j['components'].get(name)
         if jc: component.from_json(jc)

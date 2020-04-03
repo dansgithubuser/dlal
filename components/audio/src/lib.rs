@@ -47,7 +47,7 @@ impl SpecificsTrait for Specifics {
             "add",
             |soul, body| {
                 let view = View::new(args(&body)?)?;
-                let join_result = view.command(json!({
+                let join_result = view.command(&json!({
                     "name": "join",
                     "kwargs": {
                         "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
