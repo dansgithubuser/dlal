@@ -317,6 +317,9 @@ macro_rules! gen_component {
         pub extern "C" fn command(component: *mut Component, text: *const $crate::c_char) -> *const $crate::c_char {
             let component = unsafe { &mut *component };
             let text = unsafe { $crate::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
+            if std::option_env!("DLAL_SNOOP_COMMAND").is_some() {
+                println!("{:?} command {:02x?}", component, text);
+            }
             let body: $crate::JsonValue = match $crate::json_from_str(text) {
                 Ok(body) => body,
                 Err(err) => return component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),

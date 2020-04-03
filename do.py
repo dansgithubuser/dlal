@@ -141,6 +141,7 @@ if args.build is not None:
         if args.build and component not in args.build: continue
         if component == 'base': continue
         os.chdir(component_path)
+        if not os.path.exists('Cargo.toml'): continue
         invoke(
             'cargo', 'build', '--release',
             title=component,
