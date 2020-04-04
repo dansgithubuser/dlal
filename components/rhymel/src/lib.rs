@@ -17,12 +17,14 @@ pub struct Specifics {
     +--> note, when a note is played
             - rhythm: start E5 with same velocity
             - store the number
+            - match pitch to note
 
     note
     |
     +--> note, when a note is played
     |       - rhythm: forward the velocity
     |       - store the number
+    |       - match pitch to note
     +--> grace, when the stored note ends
             - store the velocity
             - start silence timer
@@ -32,6 +34,7 @@ pub struct Specifics {
     +--> note, when a note is played
     |       - rhythm: forward the velocity
     |       - store the number
+    |       - match pitch to note
     |       - forget the velocity
     +--> fresh, when silence timer exceeds grace period
             - rhythm: end E5 with stored velocity
@@ -46,6 +49,7 @@ pub struct Specifics {
     else                       { fresh }
     */
     note: u8,
+    pitch: f32,
     velocity: u8,
     silence: f32,
 
@@ -90,12 +94,10 @@ impl SpecificsTrait for Specifics {
             }
         }
         // send pitch as control voltage to outputs
-        if self.note != SENTINEL {
-            for output in &self.outputs {
-                if let Some(audio) = output.audio(self.samples_per_evaluation) {
-                    for i in 0..self.samples_per_evaluation {
-                        audio[i] += self.note as f32 / 128.0;
-                    }
+        for output in &self.outputs {
+            if let Some(audio) = output.audio(self.samples_per_evaluation) {
+                for i in 0..self.samples_per_evaluation {
+                    audio[i] += self.pitch;
                 }
             }
         }
@@ -124,6 +126,8 @@ impl SpecificsTrait for Specifics {
                 self.note = msg[1];
                 self.velocity = SENTINEL;
             }
+            // pitch
+            self.pitch = self.note as f32 / 128.0;
         }
     }
 }
