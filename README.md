@@ -187,11 +187,11 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - audiobro
-	- pitcher
-		- lfo
 	- reverb/chorus?
 	- non-audio driver
 	- tape to file
+
+- rust doc generation?
 
 - component matrix
 	- in vs out: cmd/cmd+mid/mid/mid+aud/aud/aud+cmd/all/?
