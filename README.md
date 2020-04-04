@@ -188,7 +188,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - audiobro
 	- reverb/chorus?
-	- non-audio driver
 	- tape to file
 
 - rust doc generation?

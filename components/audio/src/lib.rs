@@ -133,6 +133,23 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "run",
+            |soul, _body| {
+                let mut vec: Vec<f32> = Vec::new();
+                vec.resize(soul.samples_per_evaluation, 0.0);
+                soul.audio_o = vec.as_mut_ptr();
+                for i in &mut soul.addees {
+                    for j in &mut vec {
+                        *j = 0.0;
+                    }
+                    i.evaluate();
+                }
+                Ok(None)
+            },
+            {},
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| { Ok(Some(json!(soul.samples_per_evaluation.to_string()))) },
             {},
