@@ -38,6 +38,9 @@ Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 liner = dlal.Liner()
 lpf = dlal.Lpf()
+buf = dlal.Buf()
+tape = dlal.Tape(1 << 17)
+gain = dlal.Gain()
 
 voices = [
     drum,
@@ -55,6 +58,9 @@ for voice in voices:
         driver.add(i)
 driver.add(liner)
 driver.add(lpf)
+driver.add(buf)
+driver.add(tape)
+driver.add(gain)
 
 # commands
 liner.load('assets/midis/audiobro1.mid', immediate=True)
@@ -170,6 +176,8 @@ goon.sonic.from_json({
     },
 })
 
+gain.set(0)
+
 # connect
 drum.gain.connect(drum.buf)
 ghost.gain.connect(ghost.oracle)
@@ -182,8 +190,21 @@ for voice in voices:
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
-        i.connect(driver)
-lpf.connect(driver)
+        i.connect(buf)
+lpf.connect(buf)
+buf.connect(tape)
+gain.connect(buf)
+buf.connect(driver)
 
 # setup
-dlal.typical_setup()
+end = sys_arg(2, float)
+if end:
+    duration = end - sys_arg(1, float, 0)
+    runs = int(duration * 44100 / 64)
+    with open('audiobro1.raw', 'wb') as file:
+        for i in range(runs):
+            driver.run()
+            if i % (1 << 8) == 0xff:
+                tape.to_file_i16le(1 << 14, file)
+else:
+    dlal.typical_setup()
