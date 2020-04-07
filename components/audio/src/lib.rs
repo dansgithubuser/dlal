@@ -1,6 +1,4 @@
-use dlal_component_base::{
-    arg_num, args, command, gen_component, json, multiaudio, multiconnect, View,
-};
+use dlal_component_base::{arg_num, args, command, gen_component, json, multi, View};
 
 use portaudio as pa;
 
@@ -49,7 +47,7 @@ impl SpecificsTrait for Specifics {
             "add",
             |soul, body| {
                 let view = View::new(args(&body)?)?;
-                let join_result = view.command(json!({
+                let join_result = view.command(&json!({
                     "name": "join",
                     "kwargs": {
                         "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
@@ -68,7 +66,7 @@ impl SpecificsTrait for Specifics {
             },
             { "args": ["component", "command", "audio", "midi", "evaluate"] },
         );
-        multiconnect!(commands, true);
+        multi!(connect commands, true);
         command!(
             commands,
             "start",
@@ -135,6 +133,23 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "run",
+            |soul, _body| {
+                let mut vec: Vec<f32> = Vec::new();
+                vec.resize(soul.samples_per_evaluation, 0.0);
+                soul.audio_o = vec.as_mut_ptr();
+                for i in &mut soul.addees {
+                    for j in &mut vec {
+                        *j = 0.0;
+                    }
+                    i.evaluate();
+                }
+                Ok(None)
+            },
+            {},
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| { Ok(Some(json!(soul.samples_per_evaluation.to_string()))) },
             {},
@@ -152,7 +167,7 @@ impl SpecificsTrait for Specifics {
 
     fn evaluate(&mut self) {
         let audio_i = unsafe { from_raw_parts(self.audio_i, self.samples_per_evaluation) };
-        multiaudio!(audio_i, self.outputs, self.samples_per_evaluation);
+        multi!(audio audio_i, self.outputs, self.samples_per_evaluation);
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {

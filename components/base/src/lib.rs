@@ -8,6 +8,7 @@ pub use std::ffi::{CStr, CString};
 use std::fmt;
 pub use std::mem::transmute;
 pub use std::os::raw::{c_char, c_void};
+pub use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
 pub use std::vec::Vec;
 
@@ -154,7 +155,7 @@ impl View {
         })
     }
 
-    pub fn command(&self, body: JsonValue) -> Option<JsonValue> {
+    pub fn command(&self, body: &JsonValue) -> Option<JsonValue> {
         let text = CString::new(body.to_string()).expect("CString::new failed");
         let result = (self.command_view)(self.raw, text.as_ptr());
         if result.is_null() {
@@ -207,10 +208,10 @@ macro_rules! gen_component {
 
         // ===== component ===== //
         pub struct Component {
+            name: String,
             specifics: $specifics,
             result: $crate::CString,
             commands: CommandMap,
-            vec_u8: $crate::Vec<u8>,
         }
 
         impl Component {
@@ -220,14 +221,23 @@ macro_rules! gen_component {
             }
         }
 
+        impl std::fmt::Debug for Component {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.debug_struct("Component")
+                    .field("name", &self.name)
+                    .finish()
+            }
+        }
+
         // ===== external functions ===== //
         #[no_mangle]
-        pub extern "C" fn construct() -> *mut Component {
+        pub extern "C" fn construct(name: *const $crate::c_char) -> *mut Component {
+            let name = unsafe { $crate::CStr::from_ptr(name) }.to_str().expect("CStr::to_str failed");
             let mut component = Component {
+                name: name.to_string(),
                 specifics: $specifics::new(),
                 result: $crate::CString::new("").expect("CString::new failed"),
                 commands: CommandMap::new(),
-                vec_u8: $crate::Vec::new(),
             };
             component.specifics.register_commands(&mut component.commands);
             // join
@@ -243,19 +253,25 @@ macro_rules! gen_component {
                 );
             }
             // midi
-            let vec_u8 = unsafe {// punting responsibility of write-exclusion to caller
-                $crate::transmute::<&$crate::Vec::<u8>, &mut $crate::Vec::<u8>>(&component.vec_u8)
-            };
             if !component.commands.contains_key("midi") {
                 component.commands.insert(
                     "midi",
                     Command {
                         func: Box::new(move |soul, body| {
-                            vec_u8.clear();
-                            for i in $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err!(box "msg isn't an array"))? {
-                                vec_u8.push(i.as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?);
+                            let arr = $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err!(box "msg isn't an array"))?;
+                            if arr.len() <= 3 {
+                                let mut slice = [0 as u8; 3];
+                                for i in 0..arr.len() {
+                                    slice[i] = arr[i].as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?;
+                                }
+                                soul.midi(&slice);
+                            } else {
+                                let mut vec = Vec::<u8>::new();
+                                for i in arr {
+                                    vec.push(i.as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?);
+                                }
+                                soul.midi(vec.as_slice());
                             }
-                            soul.midi(vec_u8.as_slice());
                             Ok(None)
                         }),
                         info: $crate::json!({
@@ -305,6 +321,9 @@ macro_rules! gen_component {
         pub extern "C" fn command(component: *mut Component, text: *const $crate::c_char) -> *const $crate::c_char {
             let component = unsafe { &mut *component };
             let text = unsafe { $crate::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
+            if std::option_env!("DLAL_SNOOP_COMMAND").is_some() {
+                println!("{:?} command {:02x?}", component, text);
+            }
             let body: $crate::JsonValue = match $crate::json_from_str(text) {
                 Ok(body) => body,
                 Err(err) => return component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),
@@ -329,7 +348,11 @@ macro_rules! gen_component {
         #[no_mangle]
         pub extern "C" fn midi(component: *mut Component, msg: *const u8, size: usize) {
             let component = unsafe { &mut *component };
-            component.specifics.midi(unsafe { std::slice::from_raw_parts(msg, size) });
+            let msg = unsafe { std::slice::from_raw_parts(msg, size) };
+            if std::option_env!("DLAL_SNOOP_MIDI").is_some() {
+                println!("{:?} midi {:02x?}", component, msg);
+            }
+            component.specifics.midi(msg);
         }
 
         #[no_mangle]
@@ -337,13 +360,28 @@ macro_rules! gen_component {
             let component = unsafe { &mut *component };
             match component.specifics.audio() {
                 Some(audio) => audio.as_mut_ptr(),
-                None => std::ptr::null_mut(),
+                None => $crate::null_mut(),
             }
         }
 
         #[no_mangle]
         pub extern "C" fn evaluate(component: *mut Component) {
             let component = unsafe { &mut *component };
+            if let Some(percent) = std::option_env!("DLAL_SNOOP_AUDIO") {
+                let audio = audio(component);
+                if audio != $crate::null_mut() {
+                    use std::time::{SystemTime, UNIX_EPOCH};
+                    let timestamp = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .expect("duration_since failed")
+                        .as_millis();
+                    let percent = percent.parse::<u8>()
+                        .expect(&format!("couldn't parse DLAL_SNOOP_AUDIO={} as u8", percent));
+                    if (timestamp % 100 < percent as u128) {
+                        println!("{:?} audio {}", component, unsafe { *audio });
+                    }
+                }
+            }
             component.specifics.evaluate();
         }
     };
@@ -363,8 +401,28 @@ macro_rules! command {
 }
 
 #[macro_export]
-macro_rules! uniconnect {
-    ($commands:expr, $check_audio:expr) => {
+macro_rules! join {
+    ($commands:expr, $func:expr, $kwargs:tt$(,)?) => {
+        $crate::command!(
+            $commands,
+            "join",
+            $func,
+            {
+                "kwargs": $kwargs,
+            },
+        );
+    };
+    (samples_per_evaluation $soul:ident, $body:ident) => {
+        $soul.samples_per_evaluation = $crate::kwarg_num(&$body, "samples_per_evaluation")?;
+    };
+    (sample_rate $soul:ident, $body:ident) => {
+        $soul.sample_rate = $crate::kwarg_num(&$body, "sample_rate")?;
+    };
+}
+
+#[macro_export]
+macro_rules! uni {
+    (connect $commands:expr, $check_audio:expr) => {
         command!(
             $commands,
             "connect",
@@ -394,8 +452,8 @@ macro_rules! uniconnect {
 }
 
 #[macro_export]
-macro_rules! multiconnect {
-    ($commands:expr, $check_audio:expr) => {
+macro_rules! multi {
+    (connect $commands:expr, $check_audio:expr) => {
         $crate::command!(
             $commands,
             "connect",
@@ -413,7 +471,7 @@ macro_rules! multiconnect {
             $commands,
             "disconnect",
             |soul, body| {
-                let output = View::new($crate::args(&body)?)?;
+                let output = $crate::View::new($crate::args(&body)?)?;
                 if let Some(i) = soul.outputs.iter().position(|i| i == &output) {
                     soul.outputs.remove(i);
                 }
@@ -422,11 +480,12 @@ macro_rules! multiconnect {
             { "args": $crate::VIEW_ARGS },
         );
     };
-}
-
-#[macro_export]
-macro_rules! multiaudio {
-    ($audio:expr, $outputs:expr, $samples_per_evaluation:expr) => {
+    (midi $msg:expr, $outputs:expr) => {
+        for output in &$outputs {
+            output.midi(&$msg);
+        }
+    };
+    (audio $audio:expr, $outputs:expr, $samples_per_evaluation:expr) => {
         for output in &$outputs {
             let audio = output.audio($samples_per_evaluation).unwrap();
             for i in 0..$samples_per_evaluation {

@@ -5,20 +5,24 @@
 It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
-from ._server import audio_broadcast_start
+from ._server import audio_broadcast_start, serve
 from ._utils import snake_to_upper_camel_case
 
 import json as _json
-import os as _os
 
 def queue_set(comm):
     _Component._comm = comm
 
 def component(name):
-    return _Component._components.get(name)
+    return _Component._components[name]
+
+def component_class(kind):
+    class_name = snake_to_upper_camel_case(kind)
+    locals = {}
+    exec(f'from . import {class_name} as result', globals(), locals)
+    return locals['result']
 
 def typical_setup():
-    from ._server import serve
     import atexit
     audio = component('audio')
     comm = component('comm')
@@ -132,11 +136,8 @@ def system_save(file_path):
 
 def system_load(file_path, namespace):
     with open(file_path) as file: j = _json.loads(file.read())
-    from . import _skeleton
     for name, kind in j['component_kinds'].items():
-        class_name = snake_to_upper_camel_case(kind)
-        exec(f'from . import {class_name}')
-        exec(f'namespace["{name}"] = {class_name}()')
+        namespace[name] = component_class(kind)(name)
     for name, component in _Component._components.items():
         jc = j['components'].get(name)
         if jc: component.from_json(jc)

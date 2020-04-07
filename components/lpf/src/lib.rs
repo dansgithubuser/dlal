@@ -1,8 +1,10 @@
 use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
 
+#[derive(Default)]
 pub struct Specifics {
-    amount: f32,
     samples_per_evaluation: usize,
+    lowness: f32,
+    y: f32,
     output: Option<View>,
 }
 
@@ -11,9 +13,8 @@ gen_component!(Specifics);
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
-            amount: 1.0,
-            samples_per_evaluation: 0,
-            output: None,
+            lowness: 0.95,
+            ..Default::default()
         }
     }
 
@@ -31,22 +32,29 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
-                Ok(None)
+                if let Ok(lowness) = arg_num::<f32>(&body, 0) {
+                    soul.lowness = lowness;
+                }
+                Ok(Some(json!(soul.lowness)))
             },
-            { "args": ["gain"] },
+            {
+                "args": [{
+                    "name": "lowness",
+                    "range": "[0, 1]",
+                }],
+            }
         );
         command!(
             commands,
             "to_json",
-            |soul, _body| { Ok(Some(json!(soul.amount.to_string()))) },
+            |soul, _body| { Ok(Some(json!(soul.lowness.to_string()))) },
             {},
         );
         command!(
             commands,
             "from_json",
             |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
+                soul.lowness = arg_num(&body, 0)?;
                 Ok(None)
             },
             { "args": ["json"] },
@@ -55,8 +63,10 @@ impl SpecificsTrait for Specifics {
 
     fn evaluate(&mut self) {
         if let Some(output) = &self.output {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
-                *i *= self.amount;
+            let audio = output.audio(self.samples_per_evaluation).unwrap();
+            for i in 0..self.samples_per_evaluation {
+                audio[i] = (1.0 - self.lowness) * audio[i] + self.lowness * self.y;
+                self.y = audio[i];
             }
         }
     }

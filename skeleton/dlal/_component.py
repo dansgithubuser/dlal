@@ -5,9 +5,9 @@ import obvious
 
 import collections
 import ctypes
-import functools
 import json
 import os
+import types
 import weakref
 
 log = _logging.get_log(__name__)
@@ -30,7 +30,7 @@ def component_kinds(special=None):
         if not i.startswith('base') and i not in avoid
     ]
 
-def _json_prep(args, kwargs):
+def json_prep(args, kwargs):
     def prep(x):
         if type(x) in [int, float]:
             return str(x)
@@ -59,14 +59,18 @@ class Component:
         Component._components[name] = weakref.proxy(self)
         # raw
         self._lib = Component._load_lib(kind)
-        self._raw = self._lib.construct()
+        self._raw = self._lib.construct(name.encode('utf-8'))
         # typical commands
+        def make_typical_command(name):
+            def typical_command(self, *args, **kwargs):
+                return self.command(name, args, kwargs)
+            return types.MethodType(typical_command, self)
         for item in self.command_immediate('list'):
             if hasattr(self, item['name']): continue
             setattr(
                 self,
                 item['name'],
-                functools.partial(self.command, item['name']),
+                make_typical_command(item['name']),
             )
 
     def __del__(self):
@@ -76,25 +80,25 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def command(self, name, *args, **kwargs):
-        args, kwargs = _json_prep(args, kwargs)
+    def command(self, name, args=[], kwargs={}, do_json_prep=True):
+        if do_json_prep: args, kwargs = json_prep(args, kwargs)
         if Component._comm:
             log('debug', f'{self.name} queue {name}')
             return Component._comm.queue(self, name, args, kwargs)
         else:
-            return self.command_immediate(name, *args, **kwargs)
+            return self.command_immediate(name, args, kwargs, False)
 
-    def command_detach(self, name, *args, **kwargs):
-        args, kwargs = _json_prep(args, kwargs)
+    def command_detach(self, name, args=[], kwargs={}, do_json_prep=True):
+        if do_json_prep: args, kwargs = json_prep(args, kwargs)
         if Component._comm:
             log('debug', f'{self.name} queue (detach) {name}')
             return Component._comm.queue(self, name, args, kwargs, detach=True)
         else:
-            return self.command_immediate(name, *args, **kwargs)
+            return self.command_immediate(name, args, kwargs, False)
 
-    def command_immediate(self, name, *args, **kwargs):
+    def command_immediate(self, name, args=[], kwargs={}, do_json_prep=True):
         log('debug', f'{self.name} {name}')
-        args, kwargs = _json_prep(args, kwargs)
+        if do_json_prep: args, kwargs = json_prep(args, kwargs)
         result = self._lib.command(self._raw, json.dumps({
             'name': name,
             'args': args,
@@ -109,19 +113,24 @@ class Component:
     def connect(self, other, toggle=False):
         log('debug', f'connect {self.name} {other.name}')
         if toggle and other.name in Component._connections.get(self.name, []):
-            result = self.command('disconnect', *other._view())
+            result = self.command('disconnect', other._view())
             Component._connections[self.name].remove(other.name)
         else:
-            result = self.command('connect', *other._view())
+            result = self.command('connect', other._view())
             Component._connections[self.name].append(other.name)
         return result
 
     def disconnect(self, other):
         log('debug', f'disconnect {self.name} {other.name}')
-        result = self.command('disconnect', *other._view())
+        result = self.command('disconnect', other._view())
         connections = Component._connections[self.name]
         if other.name in connections: connections.remove(other.name)
         return result
+
+    def midi(self, msg):
+        if type(msg) == list and type(msg[0]) == list:
+            return [self.command('midi', [i]) for i in msg]
+        return self.command('midi', [msg])
 
     def _load_lib(kind):
         if kind in Component._libs: return Component._libs[kind]
@@ -131,7 +140,7 @@ class Component:
                 os.path.join(COMPONENTS_DIR, kind, 'target', 'release'),  # dev
             ],
         )
-        obvious.set_ffi_types(lib.construct, 'void*')
+        obvious.set_ffi_types(lib.construct, 'void*', str)
         obvious.set_ffi_types(lib.destruct, None, 'void*')
         obvious.set_ffi_types(lib.command, str, 'void*', str)
         Component._libs[kind] = lib

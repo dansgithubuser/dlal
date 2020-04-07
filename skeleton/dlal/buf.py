@@ -9,7 +9,7 @@ class Buf(Component):
         Component.__init__(self, 'buf', name)
 
     def load(self, file_path, note):
-        return self.command_immediate('load', file_path, note)
+        return self.command_immediate('load', [file_path, note])
 
     def load_all(self):
         pattern = os.path.join(ASSETS_DIR, 'sounds', '*', '*.wav')

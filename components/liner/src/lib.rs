@@ -1,13 +1,15 @@
 use dlal_component_base::{
-    arg, arg_num, args, command, err, gen_component, kwarg_num, JsonValue, View, VIEW_ARGS,
+    arg, arg_num, args, command, err, gen_component, join, json, json_from_str, json_get, kwarg,
+    JsonValue, View, VIEW_ARGS,
 };
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
+use serde::{Deserialize, Serialize};
 
 use std::error::Error;
 use std::vec::Vec;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 enum Msg {
     Short([u8; 3]),
     Long(Vec<u8>),
@@ -49,7 +51,7 @@ impl Msg {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Deltamsg {
     delta: u32,
     msg: Msg,
@@ -69,7 +71,7 @@ impl Deltamsg {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 struct Line {
     deltamsgs: Vec<Deltamsg>,
     ticks_per_quarter: u32,
@@ -106,7 +108,7 @@ impl Line {
         samples: u32,
         samples_per_evaluation: usize,
         sample_rate: u32,
-        output: &View,
+        output: Option<&View>,
     ) -> bool {
         let mut delta = self.calculate_delta(samples, sample_rate);
         loop {
@@ -129,7 +131,9 @@ impl Line {
                 self.ticks_aft_last_tempo = 0;
             } else {
                 // other msgs get forwarded
-                output.midi(msg);
+                if let Some(output) = output {
+                    output.midi(msg);
+                }
                 self.ticks_aft_last_tempo += deltamsg.delta; // count ticks since last tempo
             }
             // prepare for next
@@ -185,15 +189,14 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                join!(samples_per_evaluation soul, body);
+                join!(sample_rate soul, body);
                 Ok(None)
             },
-            { "kwargs": ["samples_per_evaluation", "sample_rate"] },
+            ["samples_per_evaluation", "sample_rate"],
         );
         command!(
             commands,
@@ -231,6 +234,13 @@ impl SpecificsTrait for Specifics {
                 if line_index >= soul.lines.len() {
                     return err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len());
                 }
+                if let Ok(immediate) = kwarg(&body, "immediate") {
+                    if immediate.as_bool().ok_or_else(|| err!(box "immediate isn't a bool"))? {
+                        soul.lines[line_index] = Box::new(Line::new(
+                            deltamsgs, ticks_per_quarter, soul.lines[line_index].index
+                        )?);
+                    }
+                }
                 soul.send.try_send(Box::new(Line::new(deltamsgs, ticks_per_quarter, line_index)?))?;
                 Ok(None)
             },
@@ -243,7 +253,49 @@ impl SpecificsTrait for Specifics {
                         "desc": "[{delta, msg: [..]}, ..]",
                     },
                 ],
+                "kwargs": [
+                    {
+                        "name": "immediate",
+                        "default": false,
+                        "desc": "immediately enact the line after loading",
+                    },
+                ],
             },
+        );
+        command!(
+            commands,
+            "advance",
+            |soul, body| {
+                let seconds: f32 = arg_num(&body, 0)?;
+                let evaluations_per_second = soul.sample_rate as f32 / soul.samples_per_evaluation as f32;
+                let evaluations = (seconds * evaluations_per_second) as u32;
+                for _ in 0..evaluations {
+                    soul.evaluate();
+                }
+                Ok(None)
+            },
+            {
+                "args": ["seconds"],
+            },
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| { Ok(Some(json!({ "lines": soul.lines }))) },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                let j = arg(&body, 0)?;
+                let lines = json_get(j, "lines")?.as_array().ok_or_else(|| err!(box "lines isn't an array"))?;
+                for i in 0..lines.len() {
+                    soul.lines[i] = json_from_str(&lines[i].to_string())?;
+                }
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 
@@ -256,14 +308,15 @@ impl SpecificsTrait for Specifics {
         self.samples += self.samples_per_evaluation as u32;
         let mut done = true;
         for i in 0..self.lines.len() {
-            if i >= self.outputs.len() || self.outputs[i].is_none() {
-                continue;
-            }
             done &= self.lines[i].advance(
                 self.samples,
                 self.samples_per_evaluation,
                 self.sample_rate,
-                self.outputs[i].as_ref().unwrap(),
+                if i >= self.outputs.len() {
+                    None
+                } else {
+                    self.outputs[i].as_ref()
+                },
             );
         }
         if done {

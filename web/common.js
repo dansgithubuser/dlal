@@ -52,7 +52,7 @@ export function socketBroadcastListenerRemove(topic, uuid) {
 }
 
 export function free(uuid) {
-  return socketSend('free', { op: 'store', uuid });
+  return socketSend(uuid, { op: 'free' });
 }
 
 export function context(element) {

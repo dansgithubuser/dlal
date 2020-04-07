@@ -7,7 +7,6 @@ _sys.path.append(_os.path.join(_utils.DEPS_DIR, 'dansmidilibs'))
 
 from ._default_components import *
 from ._logging import get_logger_names, set_logger_level
-from ._server import serve
 from ._skeleton import *
 
 [

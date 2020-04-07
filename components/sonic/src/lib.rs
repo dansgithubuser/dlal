@@ -1,6 +1,4 @@
 /*
-A synth inspired by the YM2612 chip, used on the Sega Genesis.
-
 The YM2612 has:
 - 6 monophonic voices
 - four FM operators per voice
@@ -184,8 +182,7 @@ macro_rules! op_command {
 }
 
 use dlal_component_base::{
-    arg, arg_num, command, gen_component, json, json_get, json_num, kwarg_num, uniconnect,
-    JsonValue, View,
+    arg, arg_num, command, gen_component, join, json, json_get, json_num, uni, JsonValue, View,
 };
 
 use std::collections::HashMap;
@@ -230,20 +227,17 @@ impl SpecificsTrait for Specifics {
     }
 
     fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
+        join!(
             commands,
-            "join",
             |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                join!(samples_per_evaluation soul, body);
+                join!(sample_rate soul, body);
                 soul.set(1.0);
                 Ok(None)
             },
-            {
-                "kwargs": ["samples_per_evaluation", "sample_rate"],
-            },
+            ["samples_per_evaluation", "sample_rate"],
         );
-        uniconnect!(commands, true);
+        uni!(connect commands, true);
         op_command!(commands, "a", f32, (a), ({
             "name": "amount",
             "desc": "attack rate",
@@ -301,20 +295,23 @@ impl SpecificsTrait for Specifics {
                     ops.insert(
                         i.to_string(),
                         json!({
-                            "a": op.a,
-                            "d": op.d,
-                            "s": op.s,
-                            "r": op.r,
-                            "m": op.m,
-                            "i0": op.i[0],
-                            "i1": op.i[1],
-                            "i2": op.i[2],
-                            "i3": op.i[3],
-                            "o": op.o,
+                            "a": op.a.to_string(),
+                            "d": op.d.to_string(),
+                            "s": op.s.to_string(),
+                            "r": op.r.to_string(),
+                            "m": op.m.to_string(),
+                            "i0": op.i[0].to_string(),
+                            "i1": op.i[1].to_string(),
+                            "i2": op.i[2].to_string(),
+                            "i3": op.i[3].to_string(),
+                            "o": op.o.to_string(),
                         }),
                     );
                 }
-                Ok(Some(json!(ops)))
+                Ok(Some(json!({
+                    "ops": ops,
+                    "pitch_bend_range": soul.pitch_bend_range.to_string(),
+                })))
             },
             {},
         );
@@ -323,8 +320,15 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = arg(&body, 0)?;
+                let ops = match json_get(j, "pitch_bend_range") {
+                    Ok(pbr) =>{
+                        soul.pitch_bend_range = json_num(pbr)?;
+                        json_get(j, "ops")?
+                    }
+                    Err(_) => j,
+                };
                 for i in 0..OPS {
-                    let op = json_get(j, &i.to_string())?;
+                    let op = json_get(ops, &i.to_string())?;
                     soul.ops[i].a = json_num(json_get(op, "a")?)?;
                     soul.ops[i].d = json_num(json_get(op, "d")?)?;
                     soul.ops[i].s = json_num(json_get(op, "s")?)?;
