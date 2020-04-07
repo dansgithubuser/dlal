@@ -13,8 +13,12 @@ import json as _json
 def queue_set(comm):
     _Component._comm = comm
 
-def component(name):
-    return _Component._components[name]
+class _Default: pass
+def component(name, default=_Default):
+    if default == _Default:
+        return _Component._components[name]
+    else:
+        return _Component._components.get(name, default)
 
 def component_class(kind):
     class_name = snake_to_upper_camel_case(kind)
@@ -24,8 +28,8 @@ def component_class(kind):
 
 def typical_setup():
     import atexit
-    audio = component('audio')
-    comm = component('comm')
+    audio = component('audio', None)
+    comm = component('comm', None)
     if audio:
         audio.start()
         atexit.register(lambda: audio.stop())
