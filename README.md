@@ -186,9 +186,6 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- audiobro
-	- reverb/chorus?
-
 - rust doc generation?
 
 - component matrix

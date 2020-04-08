@@ -38,6 +38,7 @@ Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 liner = dlal.Liner()
 lpf = dlal.Lpf()
+reverb = dlal.Reverb()
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
 gain = dlal.Gain()
@@ -58,6 +59,7 @@ for voice in voices:
         driver.add(i)
 driver.add(liner)
 driver.add(lpf)
+driver.add(reverb)
 driver.add(buf)
 driver.add(tape)
 driver.add(gain)
@@ -176,6 +178,8 @@ goon.sonic.from_json({
     },
 })
 
+lpf.set(0.97)
+reverb.set(1)
 gain.set(0)
 
 # connect
@@ -192,6 +196,7 @@ for voice in voices:
     for i in voice.output:
         i.connect(buf)
 lpf.connect(buf)
+reverb.connect(buf)
 buf.connect(tape)
 gain.connect(buf)
 buf.connect(driver)
