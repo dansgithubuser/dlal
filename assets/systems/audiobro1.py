@@ -70,9 +70,13 @@ liner.advance(sys_arg(1, float, 0))
 
 drum.buf.load('assets/sounds/animal/cricket.wav', 56)
 drum.buf.load('assets/sounds/drum/kick.wav', 36)
+drum.buf.resample(1.5, 36)
 drum.buf.load('assets/sounds/drum/snare.wav', 38)
+drum.buf.resample(0.5, 38)
 drum.buf.load('assets/sounds/drum/hat.wav', 42)
+drum.buf.resample(0.4, 42)
 drum.buf.load('assets/sounds/drum/ride.wav', 46)
+drum.buf.resample(0.45, 46)
 drum.gain.set(0)
 
 bass.sonic.from_json({

@@ -94,6 +94,27 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "resample",
+            |soul, body| {
+                let ratio = arg_num::<f32>(&body, 0)?;
+                let note: usize = arg_num(&body, 1)?;
+                if note >= 128 {
+                    return err!("invalid note");
+                }
+                let samples = &mut soul.sounds[note].samples;
+                let mut resamples = Vec::<f32>::new();
+                let mut index = 0.0;
+                while (index as usize) < samples.len() {
+                    resamples.push(samples[index as usize]);
+                    index += ratio;
+                }
+                *samples = resamples;
+                Ok(None)
+            },
+            { "args": ["ratio", "note"] },
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 let mut sounds = HashMap::<String, JsonValue>::new();
@@ -145,11 +166,11 @@ impl SpecificsTrait for Specifics {
                 continue;
             }
             for i in 0..self.audio.len() {
-                self.audio[i] += sound.samples[sound.play_index as usize] * sound.play_vol;
-                sound.play_index += sound.sample_rate as f32 / self.sample_rate as f32;
                 if sound.play_index as usize >= sound.samples.len() {
                     sound.play_vol = 0.0;
-                    break;
+                } else {
+                    self.audio[i] += sound.samples[sound.play_index as usize] * sound.play_vol;
+                    sound.play_index += sound.sample_rate as f32 / self.sample_rate as f32;
                 }
             }
         }
