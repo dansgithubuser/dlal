@@ -115,6 +115,31 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "crop",
+            |soul, body| {
+                let start = (arg_num::<f32>(&body, 0)? * soul.sample_rate as f32) as usize;
+                let end   = (arg_num::<f32>(&body, 1)? * soul.sample_rate as f32) as usize;
+                if end < start {
+                    return err!("end is before start");
+                }
+                let note: usize = arg_num(&body, 2)?;
+                if note >= 128 {
+                    return err!("invalid note");
+                }
+                let samples = &mut soul.sounds[note].samples;
+                if start >= samples.len() {
+                    return err!("start is too late");
+                }
+                if end >= samples.len() {
+                    return err!("end is too late");
+                }
+                *samples = samples[start..end].to_vec();
+                Ok(None)
+            },
+            { "args": ["start", "end", "note"] },
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 let mut sounds = HashMap::<String, JsonValue>::new();
