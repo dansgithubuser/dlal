@@ -109,7 +109,7 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 ```
 
 ### server
-Not to be confused with the simple HTTP file server run via `./do.py -w`, the skeleton servers which allow arbitrary dlal operation to happen over the web.
+Not to be confused with the simple HTTP file server run via `./do.py -w`, the skeleton server allows arbitrary dlal operation over the web.
 
 The typical implementation is in `skeleton/dlal/_websocket_server.py`.
 
