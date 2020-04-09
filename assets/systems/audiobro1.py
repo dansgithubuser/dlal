@@ -68,22 +68,31 @@ driver.add(gain)
 liner.load('assets/midis/audiobro1.mid', immediate=True)
 liner.advance(sys_arg(1, float, 0))
 
+# cricket
 drum.buf.load('assets/sounds/animal/cricket.wav', 56)
+drum.buf.amplify(1.5, 56)
+# shunk
 drum.buf.load('assets/sounds/drum/snare.wav', 36)
 drum.buf.resample(0.3, 36)
 drum.buf.crop(0, 0.06, 36)
-drum.buf.amplify(0.5, 36)
-drum.buf.load('assets/sounds/drum/kick.wav', 0)
+drum.buf.amplify(0.2, 36)
+drum.buf.load('assets/sounds/drum/low-tom.wav', 0)
+drum.buf.resample(1.2, 0)
+drum.buf.amplify(0.7, 0)
 drum.buf.add(36, 0)
+# snare
 drum.buf.load('assets/sounds/drum/snare.wav', 38)
 drum.buf.resample(0.5, 38)
-drum.buf.amplify(0.7, 38)
+drum.buf.amplify(0.4, 38)
+# hat
 drum.buf.load('assets/sounds/drum/hat.wav', 42)
 drum.buf.resample(0.4, 42)
-drum.buf.amplify(0.7, 42)
+drum.buf.amplify(0.3, 42)
+# ride
 drum.buf.load('assets/sounds/drum/ride.wav', 46)
 drum.buf.resample(0.45, 46)
-drum.buf.amplify(0.7, 46)
+drum.buf.amplify(0.5, 46)
+#
 drum.gain.set(0)
 
 bass.sonic.from_json({
@@ -107,19 +116,19 @@ bass.sonic.from_json({
 
 piano.sonic.from_json({
     "0": {
-        "a": "4e-3", "d": "3e-5", "s": "0", "r": "3e-4", "m": "1",
-        "i0": "0.06", "i1": "0.2", "i2": "0", "i3": "0", "o": "0.01",
+        "a": "4e-3", "d": "1e-4", "s": "0", "r": "2e-4", "m": "1",
+        "i0": "0", "i1": "0.06", "i2": "0", "i3": "0", "o": "0.25",
     },
     "1": {
-        "a": "6e-3", "d": "2e-3", "s": "0", "r": "2e-3", "m": "4",
+        "a": "0.025", "d": "6e-5", "s": "0.2", "r": "3e-5", "m": "1",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "2": {
-        "a": "4e-3", "d": "1e-4", "s": "0", "r": "2e-4", "m": "1",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0.06", "o": "0.2",
+        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "3": {
-        "a": "0.025", "d": "6e-5", "s": "0.2", "r": "3e-5", "m": "1",
+        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
@@ -173,7 +182,7 @@ bell.sonic.from_json({
 goon.sonic.from_json({
     "0": {
         "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "1",
-        "i0": "0", "i1": "1", "i2": "0", "i3": "0", "o": "0.15",
+        "i0": "0", "i1": "1", "i2": "0", "i3": "0", "o": "0.25",
     },
     "1": {
         "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "2",
@@ -189,7 +198,7 @@ goon.sonic.from_json({
     },
 })
 
-lpf.set(0.97)
+lpf.set(0.9)
 reverb.set(1)
 gain.set(0)
 
