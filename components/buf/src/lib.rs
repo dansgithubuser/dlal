@@ -140,6 +140,45 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "amplify",
+            |soul, body| {
+                let amount = arg_num::<f32>(&body, 0)?;
+                let note: usize = arg_num(&body, 1)?;
+                if note >= 128 {
+                    return err!("invalid note");
+                }
+                for sample in &mut soul.sounds[note].samples {
+                    *sample *= amount;
+                }
+                Ok(None)
+            },
+            { "args": ["amount", "note"] },
+        );
+        command!(
+            commands,
+            "add",
+            |soul, body| {
+                let note_to: usize = arg_num(&body, 0)?;
+                if note_to >= 128 {
+                    return err!("invalid note_to");
+                }
+                let note_from: usize = arg_num(&body, 1)?;
+                if note_from >= 128 {
+                    return err!("invalid note_from");
+                }
+                if soul.sounds[note_from].samples.len() > soul.sounds[note_to].samples.len() {
+                    let len = soul.sounds[note_from].samples.len();
+                    soul.sounds[note_to].samples.resize(len, 0.0);
+                }
+                for i in 0..soul.sounds[note_from].samples.len() {
+                    soul.sounds[note_to].samples[i] += soul.sounds[note_from].samples[i];
+                }
+                Ok(None)
+            },
+            { "args": ["note_to", "note_from"] },
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 let mut sounds = HashMap::<String, JsonValue>::new();
