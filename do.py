@@ -5,6 +5,7 @@ import datetime
 import glob
 import http.server
 import os
+import pprint
 import re
 import shutil
 import socketserver
@@ -25,6 +26,7 @@ parser.add_argument('--venv-install', '--vi', action='store_true',
     help="install what's specified in requirements.txt"
 )
 parser.add_argument('--component-new')
+parser.add_argument('--component-info', '--ci')
 parser.add_argument('--build', '-b', nargs='*')
 parser.add_argument('--run', '-r', nargs='*', help=(
     'run interactive Python with dlal imported, '
@@ -133,6 +135,21 @@ if args.component_new:
     mod_file(os.path.join(args.component_new, 'src', 'lib.rs'),
         [(r'(.|\n)+', new_lib_rs)],
     )
+
+if args.component_info:
+    os.chdir(DIR)
+    readme_path = os.path.join('components', args.component_info, 'README.md')
+    if os.path.exists(readme_path):
+        with open(readme_path) as readme:
+            print(readme.read())
+    sys.path.append(os.path.join(DIR, 'skeleton'))
+    import dlal
+    component = dlal.component_class(args.component_info)()
+    print('----- commands -----')
+    for command in component.list():
+        print(command['name'])
+        pprint.pprint(command)
+        print()
 
 # ===== build ===== #
 if args.build is not None:

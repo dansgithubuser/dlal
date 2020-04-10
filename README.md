@@ -206,5 +206,3 @@ The `audio` component is the driver component for interactive audio.
 	- bassindaface / funky funky bass
 
 - pip install?
-- python command info override
-- component info from do.py

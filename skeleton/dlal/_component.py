@@ -5,6 +5,7 @@ import obvious
 
 import collections
 import ctypes
+import inspect
 import json
 import os
 import types
@@ -43,6 +44,11 @@ def json_prep(args, kwargs):
     return [prep(i) for i in args], {k: prep(v) for k, v in kwargs.items()}
 
 class Component:
+    _libs = {}
+    _components = {}
+    _connections = collections.defaultdict(list)
+    _comm = None
+
     def __init__(self, kind, name=None):
         # tracking
         if name == None:
@@ -110,6 +116,34 @@ class Component:
             raise Exception(result['error'])
         return result
 
+    def list(self):
+        def py(command):
+            spec = inspect.getfullargspec(command)
+            doc = inspect.getdoc(command)
+            result = {'args': spec.args}
+            if spec.varargs: result['varargs'] = spec.varargs
+            if spec.varkw: result['varkw'] = spec.varkw
+            if spec.defaults: result['defaults'] = spec.defaults
+            if doc: result['doc'] = doc
+            return result
+        result = self.command_immediate('list')
+        covered = []
+        for i in result:
+            command = getattr(self, i['name'])
+            i['py'] = py(command)
+            covered.append(i['name'])
+        py_only = []
+        for k, v in inspect.getmembers(self):
+            if k.startswith('_') and k != '__init__': continue
+            if not callable(v): continue
+            if k in covered: continue
+            if v.__func__ == getattr(Component, k, None): continue
+            py_only.append({
+                'name': k,
+                'py': py(v),
+            })
+        return py_only + result
+
     def connect(self, other, toggle=False):
         log('debug', f'connect {self.name} {other.name}')
         if toggle and other.name in Component._connections.get(self.name, []):
@@ -154,11 +188,6 @@ class Component:
             str(ctypes.cast(self._lib.audio   , ctypes.c_void_p).value),
             str(ctypes.cast(self._lib.evaluate, ctypes.c_void_p).value),
         ]
-
-    _libs = {}
-    _components = {}
-    _connections = collections.defaultdict(list)
-    _comm = None
 
 def queue_set(comm):
     Component._comm = comm
