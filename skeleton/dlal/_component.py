@@ -83,7 +83,7 @@ class Component:
     def command(self, name, args=[], kwargs={}, do_json_prep=True):
         if do_json_prep: args, kwargs = json_prep(args, kwargs)
         if Component._comm:
-            log('debug', f'{self.name} queue {name}')
+            log('debug', f'{self.name} queue {name} {args} {kwargs}')
             return Component._comm.queue(self, name, args, kwargs)
         else:
             return self.command_immediate(name, args, kwargs, False)
@@ -91,13 +91,13 @@ class Component:
     def command_detach(self, name, args=[], kwargs={}, do_json_prep=True):
         if do_json_prep: args, kwargs = json_prep(args, kwargs)
         if Component._comm:
-            log('debug', f'{self.name} queue (detach) {name}')
+            log('debug', f'{self.name} queue (detach) {name} {args} {kwargs}')
             return Component._comm.queue(self, name, args, kwargs, detach=True)
         else:
             return self.command_immediate(name, args, kwargs, False)
 
     def command_immediate(self, name, args=[], kwargs={}, do_json_prep=True):
-        log('debug', f'{self.name} {name}')
+        log('debug', f'{self.name} {name} {args} {kwargs}')
         if do_json_prep: args, kwargs = json_prep(args, kwargs)
         result = self._lib.command(self._raw, json.dumps({
             'name': name,

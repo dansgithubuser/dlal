@@ -27,6 +27,24 @@ class Voice:
             if k in ks
         ]
 
+class Lforacle:
+    def __init__(self, name, freq, amp, b, fmt_name, *fmt_args, **fmt_kwargs):
+        globals()[name] = self
+        self.lfo = dlal.Lfo(name=f'{name}.lfo')
+        self.oracle = dlal.Oracle(name=f'{name}.oracle')
+        self.lfo.freq(freq)
+        self.lfo.amp(amp)
+        self.oracle.b(b)
+        self.oracle.format(fmt_name, *fmt_args, **fmt_kwargs)
+        self.lfo.connect(self.oracle)
+
+    def add_to(self, driver):
+        driver.add(self.lfo)
+        driver.add(self.oracle)
+
+    def connect(self, other):
+        self.oracle.connect(other)
+
 # init
 driver = dlal.Audio()
 comm = dlal.Comm()
@@ -34,6 +52,9 @@ Voice('drum', 'buf', 'gain', output=['buf'])
 Voice('piano', 'sonic')
 Voice('bass', 'sonic')
 Voice('ghost', 'gain', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', input=['rhymel'])
+Lforacle('ghost_lfo_i20', 0.40000, 0.3, 0.3, 'i2', 0, '%')
+Lforacle('ghost_lfo_i30', 0.31221, 0.1, 0.1, 'i3', 0, '%')
+Lforacle('ghost_lfo_i03', 0.12219, 0.1, 0.1, 'i0', 3, '%')
 Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 liner = dlal.Liner()
@@ -57,6 +78,9 @@ driver.add(comm)
 for voice in voices:
     for i in voice.components.values():
         driver.add(i)
+ghost_lfo_i20.add_to(driver)
+ghost_lfo_i30.add_to(driver)
+ghost_lfo_i03.add_to(driver)
 driver.add(liner)
 driver.add(lpf)
 driver.add(reverb)
@@ -146,15 +170,15 @@ ghost.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "1", "i3": "1", "o": "0.05",
     },
     "1": {
-        "a": "1e-6", "d": "2e-3", "s": "1", "r": "6e-5", "m": "4",
+        "a": "7e-6", "d": "2e-3", "s": "1", "r": "6e-5", "m": "4",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.125",
     },
     "2": {
-        "a": "1e-5", "d": "3e-5", "s": "0.25", "r": "6e-5", "m": "1",
+        "a": "1e-5", "d": "3e-5", "s": "1", "r": "6e-5", "m": "1",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.125",
     },
     "3": {
-        "a": "4e-6", "d": "1e-5", "s": "0.25", "r": "6e-5", "m": "2",
+        "a": "4e-6", "d": "1e-5", "s": "1", "r": "6e-5", "m": "2",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.125",
     },
 })
@@ -215,6 +239,9 @@ for voice in voices:
         liner.connect(i)
     for i in voice.output:
         i.connect(buf)
+ghost_lfo_i20.connect(ghost.sonic)
+ghost_lfo_i30.connect(ghost.sonic)
+ghost_lfo_i03.connect(ghost.sonic)
 lpf.connect(buf)
 reverb.connect(buf)
 buf.connect(tape)

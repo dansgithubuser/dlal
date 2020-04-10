@@ -141,6 +141,9 @@ impl SpecificsTrait for Specifics {
                 output.command(&body);
             }
         }
+        for i in &mut self.cv {
+            *i = 0.0;
+        }
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {
