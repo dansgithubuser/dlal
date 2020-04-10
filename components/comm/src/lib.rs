@@ -16,7 +16,7 @@ pub struct Specifics {
     fro_audio_recv: MPMCUniReceiver<Box<Option<JsonValue>>>,
 }
 
-gen_component!(Specifics);
+gen_component!(Specifics, {"in": ["cmd"], "out": ["cmd"]});
 
 impl SpecificsTrait for Specifics {
     fn new() -> Self {

@@ -35,7 +35,7 @@ pub struct Specifics {
     sounds: Vec<Sound>,
 }
 
-gen_component!(Specifics);
+gen_component!(Specifics, {"in": ["audio*", "midi"], "out": ["audio"]});
 
 impl SpecificsTrait for Specifics {
     fn new() -> Self {

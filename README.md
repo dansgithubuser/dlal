@@ -186,11 +186,6 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- component matrix
-	- in vs out: cmd/cmd+mid/mid/mid+aud/aud/aud+cmd/all/?
-	- i/o: *
-	- live i/o: **
-
 - burgers
 	- arpeggiator
 	- sample-based synth

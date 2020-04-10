@@ -14,7 +14,7 @@ pub struct Specifics {
     output: Option<View>,
 }
 
-gen_component!(Specifics);
+gen_component!(Specifics, {"in": [], "out": ["audio"]});
 
 impl SpecificsTrait for Specifics {
     fn new() -> Self {

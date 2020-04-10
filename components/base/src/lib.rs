@@ -189,6 +189,10 @@ impl View {
 #[macro_export]
 macro_rules! gen_component {
     ($specifics:ident) => {
+        gen_component!($specifics, {"in": ["?"], "out": ["?"]});
+    };
+
+    ($specifics:ident, $info:tt) => {
         // ===== specifics trait ===== //
         pub trait SpecificsTrait {
             fn new() -> Self;
@@ -240,6 +244,16 @@ macro_rules! gen_component {
                 commands: CommandMap::new(),
             };
             component.specifics.register_commands(&mut component.commands);
+            // info
+            component.commands.insert(
+                "info",
+                Command {
+                    func: Box::new(|_soul, _body| {
+                        Ok(Some($crate::json!($info)))
+                    }),
+                    info: $crate::json!({}),
+                },
+            );
             // join
             if !component.commands.contains_key("join") {
                 component.commands.insert(
@@ -291,6 +305,7 @@ macro_rules! gen_component {
             list.push($crate::json!({"name": "list", "info": {}}));
             list.sort_by_key(|i| {
                 match i["name"].as_str().unwrap() {
+                    "info" => "~0",
                     "list" => "~1",
                     "join" => "~2",
                     "connect" => "~3",

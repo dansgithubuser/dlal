@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import collections
 import datetime
 import glob
 import http.server
@@ -28,6 +29,7 @@ parser.add_argument('--venv-install', '--vi', action='store_true',
 parser.add_argument('--component-new')
 parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
+parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
 parser.add_argument('--run', '-r', nargs='*', help=(
     'run interactive Python with dlal imported, '
@@ -146,6 +148,9 @@ if args.component_info:
     sys.path.append(os.path.join(DIR, 'skeleton'))
     import dlal
     component = dlal.component_class(args.component_info)()
+    print('----- info -----')
+    pprint.pprint(component.info())
+    print()
     print('----- commands -----')
     for command in component.list():
         print(command['name'])
@@ -156,7 +161,96 @@ if args.component_base_docs:
     base_dir = os.path.join(DIR, 'components', 'base')
     os.chdir(base_dir)
     invoke('cargo', 'doc')
-    webbrowser.open_new_tab(os.path.join(base_dir, 'target', 'doc', 'dlal_component_base', 'index.html'))
+    webbrowser.open_new_tab(os.path.join(
+        base_dir, 'target', 'doc', 'dlal_component_base', 'index.html'
+    ))
+
+if args.component_matrix:
+    os.chdir(DIR)
+    sys.path.append(os.path.join(DIR, 'skeleton'))
+    import dlal
+    kinds = dlal.component_kinds()
+    def get_cat(interface):
+        interface = [i.replace('*', '') for i in interface]
+        interface = sorted(
+            interface,
+            key=lambda i: {'audio': 0, 'midi': 1, 'cmd': 2}[i],
+        )
+        if interface == 'audio+midi+cmd': return 'all'
+        return '+'.join(interface)
+    def get_short(interface):
+        return '+'.join([
+            i
+                .replace('audio', 'aud')
+                .replace('midi', 'mid')
+            for i in interface
+        ])
+    matrix = collections.defaultdict(lambda: collections.defaultdict(list))
+    for kind in kinds:
+        info = dlal.component_class(kind)().info()
+        matrix[get_cat(info['in'])][get_cat(info['out'])].append((kind, info))
+    cats = [
+        'audio',
+        'audio+midi',
+        'midi',
+        'midi+cmd',
+        'cmd',
+        'audio+cmd',
+        'all',
+        '?',
+    ]
+    with open('matrix.html', 'w') as file:
+        def w(x): file.write(x)
+        w('''<style>
+            * {
+                font-family: monospace;
+            }
+
+            .from-to {
+                font-style: italic;
+                text-align: center;
+            }
+
+            .cat {
+                font-weight: bold;
+                text-align: center;
+                padding: 0.5em;
+            }
+
+            .cell {
+                width: 10em;
+                height: 8em;
+                background-color: lightgrey;
+                padding: 0.5em;
+            }
+
+            .component {
+                padding-top: 0.5em;
+            }
+        </style>''')
+        w('<table>')
+        w('<tr>')
+        w('<td class="from-to">from\\to</td>')
+        for i in cats:
+            w('<td class="cat">'); w(i); w('</td>')
+        w('</tr>')
+        for fro in cats:
+            w('<tr>')
+            w('<td class="cat">'); w(fro); w('</td>')
+            for to in cats:
+                w('<td class="cell">')
+                for name, info in matrix[fro][to]:
+                    w('<div class="component">')
+                    i = get_short(info["in"])
+                    o = get_short(info["out"])
+                    w(f'{name}:<br><small>{i} -> {o}</small>')
+                    w('</div>')
+                w('</td>')
+            w('</tr>')
+        w('</table>')
+        w('<div>* I/O</div>')
+        w('<div>** live I/O</div>')
+    webbrowser.open_new_tab(os.path.join(DIR, 'matrix.html'))
 
 # ===== build ===== #
 if args.build is not None:
@@ -244,7 +338,7 @@ if args.style_check or args.style_rust_fix:
                 'E203', 'E226',
                 'E301', 'E302', 'E305', 'E306',
                 'E402',
-                'E701', 'E704', 'E711', 'E722',
+                'E701', 'E702', 'E704', 'E711', 'E722',
             ]),
             path,
             kwargs={'check': False},

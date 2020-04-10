@@ -168,7 +168,7 @@ pub struct Specifics {
     outputs: Vec<Option<View>>,
 }
 
-gen_component!(Specifics);
+gen_component!(Specifics, {"in": ["midi*"], "out": ["midi"]});
 
 impl SpecificsTrait for Specifics {
     fn new() -> Self {

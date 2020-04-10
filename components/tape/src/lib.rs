@@ -9,7 +9,7 @@ pub struct Specifics {
     size: u64,
 }
 
-gen_component!(Specifics);
+gen_component!(Specifics, {"in": ["audio"], "out": ["audio*"]});
 
 impl Specifics {
     fn resize(&mut self, size: u64) {
