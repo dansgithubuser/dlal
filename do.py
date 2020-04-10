@@ -27,6 +27,7 @@ parser.add_argument('--venv-install', '--vi', action='store_true',
 )
 parser.add_argument('--component-new')
 parser.add_argument('--component-info', '--ci')
+parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
 parser.add_argument('--run', '-r', nargs='*', help=(
     'run interactive Python with dlal imported, '
@@ -150,6 +151,12 @@ if args.component_info:
         print(command['name'])
         pprint.pprint(command)
         print()
+
+if args.component_base_docs:
+    base_dir = os.path.join(DIR, 'components', 'base')
+    os.chdir(base_dir)
+    invoke('cargo', 'doc')
+    webbrowser.open_new_tab(os.path.join(base_dir, 'target', 'doc', 'dlal_component_base', 'index.html'))
 
 # ===== build ===== #
 if args.build is not None:
