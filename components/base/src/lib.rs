@@ -116,6 +116,43 @@ pub fn json_num<T: std::str::FromStr>(value: &JsonValue) -> Result<T, Box<Error>
     }
 }
 
+#[macro_export]
+macro_rules! marg {
+    (args $body:expr) => {
+        $crate::args($body)
+    };
+    (arg $body:expr, $index:expr) => {
+        $crate::arg($body, $index)
+    };
+    (arg_str $body:expr, $index:expr) => {
+        $crate::arg_str($body, $index)
+    };
+    (arg_num $body:expr, $index:expr) => {
+        $crate::arg_num($body, $index)
+    };
+    (kwargs $body:expr) => {
+        $crate::kwargs($body)
+    };
+    (kwarg $body:expr, $index:expr) => {
+        $crate::kwarg($body, $index)
+    };
+    (kwarg_str $body:expr, $index:expr) => {
+        $crate::kwarg_str($body, $index)
+    };
+    (kwarg_num $body:expr, $index:expr) => {
+        $crate::kwarg_num($body, $index)
+    };
+    (json_get $json:expr, $name:expr) => {
+        $crate::json_get($json, $name)
+    };
+    (json_str $json:expr) => {
+        $crate::json_str($json)
+    };
+    (json_num $json:expr) => {
+        $crate::json_num($json)
+    };
+}
+
 // ===== views ===== //
 pub const VIEW_ARGS: [&str; 5] = ["component", "command", "audio", "midi", "evaluate"];
 

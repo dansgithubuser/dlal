@@ -35,6 +35,7 @@ Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
 Voice('burgers', 'buf')
 Voice('bass', 'sonic')
+Voice('arp', 'arp', 'sonic')
 Voice('harp', 'sonic')
 Voice('sweep', 'sonic')
 liner = dlal.Liner()
@@ -49,6 +50,7 @@ voices = [
     shaker2,
     burgers,
     bass,
+    arp,
     harp,
     sweep,
 ]
@@ -122,6 +124,25 @@ bass.sonic.from_json({
     },
 })
 
+arp.sonic.from_json({
+    "0": {
+        "a": "0.01", "d": "2e-4", "s": "0", "r": "2e-4", "m": "1",
+        "i0": "0", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.1",
+    },
+    "1": {
+        "a": "0.01", "d": "2e-4", "s": "0", "r": "2e-4", "m": "1",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+    },
+    "2": {
+        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+    },
+    "3": {
+        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+    },
+})
+
 harp.sonic.from_json({
     "0": {
         "a": "0.01", "d": "1e-4", "s": "0", "r": "1e-4", "m": "1",
@@ -164,6 +185,7 @@ lpf.set(0.9)
 reverb.set(0.3)
 
 # connect
+arp.arp.connect(arp.sonic)
 for voice in voices:
     for i in voice.input:
         liner.connect(i)

@@ -187,7 +187,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - burgers
-	- arpeggiator
 	- sweeps
 	- midi editor
 	- echo at start
