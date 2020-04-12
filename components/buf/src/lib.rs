@@ -140,6 +140,26 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "clip",
+            |soul, body| {
+                let amplitude = arg_num::<f32>(&body, 0)?;
+                let note: usize = arg_num(&body, 1)?;
+                if note >= 128 {
+                    return err!("invalid note");
+                }
+                for i in &mut soul.sounds[note].samples {
+                    if *i > amplitude {
+                        *i = amplitude;
+                    } else if *i < -amplitude {
+                        *i = -amplitude;
+                    }
+                }
+                Ok(None)
+            },
+            { "args": ["amplitude", "note"] },
+        );
+        command!(
+            commands,
             "amplify",
             |soul, body| {
                 let amount = arg_num::<f32>(&body, 0)?;
