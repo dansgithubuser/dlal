@@ -239,6 +239,9 @@ impl SpecificsTrait for Specifics {
             }
         }
         multi!(audio self.audio, self.outputs, self.audio.len());
+        for i in &mut self.audio {
+            *i = 0.0;
+        }
     }
 
     fn midi(&mut self, msg: &[u8]) {
