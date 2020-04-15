@@ -47,6 +47,7 @@ class Component:
     _libs = {}
     _components = {}
     _connections = collections.defaultdict(list)
+    _driver = None
     _comm = None
 
     def __init__(self, kind, name=None):
@@ -78,6 +79,7 @@ class Component:
                 item['name'],
                 make_typical_command(item['name']),
             )
+        if Component._driver: Component._driver.add(self)
 
     def __del__(self):
         del Component._components[self.name]

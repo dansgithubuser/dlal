@@ -10,10 +10,22 @@ from ._utils import snake_to_upper_camel_case
 
 import json as _json
 
+class _Default: pass
+
+def driver_set(driver):
+    _Component._driver = driver
+
 def queue_set(comm):
     _Component._comm = comm
 
-class _Default: pass
+class Immediate:
+    def __enter__(self):
+        self.comm = _Component._comm
+        _Component._comm = None
+
+    def __exit__(self, *args):
+        _Component._comm = self.comm
+
 def component(name, default=_Default):
     if default == _Default:
         return _Component._components[name]
@@ -25,6 +37,35 @@ def component_class(kind):
     locals = {}
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
+
+def connect(*components):
+    for i_c in range(len(components)-1):
+        srcs = components[i_c]
+        dsts = components[i_c+1]
+        if type(srcs) != list: srcs = [srcs]
+        if type(dsts) != list: dsts = [dsts]
+        for i_s, src in enumerate(srcs):
+            if src == '<': break
+            if src == '>':
+                for j in range(i_s, len(srcs)-1):
+                    src = srcs[j]
+                    dst = srcs[j+1]
+                    if src == '>':
+                        srcs[i_s-1].connect(dst)
+                    elif dst != '>':
+                        src.connect(dst)
+                break
+            for i_d, dst in enumerate(dsts):
+                if dst == '<':
+                    for j in range(i_d, len(dsts)-1):
+                        dst = dsts[j]
+                        src = dsts[j+1]
+                        if dst == '<':
+                            src.connect(dsts[i_d-1])
+                        elif src != '<':
+                            src.connect(dst)
+                    break
+                src.connect(dst)
 
 def typical_setup():
     import atexit

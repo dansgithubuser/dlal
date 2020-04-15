@@ -348,6 +348,8 @@ macro_rules! gen_component {
                     "connect" => "~3",
                     "disconnect" => "~4",
                     "midi" => "~5",
+                    "to_json" => "~6",
+                    "from_json" => "~7",
                     name => name,
                 }.to_string()
             });

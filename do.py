@@ -239,6 +239,7 @@ if args.component_matrix:
     import dlal
     kinds = dlal.component_kinds()
     def get_cat(interface):
+        if not interface: return 'none'
         interface = [i.replace('*', '') for i in interface]
         interface = sorted(
             interface,
@@ -264,6 +265,7 @@ if args.component_matrix:
         'midi+cmd',
         'cmd',
         'audio+cmd',
+        'none',
         'all',
         '?',
     ]
@@ -286,8 +288,6 @@ if args.component_matrix:
             }
 
             .cell {
-                width: 10em;
-                height: 8em;
                 background-color: lightgrey;
                 padding: 0.5em;
             }

@@ -98,15 +98,16 @@ impl SpecificsTrait for Specifics {
         }
     }
 
+    #[allow(clippy::collapsible_if)]
     fn midi(&mut self, msg: &[u8]) {
-        if msg.len() != 3 {
+        if msg.len() < 3 {
             return;
         }
         let type_nibble = msg[0] & 0xf0;
         if type_nibble == 0x80 || type_nibble == 0x90 && msg[2] == 0 {
             if let Some(i) = self.notes.iter().position(|i| i[0] == msg[1]) {
                 self.notes.remove(i);
-                if self.notes.len() == 0 {
+                if self.notes.is_empty() {
                     for output in &self.outputs {
                         output.midi(&[0x80, self.note_last, 0]);
                     }

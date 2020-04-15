@@ -15,7 +15,7 @@ pub struct Specifics {
     outputs: Vec<View>,
 }
 
-gen_component!(Specifics, {"in": [], "out": ["midi**"]});
+gen_component!(Specifics, {"in": ["midi**"], "out": ["midi"]});
 
 impl Specifics {
     fn get_ports(&self) -> Vec<String> {
