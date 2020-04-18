@@ -190,6 +190,7 @@ The `audio` component is the driver component for interactive audio.
 	- echo at start
 
 - audiobro
+	- compression
 	- legend of bass
 		- speech synth
 			- LPC
