@@ -50,6 +50,16 @@ macro_rules! err {
     };
 }
 
+#[macro_export]
+macro_rules! res {
+    ($expr:expr) => {
+        match $expr {
+            Ok(t) => Ok(t),
+            Err(e) => err!("{}", e.to_string()),
+        }
+    };
+}
+
 // ===== arg handling ===== //
 pub fn args(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
     body.get("args").ok_or_else(|| err!(box "missing args"))

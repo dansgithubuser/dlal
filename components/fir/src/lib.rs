@@ -103,8 +103,11 @@ impl SpecificsTrait for Specifics {
                     .as_array()
                     .ok_or_else(|| err!(box "ir isn't an array"))?
                     .iter()
-                    .map(|i| { i.as_f64().unwrap() as f32 })
-                    .collect();
+                    .map(|i| { match i.as_f64() {
+                        Some(i) => Ok(i as f32),
+                        None => Err("ir element isn't a number"),
+                    }})
+                    .collect::<Result<Vec<f32>, _>>()?;
                 Ok(None)
             },
             { "args": ["json"] },

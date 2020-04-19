@@ -5,6 +5,12 @@ class Audio(Component):
         Component.__init__(self, 'audio', name)
         self.components = []
 
+    def samples_per_evaluation(self, samples_per_evaluation=None):
+        args = ['samples_per_evaluation']
+        if samples_per_evaluation != None:
+            args.append(samples_per_evaluation)
+        return int(self.command_immediate(*args))
+
     def add(self, component):
         result = self.command('add', component._view())
         self.components.append(component.name)

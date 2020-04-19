@@ -2,6 +2,8 @@ import dlal
 
 import midi as mid
 
+import os
+
 audio = dlal.Audio()
 dlal.driver_set(audio)
 comm = dlal.Comm()
@@ -17,6 +19,7 @@ sonic = dlal.Sonic()
 fir = dlal.Fir()
 delay = dlal.Delay(44100, gain_x=0)
 buf = dlal.Buf()
+tape = dlal.Tape(1 << 17)
 
 sonic.midi(mid.msg.pitch_bend_range(64))
 sonic.from_json({
@@ -50,7 +53,9 @@ dlal.connect(
         '<', delay, gate_oracle, gate_adsr,
         '<', sonic,
     ],
-    audio,
+    [audio, tape],
 )
 
+if 'DLAL_TO_FILE' in os.environ:
+    midi.midi([0x90, 59, 0x40])
 dlal.typical_setup()

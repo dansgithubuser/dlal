@@ -69,14 +69,29 @@ def connect(*components):
 
 def typical_setup():
     import atexit
+    import os
     audio = component('audio', None)
     comm = component('comm', None)
-    if audio:
-        audio.start()
-        atexit.register(lambda: audio.stop())
-    if comm:
-        queue_set(comm)
-    serve()
+    tape = component('tape', None)
+    if tape and 'DLAL_TO_FILE' in os.environ:
+        samples_per_evaluation = 64
+        sample_rate = 44100
+        if audio:
+            samples_per_evaluation = audio.samples_per_evaluation()
+            sample_rate = audio.sample_rate()
+        duration = float(os.environ['DLAL_TO_FILE'])
+        runs = int(duration * sample_rate / samples_per_evaluation)
+        with open('out.raw', 'wb') as file:
+            for i in range(runs):
+                audio.run()
+                tape.to_file_i16le(samples_per_evaluation, file)
+    else:
+        if audio:
+            audio.start()
+            atexit.register(lambda: audio.stop())
+        if comm:
+            queue_set(comm)
+        serve()
 
 def system_info():
     return {
