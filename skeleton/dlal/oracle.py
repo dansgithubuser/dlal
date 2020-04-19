@@ -23,7 +23,7 @@ class Oracle(Component):
             if format != None: self.format(*format)
 
     def mode(self, mode=None):
-        '''options: ['f32', 'i32', 'pitch_wheel']'''
+        '''choices: ['f32', 'i32', 'pitch_wheel']'''
         args = []
         if mode is not None: args.append(MODE.dict[mode])
         return MODE.list[int(self.command('mode', args))]
