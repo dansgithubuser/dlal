@@ -1,4 +1,4 @@
-use dlal_component_base::{arg, arg_str, command, err, gen_component, json, multi, res, View};
+use dlal_component_base::{arg_str, command, err, gen_component, json, multi, View};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -81,27 +81,11 @@ impl SpecificsTrait for Specifics {
             },
             { "args": ["port_name_prefix"] },
         );
-        command!(
-            commands,
-            "midi",
-            |soul, body| {
-                let msg = arg(&body, 0)?
-                    .as_array()
-                    .ok_or_else(|| err!(box "msg isn't an array"))?
-                    .iter()
-                    .map(|i| {
-                        res!(i.as_str()
-                            .ok_or_else(|| err!(box "msg element isn't a string"))?
-                            .parse::<u8>()
-                        )
-                    })
-                    .collect::<Result<Vec<u8>, _>>()?;
-                multi!(midi msg.as_slice(), soul.outputs);
-                Ok(None)
-            },
-            { "args": ["msg"] },
-        );
         multi!(connect commands, false);
+    }
+
+    fn midi(&mut self, msg: &[u8]) {
+        multi!(midi msg, self.outputs);
     }
 
     fn evaluate(&mut self) {

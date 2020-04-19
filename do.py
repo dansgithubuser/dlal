@@ -406,6 +406,7 @@ if args.style_check or args.style_rust_fix:
                 'E203', 'E226',
                 'E301', 'E302', 'E305', 'E306',
                 'E402',
+                'E501',
                 'E701', 'E702', 'E704', 'E711', 'E722',
             ]),
             path,

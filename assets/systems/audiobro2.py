@@ -27,6 +27,15 @@ class Voice:
             if k in ks
         ]
 
+class Subsystem:
+    def __init__(self, name, components):
+        globals()[name] = self
+        self.name = name
+        self.components = {}
+        for name, (kind, args, kwargs) in components.items():
+            self.components[name] = dlal.component_class(kind)(*args, **kwargs, name=f'{self.name}.{name}')
+            setattr(self, name, self.components[name])
+
 # init
 audio = dlal.Audio()
 comm = dlal.Comm()
@@ -37,7 +46,18 @@ Voice('burgers', 'buf')
 Voice('bass', 'sonic')
 Voice('arp', 'arp', 'sonic')
 Voice('harp', 'sonic')
-Voice('sweep', 'sonic')
+Subsystem('sweep', {
+    'midi': ('midi', [], {'port': None}),
+    'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
+    'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%')}),
+    'adsr': ('adsr', [2e-6, 1, 1, 1e-5], {}),
+    'unary': ('unary', ['exp2'], {}),
+    'oracle': ('oracle', [], {'b': 0.05, 'format': ('bandpass', '%')}),
+    'sonic': ('sonic', [], {}),
+    'fir': ('fir', [], {}),
+    'delay': ('delay', [44100], {'gain_x': 0}),
+    'buf': ('buf', [], {}),
+})
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
@@ -52,7 +72,6 @@ voices = [
     bass,
     arp,
     harp,
-    sweep,
 ]
 
 # add
@@ -60,6 +79,8 @@ audio.add(comm)
 for voice in voices:
     for i in voice.components.values():
         audio.add(i)
+for i in sweep.components.values():
+    audio.add(i)
 audio.add(liner)
 audio.add(lpf)
 audio.add(reverb)
@@ -164,12 +185,12 @@ harp.sonic.from_json({
 
 sweep.sonic.from_json({
     "0": {
-        "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "1",
-        "i0": "0", "i1": "1", "i2": "0", "i3": "0", "o": "0.25",
+        "a": "1e-5", "d": "1e-3", "s": "1", "r": "1e-4", "m": "1",
+        "i0": "0.1", "i1": "0.2", "i2": "0", "i3": "0", "o": "0.03",
     },
     "1": {
-        "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "2",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+        "a": "1.5e-5", "d": "1", "s": "1", "r": "1", "m": "4",
+        "i0": "0.2", "i1": "0.1", "i2": "0", "i3": "0", "o": "0",
     },
     "2": {
         "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
@@ -191,6 +212,21 @@ for voice in voices:
         liner.connect(i)
     for i in voice.output:
         i.connect(buf)
+dlal.connect(
+    liner,
+    [sweep.midi,
+        '>', sweep.gate_adsr,
+        '>', sweep.sonic,
+    ],
+    sweep.adsr,
+    sweep.oracle,
+    sweep.fir,
+    [sweep.buf,
+        '<', sweep.delay, sweep.gate_oracle, sweep.gate_adsr,
+        '<', sweep.sonic,
+    ],
+    buf,
+)
 lpf.connect(buf)
 reverb.connect(buf)
 buf.connect(tape)

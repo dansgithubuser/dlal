@@ -40,7 +40,7 @@ function connect() {
 }
 
 function send(note, down) {
-  command('command_detach', ['midi', [down?0x90:0x80, note, 0x40]]);
+  command('command_detach', ['midi', [[down?0x90:0x80, note, 0x40]]]);
 }
 
 function resize() {

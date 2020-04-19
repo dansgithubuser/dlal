@@ -38,34 +38,84 @@ def component_class(kind):
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
 
-def connect(*components):
-    for i_c in range(len(components)-1):
-        srcs = components[i_c]
-        dsts = components[i_c+1]
-        if type(srcs) != list: srcs = [srcs]
-        if type(dsts) != list: dsts = [dsts]
-        for i_s, src in enumerate(srcs):
-            if src == '<': break
-            if src == '>':
-                for j in range(i_s, len(srcs)-1):
-                    src = srcs[j]
-                    dst = srcs[j+1]
-                    if src == '>':
-                        srcs[i_s-1].connect(dst)
-                    elif dst != '>':
-                        src.connect(dst)
-                break
-            for i_d, dst in enumerate(dsts):
-                if dst == '<':
-                    for j in range(i_d, len(dsts)-1):
-                        dst = dsts[j]
-                        src = dsts[j+1]
-                        if dst == '<':
-                            src.connect(dsts[i_d-1])
-                        elif src != '<':
-                            src.connect(dst)
-                    break
-                src.connect(dst)
+def connect(*instructions):
+    '''\
+    Terse connection function.
+
+    Each instruction can be a component or a list.
+    Components or lists of components are fully connected from left to right.
+
+    For example,
+    `connect(a, b, [c, d], [e, f], g)` connects
+    - `a` to `b`
+    - `b` to `c` and `d`
+    - `c` to `e` and `f`
+    - `d` to `e` and `f`
+    - `e` to `g`
+    - `f` to `g`
+
+    Lists may also contain special instruction strings (SISs).
+    Components that are listed in an instruction _before_ any SISs are "primary".
+    Primary components are fully connected from left to right.
+
+    `'>'` connects the last primary component to the following component; components are connected left to right thereafter.
+    `'<'` connects the next component to the last primary component; components are connected right to left thereafter.
+
+    For example,
+    ```
+    connect(
+        [a,
+            '>', b, c,
+            '>', d,
+        ],
+        [e, f,
+            '<', c,
+            '<', d,
+        ],
+    )
+    ```
+    connects
+    - `a` to `b` and `b` to `c`
+    - `a` to `d`
+    - `a` to `e` and `f`
+    - `c` to `f`
+    - `d` to `f`
+    '''
+    instr_prev = None
+    for instr in instructions:
+        # normalize instruction type
+        if type(instr) != list: instr = [instr]
+        # special instructions
+        last_primary = None
+        i = 0
+        while i < len(instr):
+            if instr[i] == '>':
+                i += 1
+                last_primary.connect(instr[i])
+                i += 1
+                while i < len(instr) and isinstance(instr[i], _Component):
+                    instr[i-1].connect(instr[i])
+                    i += 1
+            elif instr[i] == '<':
+                i += 1
+                instr[i].connect(last_primary)
+                i += 1
+                while i < len(instr) and isinstance(instr[i], _Component):
+                    instr[i].connect(instr[i-1])
+                    i += 1
+            else:
+                last_primary = instr[i]
+                i += 1
+        # connect all primary components in previous instruction
+        # to all primary components in current instruction
+        if instr_prev:
+            for src in instr_prev:
+                if not isinstance(src, _Component): break
+                for dst in instr:
+                    if not isinstance(dst, _Component): break
+                    src.connect(dst)
+        # prep for next
+        instr_prev = instr
 
 def typical_setup():
     import atexit
