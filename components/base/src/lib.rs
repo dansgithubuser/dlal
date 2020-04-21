@@ -126,6 +126,27 @@ pub fn json_num<T: std::str::FromStr>(value: &JsonValue) -> Result<T, Box<Error>
     }
 }
 
+pub fn json_nums<T: std::str::FromStr>(value: &JsonValue) -> Result<Vec<T>, Box<Error>> {
+    value
+        .as_array()
+        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
+        .iter()
+        .map(|i| json_num::<T>(i))
+        .collect::<Result<_, _>>()
+}
+
+pub fn json_f32s(value: &JsonValue) -> Result<Vec<f32>, Box<Error>> {
+    value
+        .as_array()
+        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
+        .iter()
+        .map(|i| match i.as_f64() {
+            Some(i) => Ok(i as f32),
+            None => err!("expected an array of numbers, but didn't get one"),
+        })
+        .collect::<Result<_, _>>()
+}
+
 #[macro_export]
 macro_rules! marg {
     (args $body:expr) => {
@@ -160,6 +181,12 @@ macro_rules! marg {
     };
     (json_num $json:expr) => {
         $crate::json_num($json)
+    };
+    (json_nums$json:expr) => {
+        $crate::json_nums($json)
+    };
+    (json_f32s $json:expr) => {
+        $crate::json_f32s($json)
     };
 }
 

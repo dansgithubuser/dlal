@@ -50,10 +50,11 @@ Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
     'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%')}),
-    'adsr': ('adsr', [2e-6, 1, 1, 1e-5], {}),
+    'adsr': ('adsr', [5e-6, 1, 1, 1e-5], {}),
+    'gain': ('gain', [8], {}),
     'unary': ('unary', ['exp2'], {}),
-    'oracle': ('oracle', [], {'b': 0.05, 'format': ('bandpass', '%')}),
-    'sonic': ('sonic', [], {}),
+    'oracle': ('oracle', [], {'m': 1/200, 'b': 0.05, 'format': ('bandpass', '%')}),
+    'train': ('train', [[0.02]], {}),
     'fir': ('fir', [], {}),
     'delay': ('delay', [44100], {'gain_x': 0}),
     'buf': ('buf', [], {}),
@@ -183,25 +184,6 @@ harp.sonic.from_json({
     },
 })
 
-sweep.sonic.from_json({
-    "0": {
-        "a": "1e-5", "d": "1e-3", "s": "1", "r": "1e-4", "m": "1",
-        "i0": "0.1", "i1": "0.2", "i2": "0", "i3": "0", "o": "0.03",
-    },
-    "1": {
-        "a": "1.5e-5", "d": "1", "s": "1", "r": "1", "m": "4",
-        "i0": "0.2", "i1": "0.1", "i2": "0", "i3": "0", "o": "0",
-    },
-    "2": {
-        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
-    },
-    "3": {
-        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
-    },
-})
-
 lpf.set(0.9)
 reverb.set(0.3)
 
@@ -216,14 +198,17 @@ dlal.connect(
     liner,
     [sweep.midi,
         '>', sweep.gate_adsr,
-        '>', sweep.sonic,
+        '>', sweep.train,
     ],
     sweep.adsr,
-    sweep.oracle,
+    [sweep.oracle,
+        '<', sweep.unary,
+        '<', sweep.gain,
+    ],
     sweep.fir,
     [sweep.buf,
         '<', sweep.delay, sweep.gate_oracle, sweep.gate_adsr,
-        '<', sweep.sonic,
+        '<', sweep.train,
     ],
     buf,
 )

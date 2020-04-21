@@ -160,14 +160,14 @@ impl SpecificsTrait for Specifics {
         );
     }
 
-    fn evaluate(&mut self) {
-    }
-
     fn midi(&mut self, msg: &[u8]) {
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {
         None
+    }
+
+    fn evaluate(&mut self) {
     }
 }'''
 

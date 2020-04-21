@@ -1,4 +1,4 @@
-use dlal_component_base::{command, err, gen_component, join, json, marg, uni, View};
+use dlal_component_base::{command, gen_component, join, json, marg, uni, View};
 
 use rustfft::{num_complex::Complex, FFTplanner};
 
@@ -99,15 +99,7 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = marg!(arg &body, 0)?;
-                soul.ir = marg!(json_get j, "ir")?
-                    .as_array()
-                    .ok_or_else(|| err!(box "ir isn't an array"))?
-                    .iter()
-                    .map(|i| { match i.as_f64() {
-                        Some(i) => Ok(i as f32),
-                        None => Err("ir element isn't a number"),
-                    }})
-                    .collect::<Result<Vec<f32>, _>>()?;
+                soul.ir = marg!(json_f32s marg!(json_get j, "ir")?)?;
                 Ok(None)
             },
             { "args": ["json"] },
