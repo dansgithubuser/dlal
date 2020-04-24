@@ -26,7 +26,7 @@ parser.add_argument('--venv-update', '--vu', action='store_true', help=(
 parser.add_argument('--venv-install', '--vi', action='store_true',
     help="install what's specified in requirements.txt"
 )
-parser.add_argument('--component-new', nargs='+')
+parser.add_argument('--component-new', '--cn', nargs='+')
 parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')

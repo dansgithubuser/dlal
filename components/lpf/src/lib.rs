@@ -40,6 +40,7 @@ impl SpecificsTrait for Specifics {
             {
                 "args": [{
                     "name": "lowness",
+                    "optional": true,
                     "range": "[0, 1]",
                 }],
             }

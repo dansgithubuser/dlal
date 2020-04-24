@@ -200,11 +200,11 @@ pub type EvaluateView = extern "C" fn(*const c_void);
 
 #[derive(Debug, PartialEq)]
 pub struct View {
-    raw: *const c_void,
-    command_view: CommandView,
-    midi_view: MidiView,
-    audio_view: AudioView,
-    evaluate_view: EvaluateView,
+    pub raw: *const c_void,
+    pub command_view: CommandView,
+    pub midi_view: MidiView,
+    pub audio_view: AudioView,
+    pub evaluate_view: EvaluateView,
 }
 
 macro_rules! json_to_ptr {
@@ -539,6 +539,12 @@ macro_rules! uni {
             },
             {},
         );
+    };
+    (audio $self:expr) => {
+        match &$self.output {
+            Some(output) => output.audio($self.samples_per_evaluation).unwrap(),
+            None => return,
+        };
     };
 }
 

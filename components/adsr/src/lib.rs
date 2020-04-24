@@ -89,6 +89,16 @@ impl SpecificsTrait for Specifics {
         }));
         command!(
             commands,
+            "reset",
+            |soul, _body| {
+                soul.stage = Stage::R;
+                soul.vol = 0.0;
+                Ok(None)
+            },
+            {},
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 Ok(Some(json!({

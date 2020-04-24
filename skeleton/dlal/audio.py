@@ -8,12 +8,23 @@ class Audio(Component):
     def samples_per_evaluation(self, samples_per_evaluation=None):
         args = ['samples_per_evaluation']
         if samples_per_evaluation != None:
-            args.append(samples_per_evaluation)
+            args.append([samples_per_evaluation])
         return int(self.command_immediate(*args))
+
+    def sample_rate(self, sample_rate=None):
+        args = ['sample_rate']
+        if sample_rate != None:
+            args.append([sample_rate])
+        return float(self.command_immediate(*args))
 
     def add(self, component):
         result = self.command('add', component._view())
         self.components.append(component.name)
+        return result
+
+    def remove(self, component):
+        result = self.command('remove', component._view())
+        self.components.remove(component.name)
         return result
 
     def start(self):
