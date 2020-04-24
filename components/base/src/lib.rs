@@ -50,6 +50,16 @@ macro_rules! err {
     };
 }
 
+#[macro_export]
+macro_rules! res {
+    ($expr:expr) => {
+        match $expr {
+            Ok(t) => Ok(t),
+            Err(e) => err!("{}", e.to_string()),
+        }
+    };
+}
+
 // ===== arg handling ===== //
 pub fn args(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
     body.get("args").ok_or_else(|| err!(box "missing args"))
@@ -114,6 +124,70 @@ pub fn json_num<T: std::str::FromStr>(value: &JsonValue) -> Result<T, Box<Error>
         Ok(num) => Ok(num),
         Err(_) => err!("couldn't parse number"),
     }
+}
+
+pub fn json_nums<T: std::str::FromStr>(value: &JsonValue) -> Result<Vec<T>, Box<Error>> {
+    value
+        .as_array()
+        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
+        .iter()
+        .map(|i| json_num::<T>(i))
+        .collect::<Result<_, _>>()
+}
+
+pub fn json_f32s(value: &JsonValue) -> Result<Vec<f32>, Box<Error>> {
+    value
+        .as_array()
+        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
+        .iter()
+        .map(|i| match i.as_f64() {
+            Some(i) => Ok(i as f32),
+            None => err!("expected an array of numbers, but didn't get one"),
+        })
+        .collect::<Result<_, _>>()
+}
+
+#[macro_export]
+macro_rules! marg {
+    (args $body:expr) => {
+        $crate::args($body)
+    };
+    (arg $body:expr, $index:expr) => {
+        $crate::arg($body, $index)
+    };
+    (arg_str $body:expr, $index:expr) => {
+        $crate::arg_str($body, $index)
+    };
+    (arg_num $body:expr, $index:expr) => {
+        $crate::arg_num($body, $index)
+    };
+    (kwargs $body:expr) => {
+        $crate::kwargs($body)
+    };
+    (kwarg $body:expr, $index:expr) => {
+        $crate::kwarg($body, $index)
+    };
+    (kwarg_str $body:expr, $index:expr) => {
+        $crate::kwarg_str($body, $index)
+    };
+    (kwarg_num $body:expr, $index:expr) => {
+        $crate::kwarg_num($body, $index)
+    };
+    (json_get $json:expr, $name:expr) => {
+        $crate::json_get($json, $name)
+    };
+    (json_str $json:expr) => {
+        $crate::json_str($json)
+    };
+    (json_num $json:expr) => {
+        $crate::json_num($json)
+    };
+    (json_nums$json:expr) => {
+        $crate::json_nums($json)
+    };
+    (json_f32s $json:expr) => {
+        $crate::json_f32s($json)
+    };
 }
 
 // ===== views ===== //
@@ -311,6 +385,8 @@ macro_rules! gen_component {
                     "connect" => "~3",
                     "disconnect" => "~4",
                     "midi" => "~5",
+                    "to_json" => "~6",
+                    "from_json" => "~7",
                     name => name,
                 }.to_string()
             });

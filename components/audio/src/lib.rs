@@ -44,6 +44,14 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "sample_rate",
+            |_soul, _body| {
+                Ok(Some(json!(SAMPLE_RATE)))
+            },
+            { "args": [] },
+        );
+        command!(
+            commands,
             "add",
             |soul, body| {
                 let view = View::new(args(&body)?)?;

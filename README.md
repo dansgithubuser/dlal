@@ -57,19 +57,18 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 +===========+
 ^
 |
-+->--------------------------->-+-> ( _server.serve )
-|                               |
-+-+                             |# servers
-| |                             |
-| +-> ( {special_component} \   +----------------------+
-| |   \   .set_cross_state  )   |                      |
-| |                             |                      |
-| +===========+                 +===================+  +===================+
-| | _skeleton |                 | _websocket_server |  | _websocket_client |
-| +===========+                 +===================+  +===================+
-| ^ ^                           ^                      ^
-| | |                           |                      |
-| +-----------------------------+----------------------+
++->---------------------------------->-+-> ( _server.serve )
+|                                      |
++-+                                    |# servers
+| |                                    |
+| +-> ( {special_component.method} )   +----------------------+
+| |                                    |                      |
+| +===========+                        +===================+  +===================+
+| | _skeleton |                        | _websocket_server |  | _websocket_client |
+| +===========+                        +===================+  +===================+
+| ^ ^                                  ^                      ^
+| | |                                  |                      |
+| +------------------------------------+----------------------+
 | | |
 | | +------------------------------------------------+
 | |                                                  |
@@ -187,10 +186,11 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - burgers
-	- arpeggiator
-	- sample-based synth
+	- midi editor
+	- echo at start
 
 - audiobro
+	- compression
 	- legend of bass
 		- speech synth
 			- LPC

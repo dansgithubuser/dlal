@@ -10,10 +10,22 @@ from ._utils import snake_to_upper_camel_case
 
 import json as _json
 
+class _Default: pass
+
+def driver_set(driver):
+    _Component._driver = driver
+
 def queue_set(comm):
     _Component._comm = comm
 
-class _Default: pass
+class Immediate:
+    def __enter__(self):
+        self.comm = _Component._comm
+        _Component._comm = None
+
+    def __exit__(self, *args):
+        _Component._comm = self.comm
+
 def component(name, default=_Default):
     if default == _Default:
         return _Component._components[name]
@@ -26,16 +38,110 @@ def component_class(kind):
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
 
+def connect(*instructions):
+    '''\
+    Terse connection function.
+
+    Each instruction can be a component or a list.
+    Components or lists of components are fully connected from left to right.
+
+    For example,
+    `connect(a, b, [c, d], [e, f], g)` connects
+    - `a` to `b`
+    - `b` to `c` and `d`
+    - `c` to `e` and `f`
+    - `d` to `e` and `f`
+    - `e` to `g`
+    - `f` to `g`
+
+    Lists may also contain special instruction strings (SISs).
+    Components that are listed in an instruction _before_ any SISs are "primary".
+    Primary components are fully connected from left to right.
+
+    `'>'` connects the last primary component to the following component; components are connected left to right thereafter.
+    `'<'` connects the next component to the last primary component; components are connected right to left thereafter.
+
+    For example,
+    ```
+    connect(
+        [a,
+            '>', b, c,
+            '>', d,
+        ],
+        [e, f,
+            '<', c,
+            '<', d,
+        ],
+    )
+    ```
+    connects
+    - `a` to `b` and `b` to `c`
+    - `a` to `d`
+    - `a` to `e` and `f`
+    - `c` to `f`
+    - `d` to `f`
+    '''
+    instr_prev = None
+    for instr in instructions:
+        # normalize instruction type
+        if type(instr) != list: instr = [instr]
+        # special instructions
+        last_primary = None
+        i = 0
+        while i < len(instr):
+            if instr[i] == '>':
+                i += 1
+                last_primary.connect(instr[i])
+                i += 1
+                while i < len(instr) and isinstance(instr[i], _Component):
+                    instr[i-1].connect(instr[i])
+                    i += 1
+            elif instr[i] == '<':
+                i += 1
+                instr[i].connect(last_primary)
+                i += 1
+                while i < len(instr) and isinstance(instr[i], _Component):
+                    instr[i].connect(instr[i-1])
+                    i += 1
+            else:
+                last_primary = instr[i]
+                i += 1
+        # connect all primary components in previous instruction
+        # to all primary components in current instruction
+        if instr_prev:
+            for src in instr_prev:
+                if not isinstance(src, _Component): break
+                for dst in instr:
+                    if not isinstance(dst, _Component): break
+                    src.connect(dst)
+        # prep for next
+        instr_prev = instr
+
 def typical_setup():
     import atexit
+    import os
     audio = component('audio', None)
     comm = component('comm', None)
-    if audio:
-        audio.start()
-        atexit.register(lambda: audio.stop())
-    if comm:
-        queue_set(comm)
-    serve()
+    tape = component('tape', None)
+    if tape and 'DLAL_TO_FILE' in os.environ:
+        samples_per_evaluation = 64
+        sample_rate = 44100
+        if audio:
+            samples_per_evaluation = audio.samples_per_evaluation()
+            sample_rate = audio.sample_rate()
+        duration = float(os.environ['DLAL_TO_FILE'])
+        runs = int(duration * sample_rate / samples_per_evaluation)
+        with open('out.raw', 'wb') as file:
+            for i in range(runs):
+                audio.run()
+                tape.to_file_i16le(samples_per_evaluation, file)
+    else:
+        if audio:
+            audio.start()
+            atexit.register(lambda: audio.stop())
+        if comm:
+            queue_set(comm)
+        serve()
 
 def system_info():
     return {

@@ -1,3 +1,4 @@
 target/
 *.pyc
 matrix.html
+assets/local

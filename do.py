@@ -26,7 +26,7 @@ parser.add_argument('--venv-update', '--vu', action='store_true', help=(
 parser.add_argument('--venv-install', '--vi', action='store_true',
     help="install what's specified in requirements.txt"
 )
-parser.add_argument('--component-new')
+parser.add_argument('--component-new', nargs='+')
 parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
@@ -80,36 +80,101 @@ if args.venv_install:
 
 # ===== components ===== #
 new_lib_rs = '''\
-use dlal_component_base::{gen_component};
+use dlal_component_base::{
+    command,
+    gen_component,
+    join,
+    json,
+    marg,
+    multi,
+    uni,
+    View,
+};
 
+use std::vec::Vec;
+
+#[derive(Default)]
 pub struct Specifics {
+    samples_per_evaluation: usize,
+    sample_rate: u32,
+    outputs: Vec<View>,
+    output: Option<View>,
 }
 
-gen_component!(Specifics);
+gen_component!(Specifics, {"in": ["?"], "out": ["?"]});
 
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
+            ..Default::default()
         }
     }
 
-    //optional
     fn register_commands(&self, commands: &mut CommandMap) {
-    }
-
-    fn evaluate(&mut self) {
+        join!(
+            commands,
+            |soul, body| {
+                join!(samples_per_evaluation soul, body);
+                join!(sample_rate soul, body);
+                Ok(None)
+            },
+            ["samples_per_evaluation", "sample_rate"],
+        );
+        multi!(connect commands, false);
+        uni!(connect commands, false);
+        command!(
+            commands,
+            "value",
+            |soul, body| {
+                if let Ok(v) = marg!(arg_num &body, 0) {
+                    soul.value = v;
+                }
+                Ok(Some(json!(soul.value)))
+            },
+            {
+                "args": [{
+                    "name": "value",
+                    "optional": true,
+                }],
+            },
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| {
+                Ok(Some(json!({
+                    "value": soul.value,
+                })))
+            },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                let j = marg!(arg &body, 0)?;
+                soul.value = marg!(json_num marg!(json_get j, "value")?)?;
+                Ok(None)
+            },
+            { "args": ["json"] },
+        );
     }
 
     fn midi(&mut self, msg: &[u8]) {
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {
+        None
+    }
+
+    fn evaluate(&mut self) {
     }
 }'''
 
 if args.component_new:
     os.chdir(os.path.join(DIR, 'components'))
-    invoke('cargo', 'new', '--lib', args.component_new)
+    name = args.component_new[0]
+    invoke('cargo', 'new', '--lib', name)
     def mod_file(path, subs=[], reps=[]):
         with open(path) as file: contents = file.read()
         for patt, repl in subs: contents = re.sub(patt, repl, contents)
@@ -118,7 +183,7 @@ if args.component_new:
                 contents = re.sub(patt, repl, contents)
         with open(path, 'w') as file: file.write(contents)
     mod_file(
-        os.path.join(args.component_new, 'Cargo.toml'),
+        os.path.join(name, 'Cargo.toml'),
         [
             ('version.*', 'version = "1.0.0"'),
             ('#.*', ''),
@@ -135,9 +200,12 @@ if args.component_new:
         ],
         [('\n\n\n', '\n\n')],
     )
-    mod_file(os.path.join(args.component_new, 'src', 'lib.rs'),
+    mod_file(os.path.join(name, 'src', 'lib.rs'),
         [(r'(.|\n)+', new_lib_rs)],
     )
+    if len(args.component_new) > 1:
+        with open(os.path.join(name, 'README.md'), 'w') as file:
+            file.write(' '.join(args.component_new[1:])+'\n')
 
 if args.component_info:
     os.chdir(DIR)
@@ -171,6 +239,7 @@ if args.component_matrix:
     import dlal
     kinds = dlal.component_kinds()
     def get_cat(interface):
+        if not interface: return 'none'
         interface = [i.replace('*', '') for i in interface]
         interface = sorted(
             interface,
@@ -196,6 +265,7 @@ if args.component_matrix:
         'midi+cmd',
         'cmd',
         'audio+cmd',
+        'none',
         'all',
         '?',
     ]
@@ -218,8 +288,6 @@ if args.component_matrix:
             }
 
             .cell {
-                width: 10em;
-                height: 8em;
                 background-color: lightgrey;
                 padding: 0.5em;
             }
@@ -338,6 +406,7 @@ if args.style_check or args.style_rust_fix:
                 'E203', 'E226',
                 'E301', 'E302', 'E305', 'E306',
                 'E402',
+                'E501',
                 'E701', 'E702', 'E704', 'E711', 'E722',
             ]),
             path,
