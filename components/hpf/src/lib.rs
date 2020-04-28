@@ -1,8 +1,11 @@
 use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
 
+use std::f32::consts::PI;
+
 #[derive(Default)]
 pub struct Specifics {
     samples_per_evaluation: usize,
+    sample_rate: u32,
     a: f32,
     x: f32,
     y: f32,
@@ -24,9 +27,10 @@ impl SpecificsTrait for Specifics {
             commands,
             |soul, body| {
                 join!(samples_per_evaluation soul, body);
+                join!(sample_rate soul, body);
                 Ok(None)
             },
-            ["samples_per_evaluation"],
+            ["samples_per_evaluation", "sample_rate"],
         );
         uni!(connect commands, true);
         command!(
@@ -44,6 +48,31 @@ impl SpecificsTrait for Specifics {
                     "optional": true,
                     "range": "[0, 1]",
                 }],
+            }
+        );
+        command!(
+            commands,
+            "freq",
+            |soul, body| {
+                if let Ok(sample_rate) = arg_num::<u32>(&body, 1) {
+                    soul.sample_rate = sample_rate;
+                }
+                if let Ok(freq) = arg_num::<f32>(&body, 0) {
+                    soul.a = 1.0 / (2.0 * PI / soul.sample_rate as f32 * freq + 1.0);
+                }
+                Ok(Some(json!((1.0 / soul.a - 1.0) / (2.0 * PI / soul.sample_rate as f32))))
+            },
+            {
+                "args": [
+                    {
+                        "name": "freq",
+                        "optional": true,
+                    },
+                    {
+                        "name": "sample_rate",
+                        "optional": true,
+                    },
+                ],
             }
         );
         command!(
