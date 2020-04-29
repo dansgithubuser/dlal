@@ -81,6 +81,11 @@ impl SpecificsTrait for Specifics {
                         "optional": true,
                         "default": "128",
                     },
+                    {
+                        "name": "amplitude",
+                        "optional": true,
+                        "default": "1",
+                    },
                 ],
             },
         );
