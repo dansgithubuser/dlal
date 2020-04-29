@@ -7,6 +7,7 @@ pub struct Specifics {
     samples_per_evaluation: usize,
     sample_rate: u32,
     a: f32,
+    x: f32,
     y: f32,
     output: Option<View>,
 }
@@ -16,7 +17,7 @@ gen_component!(Specifics, {"in": [], "out": ["audio"]});
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
-            a: 0.95,
+            a: 0.05,
             ..Default::default()
         }
     }
@@ -36,14 +37,14 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                if let Ok(lowness) = arg_num::<f32>(&body, 0) {
-                    soul.a = 1.0 - lowness;
+                if let Ok(highness) = arg_num::<f32>(&body, 0) {
+                    soul.a = 1.0 - highness;
                 }
                 Ok(Some(json!(1.0 - soul.a)))
             },
             {
                 "args": [{
-                    "name": "lowness",
+                    "name": "highness",
                     "optional": true,
                     "range": "[0, 1]",
                 }],
@@ -57,9 +58,9 @@ impl SpecificsTrait for Specifics {
                     soul.sample_rate = sample_rate;
                 }
                 if let Ok(freq) = arg_num::<f32>(&body, 0) {
-                    soul.a = 1.0 / (1.0 + 1.0 / (2.0 * PI / soul.sample_rate as f32 * freq));
+                    soul.a = 1.0 / (2.0 * PI / soul.sample_rate as f32 * freq + 1.0);
                 }
-                Ok(Some(json!(1.0 / (1.0 / soul.a - 1.0) / (2.0 * PI * soul.sample_rate as f32))))
+                Ok(Some(json!((1.0 / soul.a - 1.0) / (2.0 * PI / soul.sample_rate as f32))))
             },
             {
                 "args": [
@@ -95,7 +96,9 @@ impl SpecificsTrait for Specifics {
         if let Some(output) = &self.output {
             let audio = output.audio(self.samples_per_evaluation).unwrap();
             for i in 0..self.samples_per_evaluation {
-                audio[i] = self.y + self.a * (audio[i] - self.y);
+                let x = audio[i];
+                audio[i] = self.a * (self.y + x - self.x);
+                self.x = x;
                 self.y = audio[i];
             }
         }

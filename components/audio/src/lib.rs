@@ -1,14 +1,13 @@
-use dlal_component_base::{arg_num, args, command, gen_component, json, multi, View};
+use dlal_component_base::{arg_num, args, command, gen_component, json, kwarg_num, multi, View};
 
 use portaudio as pa;
 
 use std::ptr::{null, null_mut};
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 
-const SAMPLE_RATE: f64 = 44100.0;
-
 pub struct Specifics {
     samples_per_evaluation: usize,
+    sample_rate: f64,
     addees: Vec<View>,
     stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
     audio_i: *const f32,
@@ -22,6 +21,7 @@ impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Specifics {
             samples_per_evaluation: 64,
+            sample_rate: 44100.0,
             addees: Vec::new(),
             stream: None,
             audio_i: null(),
@@ -45,10 +45,13 @@ impl SpecificsTrait for Specifics {
         command!(
             commands,
             "sample_rate",
-            |_soul, _body| {
-                Ok(Some(json!(SAMPLE_RATE)))
+            |soul, body| {
+                if let Ok(v) = arg_num(&body, 0) {
+                    soul.sample_rate = v;
+                }
+                Ok(Some(json!(soul.sample_rate.to_string())))
             },
-            { "args": [] },
+            { "args": [{"name": "sample_rate", "optional": true}] },
         );
         command!(
             commands,
@@ -59,7 +62,7 @@ impl SpecificsTrait for Specifics {
                     "name": "join",
                     "kwargs": {
                         "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
-                        "sample_rate": SAMPLE_RATE.to_string(),
+                        "sample_rate": soul.sample_rate.to_string(),
                     },
                 }));
                 if let Some(join_result) = join_result {
@@ -70,6 +73,18 @@ impl SpecificsTrait for Specifics {
                     }
                 }
                 soul.addees.push(view);
+                Ok(None)
+            },
+            { "args": ["component", "command", "audio", "midi", "evaluate"] },
+        );
+        command!(
+            commands,
+            "remove",
+            |soul, body| {
+                let view = View::new(args(&body)?)?;
+                if let Some(index) = soul.addees.iter().position(|i| i.raw == view.raw) {
+                    soul.addees.remove(index);
+                }
                 Ok(None)
             },
             { "args": ["component", "command", "audio", "midi", "evaluate"] },
@@ -96,14 +111,14 @@ impl SpecificsTrait for Specifics {
                     INTERLEAVED,
                     pa.device_info(output_device)?.default_high_output_latency,
                 );
-                pa.is_duplex_format_supported(input_params, output_params, SAMPLE_RATE)?;
+                pa.is_duplex_format_supported(input_params, output_params, soul.sample_rate)?;
                 let soul_scoped =
                     unsafe { std::mem::transmute::<&mut Specifics, &mut Specifics>(&mut soul) };
                 soul.stream = Some(pa.open_non_blocking_stream(
                     pa::DuplexStreamSettings::new(
                         input_params,
                         output_params,
-                        SAMPLE_RATE,
+                        soul.sample_rate,
                         soul.samples_per_evaluation as u32,
                     ),
                     move |args| {
@@ -159,14 +174,20 @@ impl SpecificsTrait for Specifics {
         command!(
             commands,
             "to_json",
-            |soul, _body| { Ok(Some(json!(soul.samples_per_evaluation.to_string()))) },
+            |soul, _body| {
+                Ok(Some(json!({
+                    "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
+                    "sample_rate": soul.sample_rate.to_string(),
+                })))
+            },
             {},
         );
         command!(
             commands,
             "from_json",
             |soul, body| {
-                soul.samples_per_evaluation = arg_num(&body, 0)?;
+                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
+                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
                 Ok(None)
             },
             { "args": ["json"] },

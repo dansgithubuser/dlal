@@ -134,7 +134,7 @@ impl SpecificsTrait for Specifics {
     }
 
     fn midi(&mut self, msg: &[u8]) {
-        if msg.len() != 3 {
+        if msg.len() < 3 {
             return;
         }
         match msg[0] & 0xf0 {
