@@ -1,14 +1,39 @@
-use dlal_component_base::{command, gen_component, join, json, marg, uni, View};
+use dlal_component_base::{command, err, gen_component, join, json, marg, uni, Error, View};
 
 use std::f32;
+
+fn wave_sin(phase: f32) -> f32 {
+    (phase * 2.0 * std::f32::consts::PI).sin()
+}
+
+fn wave_tri(phase: f32) -> f32 {
+    if phase < 0.5 {
+        phase * 4.0 - 1.0
+    } else {
+        -phase * 4.0 + 3.0
+    }
+}
 
 pub struct Specifics {
     samples_per_evaluation: usize,
     sample_rate: u32,
+    wave_str: String,
     wave: fn(f32) -> f32,
     step: f32,
     phase: f32,
     output: Option<View>,
+}
+
+impl Specifics {
+    fn wave_set(&mut self, wave: &str) -> Result<(), Box<Error>> {
+        self.wave_str = wave.into();
+        match wave {
+            "sin" => self.wave = wave_sin,
+            "tri" => self.wave = wave_tri,
+            _ => return err!("unknown wave"),
+        };
+        Ok(())
+    }
 }
 
 gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
@@ -18,7 +43,8 @@ impl SpecificsTrait for Specifics {
         Self {
             samples_per_evaluation: 0,
             sample_rate: 0,
-            wave: |phase| (phase * 2.0 * std::f32::consts::PI).sin(),
+            wave_str: "sin".into(),
+            wave: wave_sin,
             step: 0.0,
             phase: 0.0,
             output: None,
@@ -51,6 +77,40 @@ impl SpecificsTrait for Specifics {
                     "optional": true,
                 }],
             }
+        );
+        command!(
+            commands,
+            "wave",
+            |soul, body| {
+                soul.wave_set(marg!(arg_str &body, 0)?)?;
+                Ok(None)
+            },
+            {
+                "args": [{
+                    "name": "wave",
+                    "choices": ["sin", "tri"],
+                }],
+            }
+        );
+        command!(
+            commands,
+            "to_json",
+            |soul, _body| {
+                Ok(Some(json!({
+                    "wave": soul.wave_str,
+                })))
+            },
+            {},
+        );
+        command!(
+            commands,
+            "from_json",
+            |soul, body| {
+                let j = marg!(arg &body, 0)?;
+                soul.wave_set(marg!(json_str marg!(json_get j, "wave")?)?)?;
+                Ok(None)
+            },
+            { "args": ["json"] },
         );
     }
 
