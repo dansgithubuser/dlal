@@ -45,9 +45,13 @@ impl SpecificsTrait for Specifics {
                     Ok(size) => size,
                     Err(_) => 128,
                 };
+                let amplitude: f32 = match marg!(arg_num &body, 3) {
+                    Ok(amplitude) => amplitude,
+                    Err(_) => 1.0,
+                };
                 let mut fr = (0..(size + 1)).map(|i| {
                     Complex::new(
-                        (1.0 - ((i as f32 - center * size as f32) / width).powf(2.0)).max(0.0),
+                        amplitude * (1.0 - ((i as f32 - center * size as f32) / width).powf(2.0)).max(0.0),
                         0.0,
                     )
                 }).collect::<Vec<Complex<f32>>>();
