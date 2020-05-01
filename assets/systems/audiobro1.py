@@ -50,7 +50,7 @@ driver = dlal.Audio()
 comm = dlal.Comm()
 Voice('drum', 'buf', 'gain', output=['buf'])
 Voice('piano', 'sonic')
-Voice('bass', 'sonic')
+Voice('bass', 'sonic', 'lim', 'buf')
 Voice('ghost', 'gain', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', input=['rhymel'])
 Lforacle('ghost_lfo_i20', 0.40000, 0.3, 0.3, 'i2', 0, '%')
 Lforacle('ghost_lfo_i30', 0.31221, 0.1, 0.1, 'i3', 0, '%')
@@ -99,34 +99,35 @@ drum.buf.amplify(1.5, 56)
 drum.buf.load('assets/sounds/drum/snare.wav', 36)
 drum.buf.resample(0.3, 36)
 drum.buf.crop(0, 0.06, 36)
-drum.buf.amplify(0.2, 36)
+drum.buf.amplify(0.4, 36)
 drum.buf.load('assets/sounds/drum/low-tom.wav', 0)
 drum.buf.resample(1.2, 0)
-drum.buf.amplify(0.7, 0)
+drum.buf.amplify(1.4, 0)
+drum.buf.clip(1.0, 0)
 drum.buf.add(36, 0)
 # snare
 drum.buf.load('assets/sounds/drum/snare.wav', 38)
 drum.buf.resample(0.5, 38)
-drum.buf.amplify(0.4, 38)
+drum.buf.amplify(0.8, 38)
 # hat
 drum.buf.load('assets/sounds/drum/hat.wav', 42)
 drum.buf.resample(0.4, 42)
 drum.buf.amplify(0.3, 42)
 # ride
-drum.buf.load('assets/sounds/drum/ride.wav', 46)
-drum.buf.resample(0.45, 46)
-drum.buf.amplify(0.5, 46)
+drum.buf.load('assets/sounds/drum/ride-bell.wav', 46)
+drum.buf.resample(0.465, 53)
+drum.buf.amplify(0.3, 53)
 #
 drum.gain.set(0)
 
 bass.sonic.from_json({
     "0": {
         "a": "0.01", "d": "0.01", "s": "1", "r": "0.01", "m": "1",
-        "i0": "0", "i1": "1", "i2": "0", "i3": "0", "o": "0.25",
+        "i0": "0", "i1": "0.4", "i2": "0.05", "i3": "0.06", "o": "1",
     },
     "1": {
         "a": "0.01", "d": "1e-06", "s": "1", "r": "0.01", "m": "1",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+        "i0": "0", "i1": "0", "i2": "0.09", "i3": "0.07", "o": "0",
     },
     "2": {
         "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
@@ -137,6 +138,8 @@ bass.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
+bass.lim.soft(0.1)
+bass.lim.hard(0.25)
 
 piano.sonic.from_json({
     "0": {
@@ -205,12 +208,12 @@ bell.sonic.from_json({
 
 goon.sonic.from_json({
     "0": {
-        "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "1",
-        "i0": "0", "i1": "1", "i2": "0", "i3": "0", "o": "0.25",
+        "a": "1e-2", "d": "1e-3", "s": "0.1", "r": "3e-4", "m": "2",
+        "i0": "0.1", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.25",
     },
     "1": {
-        "a": "1e-3", "d": "1e-3", "s": "0.5", "r": "3e-4", "m": "2",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+        "a": "3e-4", "d": "1e-3", "s": "0.4", "r": "3e-4", "m": "1",
+        "i0": "0.1", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.25",
     },
     "2": {
         "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
@@ -228,6 +231,8 @@ gain.set(0)
 
 # connect
 drum.gain.connect(drum.buf)
+bass.sonic.connect(bass.buf)
+bass.lim.connect(bass.buf)
 ghost.gain.connect(ghost.oracle)
 ghost.rhymel.connect(ghost.sonic)
 ghost.rhymel.connect(ghost.oracle)
