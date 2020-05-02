@@ -14,6 +14,10 @@ fn wave_tri(phase: f32) -> f32 {
     }
 }
 
+fn wave_saw(phase: f32) -> f32 {
+    -1.0 + 2.0 * phase
+}
+
 pub struct Specifics {
     samples_per_evaluation: usize,
     sample_rate: u32,
@@ -30,6 +34,7 @@ impl Specifics {
         match wave {
             "sin" => self.wave = wave_sin,
             "tri" => self.wave = wave_tri,
+            "saw" => self.wave = wave_saw,
             _ => return err!("unknown wave"),
         };
         Ok(())
