@@ -41,7 +41,7 @@ impl SpecificsTrait for Specifics {
                 "args": [{
                     "name": "mode",
                     "optional": true,
-                    "choices": ["exp2"],
+                    "choices": ["exp2", "sqrt"],
                 }],
             },
         );
@@ -72,6 +72,13 @@ impl SpecificsTrait for Specifics {
             for i in output.audio(self.samples_per_evaluation).unwrap() {
                 *i = match self.mode.as_str() {
                     "exp2" => i.exp2(),
+                    "sqrt" => {
+                        if *i >= 0.0 {
+                            i.sqrt()
+                        } else {
+                            -(-*i).sqrt()
+                        }
+                    }
                     _ => *i,
                 }
             }
