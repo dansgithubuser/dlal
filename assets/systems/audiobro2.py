@@ -46,20 +46,27 @@ Voice('burgers', 'buf')
 Voice('bass', 'sonic')
 Voice('arp', 'arp', 'sonic')
 Voice('harp', 'sonic')
+bins = 512
+sample_rate = 44100
+sweep = 48 / 12
+b = 167 / (sample_rate/2)
+m = 440 / (sample_rate/2) / (1-b)
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
     'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%')}),
-    'adsr': ('adsr', [5e-6, 1, 1, 1e-5], {}),
-    'gain': ('gain', [7], {}),
+    'adsr': ('adsr', [1/4/sample_rate, 1, 1, 1e-5], {}),
+    'gain': ('gain', [sweep**2], {}),
+    'unary2': ('unary', ['sqrt'], {}),
     'unary': ('unary', ['exp2'], {}),
-    'oracle': ('oracle', [], {'m': 1/250, 'b': 0.01, 'format': ('bandpass', '%', 4, 512, '%')}),
-    'train': ('osc', ['tri'], {}),
-    'train_adsr': ('adsr', [5e-6, 1, 1, 5e-5], {}),
+    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('bandpass', '%', 1, bins)}),
+    'train': ('osc', ['saw'], {}),
+    'train2': ('osc', ['saw'], {'bend': 1.0081}),
+    'train_adsr': ('adsr', [5e-8, 1, 1, 5e-5], {}),
     'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', '%')}),
     'train_gain': ('gain', [], {}),
     'fir': ('fir', [], {}),
-    'delay': ('delay', [44100], {'gain_x': 0}),
+    'delay': ('delay', [22050], {'gain_x': 0}),
     'buf': ('buf', [], {}),
 })
 liner = dlal.Liner()
@@ -202,10 +209,12 @@ dlal.connect(
     [sweep.midi,
         '>', sweep.gate_adsr,
         '>', sweep.train,
+        '>', sweep.train2,
         '>', sweep.train_adsr,
     ],
     sweep.adsr,
     [sweep.oracle,
+        '<', sweep.unary2,
         '<', sweep.unary,
         '<', sweep.gain,
     ],
@@ -213,6 +222,7 @@ dlal.connect(
     [sweep.buf,
         '<', sweep.delay, sweep.gate_oracle, sweep.gate_adsr,
         '<', sweep.train,
+        '<', sweep.train2,
         '<', sweep.train_gain, sweep.train_oracle, sweep.train_adsr,
     ],
     buf,
@@ -227,7 +237,7 @@ end = sys_arg(2, float)
 if end:
     duration = end - sys_arg(1, float, 0)
     runs = int(duration * 44100 / 64)
-    with open('audiobro1.raw', 'wb') as file:
+    with open('audiobro2.raw', 'wb') as file:
         for i in range(runs):
             audio.run()
             if i % (1 << 8) == 0xff:
