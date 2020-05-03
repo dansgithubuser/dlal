@@ -23,6 +23,7 @@ pub struct Specifics {
     sample_rate: u32,
     wave_str: String,
     wave: fn(f32) -> f32,
+    bend: f32,
     step: f32,
     phase: f32,
     output: Option<View>,
@@ -50,6 +51,7 @@ impl SpecificsTrait for Specifics {
             sample_rate: 0,
             wave_str: "sin".into(),
             wave: wave_sin,
+            bend: 1.0,
             step: 0.0,
             phase: 0.0,
             output: None,
@@ -99,6 +101,20 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "bend",
+            |soul, body| {
+                soul.bend = marg!(arg_num &body, 0)?;
+                Ok(None)
+            },
+            {
+                "args": [{
+                    "name": "bend",
+                    "description": "1 is no bend",
+                }],
+            }
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 Ok(Some(json!({
@@ -136,7 +152,7 @@ impl SpecificsTrait for Specifics {
 
     fn evaluate(&mut self) {
         for i in uni!(audio self).iter_mut() {
-            self.phase += self.step;
+            self.phase += self.step * self.bend;
             self.phase -= self.phase.floor();
             *i += (self.wave)(self.phase);
         }
