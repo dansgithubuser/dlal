@@ -49,15 +49,16 @@ Voice('harp', 'sonic')
 bins = 512
 sample_rate = 44100
 sweep = 48 / 12
-b = 167 / (sample_rate/2)
+b = 0 / (sample_rate/2)
 m = 440 / (sample_rate/2) / (1-b)
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
     'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%')}),
     'adsr': ('adsr', [1/4/sample_rate, 1, 1, 1e-5], {}),
-    'gain': ('gain', [sweep**2], {}),
-    'unary2': ('unary', ['sqrt'], {}),
+    'midman': ('midman', [], {'directives': [([{'byte': 0x90, 'match': 'most_significant_nibble'}], 0, 'set', '%1*0.08')]}),
+    'gain': ('gain', [], {}),
+    'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
     'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('bandpass', '%', 1, bins)}),
     'train': ('osc', ['saw'], {}),
@@ -207,6 +208,7 @@ for voice in voices:
 dlal.connect(
     liner,
     [sweep.midi,
+        '>', sweep.midman, sweep.gain,
         '>', sweep.gate_adsr,
         '>', sweep.train,
         '>', sweep.train2,
