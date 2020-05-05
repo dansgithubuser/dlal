@@ -1,12 +1,4 @@
-use dlal_component_base::{
-    command,
-    gen_component,
-    join,
-    json,
-    marg,
-    multi,
-    View,
-};
+use dlal_component_base::{command, gen_component, join, json, marg, multi, View};
 
 use std::vec::Vec;
 
