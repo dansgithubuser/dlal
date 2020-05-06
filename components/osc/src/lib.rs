@@ -61,8 +61,8 @@ gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
-            samples_per_evaluation: 0,
-            sample_rate: 0,
+            samples_per_evaluation: 64,
+            sample_rate: 44100,
             wave_str: "sin".into(),
             wave: wave_sin,
             bend: 1.0,
