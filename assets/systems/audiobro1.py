@@ -48,7 +48,7 @@ class Lforacle:
 # init
 driver = dlal.Audio()
 comm = dlal.Comm()
-Voice('drum', 'buf', 'gain', output=['buf'])
+Voice('drum', 'buf')
 Voice('piano', 'sonic')
 Voice('bass', 'sonic', 'lim', 'buf')
 Voice('ghost', 'gain', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', input=['rhymel'])
@@ -57,6 +57,9 @@ Lforacle('ghost_lfo_i30', 0.31221, 0.1, 0.1, 'i3', 0, '%')
 Lforacle('ghost_lfo_i03', 0.12219, 0.1, 0.1, 'i0', 3, '%')
 Voice('bell', 'sonic')
 Voice('goon', 'sonic')
+Voice('hat', 'buf')
+hat_osc = dlal.Osc(wave='noise', freq='0.12141')
+hat_oracle = dlal.Oracle(m=0.04, b=0.01, format=('offset', 6, '%'))
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
@@ -71,6 +74,7 @@ voices = [
     ghost,
     bell,
     goon,
+    hat,
 ]
 
 # add
@@ -81,6 +85,8 @@ for voice in voices:
 ghost_lfo_i20.add_to(driver)
 ghost_lfo_i30.add_to(driver)
 ghost_lfo_i03.add_to(driver)
+driver.add(hat_osc)
+driver.add(hat_oracle)
 driver.add(liner)
 driver.add(lpf)
 driver.add(reverb)
@@ -109,16 +115,10 @@ drum.buf.add(36, 0)
 drum.buf.load('assets/sounds/drum/snare.wav', 38)
 drum.buf.resample(0.5, 38)
 drum.buf.amplify(0.8, 38)
-# hat
-drum.buf.load('assets/sounds/drum/hat.wav', 42)
-drum.buf.resample(0.4, 42)
-drum.buf.amplify(0.3, 42)
 # ride
 drum.buf.load('assets/sounds/drum/ride-bell.wav', 46)
 drum.buf.resample(0.465, 53)
 drum.buf.amplify(0.3, 53)
-#
-drum.gain.set(0)
 
 bass.sonic.from_json({
     "0": {
@@ -225,12 +225,16 @@ goon.sonic.from_json({
     },
 })
 
+# hat
+hat.buf.load('assets/sounds/drum/hat.wav', 42)
+hat.buf.resample(0.4, 42)
+hat.buf.amplify(0.6, 42)
+
 lpf.set(0.9)
 reverb.set(1)
 gain.set(0)
 
 # connect
-drum.gain.connect(drum.buf)
 bass.sonic.connect(bass.buf)
 bass.lim.connect(bass.buf)
 ghost.gain.connect(ghost.oracle)
@@ -247,6 +251,8 @@ for voice in voices:
 ghost_lfo_i20.connect(ghost.sonic)
 ghost_lfo_i30.connect(ghost.sonic)
 ghost_lfo_i03.connect(ghost.sonic)
+hat_osc.connect(hat_oracle)
+hat_oracle.connect(liner)
 lpf.connect(buf)
 reverb.connect(buf)
 buf.connect(tape)
