@@ -1,9 +1,10 @@
 use dlal_component_base::{command, err, gen_component, join, json, marg, uni, Error, View};
 
 use std::f32;
+use std::time;
 
 fn wave_sin(phase: f32) -> f32 {
-    (phase * 2.0 * std::f32::consts::PI).sin()
+    (phase * 2.0 * f32::consts::PI).sin()
 }
 
 fn wave_tri(phase: f32) -> f32 {
@@ -16,6 +17,18 @@ fn wave_tri(phase: f32) -> f32 {
 
 fn wave_saw(phase: f32) -> f32 {
     -1.0 + 2.0 * phase
+}
+
+fn wave_noise(phase: f32) -> f32 {
+    let t = time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap();
+    let r1 = t.as_secs();
+    let r2 = t.subsec_nanos() as u64;
+    let r3 = unsafe {
+        *std::mem::transmute::<*const f32, *const u32>(&phase)
+    } as u64;
+    const PERIOD: u64 = 77777;
+    let rf = (r1 ^ r2 ^ r3) % PERIOD;
+    2.0 * rf as f32 / PERIOD as f32 - 1.0
 }
 
 pub struct Specifics {
@@ -36,6 +49,7 @@ impl Specifics {
             "sin" => self.wave = wave_sin,
             "tri" => self.wave = wave_tri,
             "saw" => self.wave = wave_saw,
+            "noise" => self.wave = wave_noise,
             _ => return err!("unknown wave"),
         };
         Ok(())
@@ -47,8 +61,8 @@ gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
-            samples_per_evaluation: 0,
-            sample_rate: 0,
+            samples_per_evaluation: 64,
+            sample_rate: 44100,
             wave_str: "sin".into(),
             wave: wave_sin,
             bend: 1.0,
@@ -95,7 +109,7 @@ impl SpecificsTrait for Specifics {
             {
                 "args": [{
                     "name": "wave",
-                    "choices": ["sin", "tri"],
+                    "choices": ["sin", "tri", "saw", "noise"],
                 }],
             }
         );

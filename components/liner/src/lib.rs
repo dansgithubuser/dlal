@@ -79,6 +79,7 @@ struct Line {
     index: usize, //used to convey which line this is, and then to keep track of current deltamsg
     samples_ere_last_tempo: u32,
     ticks_aft_last_tempo: u32,
+    offset: f64,
 }
 
 impl Line {
@@ -152,8 +153,15 @@ impl Line {
         let ticks_per_us = self.ticks_per_quarter as f64 / self.us_per_quarter as f64;
         let ticks_per_s = ticks_per_us * US_PER_S;
         let ticks_per_sample = ticks_per_s / sample_rate as f64;
-        let samples_aft_last_tempo = samples - self.samples_ere_last_tempo;
+        let samples_aft_last_tempo =
+            samples as f64 - self.offset * sample_rate as f64 - self.samples_ere_last_tempo as f64;
+        if samples_aft_last_tempo < 0.0 {
+            return 0;
+        }
         let ticks_aft_last_tempo = (ticks_per_sample * samples_aft_last_tempo as f64) as u32;
+        if self.ticks_aft_last_tempo > ticks_aft_last_tempo {
+            return 0;
+        }
         ticks_aft_last_tempo - self.ticks_aft_last_tempo
     }
 }
@@ -260,6 +268,22 @@ impl SpecificsTrait for Specifics {
                         "desc": "immediately enact the line after loading",
                     },
                 ],
+            },
+        );
+        command!(
+            commands,
+            "offset",
+            |soul, body| {
+                let line_index: usize = arg_num(&body, 0)?;
+                let seconds: f64 = arg_num(&body, 1)?;
+                if line_index >= soul.lines.len() {
+                    return err!("invalid line_index");
+                }
+                soul.lines[line_index].offset = seconds;
+                Ok(None)
+            },
+            {
+                "args": ["line_index", "seconds"],
             },
         );
         command!(

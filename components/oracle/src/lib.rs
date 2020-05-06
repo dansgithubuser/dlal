@@ -17,6 +17,7 @@ pub struct Specifics {
     mode: u8,
     format: String,
     outputs: Vec<View>,
+    last_error: String,
 }
 
 gen_component!(Specifics, {"in": ["audio"], "out": ["cmd", "midi"]});
@@ -88,6 +89,16 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "last_error",
+            |soul, _body| {
+                Ok(Some(json!(soul.last_error)))
+            },
+            {
+                "args": [],
+            },
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 Ok(Some(json!({
@@ -138,7 +149,11 @@ impl SpecificsTrait for Specifics {
         };
         if let Ok(body) = json_from_str(&text) {
             for output in &self.outputs {
-                output.command(&body);
+                if let Some(result) = output.command(&body) {
+                    if let Some(error) = result.get("error") {
+                        self.last_error = error.as_str().unwrap_or(&error.to_string()).into();
+                    }
+                }
             }
         }
         for i in &mut self.cv {
