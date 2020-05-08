@@ -21,6 +21,7 @@ lazy_static! {
 enum Piece {
     Byte(u8),
     Null,
+    LeastSignificantNibble(u8),
     MostSignificantNibble(u8),
 }
 
@@ -44,6 +45,11 @@ impl Directive {
                     }
                 }
                 Piece::Null => (),
+                Piece::LeastSignificantNibble(b) => {
+                    if b != msg[i] & 0xf {
+                        return false;
+                    }
+                }
                 Piece::MostSignificantNibble(b) => {
                     if b != msg[i] & 0xf0 {
                         return false;
@@ -96,6 +102,7 @@ impl Directive {
 pub struct Specifics {
     directives: Vec<Directive>,
     outputs: Vec<View>,
+    last_error: String,
 }
 
 gen_component!(Specifics, {"in": ["midi"], "out": ["cmd"]});
@@ -124,18 +131,19 @@ impl SpecificsTrait for Specifics {
                                 Ok(Piece::Byte(marg!(json_num &i)?))
                             },
                             JsonValue::Object(map) => {
-                                let piece_match = map
-                                    .get("match")
-                                    .ok_or_else(|| err!(box "missing pattern element value 'match'"))?
-                                    .as_str()
-                                    .ok_or_else(|| err!(box "match isn't a string"))?;
-                                match piece_match {
-                                    "most_significant_nibble" => {
-                                        let byte = map.get("byte").ok_or_else(|| err!(box "missing pattern element value 'byte'"))?;
-                                        let byte = marg!(json_num &byte)?;
-                                        Ok(Piece::MostSignificantNibble(byte))
-                                    },
-                                    _ => err!("invalid match value"),
+                                if let Some(nibble) = map.get("nibble") {
+                                    let nibble = marg!(json_num &nibble)?;
+                                    if nibble >= 0x10 {
+                                        if nibble & 0xf != 0 {
+                                            return err!("expected one nibble to be 0");
+                                        }
+                                        Ok(Piece::MostSignificantNibble(nibble))
+                                    }
+                                    else {
+                                        Ok(Piece::LeastSignificantNibble(nibble))
+                                    }
+                                } else {
+                                    err!("unknown pattern object")
                                 }
                             },
                             _ => err!("pattern element type is invalid"),
@@ -167,12 +175,7 @@ impl SpecificsTrait for Specifics {
                                 {
                                     "name": "object",
                                     "values": {
-                                        "byte": "byte",
-                                        "match": {
-                                            "choices": [
-                                                "most_significant_nibble",
-                                            ],
-                                        },
+                                        "nibble": "nibble",
                                     },
                                     "desc": "match based on provided values",
                                 },
@@ -190,6 +193,16 @@ impl SpecificsTrait for Specifics {
                         "desc": "command text to have MIDI bytes subbed in; %1*2+3 becomes MIDI byte 1 multiplied by 2 plus 3"
                     },
                 ],
+            },
+        );
+        command!(
+            commands,
+            "last_error",
+            |soul, _body| {
+                Ok(Some(json!(soul.last_error)))
+            },
+            {
+                "args": [],
             },
         );
         command!(
@@ -220,7 +233,11 @@ impl SpecificsTrait for Specifics {
                 if directive.component >= self.outputs.len() {
                     continue;
                 }
-                self.outputs[directive.component].command(&directive.sub(msg));
+                if let Some(result) = self.outputs[directive.component].command(&directive.sub(msg)) {
+                    if let Some(error) = result.get("error") {
+                        self.last_error = error.as_str().unwrap_or(&error.to_string()).into();
+                    }
+                }
             }
         }
     }

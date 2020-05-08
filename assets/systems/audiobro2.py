@@ -45,7 +45,8 @@ Voice('shaker2', 'buf')
 Voice('burgers', 'buf')
 Voice('bass', 'sonic')
 Voice('arp', 'arp', 'sonic')
-Voice('harp', 'sonic')
+Voice('harp1', 'osc', 'oracle', 'sonic', input=['sonic'])
+Voice('harp2', 'osc', 'oracle', 'sonic', input=['sonic'])
 bins = 512
 sample_rate = 44100
 sweep = 48 / 12
@@ -56,7 +57,7 @@ Subsystem('sweep', {
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
     'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%')}),
     'adsr': ('adsr', [1/4/sample_rate, 1, 1, 1e-5], {}),
-    'midman': ('midman', [], {'directives': [([{'byte': 0x90, 'match': 'most_significant_nibble'}], 0, 'set', '%1*0.08')]}),
+    'midman': ('midman', [], {'directives': [([{'nibble': 0x90}], 0, 'set', '%1*0.08')]}),
     'gain': ('gain', [], {}),
     'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
@@ -70,6 +71,16 @@ Subsystem('sweep', {
     'delay': ('delay', [22050], {'gain_x': 0}),
     'buf': ('buf', [], {}),
 })
+midman = dlal.Midman([
+    ([{'nibble': 0x90}, 0x3c], 0, 'freq', 0),
+    ([{'nibble': 0x90}, 0x3c], 1, 'freq', 0),
+    ([{'nibble': 0x90}, 0x3c], 0, 'phase', 0),
+    ([{'nibble': 0x90}, 0x3c], 1, 'phase', 0),
+    ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
+    ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
+])
+harp1.oracle.m(1/12)
+harp2.oracle.m(0/4)
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
@@ -83,7 +94,8 @@ voices = [
     burgers,
     bass,
     arp,
-    harp,
+    harp1,
+    harp2,
 ]
 
 # add
@@ -93,6 +105,7 @@ for voice in voices:
         audio.add(i)
 for i in sweep.components.values():
     audio.add(i)
+audio.add(midman)
 audio.add(liner)
 audio.add(lpf)
 audio.add(reverb)
@@ -163,7 +176,7 @@ arp.sonic.from_json({
         "i0": "0", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.1",
     },
     "1": {
-        "a": "0.01", "d": "2e-4", "s": "0", "r": "2e-4", "m": "1",
+        "a": "1e-3", "d": "4e-4", "s": "0", "r": "4e-4", "m": "2",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "2": {
@@ -176,13 +189,13 @@ arp.sonic.from_json({
     },
 })
 
-harp.sonic.from_json({
+harp1.sonic.from_json({
     "0": {
-        "a": "0.01", "d": "1e-4", "s": "0", "r": "1e-4", "m": "1",
-        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.1",
+        "a": "0.01", "d": "2e-5", "s": "0", "r": "2e-5", "m": "1",
+        "i0": "0", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.1",
     },
     "1": {
-        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
+        "a": "0.01", "d": "4e-5", "s": "0.5", "r": "2e-5", "m": "3",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "2": {
@@ -194,6 +207,27 @@ harp.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
+harp1.oracle.format('offset', 6, '%')
+
+harp2.sonic.from_json({
+    "0": {
+        "a": "0.01", "d": "2e-5", "s": "0", "r": "2e-5", "m": "1",
+        "i0": "0", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.1",
+    },
+    "1": {
+        "a": "0.01", "d": "4e-5", "s": "0.5", "r": "2e-5", "m": "3",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+    },
+    "2": {
+        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+    },
+    "3": {
+        "a": "0", "d": "0", "s": "0", "r": "0", "m": "0",
+        "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
+    },
+})
+harp2.oracle.format('offset', 7, '%')
 
 lpf.set(0.9)
 reverb.set(0.3)
@@ -205,6 +239,10 @@ for voice in voices:
         liner.connect(i)
     for i in voice.output:
         i.connect(buf)
+harp1.osc.connect(harp1.oracle)
+harp2.osc.connect(harp2.oracle)
+harp1.oracle.connect(liner)
+harp2.oracle.connect(liner)
 dlal.connect(
     liner,
     [sweep.midi,
@@ -229,6 +267,9 @@ dlal.connect(
     ],
     buf,
 )
+liner.connect(midman)
+midman.connect(harp1.osc)
+midman.connect(harp2.osc)
 lpf.connect(buf)
 reverb.connect(buf)
 buf.connect(tape)
