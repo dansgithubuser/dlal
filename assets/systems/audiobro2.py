@@ -129,6 +129,7 @@ liner.advance(sys_arg(1, float, 0))
 
 # cowbell
 drum.buf.load('assets/sounds/drum/cowbell.wav', 56)
+drum.buf.amplify(2, 56)
 # kick
 drum.buf.load('assets/sounds/drum/kick.wav', 36)
 drum.buf.resample(4, 36)
@@ -156,6 +157,13 @@ drum.buf.amplify(0.75, 64)
 drum.buf.load('assets/sounds/drum/bongo-hi.wav', 63)
 drum.buf.resample(0.85, 63)
 drum.buf.amplify(0.75, 63)
+# guiro
+drum.buf.load('assets/sounds/drum/guiro.wav', 47)
+# megabass
+drum.buf.load('assets/sounds/drum/low-tom.wav', 41)
+drum.buf.resample(0.45, 41)
+drum.buf.amplify(5, 41)
+drum.buf.clip(0.4, 41)
 
 shaker1.buf.load('assets/sounds/drum/shaker1.wav', 82)
 
@@ -165,6 +173,7 @@ shaker2.buf.amplify(0.5, 82)
 burgers.buf.load('assets/local/burgers/people.wav', 60)
 burgers.buf.load('assets/local/burgers/pickle.wav', 62)
 burgers.buf.load('assets/local/burgers/plate.wav', 64)
+burgers.buf.load('assets/local/burgers/plate2.wav', 63)
 burgers.buf.load('assets/local/burgers/mm.wav', 65)
 burgers.buf.load('assets/local/burgers/think.wav', 67)
 burgers.buf.load('assets/local/burgers/legs.wav', 69)

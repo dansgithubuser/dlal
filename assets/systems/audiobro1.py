@@ -185,7 +185,7 @@ ghost.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.125",
     },
 })
-ghost.sonic.midi(midi.msg.pitch_bend_range(64))
+ghost.sonic.midi(midi.Msg.pitch_bend_range(64))
 
 bell.sonic.from_json({
     "0": {

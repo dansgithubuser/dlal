@@ -35,9 +35,9 @@ def json_prep(args, kwargs):
     def prep(x):
         if type(x) in [int, float]:
             return str(x)
-        elif type(x) == list:
+        elif isinstance(x, list):
             return [prep(i) for i in x]
-        elif type(x) == dict:
+        elif isinstance(x, dict):
             return {k: prep(v) for k, v in x.items()}
         else:
             return x
@@ -164,7 +164,7 @@ class Component:
         return result
 
     def midi(self, msg):
-        if type(msg) == list and type(msg[0]) == list:
+        if isinstance(msg, list) and isinstance(msg[0], list):
             return [self.command('midi', [i]) for i in msg]
         return self.command('midi', [msg])
 

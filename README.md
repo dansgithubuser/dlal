@@ -187,10 +187,10 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - burgers
-	- echo at start
-	- midi delay
 
 - audiobro
+	- track 1
+		- bass slide down in B section
 	- legend of bass
 		- speech synth
 			- LPC
