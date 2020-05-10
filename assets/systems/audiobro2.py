@@ -44,7 +44,7 @@ Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
 Voice('burgers', 'buf')
 Voice('bass', 'sonic')
-Voice('arp', 'arp', 'sonic')
+Voice('arp', 'arp', 'sonic', 'osc', 'unary', 'oracle', output=['sonic'])
 Voice('harp1', 'osc', 'oracle', 'sonic', input=['sonic'])
 Voice('harp2', 'osc', 'oracle', 'sonic', input=['sonic'])
 bins = 512
@@ -84,6 +84,7 @@ midman = dlal.Midman([
     ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
     ([{'nibble': 0x90}, 0x41], 2, 'gain_y', 0.3),
     ([{'nibble': 0x90}, 0x41], 2, 'gain_o', 1),
+    ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),
 ])
 harp1.oracle.m(1/12)
 harp2.oracle.m(0/4)
@@ -193,10 +194,10 @@ bass.sonic.from_json({
 arp.sonic.from_json({
     "0": {
         "a": "0.01", "d": "2e-4", "s": "0", "r": "2e-4", "m": "1",
-        "i0": "0", "i1": "0.1", "i2": "0", "i3": "0", "o": "0.1",
+        "i0": "0", "i1": "0.1", "i2": "0.5", "i3": "0", "o": "0.1",
     },
     "1": {
-        "a": "1e-3", "d": "4e-4", "s": "0", "r": "4e-4", "m": "2",
+        "a": "1e-3", "d": "4e-4", "s": "0", "r": "4e-4", "m": "1.99",
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "2": {
@@ -208,6 +209,10 @@ arp.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
+arp.osc.freq(1/8)
+arp.oracle.m(0.1)
+arp.oracle.format('i0', 0, '%')
+arp.unary.mode('exp2')
 
 harp1.sonic.from_json({
     "0": {
@@ -254,6 +259,9 @@ reverb.set(0.3)
 
 # connect
 arp.arp.connect(arp.sonic)
+arp.osc.connect(arp.oracle)
+arp.unary.connect(arp.oracle)
+arp.oracle.connect(arp.sonic)
 for voice in voices:
     for i in voice.input:
         liner.connect(i)
@@ -291,6 +299,7 @@ liner.connect(midman)
 midman.connect(harp1.osc)
 midman.connect(harp2.osc)
 midman.connect(delay)
+midman.connect(arp.osc)
 lpf.connect(buf)
 reverb.connect(buf)
 delay.connect(buf)
