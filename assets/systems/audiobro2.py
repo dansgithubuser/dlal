@@ -78,12 +78,19 @@ midman = dlal.Midman([
     ([{'nibble': 0x90}, 0x3c], 1, 'phase', 0),
     ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
     ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
+    ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),
+    ([{'nibble': 0x90}, 0x40], 2, 'gain_y', 0.3),
+    ([{'nibble': 0x90}, 0x40], 2, 'gain_o', 1),
+    ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
+    ([{'nibble': 0x90}, 0x41], 2, 'gain_y', 0.3),
+    ([{'nibble': 0x90}, 0x41], 2, 'gain_o', 1),
 ])
 harp1.oracle.m(1/12)
 harp2.oracle.m(0/4)
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
+delay = dlal.Delay(11025)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
 
@@ -109,6 +116,7 @@ audio.add(midman)
 audio.add(liner)
 audio.add(lpf)
 audio.add(reverb)
+audio.add(delay)
 audio.add(buf)
 audio.add(tape)
 
@@ -270,8 +278,10 @@ dlal.connect(
 liner.connect(midman)
 midman.connect(harp1.osc)
 midman.connect(harp2.osc)
+midman.connect(delay)
 lpf.connect(buf)
 reverb.connect(buf)
+delay.connect(buf)
 buf.connect(tape)
 buf.connect(audio)
 
