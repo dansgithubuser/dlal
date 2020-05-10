@@ -185,7 +185,7 @@ ghost.sonic.from_json({
         "i0": "0", "i1": "0", "i2": "0", "i3": "0", "o": "0.125",
     },
 })
-ghost.sonic.midi(midi.msg.pitch_bend_range(64))
+ghost.sonic.midi(midi.Msg.pitch_bend_range(64))
 
 bell.sonic.from_json({
     "0": {
@@ -227,7 +227,8 @@ goon.sonic.from_json({
 
 # hat
 hat.buf.load('assets/sounds/drum/hat.wav', 42)
-hat.buf.resample(0.4, 42)
+hat.buf.resample(0.33, 42)
+hat.buf.clip(0.24, 42)
 hat.buf.amplify(0.6, 42)
 
 lpf.set(0.9)

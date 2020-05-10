@@ -129,6 +129,20 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "phase",
+            |soul, body| {
+                soul.phase = marg!(arg_num &body, 0)?;
+                Ok(None)
+            },
+            {
+                "args": [{
+                    "name": "phase",
+                    "range": "[0..1)",
+                }],
+            }
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 Ok(Some(json!({

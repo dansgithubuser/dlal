@@ -65,6 +65,8 @@ impl SpecificsTrait for Specifics {
                 "args": [{
                     "name": "gain_x",
                     "optional": true,
+                    "desc": "input",
+                    "default": "1.0",
                 }],
             },
         );
@@ -81,6 +83,8 @@ impl SpecificsTrait for Specifics {
                 "args": [{
                     "name": "gain_y",
                     "optional": true,
+                    "desc": "feedback",
+                    "default": "0.0",
                 }],
             },
         );
@@ -97,6 +101,8 @@ impl SpecificsTrait for Specifics {
                 "args": [{
                     "name": "gain_o",
                     "optional": true,
+                    "desc": "output",
+                    "default": "1.0",
                 }],
             },
         );
@@ -135,8 +141,9 @@ impl SpecificsTrait for Specifics {
         };
         for i in 0..self.samples_per_evaluation {
             let x = audio[i];
-            audio[i] += self.audio[self.index] * self.gain_o;
-            self.audio[self.index] = x * self.gain_x + audio[i] * self.gain_y;
+            let echo = self.audio[self.index] * self.gain_o;
+            audio[i] += echo;
+            self.audio[self.index] = x * self.gain_x + echo * self.gain_y;
             self.index += 1;
             self.index %= self.audio.len();
         }
