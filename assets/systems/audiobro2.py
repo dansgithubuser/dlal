@@ -68,7 +68,7 @@ Subsystem('sweep', {
     'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', '%')}),
     'train_gain': ('gain', [], {}),
     'fir': ('fir', [], {}),
-    'delay': ('delay', [22050], {'gain_x': 0}),
+    'delay': ('delay', [22050], {'gain_x': 1}),
     'buf': ('buf', [], {}),
 })
 midman = dlal.Midman([
