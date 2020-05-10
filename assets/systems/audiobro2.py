@@ -91,6 +91,7 @@ liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
 delay = dlal.Delay(11025)
+lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
 
@@ -117,6 +118,7 @@ audio.add(liner)
 audio.add(lpf)
 audio.add(reverb)
 audio.add(delay)
+audio.add(lim)
 audio.add(buf)
 audio.add(tape)
 
@@ -133,11 +135,15 @@ drum.buf.resample(4, 36)
 drum.buf.load('assets/sounds/drum/ride-bell.wav', 53)
 drum.buf.resample(0.465, 53)
 drum.buf.amplify(0.3, 53)
+# tom
+drum.buf.load('assets/sounds/drum/floor-tom.wav', 50)
+drum.buf.crop(0, 0.05, 50)
+drum.buf.resample(3, 50)
 # snare
 drum.buf.load('assets/sounds/drum/snare.wav', 40)
-drum.buf.resample(0.63, 40)
 drum.buf.crop(0, 0.1, 40)
-drum.buf.amplify(0.7, 40)
+drum.buf.amplify(2, 40)
+drum.buf.clip(1.0, 40)
 # ride
 drum.buf.load('assets/sounds/drum/ride.wav', 46)
 drum.buf.resample(0.45, 46)
@@ -145,10 +151,10 @@ drum.buf.amplify(0.5, 46)
 # bongos
 drum.buf.load('assets/sounds/drum/bongo-lo.wav', 64)
 drum.buf.resample(1.1, 64)
-drum.buf.amplify(0.5, 64)
+drum.buf.amplify(0.75, 64)
 drum.buf.load('assets/sounds/drum/bongo-hi.wav', 63)
 drum.buf.resample(0.85, 63)
-drum.buf.amplify(0.5, 63)
+drum.buf.amplify(0.75, 63)
 
 shaker1.buf.load('assets/sounds/drum/shaker1.wav', 82)
 
@@ -156,8 +162,8 @@ shaker2.buf.load('assets/sounds/drum/shaker2.wav', 82)
 shaker2.buf.amplify(0.5, 82)
 
 burgers.buf.load('assets/local/burgers/people.wav', 60)
-burgers.buf.amplify(4, 60)
-burgers.buf.clip(0.3, 60)
+burgers.buf.amplify(5, 60)
+burgers.buf.clip(0.25, 60)
 
 bass.sonic.from_json({
     "0": {
@@ -282,6 +288,7 @@ midman.connect(delay)
 lpf.connect(buf)
 reverb.connect(buf)
 delay.connect(buf)
+lim.connect(buf)
 buf.connect(tape)
 buf.connect(audio)
 
