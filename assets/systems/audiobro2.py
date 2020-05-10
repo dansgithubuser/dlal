@@ -90,7 +90,7 @@ harp2.oracle.m(0/4)
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
-delay = dlal.Delay(11025)
+delay = dlal.Delay(11025, gain_o=0)
 lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -162,24 +162,30 @@ shaker2.buf.load('assets/sounds/drum/shaker2.wav', 82)
 shaker2.buf.amplify(0.5, 82)
 
 burgers.buf.load('assets/local/burgers/people.wav', 60)
-burgers.buf.amplify(5, 60)
-burgers.buf.clip(0.25, 60)
+burgers.buf.load('assets/local/burgers/pickle.wav', 62)
+burgers.buf.load('assets/local/burgers/plate.wav', 64)
+burgers.buf.load('assets/local/burgers/mm.wav', 65)
+burgers.buf.load('assets/local/burgers/think.wav', 67)
+burgers.buf.load('assets/local/burgers/legs.wav', 69)
+for i in range(60, 72):
+    burgers.buf.amplify(5, i)
+    burgers.buf.clip(0.25, i)
 
 bass.sonic.from_json({
     "0": {
-        "a": "5e-4", "d": "5e-5", "s": "0.5", "r": "0.01", "m": "1",
+        "a": "5e-3", "d": "3e-4", "s": "0.5", "r": "0.01", "m": "1",
         "i0": "0.3", "i1": "0.5", "i2": "0.4", "i3": "0.3", "o": "0.25",
     },
     "1": {
-        "a": "5e-4", "d": "1e-6", "s": "0.2", "r": "0.01", "m": "1.99",
+        "a": "5e-3", "d": "1e-4", "s": "0.5", "r": "0.01", "m": "1.99",
         "i0": "0.04", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "2": {
-        "a": "4e-4", "d": "5e-6", "s": "0.2", "r": "0.01", "m": "3.00013",
+        "a": "4e-3", "d": "3e-4", "s": "0.5", "r": "0.01", "m": "3.00013",
         "i0": "0.03", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
     "3": {
-        "a": "3e-4", "d": "1e-5", "s": "0.2", "r": "0.01", "m": "4.0001",
+        "a": "3e-3", "d": "1e-4", "s": "0.5", "r": "0.01", "m": "4.0001",
         "i0": "0.02", "i1": "0", "i2": "0", "i3": "0", "o": "0",
     },
 })
