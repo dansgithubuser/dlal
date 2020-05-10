@@ -227,7 +227,8 @@ goon.sonic.from_json({
 
 # hat
 hat.buf.load('assets/sounds/drum/hat.wav', 42)
-hat.buf.resample(0.4, 42)
+hat.buf.resample(0.33, 42)
+hat.buf.clip(0.24, 42)
 hat.buf.amplify(0.6, 42)
 
 lpf.set(0.9)

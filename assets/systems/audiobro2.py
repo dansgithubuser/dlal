@@ -72,19 +72,33 @@ Subsystem('sweep', {
     'buf': ('buf', [], {}),
 })
 midman = dlal.Midman([
-    ([{'nibble': 0x90}, 0x3c], 0, 'freq', 0),
-    ([{'nibble': 0x90}, 0x3c], 1, 'freq', 0),
+    ([{'nibble': 0x90}, 0x3c], 0, 'freq', 0),  # harp1.osc
+    ([{'nibble': 0x90}, 0x3c], 1, 'freq', 0),  # harp2.osc
     ([{'nibble': 0x90}, 0x3c], 0, 'phase', 0),
     ([{'nibble': 0x90}, 0x3c], 1, 'phase', 0),
     ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
     ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
-    ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),
+    ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),  # delay
     ([{'nibble': 0x90}, 0x40], 2, 'gain_y', 0.3),
     ([{'nibble': 0x90}, 0x40], 2, 'gain_o', 1),
     ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
     ([{'nibble': 0x90}, 0x41], 2, 'gain_y', 0.3),
     ([{'nibble': 0x90}, 0x41], 2, 'gain_o', 1),
-    ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),
+    ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),  # arp.osc
+    ([{'nibble': 0x90}, 0x45], 4, 'm', -28*m),  # sweep.oracle
+    ([{'nibble': 0x90}, 0x45], 4, 'b', 16000 / (sample_rate/2)),
+    ([{'nibble': 0x90}, 0x45], 5, 'gain_x', 0),  # sweep.delay
+    ([{'nibble': 0x90}, 0x45], 6, 'a', 1e-3),  # sweep.train_adsr
+    ([{'nibble': 0x90}, 0x45], 6, 'r', 1e-3),
+    ([{'nibble': 0x90}, 0x45], 7, 'm', 0.0005),  # sweep.train_oracle
+    ([{'nibble': 0x90}, 0x45], 8, 'r', 1),  # sweep.adsr
+    ([{'nibble': 0x90}, 0x47], 4, 'm', m),  # sweep.oracle
+    ([{'nibble': 0x90}, 0x47], 4, 'b', b),
+    ([{'nibble': 0x90}, 0x47], 5, 'gain_x', 1),  # sweep.delay
+    ([{'nibble': 0x90}, 0x47], 6, 'a', 5e-8),  # sweep.train_adsr
+    ([{'nibble': 0x90}, 0x47], 6, 'r', 5e-5),
+    ([{'nibble': 0x90}, 0x47], 7, 'm', 0.2),  # sweep.train_oracle
+    ([{'nibble': 0x90}, 0x47], 8, 'r', 1e-5),  # sweep.adsr
 ])
 harp1.oracle.m(1/12)
 harp2.oracle.m(0/4)
@@ -309,6 +323,11 @@ midman.connect(harp1.osc)
 midman.connect(harp2.osc)
 midman.connect(delay)
 midman.connect(arp.osc)
+midman.connect(sweep.oracle)
+midman.connect(sweep.delay)
+midman.connect(sweep.train_adsr)
+midman.connect(sweep.train_oracle)
+midman.connect(sweep.adsr)
 lpf.connect(buf)
 reverb.connect(buf)
 delay.connect(buf)
