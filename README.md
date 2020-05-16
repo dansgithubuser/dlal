@@ -186,7 +186,9 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- burgers
+- midi editor
+	- save
+	- faster render
 
 - audiobro
 	- track 1

@@ -1,0 +1,81 @@
+<script type='module'>
+
+import {
+  Midi,
+} from './../deps/dansmidilibs/midi.js';
+import {
+  e,
+  getUrlParam,
+  v,
+} from './../deps/obvious/obvious.js';
+import {
+  command,
+  socketConnect,
+  socketSend,
+} from './common.js';
+
+var gMidi;
+
+async function getMidi() {
+  const response = await command('get_midi_all');
+  gMidi.fromDeltamsgs(response.result);
+}
+
+window.onload = function () {
+  const canvas = e('canvas');
+  gMidi = new Midi(canvas);
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  socketConnect({ onOpen: getMidi });
+  window.gMidi = gMidi;
+  gMidi.tapMode = v('tapMode');
+}
+
+window.durate = () => {
+  gMidi.duration  = gMidi.ticksPerQuarter * 4 * +v('durationTop') / +v('durationBottom');
+  gMidi.quantizor = gMidi.ticksPerQuarter * 4                     / +v('durationBottom');
+};
+
+window.transpose = () => {
+  gMidi.transpose(v('transposeAmount'));
+};
+
+window.save = () => {
+  alert('unimplemented');
+};
+
+window.gMidi = gMidi;
+
+</script>
+<style>
+
+.space {
+  margin-left: 3em;
+}
+
+</style>
+<body>
+  <canvas id='canvas' style='width:100%; height:90%;'>
+  </canvas>
+  <div>
+    tap mode: <select id='tapMode' onchange='gMidi.tapMode = this.value'>
+      <option value='toggle'>toggle</option>
+      <option value='add'>add</option>
+      <option value='select'>select</option>
+      <option value='delete'>delete</option>
+    </select>
+    <span class='space'/>
+    <input type='button' value='add track' onclick='gMidi.addTrack()'>
+    <input type='button' value='deselect' onclick='gMidi.deselect()'>
+  </div>
+    duration: <input id='durationTop'    type='number' min=1 max=3600 value=1 onchange='durate()'>
+    /         <input id='durationBottom' type='number' min=1 max=3600 value=4 onchange='durate()'>
+  </div>
+  <div>
+    <input id='transposeAmount' type='number' min=-127 max=127 value=12>
+    <input type='button' value='transpose' onclick='transpose()'>
+  </div>
+  <div>
+    <input type='button' value='save' onclick='save()'>
+  </div>
+</body>

@@ -21,7 +21,7 @@ class Liner(Component):
                 )
             ]
             self.command_immediate(
-                'load_midi',
+                'set_midi',
                 [
                     i,
                     song.ticks_per_quarter(),
@@ -31,6 +31,9 @@ class Liner(Component):
                     'immediate': immediate,
                 },
             )
+
+    def get_midi_all(self):
+        return self.command_immediate('get_midi_all')
 
     def from_json(self, j):
         self.command('from_json', [j], do_json_prep=False)

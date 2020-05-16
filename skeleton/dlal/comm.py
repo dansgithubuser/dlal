@@ -4,7 +4,7 @@ class Comm(Component):
     def __init__(self, name=None):
         Component.__init__(self, 'comm', name)
 
-    def queue(self, component, name, args, kwargs, detach=False):
+    def queue(self, component, name, args, kwargs, timeout_ms=20, detach=False):
         return self.command_immediate('queue', [
             *component._view(),
             {
@@ -12,6 +12,6 @@ class Comm(Component):
                 'args': args,
                 'kwargs': kwargs,
             },
-            20,
+            timeout_ms,
             detach,
         ])
