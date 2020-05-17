@@ -40,8 +40,14 @@ window.transpose = () => {
   gMidi.transpose(v('transposeAmount'));
 };
 
-window.save = () => {
-  alert('unimplemented');
+window.save = async () => {
+  const response = await socketSend('midi.Song', {
+    op: 'store',
+    kwargs: { file_bytes: gMidi.toBytes() },
+  });
+  await socketSend(`${response.uuid}.save`, {
+    args: ['tmp.mid'],
+  });
 };
 
 window.gMidi = gMidi;
