@@ -306,7 +306,17 @@ if args.component_matrix:
             w('<tr>')
             w('<td class="cat">'); w(fro); w('</td>')
             for to in cats:
-                w('<td class="cell">')
+                style = {
+                    ('audio', 'audio'): 'background-color: #ff0;',
+                    ('audio+midi', 'audio'): 'background-color: #ff0;',
+                    ('audio', 'midi+cmd'): 'background-color: #8f8;',
+                    ('midi', 'audio'): 'background-color: #88f;',
+                    ('midi', 'midi'): 'background-color: #f0f;',
+                    ('midi', 'cmd'): 'background-color: #8f8;',
+                    ('cmd', 'cmd'): 'background-color: #8f8;',
+                    ('none', 'audio'): 'background-color: #fc4;',
+                }.get((fro, to), '')
+                w(f'<td class="cell" style="{style}">')
                 for name, info in matrix[fro][to]:
                     w('<div class="component">')
                     i = get_short(info["in"])

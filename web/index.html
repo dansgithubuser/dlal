@@ -21,49 +21,61 @@
 }
 
 /*
-component styling guide
-
-all components have a vertical gradient background, by default the top is white
-
-I/O
-  input - offwhite top
-  command - green
-  MIDI - red
-  audio - yellow
-store - magenta
-synth - blue
-proc - orange
+see `do.py --component-matrix` for coloring guidance
 */
-.component-audio {
+.component-audio,
+.component-tape
+{
   background-image: linear-gradient(to top, #cc0, #ff0);
 }
 
-.component-buf {
-  background-image: linear-gradient(to top, #f0f, #fff);
+.component-buf,
+.component-peak
+{
+  background-image: linear-gradient(to top, #ff0, #fff);
 }
 
-.component-comm {
-  background-image: linear-gradient(to top, #4f4, #cfc);
+.component-oracle,
+.component-midman,
+.component-comm
+{
+  background-image: linear-gradient(to top, #8f8, #fff);
 }
 
-.component-gain {
-  background-image: linear-gradient(to top, #f80, #fff);
-}
-
-.component-liner {
-  background-image: linear-gradient(to top, #f0f, #fff);
-}
-
-.component-midi {
-  background-image: linear-gradient(to top, #f44, #fcc);
-}
-
-.component-sonic {
+.component-sonic,
+.component-train,
+.component-osc
+{
   background-image: linear-gradient(to top, #88f, #fff);
 }
 
-.component-tape {
-  background-image: linear-gradient(to top, #aa0, #fff);
+.component-adsr
+{
+  background-image: linear-gradient(to top, #0ff, #fff);
+}
+
+.component-midi,
+.component-liner
+{
+  background-image: linear-gradient(to top, #c0c, #f0f);
+}
+
+.component-arp
+{
+  background-image: linear-gradient(to top, #f0f, #fff);
+}
+
+.component-gain,
+.component-lpf,
+.component-lim,
+.component-delay,
+.component-reverb,
+.component-lfo,
+.component-hpf,
+.component-unary,
+.component-fir
+{
+  background-image: linear-gradient(to top, #fc4, #fff);
 }
 
 </style>

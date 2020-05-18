@@ -8,6 +8,8 @@ from ._component import Component as _Component, component_kinds
 from ._server import audio_broadcast_start, serve
 from ._utils import snake_to_upper_camel_case
 
+import midi
+
 import json as _json
 
 class _Default: pass

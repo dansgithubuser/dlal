@@ -88,11 +88,11 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def command(self, name, args=[], kwargs={}, do_json_prep=True):
+    def command(self, name, args=[], kwargs={}, do_json_prep=True, timeout_ms=20):
         if do_json_prep: args, kwargs = json_prep(args, kwargs)
         if Component._comm:
             log('debug', f'{self.name} queue {name} {args} {kwargs}')
-            return Component._comm.queue(self, name, args, kwargs)
+            return Component._comm.queue(self, name, args, kwargs, timeout_ms=timeout_ms)
         else:
             return self.command_immediate(name, args, kwargs, False)
 

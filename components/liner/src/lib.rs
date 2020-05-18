@@ -4,12 +4,12 @@ use dlal_component_base::{
 };
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer, ser::SerializeSeq};
 
 use std::error::Error;
 use std::vec::Vec;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 enum Msg {
     Short([u8; 3]),
     Long(Vec<u8>),
@@ -48,6 +48,20 @@ impl Msg {
             Msg::Short(msg) => msg,
             Msg::Long(msg) => msg.as_slice(),
         }
+    }
+}
+
+impl Serialize for Msg {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let slice = self.as_slice();
+        let mut seq = serializer.serialize_seq(Some(slice.len()))?;
+        for i in slice {
+            seq.serialize_element(i)?;
+        }
+        seq.end()
     }
 }
 
@@ -234,7 +248,47 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
-            "load_midi",
+            "get_midi",
+            |soul, body| {
+                let line_index: usize = arg_num(&body, 0)?;
+                if line_index >= soul.lines.len() {
+                    return err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len());
+                }
+                let line = &soul.lines[line_index];
+                Ok(Some(json!({
+                    "ticks_per_quarter": line.ticks_per_quarter,
+                    "deltamsgs": line.deltamsgs,
+                })))
+            },
+            {
+                "args": [
+                    "line_index",
+                ],
+                "return": {
+                    "ticks_per_quarter": "number",
+                    "deltamsgs": "[{delta, msg: [..]}, ..]",
+                },
+            },
+        );
+        command!(
+            commands,
+            "get_midi_all",
+            |soul, _body| {
+                Ok(Some(json!(soul.lines.iter().map(|line| json!({
+                    "ticks_per_quarter": line.ticks_per_quarter,
+                    "deltamsgs": line.deltamsgs,
+                })).collect::<Vec<_>>())))
+            },
+            {
+                "return": [{
+                    "ticks_per_quarter": "number",
+                    "deltamsgs": "[{delta, msg: [..]}, ..]",
+                }],
+            },
+        );
+        command!(
+            commands,
+            "set_midi",
             |soul, body| {
                 let line_index: usize = arg_num(&body, 0)?;
                 let ticks_per_quarter: u32 = arg_num(&body, 1)?;
