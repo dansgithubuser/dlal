@@ -186,6 +186,14 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- midi editor
+	- ticks per quarter of duration is wrong after loading midi
+	- stems don't appear often enough
+	- note selection doesn't work right
+	- equalize keyboard commands and web UI
+	- keyboard mode checkbox in web UI
+	- zoom
+
 - audiobro
 	- track 1
 		- bass slide down in B section

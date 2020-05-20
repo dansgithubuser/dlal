@@ -16,7 +16,12 @@ class Liner(Component):
                     'msg': i.msg(),
                 }
                 for i in midi.interleave(
-                    song.tracks(i).extract(['note_on', 'note_off']),
+                    song.tracks(i).extract([
+                        'note_on',
+                        'note_off',
+                        'control_change',
+                        'pitch_wheel_change',
+                    ]),
                     tempos,
                 )
             ]
