@@ -187,7 +187,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - speech synth
-	- annotated recorder
 	- parameter figurer
 
 - audiobro
