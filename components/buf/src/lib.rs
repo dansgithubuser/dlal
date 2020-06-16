@@ -90,7 +90,7 @@ impl SpecificsTrait for Specifics {
                 };
                 Ok(None)
             },
-            { "args": ["file_path", "note"] },
+            { "args": ["wav_file_path", "note"] },
         );
         command!(
             commands,

@@ -13,8 +13,11 @@ class Subsystem:
         from ._skeleton import component_class
         if kind == None:
             kind = name
-        kwargs['name'] = self.name + kwargs.get('name', name)
-        component = component_class(kind)(*args, **kwargs)
+        component = component_class(kind)(
+            *args,
+            **kwargs,
+            name=self.name + '.' + kwargs.get('name', name),
+        )
         self.components[name] = component
         setattr(self, name, component)
 

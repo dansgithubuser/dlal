@@ -352,7 +352,7 @@ if args.run or args.run == []:
     else:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
     if args.run:
-        invoke('python', '-i', *args.run)
+        invoke('python', '-i', *[i.strip() for i in args.run])
     else:
         invoke('python', '-i', '-c', 'import dlal')
 

@@ -15,8 +15,10 @@ class Tape(Component):
     def clear(self):
         return self.command_immediate('clear')
 
-    def read(self, size):
-        return [float(i) for i in self.command_immediate('read', [size])]
+    def read(self, size=None):
+        args = []
+        if size: args.append(size)
+        return [float(i) for i in self.command_immediate('read', args)]
 
     def to_file_i16le(self, size, file):
         samples = self.read(size)

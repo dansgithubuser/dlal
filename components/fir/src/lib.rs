@@ -44,6 +44,15 @@ impl SpecificsTrait for Specifics {
         uni!(connect commands, true);
         command!(
             commands,
+            "ir",
+            |soul, body| {
+                soul.set_ir(marg!(json_f32s marg!(arg &body, 0)?)?);
+                Ok(None)
+            },
+            { "args": ["json"] },
+        );
+        command!(
+            commands,
             "bandpass",
             |soul, body| {
                 let center: f32 = marg!(arg_num &body, 0)?;
