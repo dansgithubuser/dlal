@@ -30,8 +30,35 @@ def autocorrelation(x, shift):
     print(error, total, 1 - error / total / 2)
     return 1 - error / total / 2
 
-def sigmoid(x, x0=0, k=1):
-    return 1 / (1 + math.exp(-k*(x-x0)))
+def plosive_ranges(x):
+    window_size = 512
+    silence_factor = 4
+    # estimate envelope
+    total_amp = sum(abs(i) for i in x[:window_size])
+    envelope = [total_amp / window_size]
+    for i in range(window_size, len(x)):
+        total_amp += abs(x[i]) - abs(x[i - window_size])
+        envelope.append(total_amp / window_size)
+    # figure threshold
+    sorted_envelope = sorted(envelope)
+    threshold = sorted_envelope[len(envelope) // silence_factor]
+    # if threshold is close to maximum, this isn't a plosive
+    maximum = sorted_envelope[-1]
+    if threshold / maximum > 1 / silence_factor:
+        return None
+    # figure plosive starts
+    result = []
+    silent = True
+    for i, v in enumerate(envelope):
+        if silent:
+            if v > maximum * 3 / 4:
+                result.append([i + window_size // 2])
+                silent = False
+        else:
+            if v < maximum / 4:
+                result[-1].append(i + window_size // 2)
+                silent = True
+    return result
 
 def exp(x, base):
     return (base**x - 1) / (base - 1)
