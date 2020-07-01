@@ -5,8 +5,7 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(description=
-    'Takes an FIR, a tone amplitude, and a noise amplitude, '
-    'as produced by phonetic_encoder.py, '
+    'Takes phonetic parameters as produced by phonetic_encoder.py, '
     'and synthesizes a sound.'
 )
 parser.add_argument('phonetic_file_path')
@@ -14,6 +13,9 @@ args = parser.parse_args()
 
 with open(args.phonetic_file_path) as file:
     params = json.loads(file.read())
+
+if params.get('type') == 'plosive':
+    raise Exception('unimplemented')
 
 audio = dlal.Audio()
 dlal.driver_set(audio)
