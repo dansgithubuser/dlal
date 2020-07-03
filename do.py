@@ -31,7 +31,7 @@ parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
-parser.add_argument('--run', '-r', nargs='*', help=(
+parser.add_argument('--run', '-r', nargs='?', const=True, help=(
     'run interactive Python with dlal imported, '
     'or run specified system, optionally with args'
 ))
@@ -345,14 +345,14 @@ if args.build is not None:
         )
 
 # ===== run ===== #
-if args.run or args.run == []:
+if args.run:
     os.chdir(os.path.join(DIR))
     if 'PYTHONPATH' in os.environ:
         os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'skeleton')
     else:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
-    if args.run:
-        invoke('python', '-i', *[i.strip() for i in args.run])
+    if args.run != True:
+        invoke('python', '-i', *args.run.split())
     else:
         invoke('python', '-i', '-c', 'import dlal')
 
