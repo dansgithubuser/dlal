@@ -36,7 +36,7 @@ def autocorrelation(x, shift):
     print(error, total, 1 - error / total / 2)
     return 1 - error / total / 2
 
-def plosive_ranges(x):
+def stop_ranges(x):
     window_size = 512
     silence_factor = 4
     # estimate envelope
@@ -48,11 +48,11 @@ def plosive_ranges(x):
     # figure threshold
     sorted_envelope = sorted(envelope)
     threshold = sorted_envelope[len(envelope) // silence_factor]
-    # if threshold is close to maximum, this isn't a plosive
+    # if threshold is close to maximum, this isn't a stop
     maximum = sorted_envelope[-1]
     if threshold / maximum > 1 / silence_factor:
         return None
-    # figure plosive starts
+    # figure stop starts
     result = []
     silent = True
     for i, v in enumerate(envelope):
@@ -89,7 +89,7 @@ def parameterize(x):
     }
 
 def analyze(x):
-    ranges = plosive_ranges(x)
+    ranges = stop_ranges(x)
     if ranges:
         i_i, i_f = ranges[0]
         i_step = (i_f - i_i) // 3
@@ -98,7 +98,7 @@ def analyze(x):
             print(i, i+i_step)
             frames.append(parameterize(x[i:i+i_step]))
         return {
-            'type': 'plosive',
+            'type': 'stop',
             'frames': frames,
         }
     else:
@@ -113,4 +113,4 @@ for wav_file_path in glob.glob(args.dir+'/*.wav'):
     params = analyze(x)
     out_file_path = re.sub('.wav$', '', wav_file_path) + '.phonetic.json'
     with open(out_file_path, 'w') as file:
-        file.write(json.dumps(params))
+        file.write(json.dumps(params, indent=2))

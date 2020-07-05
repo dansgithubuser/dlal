@@ -14,7 +14,7 @@ args = parser.parse_args()
 with open(args.phonetic_file_path) as file:
     params = json.loads(file.read())
 
-if params.get('type') == 'plosive':
+if params.get('type') == 'stop':
     raise Exception('unimplemented')
 
 audio = dlal.Audio()
