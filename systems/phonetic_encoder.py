@@ -2,32 +2,35 @@
 import dlal
 
 import argparse
-import glob
 import json
 import math
+import os
 import re
 
 #===== args =====#
 parser = argparse.ArgumentParser(description=
-    'Takes a folder full of wav files that consist of 5 seconds of a single phonetic, '
-    'and transforms each into phonetic parameters that can be consumed by phonetic_decoder.py.'
+    'Takes a sound as recorded by phonetic_recorder.py, '
+    'and transforms into phonetic parameters that can be consumed by phonetic_decoder.py.'
 )
-parser.add_argument('dir')
+parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--only')
-parser.add_argument('--frequency', '-f', help='frequency of voiced phonetic', default=80)
-parser.add_argument('--frequency-deviation', '--fd', default=20)
+parser.add_argument('--start-from')
+parser.add_argument('--frequency', '-f', help='frequency of voiced phonetic', default=100)
+parser.add_argument('--frequency-deviation', '--fd', default=7)
 args = parser.parse_args()
 
 #===== consts =====#
 SAMPLE_RATE = 44100
 
 #===== helpers =====#
-def load(wav_file_path):
-    buf = dlal.Buf()
-    buf.load(wav_file_path, 0)
-    return [float(i) for i in buf.to_json()['0']['samples']]
+def load(phonetics_file_path, start, duration):
+    if not load.phonetics:
+        load.phonetics = dlal.read_sound(phonetics_file_path)[0]
+    return load.phonetics[start:start+duration]
+load.phonetics = None
 
 def autocorrelation(x, shift):
+    assert len(x) > shift
     error = 0
     total = 0
     for i in range(len(x)-shift):
@@ -77,6 +80,8 @@ def parameterize(x):
     shift_f = int(SAMPLE_RATE / f_i)
     max_ac = -1
     for shift in range(shift_i, shift_f):
+        while shift >= len(x):
+            shift //= 2
         ac = autocorrelation(x, shift)
         if ac > max_ac: max_ac = ac
     # average amplitude
@@ -107,12 +112,24 @@ def analyze(x):
         return parameterize(x)
 
 #===== main =====#
-for wav_file_path in glob.glob(args.dir+'/*.wav'):
-    if args.only and not wav_file_path[:-4].endswith(args.only):
+phonetics = [
+    'ae', 'ay', 'aw', 'e', 'ee', 'i', 'o', 'oo', 'uu', 'uh',
+    'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
+for i, phonetic in enumerate(phonetics):
+    if args.only and phonetic != args.only:
         continue
-    print(wav_file_path)
-    x = load(wav_file_path)
+    if args.start_from and i < phonetics.index(args.start_from):
+        continue
+    print(phonetic)
+    x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
     params = analyze(x)
-    out_file_path = re.sub('.wav$', '', wav_file_path) + '.phonetic.json'
+    out_file_path = os.path.join(
+        os.path.dirname(args.phonetics_file_path),
+        phonetic + '.phonetic.json',
+    )
+    params = json.dumps(params, indent=2)
+    print(params)
     with open(out_file_path, 'w') as file:
-        file.write(json.dumps(params, indent=2))
+        file.write(params)

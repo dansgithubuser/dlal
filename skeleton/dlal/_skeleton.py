@@ -6,11 +6,12 @@ It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
 from ._server import audio_broadcast_start, serve
-from ._utils import snake_to_upper_camel_case
+from ._utils import snake_to_upper_camel_case as _snake_to_upper_camel_case
 
 import midi
 
 import json as _json
+import re as _re
 
 class _Default: pass
 
@@ -35,7 +36,7 @@ def component(name, default=_Default):
         return _Component._components.get(name, default)
 
 def component_class(kind):
-    class_name = snake_to_upper_camel_case(kind)
+    class_name = _snake_to_upper_camel_case(kind)
     locals = {}
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
@@ -260,3 +261,22 @@ def system_load(file_path, namespace):
         component = namespace[name]
         for connectee in connectees:
             component.connect(namespace[connectee])
+
+def read_sound(file_path):
+    import soundfile as sf
+    data, sample_rate = sf.read(file_path)
+    return [float(i) for i in data], sample_rate
+
+def i16le_to_flac(i16le_file_path, flac_file_path=None):
+    import soundfile as sf
+    if flac_file_path == None:
+        flac_file_path = _re.sub(r'\.i16le$', '', i16le_file_path) + '.flac'
+    data, sample_rate = sf.read(
+        i16le_file_path,
+        samplerate=44100,
+        channels=1,
+        format='RAW',
+        subtype='PCM_16',
+        endian='LITTLE',
+    )
+    sf.write(flac_file_path, data, sample_rate, format='FLAC')

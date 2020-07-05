@@ -2,7 +2,9 @@
 import dlal
 
 import argparse
+import glob
 import json
+import os
 import time
 
 #===== args =====#
@@ -10,25 +12,19 @@ parser = argparse.ArgumentParser(description=
     'Takes phonetic parameters as produced by phonetic_encoder.py, '
     'and synthesizes a sound.'
 )
-parser.add_argument('phonetic_file_path')
+parser.add_argument('--phonetic_file_path', default='assets/phonetics')
+parser.add_argument('--phonetics', default='helo [oo]rld')
 args = parser.parse_args()
 
 #===== consts =====#
 SAMPLE_RATE = 44100
 
 #===== speech params =====#
-with open(args.phonetic_file_path) as file:
-    params = json.loads(file.read())
-
-if params.get('type') in [None, 'continuant']:
-    frames = [params]
-elif params['type'] == 'stop':
-    frames = params['frames']
-frames.append({
-    'tone_amp': 0,
-    'noise_amp': 0,
-    'fir': frames[0]['fir'],
-})
+phonetics = {}
+for path in glob.glob(os.path.join(args.phonetic_file_path, '*.phonetic.json')):
+    phonetic = os.path.basename(path).split('.')[0]
+    with open(path) as file:
+        phonetics[phonetic] = json.loads(file.read())
 
 #===== system =====#
 audio = dlal.Audio()
@@ -60,9 +56,21 @@ tone.midi([0x90, 48, 0x7f])
 noise.midi([0x90, 60, 0x7f])
 
 #===== main =====#
-dlal.typical_setup()
+def say_phonetic(phonetic):
+    if phonetic == ' ':
+        params = {}
+        frames = [{
+            'tone_amp': 0,
+            'noise_amp': 0,
+            'fir': [0]*64,
+        }]
+    else:
+        params = phonetics[phonetic]
+        if params.get('type') in [None, 'continuant']:
+            frames = [params]
+        elif params['type'] == 'stop':
+            frames = params['frames']
 
-def talk():
     ir = [0]*64
     tone_amp = 0
     noise_amp = 0
@@ -71,10 +79,10 @@ def talk():
         c = 0.5
         return c * curr + (1 - c) * dst
 
-    duration = params.get('duration', SAMPLE_RATE)
+    duration = params.get('duration', SAMPLE_RATE / 8)
     for frame in frames:
         frame_start = time.time()
-        while time.time() - frame_start < duration / SAMPLE_RATE / (len(frames) - 1):
+        while time.time() - frame_start < duration / SAMPLE_RATE / len(frames):
             tone_amp = hysteresis(tone_amp, frame['tone_amp'])
             noise_amp = hysteresis(noise_amp, frame['noise_amp'])
             ir = [hysteresis(curr, dst) for curr, dst in zip(ir, frame['fir'])]
@@ -83,4 +91,20 @@ def talk():
             fir.command_detach('ir', ir)
             time.sleep(0.003)
 
-talk()
+def say_phonetics(phonetics):
+    phonetics += ' '
+    i = 0
+    while i < len(phonetics):
+        if phonetics[i] == '[':
+            i += 1
+            phonetic = ''
+            while phonetics[i] != ']':
+                phonetic += phonetics[i]
+                i += 1
+        else:
+            phonetic = phonetics[i]
+        i += 1
+        say_phonetic(phonetic)
+
+dlal.typical_setup()
+say_phonetics(args.phonetics)
