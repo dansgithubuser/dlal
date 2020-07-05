@@ -92,13 +92,15 @@ def analyze(x):
     ranges = stop_ranges(x)
     if ranges:
         i_i, i_f = ranges[0]
-        i_step = (i_f - i_i) // 3
+        duration = i_f - i_i
+        i_step = duration // 3
         frames = []
         for i in range(i_i, i_f, i_step):
             print(i, i+i_step)
             frames.append(parameterize(x[i:i+i_step]))
         return {
             'type': 'stop',
+            'duration': duration,
             'frames': frames,
         }
     else:
