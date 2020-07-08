@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description=
 )
 parser.add_argument('--phonetic_file_path', default='assets/phonetics')
 parser.add_argument('--phonetics', default='helo [oo]rld')
-parser.add_argument('--plot-firs', action='store_true')
+parser.add_argument('--plot', choices=['firs', 'spectra'])
 args = parser.parse_args()
 
 #===== consts =====#
@@ -107,16 +107,21 @@ def say_phonetics(phonetics):
         i += 1
         say_phonetic(phonetic)
 
-if args.plot_firs:
+if args.plot:
     import dansplotcore
     plot = dansplotcore.Plot(
-        transform=dansplotcore.transforms.Grid(64, 1, 4),
+        transform=dansplotcore.transforms.Grid(80, 4, 6),
         hide_axes=True,
     )
-    for k, v in phonetics.items():
+    for k, v in sorted(phonetics.items()):
         if v.get('type', 'continuant') == 'continuant':
             plot.text(k, **plot.transform(0, 0, 0, plot.series))
-            plot.plot(v['fir'])
+            if args.plot == 'spectra':
+                import numpy as np
+                fr = [float(abs(i)) for i in np.fft.fft(v['fir'])]
+                plot.plot(fr[:len(v['fir']) // 2 + 1])
+            else:
+                plot.plot(v['fir'])
     plot.show()
 else:
     dlal.typical_setup()
