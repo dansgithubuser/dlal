@@ -129,15 +129,12 @@ def typical_setup():
     audio = component('audio', None)
     comm = component('comm', None)
     tape = component('tape', None)
-    if tape and 'DLAL_TO_FILE' in os.environ:
-        samples_per_evaluation = 64
-        sample_rate = 44100
-        if audio:
-            samples_per_evaluation = audio.samples_per_evaluation()
-            sample_rate = audio.sample_rate()
+    if tape and 'DLAL_TO_FILE' in os.environ and audio:
+        samples_per_evaluation = audio.samples_per_evaluation()
+        sample_rate = audio.sample_rate()
         duration = float(os.environ['DLAL_TO_FILE'])
         runs = int(duration * sample_rate / samples_per_evaluation)
-        with open('out.raw', 'wb') as file:
+        with open('out.i16le', 'wb') as file:
             for i in range(runs):
                 audio.run()
                 tape.to_file_i16le(samples_per_evaluation, file)

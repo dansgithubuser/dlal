@@ -28,7 +28,7 @@ class Tape(Component):
             elif i < -0x8000: i = -0x8000
             file.write(struct.pack('<h', i))
 
-    def to_file_i16le_start(self, size, file_path):
+    def to_file_i16le_start(self, size=64, file_path='out.i16le'):
         tape = weakref.proxy(self)
         class File:
             def __init__(self, file_path):

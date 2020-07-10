@@ -4,6 +4,7 @@ import dlal
 import argparse
 import glob
 import json
+import math
 import os
 import time
 
@@ -13,8 +14,8 @@ parser = argparse.ArgumentParser(description=
     'and synthesizes a sound.'
 )
 parser.add_argument('--phonetic_file_path', default='assets/phonetics')
-parser.add_argument('--phonetics', default='helo [oo]rld')
-parser.add_argument('--plot', choices=['firs', 'spectra'])
+parser.add_argument('--phonetics', default='helow wrld')
+parser.add_argument('--plot', choices=['irs', 'spectra'])
 args = parser.parse_args()
 
 #===== consts =====#
@@ -37,62 +38,65 @@ tone_buf = dlal.Buf(name='tone_buf')
 noise = dlal.Osc('noise', name='noise')
 noise_gain = dlal.Gain(0, name='noise_gain')
 noise_buf = dlal.Buf(name='noise_buf')
-fir = dlal.Fir()
+iir = dlal.Iir(a=phonetics['0']['coeffs'])
 mix_buf = dlal.Buf(name='mix_buf')
+tape = dlal.Tape(size=44100*5)
 
 dlal.connect(
-    fir,
+    iir,
     [mix_buf,
         '<', tone_buf, tone,
         '<', noise_buf, noise,
     ],
-    audio,
+    [audio, tape],
     [],
     tone_gain, tone_buf,
     [],
     noise_gain, noise_buf,
 )
 
-tone.midi([0x90, 48, 0x7f])
-noise.midi([0x90, 60, 0x7f])
-
 #===== main =====#
-def say_phonetic(phonetic):
+def say_one(phonetic):
     if phonetic == ' ':
-        params = {}
-        frames = [{
-            'tone_amp': 0,
-            'noise_amp': 0,
-            'fir': [0]*64,
-        }]
-    else:
-        params = phonetics[phonetic]
-        if params.get('type') in [None, 'continuant']:
-            frames = [params]
-        elif params['type'] == 'stop':
-            frames = params['frames']
+        phonetic = '0'
+    params = phonetics[phonetic]
+    if params.get('type') in [None, 'continuant']:
+        frames = [params]
+    elif params['type'] == 'stop':
+        frames = params['frames']
 
-    ir = [0]*64
-    tone_amp = 0
-    noise_amp = 0
-
-    def hysteresis(curr, dst):
-        c = 0.5
+    def hysteresis(curr, dst, c):
         return c * curr + (1 - c) * dst
 
     duration = params.get('duration', SAMPLE_RATE / 8)
-    for frame in frames:
+    for frame_i, frame in enumerate(frames):
         frame_start = time.time()
         while time.time() - frame_start < duration / SAMPLE_RATE / len(frames):
-            tone_amp = hysteresis(tone_amp, frame['tone_amp'])
-            noise_amp = hysteresis(noise_amp, frame['noise_amp'])
-            ir = [hysteresis(curr, dst) for curr, dst in zip(ir, frame['fir'])]
-            tone_gain.command_detach('set', [tone_amp])
-            noise_gain.command_detach('set', [noise_amp / 4])
-            fir.command_detach('ir', ir)
+            if say_one.phonetic == '0':  # starting from silence
+                c = 0
+            elif len(frames) > 1:  # stop
+                c = 0
+            else:  # moving between continuants
+                c = 0.7
+            say_one.tone_amp = hysteresis(say_one.tone_amp, frame['tone_amp'], c)
+            say_one.noise_amp = hysteresis(say_one.noise_amp, frame['noise_amp'], c)
+            say_one.coeffs = [
+                hysteresis(curr, dst, c)
+                for curr, dst
+                in zip(say_one.coeffs, frame['coeffs'])
+            ]
+            tone_gain.command_detach('set', [say_one.tone_amp])
+            noise_gain.command_detach('set', [say_one.noise_amp / 10])  # noise is ~100x more powerful than a 100Hz impulse train
+            iir.command_detach('a', [say_one.coeffs], do_json_prep=False)
             time.sleep(0.003)
+    say_one.phonetic = phonetic
+say_one.phonetic = '0'
 
-def say_phonetics(phonetics):
+say_one.coeffs = phonetics['0']['coeffs']
+say_one.tone_amp = phonetics['0']['tone_amp']
+say_one.noise_amp = phonetics['0']['noise_amp']
+
+def say(phonetics):
     phonetics += ' '
     i = 0
     while i < len(phonetics):
@@ -105,24 +109,39 @@ def say_phonetics(phonetics):
         else:
             phonetic = phonetics[i]
         i += 1
-        say_phonetic(phonetic)
+        say_one(phonetic)
 
 if args.plot:
     import dansplotcore
-    plot = dansplotcore.Plot(
-        transform=dansplotcore.transforms.Grid(80, 4, 6),
-        hide_axes=True,
-    )
+    if args.plot == 'spectra':
+        plot = dansplotcore.Plot(
+            transform=dansplotcore.transforms.Grid(22050, 100, 6),
+            hide_axes=True,
+        )
+    else:
+        plot = dansplotcore.Plot(
+            transform=dansplotcore.transforms.Grid(4096, 4, 6),
+            hide_axes=True,
+        )
     for k, v in sorted(phonetics.items()):
-        if v.get('type', 'continuant') == 'continuant':
+        if v.get('type', 'continuant') == 'continuant' and k != '0':
             plot.text(k, **plot.transform(0, 0, 0, plot.series))
+            iir.a(v['coeffs'])
             if args.plot == 'spectra':
-                import numpy as np
-                fr = [float(abs(i)) for i in np.fft.fft(v['fir'])]
-                plot.plot(fr[:len(v['fir']) // 2 + 1])
+                plot.plot([
+                    (f, m)
+                    for f, m
+                    in dlal.Iir.frequency_response(a=v['coeffs'])
+                ])
             else:
-                plot.plot(v['fir'])
+                plot.plot(dlal.impulse_response(mix_buf, mix_buf, audio))
+            iir.a(phonetics['0']['coeffs'])
+            audio.run()
     plot.show()
 else:
+    tone.midi([0x90, 40, 0x7f])
+    noise.midi([0x90, 60, 0x7f])
     dlal.typical_setup()
-    say_phonetics(args.phonetics)
+    tape.to_file_i16le_start()
+    say(args.phonetics)
+    tape.to_file_i16le_stop()
