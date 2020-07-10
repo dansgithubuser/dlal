@@ -49,7 +49,7 @@ impl SpecificsTrait for Specifics {
                 soul.set_ir(marg!(json_f32s marg!(arg &body, 0)?)?);
                 Ok(None)
             },
-            { "args": ["json"] },
+            { "args": ["ir"] },
         );
         command!(
             commands,
