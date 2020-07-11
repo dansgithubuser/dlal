@@ -16,7 +16,9 @@ import re as _re
 class _Default: pass
 
 def driver_set(driver):
+    result = _Component._driver
     _Component._driver = driver
+    return result
 
 def queue_set(comm):
     _Component._comm = comm
@@ -280,3 +282,20 @@ def i16le_to_flac(i16le_file_path, flac_file_path=None):
         endian='LITTLE',
     )
     sf.write(flac_file_path, data, sample_rate, format='FLAC')
+
+def impulse_response(ci, co, driver):
+    from . import Train
+    from . import Tape
+    with driver:
+        train = Train(name='dlal.impulse_response.train', slot=1)
+        train.connect(ci)
+        train.one()
+        tape = Tape(name='dlal.impulse_response.tape')
+        co.connect(tape)
+        ir = []
+        for i in range(64):
+            driver.run()
+            ir.extend(tape.read())
+        train.disconnect(ci)
+        co.disconnect(tape)
+    return ir
