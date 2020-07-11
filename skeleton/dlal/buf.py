@@ -5,8 +5,8 @@ import glob
 import os
 
 class Buf(Component):
-    def __init__(self, name=None):
-        Component.__init__(self, 'buf', name)
+    def __init__(self, **kwargs):
+        Component.__init__(self, 'buf', **kwargs)
 
     def load(self, file_path, note):
         return self.command_immediate('load', [file_path, note])

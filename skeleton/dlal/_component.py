@@ -50,7 +50,7 @@ class Component:
     _driver = None
     _comm = None
 
-    def __init__(self, kind, name=None):
+    def __init__(self, kind, name=None, slot=0):
         # tracking
         if name == None:
             name = kind
@@ -79,7 +79,7 @@ class Component:
                 item['name'],
                 make_typical_command(item['name']),
             )
-        if Component._driver: Component._driver.add(self)
+        if Component._driver: Component._driver.add(self, slot)
 
     def __del__(self):
         del Component._components[self.name]

@@ -13,8 +13,8 @@ class Mode:
 MODE = Mode('f32', 'i32', 'pitch_wheel')
 
 class Oracle(Component):
-    def __init__(self, mode=None, m=None, b=None, format=None, name=None):
-        Component.__init__(self, 'oracle', name)
+    def __init__(self, mode=None, m=None, b=None, format=None, **kwargs):
+        Component.__init__(self, 'oracle', **kwargs)
         from ._skeleton import Immediate
         with Immediate():
             if mode != None: self.mode(mode)

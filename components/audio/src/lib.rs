@@ -8,11 +8,21 @@ use std::slice::{from_raw_parts, from_raw_parts_mut};
 pub struct Specifics {
     samples_per_evaluation: usize,
     sample_rate: f64,
-    addees: Vec<View>,
+    addees: Vec<Vec<View>>,
     stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
     audio_i: *const f32,
     audio_o: *mut f32,
     outputs: Vec<View>,
+}
+
+impl Specifics {
+    fn evaluate_addees(&mut self) {
+        for slot in self.addees.iter().rev() {
+            for i in slot {
+                i.evaluate();
+            }
+        }
+    }
 }
 
 gen_component!(Specifics, {"in": ["audio**"], "out": ["audio**"]});
@@ -22,7 +32,7 @@ impl SpecificsTrait for Specifics {
         Specifics {
             samples_per_evaluation: 64,
             sample_rate: 44100.0,
-            addees: Vec::new(),
+            addees: vec![Vec::new()],
             stream: None,
             audio_i: null(),
             audio_o: null_mut(),
@@ -58,6 +68,7 @@ impl SpecificsTrait for Specifics {
             "add",
             |soul, body| {
                 let view = View::new(args(&body)?)?;
+                let slot: usize = arg_num(&body, 5)?;
                 let join_result = view.command(&json!({
                     "name": "join",
                     "kwargs": {
@@ -72,7 +83,10 @@ impl SpecificsTrait for Specifics {
                         }
                     }
                 }
-                soul.addees.push(view);
+                if slot >= soul.addees.len() {
+                    soul.addees.resize(slot + 1, vec![]);
+                }
+                soul.addees[slot].push(view);
                 Ok(None)
             },
             { "args": ["component", "command", "audio", "midi", "evaluate"] },
@@ -82,8 +96,11 @@ impl SpecificsTrait for Specifics {
             "remove",
             |soul, body| {
                 let view = View::new(args(&body)?)?;
-                if let Some(index) = soul.addees.iter().position(|i| i.raw == view.raw) {
-                    soul.addees.remove(index);
+                for slot in 0..soul.addees.len() {
+                    if let Some(index) = soul.addees[slot].iter().position(|i| i.raw == view.raw) {
+                        soul.addees[slot].remove(index);
+                        break;
+                    }
                 }
                 Ok(None)
             },
@@ -128,9 +145,7 @@ impl SpecificsTrait for Specifics {
                         }
                         soul_scoped.audio_i = args.in_buffer.as_ptr();
                         soul_scoped.audio_o = args.out_buffer.as_mut_ptr();
-                        for i in &mut soul_scoped.addees {
-                            i.evaluate();
-                        }
+                        soul_scoped.evaluate_addees();
                         pa::Continue
                     },
                 )?);
@@ -161,12 +176,10 @@ impl SpecificsTrait for Specifics {
                 let mut vec: Vec<f32> = Vec::new();
                 vec.resize(soul.samples_per_evaluation, 0.0);
                 soul.audio_o = vec.as_mut_ptr();
-                for i in &mut soul.addees {
-                    for j in &mut vec {
-                        *j = 0.0;
-                    }
-                    i.evaluate();
+                for j in &mut vec {
+                    *j = 0.0;
                 }
+                soul.evaluate_addees();
                 Ok(None)
             },
             {},

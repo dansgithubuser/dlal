@@ -5,8 +5,8 @@ import threading
 import weakref
 
 class Tape(Component):
-    def __init__(self, size=None, name=None):
-        Component.__init__(self, 'tape', name)
+    def __init__(self, size=None, **kwargs):
+        Component.__init__(self, 'tape', **kwargs)
         if size: self.command_immediate('resize', [size])
 
     def size(self):

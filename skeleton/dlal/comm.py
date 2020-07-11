@@ -1,8 +1,8 @@
 from ._component import Component
 
 class Comm(Component):
-    def __init__(self, name=None):
-        Component.__init__(self, 'comm', name)
+    def __init__(self, **kwargs):
+        Component.__init__(self, 'comm', **kwargs)
 
     def queue(self, component, name, args, kwargs, timeout_ms=20, detach=False):
         return self.command_immediate(
