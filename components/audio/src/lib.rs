@@ -1,5 +1,6 @@
 use dlal_component_base::{arg_num, args, command, gen_component, json, kwarg_num, multi, View};
 
+use colored::*;
 use portaudio as pa;
 
 use std::ptr::{null, null_mut};
@@ -20,6 +21,35 @@ impl Specifics {
         for slot in self.addees.iter().rev() {
             for i in slot {
                 i.evaluate();
+            }
+        }
+    }
+
+    fn evaluate_addees_explain(&mut self) {
+        for slot in self.addees.iter().rev() {
+            for i in slot {
+                self.explain();
+                println!(
+                    "{} {}",
+                    "evaluate".green().bold(),
+                    i.name().green(),
+                );
+                i.evaluate();
+            }
+        }
+    }
+
+    fn explain(&self) {
+        for slot in self.addees.iter().rev() {
+            for i in slot {
+                if let Some(audio) = i.audio(self.samples_per_evaluation) {
+                    println!(
+                        "{} {} {:?}",
+                        "audio".yellow().bold(),
+                        i.name().yellow(),
+                        audio,
+                    );
+                }
             }
         }
     }
@@ -180,6 +210,21 @@ impl SpecificsTrait for Specifics {
                     *j = 0.0;
                 }
                 soul.evaluate_addees();
+                Ok(None)
+            },
+            {},
+        );
+        command!(
+            commands,
+            "run_explain",
+            |soul, _body| {
+                let mut vec: Vec<f32> = Vec::new();
+                vec.resize(soul.samples_per_evaluation, 0.0);
+                soul.audio_o = vec.as_mut_ptr();
+                for j in &mut vec {
+                    *j = 0.0;
+                }
+                soul.evaluate_addees_explain();
                 Ok(None)
             },
             {},

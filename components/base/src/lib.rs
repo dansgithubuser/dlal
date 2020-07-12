@@ -257,6 +257,10 @@ impl View {
     pub fn evaluate(&self) {
         (self.evaluate_view)(self.raw);
     }
+
+    pub fn name(&self) -> String {
+        self.command(&json!({"name": "name"})).unwrap().as_str().unwrap().into()
+    }
 }
 
 // ===== generate ===== //
@@ -310,14 +314,24 @@ macro_rules! gen_component {
         // ===== external functions ===== //
         #[no_mangle]
         pub extern "C" fn construct(name: *const $crate::c_char) -> *mut Component {
-            let name = unsafe { $crate::CStr::from_ptr(name) }.to_str().expect("CStr::to_str failed");
+            let name = unsafe { $crate::CStr::from_ptr(name) }.to_str().expect("CStr::to_str failed").to_string();
             let mut component = Component {
-                name: name.to_string(),
+                name: name.clone(),
                 specifics: $specifics::new(),
                 result: $crate::CString::new("").expect("CString::new failed"),
                 commands: CommandMap::new(),
             };
             component.specifics.register_commands(&mut component.commands);
+            // name
+            component.commands.insert(
+                "name",
+                Command {
+                    func: Box::new(move |_soul, _body| {
+                        Ok(Some($crate::json!(name)))
+                    }),
+                    info: $crate::json!({}),
+                },
+            );
             // info
             component.commands.insert(
                 "info",
@@ -379,14 +393,15 @@ macro_rules! gen_component {
             list.push($crate::json!({"name": "list", "info": {}}));
             list.sort_by_key(|i| {
                 match i["name"].as_str().unwrap() {
-                    "info" => "~0",
-                    "list" => "~1",
-                    "join" => "~2",
-                    "connect" => "~3",
-                    "disconnect" => "~4",
-                    "midi" => "~5",
-                    "to_json" => "~6",
-                    "from_json" => "~7",
+                    "name" => "~099",
+                    "info" => "~100",
+                    "list" => "~101",
+                    "join" => "~102",
+                    "connect" => "~103",
+                    "disconnect" => "~104",
+                    "midi" => "~105",
+                    "to_json" => "~106",
+                    "from_json" => "~107",
                     name => name,
                 }.to_string()
             });
@@ -459,7 +474,7 @@ macro_rules! gen_component {
         pub extern "C" fn evaluate(component: *mut Component) {
             let component = unsafe { &mut *component };
             if let Some(percent) = std::option_env!("DLAL_SNOOP_AUDIO") {
-                let audio = audio(component);
+                let mut audio = audio(component);
                 if audio != $crate::null_mut() {
                     use std::time::{SystemTime, UNIX_EPOCH};
                     let timestamp = SystemTime::now()
@@ -469,7 +484,13 @@ macro_rules! gen_component {
                     let percent = percent.parse::<u8>()
                         .expect(&format!("couldn't parse DLAL_SNOOP_AUDIO={} as u8", percent));
                     if (timestamp % 100 < percent as u128) {
-                        println!("{:?} audio {}", component, unsafe { *audio });
+                        print!("{:?} audio", component);
+                        let samples = std::option_env!("DLAL_SNOOP_AUDIO_SAMPLES").unwrap_or("1").parse::<u32>().unwrap();
+                        for i in 0..samples {
+                            print!(" {}", unsafe { *audio });
+                            unsafe { audio = audio.offset(1) };
+                        }
+                        println!("");
                     }
                 }
             }

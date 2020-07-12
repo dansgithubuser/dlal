@@ -135,6 +135,8 @@ class Component:
         result = self.command_immediate('list')
         covered = []
         for i in result:
+            if i['name'] == 'name':
+                continue
             command = getattr(self, i['name'])
             i['py'] = py(command)
             covered.append(i['name'])

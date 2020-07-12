@@ -222,6 +222,7 @@ if args.component_info:
     print('----- commands -----')
     for command in component.list():
         print(command['name'])
+        del command['name']
         pprint.pprint(command)
         print()
 
