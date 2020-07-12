@@ -114,9 +114,9 @@ impl SpecificsTrait for Specifics {
                 self.i_x %= self.x.len();
             }
             if !self.y.is_empty() {
-                self.y[self.i_y] = *i;
                 self.i_y += self.y.len() - 1;
                 self.i_y %= self.y.len();
+                self.y[self.i_y] = *i;
             }
         }
     }
