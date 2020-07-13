@@ -11,6 +11,7 @@ from ._utils import snake_to_upper_camel_case as _snake_to_upper_camel_case
 import midi
 
 import json as _json
+import math as _math
 import re as _re
 
 class _Default: pass
@@ -299,3 +300,26 @@ def impulse_response(ci, co, driver):
         train.disconnect(ci)
         co.disconnect(tape)
     return ir
+
+def frequency_response(ci, co, driver, n=64, settling_time=1):
+    from . import Osc
+    from . import Tape
+    settling_runs = int(settling_time * driver.sample_rate() / driver.samples_per_evaluation())
+    with driver:
+        osc = Osc(name='dlal.frequency_response.osc', slot=1)
+        osc.connect(ci)
+        tape = Tape(name='dlal.frequency_response.tape')
+        co.connect(tape)
+        fr = []
+        for i in range(n):
+            freq = (driver.sample_rate() / 2) ** (i / n)
+            osc.freq(freq)
+            peak = 0
+            for _ in range(settling_runs):
+                driver.run()
+                peak = max([abs(i) for i in tape.read()] + [peak])
+            fr.append((freq, 20 * _math.log10(peak)))
+            for _ in range(settling_runs):
+                driver.run()
+                tape.read()
+    return fr
