@@ -6,6 +6,7 @@ import glob
 import json
 import math
 import os
+import re
 import time
 
 #===== args =====#
@@ -14,7 +15,7 @@ parser = argparse.ArgumentParser(description=
     'and synthesizes a sound.'
 )
 parser.add_argument('--phonetic_file_path', default='assets/phonetics')
-parser.add_argument('--phonetics', default='helow wrld')
+parser.add_argument('--phonetics')
 parser.add_argument('--plot', choices=['irs', 'spectra'])
 args = parser.parse_args()
 
@@ -111,6 +112,101 @@ def say(phonetics):
         i += 1
         say_one(phonetic)
 
+def say_sentence(sentence):
+    pronunciations = {
+        'a': 'u',
+        'about': 'ubuwt',
+        'all': 'al',
+        'also': 'olsow',
+        'as': '[ae]z',
+        'be': 'by',
+        'because': 'bykuz',
+        'by': 'bay',
+        'day': 'dey',
+        'do': 'dw',
+        'find': 'fuynd',
+        'give': 'giv',
+        'go': 'gow',
+        'have': 'h[ae]v',
+        'how': 'h[ae]w',
+        'he': 'hy',
+        'her': 'hr',
+        'his': 'hiz',
+        'i': 'uy',
+        'into': 'intw',
+        'know': 'now',
+        'many': 'meny',
+        'me': 'my',
+        'my': 'may',
+        'new': 'nyw',
+        'now': 'n[ae]w',
+        'of': 'uv',
+        'on': 'an',
+        'one': 'wun',
+        'other': 'u[th_v]r',
+        'our': '[ae]wr',
+        'out': 'uwt',
+        'people': 'pypl',
+        'she': '[sh]y',
+        'there': '[th_v]er',
+        'their': '[th_v]er',
+        'to': 'tw',
+        'two': 'tw',
+        'want': 'want',
+        'was': 'wuz',
+        'way': 'wey',
+        'we': 'wy',
+        'what': 'wut',
+        'who': 'hw',
+        'year': 'yr',
+        'your': 'yor',
+    }
+    words = sentence.split()
+    for word in words:
+        if word.startswith('['):
+            word = word[1:-1]
+        else:
+            word.lower()
+            word = re.sub(r'''['.,"]''', '', word)
+            if word in pronunciations:
+                word = pronunciations[word]
+            else:
+                word = word.replace('ould', '[uu]d')
+                word = word.replace('ake', 'eyk')
+                word = word.replace('ere', 'yr')
+                word = word.replace('ese', 'yz')
+                word = word.replace('fir', 'fr')
+                word = word.replace('ike', 'uyk')
+                word = word.replace('ime', 'uym')
+                word = word.replace('ome', 'um')
+                word = word.replace('ook', '[uu]k')
+                word = word.replace('ore', 'or')
+                word = word.replace('thi', '[th]i')
+                word = word.replace('ay', 'ey')
+                word = word.replace('ch', '[ch]')
+                word = word.replace('ck', 'k')
+                word = word.replace('ee', 'y')
+                word = word.replace('ll', 'l')
+                word = word.replace('om', 'um')
+                word = word.replace('oo', 'w')
+                word = word.replace('ou', 'w')
+                word = word.replace('ng', '[ng]')
+                word = word.replace('nk', '[ng]k')
+                word = word.replace('sh', '[sh]')
+                word = word.replace('wh', 'w')
+                word = re.sub('th[aey]', '[th_v]', word)
+                word = word.replace('a', '[ae]')
+                word = word.replace('c', 'k')
+        print(word)
+        say(word)
+
+def tell_story():
+    say_sentence('''
+        [wuns] upon a time,
+        there was a man,
+        a [beys] man
+    ''')
+
 if args.plot:
     import dansplotcore
     if args.plot == 'spectra':
@@ -141,7 +237,9 @@ if args.plot:
 else:
     tone.midi([0x90, 40, 0x7f])
     noise.midi([0x90, 60, 0x7f])
-    dlal.typical_setup()
-    tape.to_file_i16le_start()
-    say(args.phonetics)
-    tape.to_file_i16le_stop()
+    if args.phonetics:
+        tape.to_file_i16le_start()
+        say(args.phonetics)
+        tape.to_file_i16le_stop()
+    else:
+        dlal.typical_setup()
