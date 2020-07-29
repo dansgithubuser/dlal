@@ -6,16 +6,20 @@ It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
 from ._server import audio_broadcast_start, serve
-from ._utils import snake_to_upper_camel_case
+from ._utils import snake_to_upper_camel_case as _snake_to_upper_camel_case
 
 import midi
 
 import json as _json
+import math as _math
+import re as _re
 
 class _Default: pass
 
 def driver_set(driver):
+    result = _Component._driver
     _Component._driver = driver
+    return result
 
 def queue_set(comm):
     _Component._comm = comm
@@ -35,7 +39,7 @@ def component(name, default=_Default):
         return _Component._components.get(name, default)
 
 def component_class(kind):
-    class_name = snake_to_upper_camel_case(kind)
+    class_name = _snake_to_upper_camel_case(kind)
     locals = {}
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
@@ -125,15 +129,12 @@ def typical_setup():
     audio = component('audio', None)
     comm = component('comm', None)
     tape = component('tape', None)
-    if tape and 'DLAL_TO_FILE' in os.environ:
-        samples_per_evaluation = 64
-        sample_rate = 44100
-        if audio:
-            samples_per_evaluation = audio.samples_per_evaluation()
-            sample_rate = audio.sample_rate()
+    if tape and 'DLAL_TO_FILE' in os.environ and audio:
+        samples_per_evaluation = audio.samples_per_evaluation()
+        sample_rate = audio.sample_rate()
         duration = float(os.environ['DLAL_TO_FILE'])
         runs = int(duration * sample_rate / samples_per_evaluation)
-        with open('out.raw', 'wb') as file:
+        with open('out.i16le', 'wb') as file:
             for i in range(runs):
                 audio.run()
                 tape.to_file_i16le(samples_per_evaluation, file)
@@ -260,3 +261,62 @@ def system_load(file_path, namespace):
         component = namespace[name]
         for connectee in connectees:
             component.connect(namespace[connectee])
+
+def read_sound(file_path):
+    import soundfile as sf
+    data, sample_rate = sf.read(file_path)
+    return [float(i) for i in data], sample_rate
+
+def i16le_to_flac(i16le_file_path, flac_file_path=None):
+    import soundfile as sf
+    if flac_file_path == None:
+        flac_file_path = _re.sub(r'\.i16le$', '', i16le_file_path) + '.flac'
+    data, sample_rate = sf.read(
+        i16le_file_path,
+        samplerate=44100,
+        channels=1,
+        format='RAW',
+        subtype='PCM_16',
+        endian='LITTLE',
+    )
+    sf.write(flac_file_path, data, sample_rate, format='FLAC')
+
+def impulse_response(ci, co, driver):
+    from . import Train
+    from . import Tape
+    with driver:
+        train = Train(name='dlal.impulse_response.train', slot=1)
+        train.connect(ci)
+        train.one()
+        tape = Tape(name='dlal.impulse_response.tape')
+        co.connect(tape)
+        ir = []
+        for i in range(64):
+            driver.run()
+            ir.extend(tape.read())
+        train.disconnect(ci)
+        co.disconnect(tape)
+    return ir
+
+def frequency_response(ci, co, driver, n=64, settling_time=1):
+    from . import Osc
+    from . import Tape
+    settling_runs = int(settling_time * driver.sample_rate() / driver.samples_per_evaluation())
+    with driver:
+        osc = Osc(name='dlal.frequency_response.osc', slot=1)
+        osc.connect(ci)
+        tape = Tape(name='dlal.frequency_response.tape')
+        co.connect(tape)
+        fr = []
+        for i in range(n):
+            freq = (driver.sample_rate() / 2) ** (i / n)
+            osc.freq(freq)
+            peak = 0
+            for _ in range(settling_runs):
+                driver.run()
+                peak = max([abs(i) for i in tape.read()] + [peak])
+            fr.append((freq, 20 * _math.log10(peak)))
+            for _ in range(settling_runs):
+                driver.run()
+                tape.read()
+    return fr

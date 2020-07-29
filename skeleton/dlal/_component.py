@@ -50,7 +50,7 @@ class Component:
     _driver = None
     _comm = None
 
-    def __init__(self, kind, name=None):
+    def __init__(self, kind, name=None, slot=0):
         # tracking
         if name == None:
             name = kind
@@ -79,14 +79,18 @@ class Component:
                 item['name'],
                 make_typical_command(item['name']),
             )
-        if Component._driver: Component._driver.add(self)
+        if Component._driver: Component._driver.add(self, slot)
 
     def __del__(self):
-        del Component._components[self.name]
+        self._remove()
         self._lib.destruct(self._raw)
 
     def __repr__(self):
         return self.name
+
+    def _remove(self):
+        if self.name in Component._components:
+            del Component._components[self.name]
 
     def command(self, name, args=[], kwargs={}, do_json_prep=True, timeout_ms=20):
         if do_json_prep: args, kwargs = json_prep(args, kwargs)
@@ -131,6 +135,8 @@ class Component:
         result = self.command_immediate('list')
         covered = []
         for i in result:
+            if i['name'] == 'name':
+                continue
             command = getattr(self, i['name'])
             i['py'] = py(command)
             covered.append(i['name'])

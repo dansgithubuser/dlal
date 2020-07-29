@@ -1,8 +1,8 @@
 from ._component import Component
 
 class Osc(Component):
-    def __init__(self, wave=None, freq=None, bend=None, name=None):
-        Component.__init__(self, 'osc', name)
+    def __init__(self, wave=None, freq=None, bend=None, **kwargs):
+        Component.__init__(self, 'osc', **kwargs)
         from ._skeleton import Immediate
         with Immediate():
             if wave != None: self.wave(wave)

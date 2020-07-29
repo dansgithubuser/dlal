@@ -13,6 +13,16 @@ pub struct Specifics {
     output: Option<View>,
 }
 
+impl Specifics {
+    fn set_ir(&mut self, ir: Vec<f32>) {
+        self.ir = ir;
+        self.state.resize(self.ir.len(), 0.0);
+        if self.index > self.state.len() {
+            self.index = 0;
+        }
+    }
+}
+
 gen_component!(Specifics, {"in": [], "out": ["audio"]});
 
 impl SpecificsTrait for Specifics {
@@ -32,6 +42,15 @@ impl SpecificsTrait for Specifics {
             ["samples_per_evaluation"],
         );
         uni!(connect commands, true);
+        command!(
+            commands,
+            "ir",
+            |soul, body| {
+                soul.set_ir(marg!(json_f32s marg!(arg &body, 0)?)?);
+                Ok(None)
+            },
+            { "args": ["ir"] },
+        );
         command!(
             commands,
             "bandpass",
@@ -62,11 +81,7 @@ impl SpecificsTrait for Specifics {
                 let fft = planner.plan_fft(2 * size);
                 let mut ir = vec![Complex::<f32>::new(0.0, 0.0); 2 * size];
                 fft.process(&mut fr, &mut ir);
-                soul.ir.clear();
-                for i in 0..size {
-                    soul.ir.push(ir[i].re);
-                }
-                soul.state.resize(size, 0.0);
+                soul.set_ir(ir.iter().map(|i| i.re).collect());
                 Ok(None)
             },
             {
@@ -108,7 +123,7 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = marg!(arg &body, 0)?;
-                soul.ir = marg!(json_f32s marg!(json_get j, "ir")?)?;
+                soul.set_ir(marg!(json_f32s marg!(json_get j, "ir")?)?);
                 Ok(None)
             },
             { "args": ["json"] },

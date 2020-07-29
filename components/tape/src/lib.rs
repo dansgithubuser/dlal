@@ -34,8 +34,11 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                soul.audio
-                    .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
+                let samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
+                soul.audio.resize(samples_per_evaluation, 0.0);
+                if soul.size == 0 {
+                    soul.resize(samples_per_evaluation as u64);
+                }
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -73,11 +76,23 @@ impl SpecificsTrait for Specifics {
                 if soul.recv.is_none() {
                     return err!("not initialized");
                 }
-                let size: usize = arg_num(&body, 0)?;
                 let mut audio = Vec::<String>::new();
-                for _ in 0..size {
-                    audio.push(soul.recv.as_ref().unwrap().recv().unwrap().to_string());
-                }
+                match arg_num::<usize>(&body, 0) {
+                    Ok(size) =>  {
+                        for _ in 0..size {
+                            audio.push(soul.recv.as_ref().unwrap().recv().unwrap().to_string());
+                        }
+                    }
+                    Err(_) => {
+                        loop {
+                            if let Ok(x) = soul.recv.as_ref().unwrap().try_recv() {
+                                audio.push(x.to_string());
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                };
                 Ok(Some(json!(audio)))
             },
             {

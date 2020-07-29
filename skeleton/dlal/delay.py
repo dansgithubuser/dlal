@@ -7,9 +7,9 @@ class Delay(Component):
         gain_x=None,
         gain_y=None,
         gain_o=None,
-        name=None,
+        **kwargs,
     ):
-        Component.__init__(self, 'delay', name)
+        Component.__init__(self, 'delay', **kwargs)
         from ._skeleton import Immediate
         with Immediate():
             if size != None: self.resize(size)

@@ -40,6 +40,17 @@ In the webboard, you can click `connect` and play the keyboard.
 
 You can explore the interactive Python UI of dlal in the original terminal session as well.
 
+## environment variables
+| var | description |
+| - | - |
+| `DLAL_MIDI_INPUT` | which MIDI port to open by default when initializing a `dlal.Midi` |
+| `DLAL_TO_FILE` | when using `dlal.typical_setup`, record to file for this many seconds instead of playing live |
+| `DLAL_LOG_LEVEL` | critical, error, warning (default), info, debug, verbose |
+| `DLAL_SNOOP_COMMAND` | snoop on commands |
+| `DLAL_SNOOP_MIDI` | snoop on MIDI message |
+| `DLAL_SNOOP_AUDIO` | snoop on this many percent of audio evaluations |
+| `DLAL_SNOOP_AUDIO_SAMPLES` | snoop on this many samples of an audio evaluation, default 1 |
+
 ## layout
 ### files
 - assets: static, purpose-built files
@@ -186,9 +197,10 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- speech synth
-	- annotated recorder
-	- parameter figurer
+- clean up error handling and arg handling goes away
+- get rid of json paranoia
+- get rid of soul?
+	- `commands!` section instead of individual `command!`s
 
 - audiobro
 	- track 1
@@ -199,5 +211,3 @@ The `audio` component is the driver component for interactive audio.
 			- https://www.youtube.com/watch?v=Jcymn3RGkF4
 	- haunted by bass
 	- bassindaface / funky funky bass
-
-- pip install?

@@ -9,7 +9,7 @@ struct Note {
     vol: f32,
     on: bool,
     phase: f32,
-    index: usize,
+    index: Option<usize>,
 }
 
 impl Note {
@@ -24,7 +24,7 @@ impl Note {
         self.vol = vol;
         self.on = true;
         self.phase = 0.0;
-        self.index = 0;
+        self.index = Some(0);
     }
 
     fn off(&mut self) {
@@ -35,15 +35,15 @@ impl Note {
         self.phase += self.step;
         if self.phase >= 1.0 {
             self.phase -= 1.0;
-            self.index = 1;
+            self.index = Some(0);
             return self.vol * impulse[0];
         }
-        if self.index != 0 {
-            if self.index == impulse.len() {
-                self.index = 0;
+        if let Some(index) = self.index {
+            if index == impulse.len() {
+                self.index = None;
             } else {
-                let amp = self.vol * impulse[self.index];
-                self.index += 1;
+                let amp = self.vol * impulse[index];
+                self.index = Some(index + 1);
                 return amp;
             }
         }
@@ -113,6 +113,18 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "one",
+            |soul, _body| {
+                let note = &mut soul.notes[0];
+                note.vol = 1.0;
+                note.phase = 0.0;
+                note.index = Some(0);
+                Ok(None)
+            },
+            { "args": [] },
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 Ok(Some(json!({
@@ -158,7 +170,7 @@ impl SpecificsTrait for Specifics {
             None => return,
         };
         for note in &mut self.notes {
-            if !note.on && note.index == 0 {
+            if !note.on && note.index.is_none() {
                 continue;
             }
             for i in audio.iter_mut() {
