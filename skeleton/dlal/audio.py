@@ -17,7 +17,6 @@ class Audio(Component):
         driver_set(self.old_driver)
         for i in self.with_components:
             self.remove(i)
-            i._remove()
         self.with_components = None
 
     def samples_per_evaluation(self, samples_per_evaluation=None):
