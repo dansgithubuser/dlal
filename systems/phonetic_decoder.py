@@ -1,6 +1,8 @@
 #===== imports =====#
 import dlal
 
+from scipy import signal
+
 import argparse
 import glob
 import json
@@ -29,6 +31,23 @@ for path in glob.glob(os.path.join(args.phonetic_file_path, '*.phonetic.json')):
     with open(path) as file:
         phonetics[phonetic] = json.loads(file.read())
 
+def iir_become_phonetic(iir, phonetic):
+    p = []
+    for i in phonetic['poles']:
+        p.append(i)
+        p.append({
+            're': i['re'],
+            'im': -i['im'],
+        })
+    z = []
+    for i in phonetic['zeros']:
+        z.append(i)
+        z.append({
+            're': i['re'],
+            'im': -i['im'],
+        })
+    iir.command_detach('pole_zero', [p, z, str(phonetic['gain'])], do_json_prep=False)
+
 #===== system =====#
 audio = dlal.Audio()
 dlal.driver_set(audio)
@@ -39,7 +58,7 @@ tone_buf = dlal.Buf(name='tone_buf')
 noise = dlal.Osc('noise', name='noise')
 noise_gain = dlal.Gain(0, name='noise_gain')
 noise_buf = dlal.Buf(name='noise_buf')
-iir = dlal.Iir(a=[1]+phonetics['0']['coeffs'])
+iir = dlal.Iir()
 mix_buf = dlal.Buf(name='mix_buf')
 tape = dlal.Tape(size=44100*5)
 
@@ -55,6 +74,8 @@ dlal.connect(
     [],
     noise_gain, noise_buf,
 )
+
+iir_become_phonetic(iir, phonetics['0'])
 
 #===== main =====#
 def say_one(phonetic):
@@ -81,19 +102,13 @@ def say_one(phonetic):
                 c = 0.7
             say_one.tone_amp = hysteresis(say_one.tone_amp, frame['tone_amp'], c)
             say_one.noise_amp = hysteresis(say_one.noise_amp, frame['noise_amp'], c)
-            say_one.coeffs = [
-                hysteresis(curr, dst, c)
-                for curr, dst
-                in zip(say_one.coeffs, frame['coeffs'])
-            ]
             tone_gain.command_detach('set', [say_one.tone_amp])
             noise_gain.command_detach('set', [say_one.noise_amp / 10])  # noise is ~100x more powerful than a 100Hz impulse train
-            iir.command_detach('a', [[1]+say_one.coeffs], do_json_prep=False)
+            iir_become_phonetic(iir, frame)
             time.sleep(0.003)
     say_one.phonetic = phonetic
 say_one.phonetic = '0'
 
-say_one.coeffs = phonetics['0']['coeffs']
 say_one.tone_amp = phonetics['0']['tone_amp']
 say_one.noise_amp = phonetics['0']['noise_amp']
 
@@ -222,16 +237,12 @@ if args.plot:
     for k, v in sorted(phonetics.items()):
         if v.get('type', 'continuant') == 'continuant' and k != '0':
             plot.text(k, **plot.transform(0, 0, 0, plot.series))
-            iir.a([1]+v['coeffs'])
+            iir_become_phonetic(v)
             if args.plot == 'spectra':
-                plot.plot([
-                    (f, m)
-                    for f, m
-                    in dlal.Iir.frequency_response(a=[1]+v['coeffs'])
-                ])
+                plot.plot(dlal.frequency_response(mix_buf, mix_buf, audio))
             else:
                 plot.plot(dlal.impulse_response(mix_buf, mix_buf, audio))
-            iir.a([1]+phonetics['0']['coeffs'])
+            iir_become_phonetic(phonetics['0'])
             audio.run()
     plot.show()
 else:

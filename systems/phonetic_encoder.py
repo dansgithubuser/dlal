@@ -1,10 +1,15 @@
 #===== imports =====#
 import dlal
 
+from numpy.fft import fft
+from scipy import signal
+
 import argparse
+import cmath
 import json
 import math
 import os
+import random
 import re
 
 try:
@@ -20,7 +25,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--only')
 parser.add_argument('--start-from')
-parser.add_argument('--order', type=int, default=24)
+parser.add_argument('--order', type=int, default=5)
 parser.add_argument('--plot-spectra', action='store_true')
 args = parser.parse_args()
 
@@ -68,23 +73,19 @@ def stop_ranges(x):
                 silent = True
     return result
 
-def plot_residual_spectrum(plot, actual, past, b, a, residual_size=4096):
+def plot_sample_spectrum(plot, x):
     if plot == None:
         plot = dpc.Plot()
-    from numpy.fft import fft
-    coeffs = [[float(i)] for i in a[1:]]
-    residual = actual[:residual_size] - past[:residual_size].dot(coeffs)
-    residual = [float(i/b[0]) for i in residual]
+    f = fft(x)
     plot.plot([
-        math.log10(float(abs(i)))
-        for i in fft(residual)[0:2049]
+        float(abs(i))
+        for i in f[:len(f) // 2 + 1]
     ])
     return plot
 
 def plot_filter_spectrum(plot, b, a):
     if plot == None:
         plot = dpc.Plot()
-    from scipy import signal
     w, h = signal.freqz(b, a)
     plot.plot([float(abs(i)) for i in h])
     return plot
@@ -102,44 +103,151 @@ def plot_pole_zero(plot, z, p):
         plot.line(xi=0, yi=0, xf=pole.real, yf=pole.imag, g=0, b=0)
     return plot
 
+def json_complex(re, im):
+    return {'re': re, 'im': im}
+
 def parameterize(x):
-    import numpy as np
-    from scipy import signal
-    #----- coeffs -----#
-    past = np.array([
-        x[i:i+args.order]
-        for i in range(len(x) - args.order)
-    ])
-    actual = np.array([
-        [x[i+args.order]]
-        for i in range(len(x) - args.order)
-    ])
-    coeffs = np.linalg.pinv(past).dot(actual)
-    #----- stabilize and smooth -----#
-    b = [1]
-    a = [1] + [i for i in coeffs]
-    w, h = signal.freqz(b, a)
-    max_gain_unstable = max(abs(i) for i in h)
-    z, p, k = signal.tf2zpk(b, a)
-    new_p = []
-    for i in p:
-        if abs(i) > 1:
-            i /= abs(i) ** 2
-        i *= 0.9  # so peaks are not too sharp
-        new_p.append(i)
-    b, a = signal.zpk2tf(z, new_p, k)
-    w, h = signal.freqz(b, a)
-    max_gain_stable = max(abs(i) for i in h)
-    z, p, k = signal.tf2zpk(b, a)
-    k *= max_gain_unstable / max_gain_stable
-    b, a = signal.zpk2tf(z, p, k)
-    coeffs = a[1:]
+    #----- find formants -----#
+    # parameters
+    FREQUENCY = 100
+    # consts
+    n = 1 << 12
+    while n > len(x):
+        n >>= 1
+    spectrum = fft(x[:n])[:n//2+1]
+    # calculate envelope
+    width = FREQUENCY * n // SAMPLE_RATE + 1  # span enough bins that we ignore harmonics
+    envelope = []
+    for i in range(len(spectrum)):
+        j_i = i - width // 2
+        j_f = j_i + width
+        if j_i < 0:
+            j_i = 0
+        if j_f > len(spectrum):
+            j_f = len(spectrum)
+        amp = 0
+        for j in range(j_i, j_f):
+            amp = max(amp, float(abs(spectrum[j])))
+        envelope.append(amp)
+    # calculate frequency of formants
+    class Amp:
+        def __init__(self, amp):
+            self.amp = amp
+            self.visited = False
+
+    envelope = [Amp(i) for i in envelope]
+    formants = {}
+    for i in range(args.order):
+        # find center of max unvisited formant
+        peak_amp = max([i.amp for i in envelope if not i.visited])
+        peak_i = [i.amp for i in envelope].index(peak_amp)
+        peak_f = peak_i
+        while peak_f+1 < len(envelope) and envelope[peak_f+1].amp == peak_amp:
+            peak_f += 1
+        freq = (peak_i + peak_f) / 2 / n * 2 * math.pi
+        formants[freq] = peak_amp
+        # visit right
+        i = peak_i
+        while i+1 < len(envelope):
+            envelope[i].visited = True
+            if envelope[i].amp < envelope[i+1].amp:
+                break
+            i += 1
+        # visit left
+        i = peak_i
+        while i-1 >= 0:
+            envelope[i].visited = True
+            if envelope[i].amp < envelope[i-1].amp:
+                break
+            i -= 1
+    #----- gradient descent poles to match spectrum -----#
+    STEPS = 10
+    HEAT = 1
+    ANNEALING_MULTIPLIER = 0.9
+    BRANCHES = 1 << args.order
+    MAX_POLE_ABS = 0.99
+    # helpers
+    class Filter:
+        def __init__(self, p, z, k):
+            self.p = p
+            self.z = z
+            self.k = k
+
+        def all_p(self):
+            return self.p + [i.conjugate() for i in self.p]
+
+        def all_z(self):
+            return self.z + [i.conjugate() for i in self.z]
+
+        def calc_error(self):
+            w, h = self.spectrum()
+            return sum((abs(h_i) - envelope_i.amp) ** 2 for h_i, envelope_i in zip(h, envelope))
+
+        def mutate(self, heat):
+            def mutate_one(i):
+                ret = i * abs(i) ** random.uniform(-0.5, 0.5)
+                if abs(ret) >= MAX_POLE_ABS:
+                    ret = i
+                return ret
+            k = self.k * random.uniform(0.5, 2) ** heat
+            if k == 0:
+                k = self.k
+            return Filter(
+                [mutate_one(i) for i in self.p],
+                self.z,
+                k,
+            )
+
+        def tf(self):
+            return signal.zpk2tf(self.all_z(), self.all_p(), self.k)
+
+        def spectrum(self):
+            b, a = self.tf()
+            return signal.freqz(b, a, n//2+1, include_nyquist=True)
+
+        def h_max(self):
+            w, h = self.spectrum()
+            return max(float(abs(i)) for i in h)
+
+        def plot(self):
+            w, h = self.spectrum()
+            plot = dpc.Plot()
+            plot.plot([float(abs(i)) for i in h])
+            plot.plot([i.amp for i in envelope])
+            plot.show()
+
+    # init
+    p = [
+        cmath.rect(min(0.9 * MAX_POLE_ABS, 1 - 1 / max(amp, 2)), freq)
+        for freq, amp in formants.items()
+    ]
+    if any(i.imag < 0 for i in p) or any(abs(i) > MAX_POLE_ABS for i in p):
+        raise Exception('improper initial pole')
+    z = [
+        cmath.rect(1, (cmath.phase(p[i]) + cmath.phase(p[i+1])) / 2)
+        for i in range(len(p) - 1)
+    ]
+    z.append(cmath.rect(
+        abs(p[-1]),
+        cmath.phase(p[-1]) + cmath.phase(p[0]),
+    ))
+    fil = Filter(p, z, 1)
+    e = fil.calc_error()
+    heat = HEAT
+    # loop
+    for i in range(STEPS):
+        fil_tries = [fil]+[fil.mutate(heat) for i in range(BRANCHES)]
+        e_tries = [i.calc_error() for i in fil_tries]
+        i = e_tries.index(min(e_tries))
+        fil = fil_tries[i]
+        e = e_tries[i]
+        heat *= ANNEALING_MULTIPLIER
+    if any(i.imag < 0 for i in fil.p) or any(abs(i) > MAX_POLE_ABS for i in fil.p):
+        raise Exception('improper final pole')
+    # normalize
+    fil.k /= fil.h_max()
     #----- tone vs noise -----#
-    # residual
-    RESIDUAL_SIZE = 4096 # we don't need entire residual, just a few cycles of lowest frequency
-    coeffs.shape = (len(coeffs), 1)
-    residual = actual[:RESIDUAL_SIZE] - past[:RESIDUAL_SIZE].dot(coeffs)
-    residual = [float(i/b[0]) for i in residual]
+    x = x[:4096]  # we don't need entire signal, just a few cycles of lowest frequency
     # autocorrelation
     freq_i = 60
     freq_f = 120
@@ -147,13 +255,13 @@ def parameterize(x):
     shift_f = int(SAMPLE_RATE / freq_i)
     max_ac = 0
     for shift in range(shift_i, shift_f):
-        while shift >= len(residual):
+        while shift >= len(x):
             shift //= 2
-        ac = autocorrelation(residual, shift)
+        ac = autocorrelation(x, shift)
         if ac > max_ac: max_ac = ac
     # energy
-    energy = sum(i**2 for i in residual)
-    power = energy / len(residual)
+    energy = sum(i**2 for i in x)
+    power = energy / len(x)
     # amplitudes
     tone = max_ac / energy
     tone_amp = math.sqrt(power * tone)
@@ -166,9 +274,11 @@ def parameterize(x):
         tone_amp = 0
     #----- outputs -----#
     return {
-        'coeffs': [float(i) for i in coeffs],
-        'tone_amp': float(b[0]) * tone_amp,
-        'noise_amp': float(b[0]) * noise_amp,
+        'poles': [json_complex(i.real, i.imag) for i in fil.p],
+        'zeros': [json_complex(i.real, i.imag) for i in fil.z],
+        'gain': fil.k,
+        'tone_amp': tone_amp,
+        'noise_amp': noise_amp,
     }
 
 def analyze(x):
@@ -215,13 +325,14 @@ for i, phonetic in enumerate(phonetics):
     if args.plot_spectra:
         if phonetic == '0':
             continue
-        from numpy.fft import fft
         plot.text(phonetic, **plot.transform(0, 0, 0, plot.series))
         plot.plot([float(abs(i)) for i in fft(x[:4096])[:2049]])
         continue
     if phonetic == '0':
         params = {
-            'coeffs': [0.0] * args.order,
+            'poles': [json_complex(0, 0)] * args.order,
+            'zeros': [json_complex(0, 0)] * args.order,
+            'gain': 0,
             'tone_amp': 0,
             'noise_amp': 0,
         }
