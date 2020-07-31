@@ -1,3 +1,4 @@
-obvious==2.0.0
-SimpleWebSocketServer==0.1.1
-websocket-client==0.56.0
+obvious
+SimpleWebSocketServer
+soundfile
+websocket-client
