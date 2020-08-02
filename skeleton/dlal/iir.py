@@ -3,12 +3,12 @@ from ._component import Component
 import math
 
 class Iir(Component):
-    def __init__(self, b=[1], a=[], **kwargs):
+    def __init__(self, b=None, a=None, **kwargs):
         Component.__init__(self, 'iir', **kwargs)
         from ._skeleton import Immediate
         with Immediate():
-            self.a(a)
-            self.b(b)
+            if a: self.a(a)
+            if b: self.b(b)
 
     def a(self, a):
         return self.command('a', [a], do_json_prep=False)

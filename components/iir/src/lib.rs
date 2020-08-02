@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, marg, uni, View};
+use dlal_component_base::{command, err, gen_component, join, json, marg, uni, View};
 
 use std::vec::Vec;
 
@@ -7,27 +7,30 @@ pub struct Specifics {
     samples_per_evaluation: usize,
     a: Vec<f32>,
     b: Vec<f32>,
-    x: Vec<f32>,
-    y: Vec<f32>,
-    i_x: usize,
-    i_y: usize,
+    d: Vec<f32>,
     output: Option<View>,
 }
 
 impl Specifics {
     fn set_a(&mut self, a: Vec<f32>) {
         self.a = a;
-        self.y.resize(self.a.len(), 0.0);
-        if self.i_y > self.y.len() {
-            self.i_y = 0;
+        let b_len = self.b.iter().position(|&i| i == 0.0).unwrap_or(self.b.len());
+        if self.a.len() > b_len {
+            self.d.resize(self.a.len(), 0.0);
+            self.b.resize(self.a.len(), 0.0);
+        } else {
+            self.a.resize(self.d.len(), 0.0);
         }
     }
 
     fn set_b(&mut self, b: Vec<f32>) {
         self.b = b;
-        self.x.resize(self.b.len(), 0.0);
-        if self.i_x > self.x.len() {
-            self.i_x = 0;
+        let a_len = self.a.iter().position(|&i| i == 0.0).unwrap_or(self.a.len());
+        if self.b.len() > a_len {
+            self.d.resize(self.b.len(), 0.0);
+            self.a.resize(self.b.len(), 0.0);
+        } else {
+            self.b.resize(self.d.len(), 0.0);
         }
     }
 }
@@ -37,6 +40,8 @@ gen_component!(Specifics, {"in": [], "out": ["audio"]});
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
+            a: vec![1.0],
+            b: vec![1.0],
             ..Default::default()
         }
     }
@@ -55,7 +60,11 @@ impl SpecificsTrait for Specifics {
             commands,
             "a",
             |soul, body| {
-                soul.set_a(marg!(json_f32s marg!(arg &body, 0)?)?);
+                let a = marg!(json_f32s marg!(arg &body, 0)?)?;
+                if a.len() == 0 {
+                    return err!("expecting an array with at least one element");
+                }
+                soul.set_a(a);
                 Ok(None)
             },
             { "args": ["a"] },
@@ -99,25 +108,11 @@ impl SpecificsTrait for Specifics {
             None => return,
         };
         for i in output.audio(self.samples_per_evaluation).unwrap() {
-            if !self.x.is_empty() {
-                self.x[self.i_x] = *i;
+            let y = (self.b[0] * *i + self.d[0]) / self.a[0];
+            for j in 1..self.d.len() {
+                self.d[j - 1] = self.b[j] * *i - self.a[j] * y + self.d[j];
             }
-            *i = 0.0;
-            for j in 0..self.a.len() {
-                *i -= self.a[j] * self.y[(self.i_y + j) % self.y.len()];
-            }
-            for j in 0..self.b.len() {
-                *i += self.b[j] * self.x[(self.i_x + j) % self.x.len()];
-            }
-            if !self.x.is_empty() {
-                self.i_x += self.x.len() - 1;
-                self.i_x %= self.x.len();
-            }
-            if !self.y.is_empty() {
-                self.i_y += self.y.len() - 1;
-                self.i_y %= self.y.len();
-                self.y[self.i_y] = *i;
-            }
+            *i = y;
         }
     }
 }

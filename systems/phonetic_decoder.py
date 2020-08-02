@@ -39,7 +39,7 @@ tone_buf = dlal.Buf(name='tone_buf')
 noise = dlal.Osc('noise', name='noise')
 noise_gain = dlal.Gain(0, name='noise_gain')
 noise_buf = dlal.Buf(name='noise_buf')
-iir = dlal.Iir(a=phonetics['0']['coeffs'])
+iir = dlal.Iir(a=[1]+phonetics['0']['coeffs'])
 mix_buf = dlal.Buf(name='mix_buf')
 tape = dlal.Tape(size=44100*5)
 
@@ -88,7 +88,7 @@ def say_one(phonetic):
             ]
             tone_gain.command_detach('set', [say_one.tone_amp])
             noise_gain.command_detach('set', [say_one.noise_amp / 10])  # noise is ~100x more powerful than a 100Hz impulse train
-            iir.command_detach('a', [say_one.coeffs], do_json_prep=False)
+            iir.command_detach('a', [[1]+say_one.coeffs], do_json_prep=False)
             time.sleep(0.003)
     say_one.phonetic = phonetic
 say_one.phonetic = '0'
@@ -222,16 +222,16 @@ if args.plot:
     for k, v in sorted(phonetics.items()):
         if v.get('type', 'continuant') == 'continuant' and k != '0':
             plot.text(k, **plot.transform(0, 0, 0, plot.series))
-            iir.a(v['coeffs'])
+            iir.a([1]+v['coeffs'])
             if args.plot == 'spectra':
                 plot.plot([
                     (f, m)
                     for f, m
-                    in dlal.Iir.frequency_response(a=v['coeffs'])
+                    in dlal.Iir.frequency_response(a=[1]+v['coeffs'])
                 ])
             else:
                 plot.plot(dlal.impulse_response(mix_buf, mix_buf, audio))
-            iir.a(phonetics['0']['coeffs'])
+            iir.a([1]+phonetics['0']['coeffs'])
             audio.run()
     plot.show()
 else:
