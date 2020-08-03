@@ -60,12 +60,14 @@ impl SpecificsTrait for Specifics {
             commands,
             "a",
             |soul, body| {
-                let a = marg!(json_f64s marg!(arg &body, 0)?)?;
-                if a.len() == 0 {
-                    return err!("expecting an array with at least one element");
+                if let Ok(a) = marg!(arg &body, 0) {
+                    let a = marg!(json_f64s a)?;
+                    if a.len() == 0 {
+                        return err!("expecting an array with at least one element");
+                    }
+                    soul.set_a(a);
                 }
-                soul.set_a(a);
-                Ok(None)
+                Ok(Some(json!(soul.a)))
             },
             { "args": ["a"] },
         );
@@ -73,8 +75,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "b",
             |soul, body| {
-                soul.set_b(marg!(json_f64s marg!(arg &body, 0)?)?);
-                Ok(None)
+                if let Ok(b) = marg!(arg &body, 0) {
+                    soul.set_b(marg!(json_f64s b)?);
+                }
+                Ok(Some(json!(soul.b)))
             },
             { "args": ["b"] },
         );

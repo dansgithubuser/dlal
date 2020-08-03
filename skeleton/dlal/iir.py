@@ -10,11 +10,15 @@ class Iir(Component):
             if a: self.a(a)
             if b: self.b(b)
 
-    def a(self, a):
-        return self.command('a', [a], do_json_prep=False)
+    def a(self, a=None):
+        args = []
+        if a != None: args.append(a)
+        return self.command('a', args, do_json_prep=False)
 
-    def b(self, b):
-        return self.command('b', [b], do_json_prep=False)
+    def b(self, b=None):
+        args = []
+        if b != None: args.append(b)
+        return self.command('b', args, do_json_prep=False)
 
     def pole_zero(self, p, z, k=1):
         from scipy import signal
