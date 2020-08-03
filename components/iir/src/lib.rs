@@ -80,6 +80,18 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "wash",
+            |soul, _body| {
+                let result = Ok(Some(json!(soul.d)));
+                for i in soul.d.iter_mut() {
+                    *i = 0.0;
+                }
+                result
+            },
+            { "args": ["b"] },
+        );
+        command!(
+            commands,
             "to_json",
             |soul, _body| {
                 Ok(Some(json!({
