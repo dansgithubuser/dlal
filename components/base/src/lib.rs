@@ -147,6 +147,18 @@ pub fn json_f32s(value: &JsonValue) -> Result<Vec<f32>, Box<Error>> {
         .collect::<Result<_, _>>()
 }
 
+pub fn json_f64s(value: &JsonValue) -> Result<Vec<f64>, Box<Error>> {
+    value
+        .as_array()
+        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
+        .iter()
+        .map(|i| match i.as_f64() {
+            Some(i) => Ok(i),
+            None => err!("expected an array of numbers, but didn't get one"),
+        })
+        .collect::<Result<_, _>>()
+}
+
 #[macro_export]
 macro_rules! marg {
     (args $body:expr) => {
@@ -187,6 +199,9 @@ macro_rules! marg {
     };
     (json_f32s $json:expr) => {
         $crate::json_f32s($json)
+    };
+    (json_f64s $json:expr) => {
+        $crate::json_f64s($json)
     };
 }
 
