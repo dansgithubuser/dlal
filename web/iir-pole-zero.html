@@ -1,0 +1,200 @@
+<link rel='stylesheet' type='text/css' href='style.css'>
+<script type='module'>
+
+//===== imports =====//
+import { Complex } from './../deps/complex.js'
+import {
+  disc,
+  e,
+  listenToTouches,
+  rect,
+} from './../deps/obvious/obvious.js';
+
+import {
+  socketConnect,
+  command,
+} from './common.js';
+
+//===== consts =====//
+const CANVAS = e('canvas');
+const CONTEXT = CANVAS.getContext('2d');
+CANVAS.width = CANVAS.offsetWidth;
+CANVAS.height = CANVAS.offsetHeight;
+const W = CANVAS.width;
+const H = CANVAS.height;
+
+const UNIT_X = W / 2;
+const UNIT_Y = H;
+const UNIT_R = H / 2;
+
+const R = 5; // radius of poles and zeros
+
+const N = 1024; // samples of frequency response
+
+//===== globals =====//
+let gZeros = [];
+let gPoles = [];
+
+let gSelected;
+
+//===== controls =====//
+window.addPole = () => {
+  gPoles.push(Complex(0, 0));
+  render();
+}
+
+window.remPole = () => {
+  gPoles.pop();
+  render();
+}
+
+window.addZero = () => {
+  gZeros.push(Complex(0, 0));
+  render();
+}
+
+window.remZero = () => {
+  gZeros.pop();
+  render();
+}
+
+//===== rendering =====//
+function reToX(z) {
+  return UNIT_X + z.re * UNIT_R;
+}
+
+function imToY(z) {
+  return UNIT_Y - z.im * UNIT_R;
+}
+
+function render() {
+  // background
+  rect(CONTEXT, 0, 0, W, H, 0, 0, 0);
+  // calculate frequency response
+  let h = [];
+  let h_max = 1;
+  let h_min = 1;
+  for (let i = 0; i < N; ++i) {
+    let z = Complex(1, 0).mul({ abs: 1, arg: Math.PI * i / (N - 1) });
+    let h_i = Complex(1, 0);
+    for (const j of gPoles) {
+      h_i = h_i.div((z.sub(j)));
+      if (j.im != 0)
+        h_i = h_i.div((z.sub(j.conjugate())));
+    }
+    for (const j of gZeros) {
+      h_i = h_i.mul((z.sub(j)));
+      if (j.im != 0)
+        h_i = h_i.mul((z.sub(j.conjugate())));
+    }
+    h.push(h_i);
+    if (h_i.abs() > h_max) h_max = h_i.abs();
+    if (h_i.abs() < h_min) h_min = h_i.abs();
+  }
+  h_max = 20 * Math.log10(h_max);
+  h_min = 20 * Math.log10(h_min);
+  const h_rng = h_max - h_min;
+  // unit response
+  disc(CONTEXT, UNIT_X, UNIT_Y, UNIT_R - h_min / h_rng * UNIT_R, 32, 32, 32);
+  // render frequency response
+  CONTEXT.strokeStyle = 'rgb(255, 255, 255)';
+  CONTEXT.beginPath();
+  for (let i = 0; i < N; ++i) {
+    const r = UNIT_R + (20 * Math.log10(h[i].abs()) - h_min) / h_rng * UNIT_R;
+    const theta = Math.PI * i / (N - 1);
+    const x = UNIT_X + r * Math.cos(theta);
+    const y = UNIT_Y - r * Math.sin(theta);
+    if (i == 0)
+      CONTEXT.moveTo(x, y);
+    else
+      CONTEXT.lineTo(x, y);
+  }
+  CONTEXT.stroke();
+  // unit circle
+  disc(CONTEXT, UNIT_X, UNIT_Y, UNIT_R, 0, 0, 64);
+  // poles
+  for (const i of gPoles) disc(CONTEXT,
+    reToX(i), imToY(i), R,
+    0, 255, 0,
+  );
+  // zeros
+  for (const i of gZeros) disc(CONTEXT,
+    reToX(i), imToY(i), R,
+    255, 0, 0,
+  );
+}
+
+//===== interaction =====//
+listenToTouches(CANVAS, {
+  onStart(id, x, y) {
+    let d_min = W + H;
+    let i_min;
+    let pole = true;
+    for (let i = 0; i < gPoles.length; ++i) {
+      const dx = x - reToX(gPoles[i]);
+      const dy = y - imToY(gPoles[i]);
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < d_min){
+        d_min = d;
+        i_min = i;
+      }
+    }
+    for (let i = 0; i < gZeros.length; ++i) {
+      const dx = x - reToX(gZeros[i]);
+      const dy = y - imToY(gZeros[i]);
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < d_min){
+        d_min = d;
+        i_min = i;
+        pole = false;
+      }
+    }
+    if (pole) {
+      gSelected = gPoles[i_min];
+    } else {
+      gSelected = gZeros[i_min];
+    }
+    console.log(gSelected);
+  },
+  onDrag(touches) {
+    const { xi, yi, xf, yf } = touches[0];
+    gSelected.re += (xf - xi) / UNIT_R;
+    gSelected.im -= (yf - yi) / UNIT_R;
+    render();
+    // command
+    const p = [];
+    const z = [];
+    for (const i of gPoles) {
+      p.push(i);
+      if (i.im != 0)
+        p.push(i.conjugate());
+    }
+    for (const i of gZeros) {
+      z.push(i);
+      if (i.im != 0)
+        z.push(i.conjugate());
+    }
+    command('pole_zero', [p, z]);
+  },
+  onEnd(id, x, y) {
+    gSelected = null;
+  },
+});
+
+//===== setup =====//
+window.onload = function () {
+  render();
+  socketConnect();
+}
+
+</script>
+<body>
+  <div>
+    <input type='button' value='add pole'    style='background: rgb(0, 255, 0)' onclick='window.addPole()'>
+    <input type='button' value='remove pole' style='background: rgb(0, 255, 0)' onclick='window.remPole()'>
+    &emsp;&emsp;
+    <input type='button' value='add zero'    style='background: rgb(255, 0, 0)' onclick='window.addZero()'>
+    <input type='button' value='remove zero' style='background: rgb(255, 0, 0)' onclick='window.remZero()'>
+  </div>
+  <canvas id='canvas' style='width: 90vw; height: 90vh'></canvas>
+</body>

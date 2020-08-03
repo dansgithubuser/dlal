@@ -73,7 +73,8 @@ see `do.py --component-matrix` for coloring guidance
 .component-lfo,
 .component-hpf,
 .component-unary,
-.component-fir
+.component-fir,
+.component-iir
 {
   background-image: linear-gradient(to top, #fc4, #fff);
 }
@@ -156,6 +157,9 @@ async function componentContext(name) {
         await socketSend(`${audio}.start`);
         updateDiagram();
       }, name);
+      break;
+    case 'iir':
+      await contextOptionPage('pole&#8209;zero', 'iir-pole-zero.html');
       break;
     case 'liner':
       await contextOptionPage('midi editor', 'midi-editor.html');
