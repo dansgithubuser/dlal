@@ -5,14 +5,14 @@ use std::vec::Vec;
 #[derive(Default)]
 pub struct Specifics {
     samples_per_evaluation: usize,
-    a: Vec<f32>,
-    b: Vec<f32>,
-    d: Vec<f32>,
+    a: Vec<f64>,
+    b: Vec<f64>,
+    d: Vec<f64>,
     output: Option<View>,
 }
 
 impl Specifics {
-    fn set_a(&mut self, a: Vec<f32>) {
+    fn set_a(&mut self, a: Vec<f64>) {
         self.a = a;
         let b_len = self.b.iter().position(|&i| i == 0.0).unwrap_or(self.b.len());
         if self.a.len() > b_len {
@@ -23,7 +23,7 @@ impl Specifics {
         }
     }
 
-    fn set_b(&mut self, b: Vec<f32>) {
+    fn set_b(&mut self, b: Vec<f64>) {
         self.b = b;
         let a_len = self.a.iter().position(|&i| i == 0.0).unwrap_or(self.a.len());
         if self.b.len() > a_len {
@@ -60,7 +60,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "a",
             |soul, body| {
-                let a = marg!(json_f32s marg!(arg &body, 0)?)?;
+                let a = marg!(json_f64s marg!(arg &body, 0)?)?;
                 if a.len() == 0 {
                     return err!("expecting an array with at least one element");
                 }
@@ -73,7 +73,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "b",
             |soul, body| {
-                soul.set_b(marg!(json_f32s marg!(arg &body, 0)?)?);
+                soul.set_b(marg!(json_f64s marg!(arg &body, 0)?)?);
                 Ok(None)
             },
             { "args": ["b"] },
@@ -94,8 +94,8 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = marg!(arg &body, 0)?;
-                soul.set_a(marg!(json_f32s marg!(json_get j, "a")?)?);
-                soul.set_b(marg!(json_f32s marg!(json_get j, "b")?)?);
+                soul.set_a(marg!(json_f64s marg!(json_get j, "a")?)?);
+                soul.set_b(marg!(json_f64s marg!(json_get j, "b")?)?);
                 Ok(None)
             },
             { "args": ["json"] },
@@ -108,11 +108,11 @@ impl SpecificsTrait for Specifics {
             None => return,
         };
         for i in output.audio(self.samples_per_evaluation).unwrap() {
-            let y = (self.b[0] * *i + self.d[0]) / self.a[0];
+            let y = (self.b[0] * (*i as f64) + self.d[0]) / self.a[0];
             for j in 1..self.d.len() {
-                self.d[j - 1] = self.b[j] * *i - self.a[j] * y + self.d[j];
+                self.d[j - 1] = self.b[j] * (*i as f64) - self.a[j] * y + self.d[j];
             }
-            *i = y;
+            *i = y as f32;
         }
     }
 }
