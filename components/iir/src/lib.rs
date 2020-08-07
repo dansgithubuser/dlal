@@ -1,5 +1,8 @@
 use dlal_component_base::{command, err, gen_component, join, json, marg, uni, View};
 
+use num_complex::Complex64;
+use polynomials::{Polynomial, poly};
+
 use std::vec::Vec;
 
 #[derive(Default)]
@@ -81,6 +84,82 @@ impl SpecificsTrait for Specifics {
                 Ok(Some(json!(soul.b)))
             },
             { "args": ["b"] },
+        );
+        command!(
+            commands,
+            "pole_zero",
+            |soul, body| {
+                // poles
+                let poles: Vec<Complex64> = marg!(arg &body, 0)?
+                    .as_array()
+                    .ok_or_else(|| err!(box "expecting an array, but didn't get one"))?
+                    .iter()
+                    .map::<Result<Complex64, String>, _>(|i| {
+                        let re = i
+                            .get("re")
+                            .unwrap_or(&json!(0))
+                            .as_f64()
+                            .ok_or_else(|| "real component isn't a number")?;
+                        let im = i
+                            .get("im")
+                            .unwrap_or(&json!(0))
+                            .as_f64()
+                            .ok_or_else(|| "imaginary component isn't a number")?;
+                        Ok(Complex64::new(re, im))
+                    })
+                    .collect::<Result<_, _>>()?;
+                // zeros
+                let zeros: Vec<Complex64> = marg!(arg &body, 1)?
+                    .as_array()
+                    .ok_or_else(|| err!(box "expecting an array, but didn't get one"))?
+                    .iter()
+                    .map::<Result<Complex64, String>, _>(|i| {
+                        let re = i
+                            .get("re")
+                            .unwrap_or(&json!(0))
+                            .as_f64()
+                            .ok_or_else(|| "real component isn't a number")?;
+                        let im = i
+                            .get("im")
+                            .unwrap_or(&json!(0))
+                            .as_f64()
+                            .ok_or_else(|| "imaginary component isn't a number")?;
+                        Ok(Complex64::new(re, im))
+                    })
+                    .collect::<Result<_, _>>()?;
+                // gain
+                let gain = poly![Complex64::new(marg!(arg_num &body, 2)?, 0.0)];
+                /*
+                The polynomials package only works with positive exponents, but we want negative ones. So let's define z' as 1/z.
+
+                The equation we want to evaluate:
+                H(z) = gain * [(1 - q_1 / z)(1 - q_2 / z)...(1 - q_m / z)] / [(1 - p_1 / z)(1 - p_2 / z)...(1 - p_n / z)]
+                where q_k is the kth zero and p_k is the kth pole.
+
+                With z' = 1/z:
+                H(z) = gain * [(1 - q_1 * z')(1 - q_2 * z')...(1 - q_m * z')] / [(1 - p_1 * z')(1 - p_2 * z')...(1 - p_n * z')]
+                */
+                // b
+                let mut b = Polynomial::new();
+                b.push(Complex64::new(1.0, 0.0));
+                for zero in zeros {
+                    b *= poly![Complex64::new(1.0, 0.0), -zero];
+                }
+                b *= gain;
+                // a
+                let mut a = Polynomial::new();
+                a.push(Complex64::new(1.0, 0.0));
+                for pole in poles {
+                    a *= poly![Complex64::new(1.0, 0.0), -pole];
+                }
+                // finish
+                let a: Vec<Complex64> = a.into();
+                let b: Vec<Complex64> = b.into();
+                soul.set_a(a.iter().map(|i| i.re).collect());
+                soul.set_b(b.iter().map(|i| i.re).collect());
+                Ok(None)
+            },
+            { "args": ["poles", "zeros", "gain"] },
         );
         command!(
             commands,
