@@ -31,7 +31,7 @@ for path in glob.glob(os.path.join(args.phonetic_file_path, '*.phonetic.json')):
     with open(path) as file:
         phonetics[phonetic] = json.loads(file.read())
 
-def iir_become_phonetic(iir, phonetic):
+def iir_become_phonetic(iir, phonetic, smooth=None):
     p = []
     for i in phonetic['poles']:
         p.append(i)
@@ -46,7 +46,15 @@ def iir_become_phonetic(iir, phonetic):
             're': i['re'],
             'im': -i['im'],
         })
-    iir.command_detach('pole_zero', [p, z, str(phonetic['gain'])], do_json_prep=False)
+    kwargs = {}
+    if smooth != None:
+        kwargs['smooth'] = smooth
+    iir.command_detach(
+        'pole_zero',
+        [p, z, str(phonetic['gain'])],
+        kwargs,
+        do_json_prep=False,
+    )
 
 #===== system =====#
 audio = dlal.Audio()
@@ -95,16 +103,16 @@ def say_one(phonetic):
         frame_start = time.time()
         while time.time() - frame_start < duration / SAMPLE_RATE / len(frames):
             if say_one.phonetic == '0':  # starting from silence
-                c = 0
+                c = 0.5
             elif len(frames) > 1:  # stop
-                c = 0
+                c = 0.5
             else:  # moving between continuants
-                c = 0.7
+                c = 0.96
             say_one.tone_amp = hysteresis(say_one.tone_amp, frame['tone_amp'], c)
             say_one.noise_amp = hysteresis(say_one.noise_amp, frame['noise_amp'], c)
             tone_gain.command_detach('set', [say_one.tone_amp])
             noise_gain.command_detach('set', [say_one.noise_amp / 10])  # noise is ~100x more powerful than a 100Hz impulse train
-            iir_become_phonetic(iir, frame)
+            iir_become_phonetic(iir, frame, c)
             time.sleep(0.003)
     say_one.phonetic = phonetic
 say_one.phonetic = '0'

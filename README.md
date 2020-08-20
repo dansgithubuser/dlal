@@ -197,8 +197,6 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-clicks
-	smooth zero-pole transition
 noise vs tone
 
 - clean up error handling and arg handling goes away

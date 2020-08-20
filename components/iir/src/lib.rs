@@ -5,12 +5,32 @@ use polynomials::{Polynomial, poly};
 
 use std::vec::Vec;
 
+fn hysteresis(a: &mut f64, b: f64, smooth: f64) {
+    *a = *a * smooth + b * (1.0 - smooth);
+}
+
+fn hysteresis_vec(a: &mut Vec<Complex64>, b: &Vec<Complex64>, smooth: f64) {
+    for i in 0..a.len() {
+        if i >= b.len() {
+            break;
+        }
+        a[i] = a[i] * smooth + b[i] * (1.0 - smooth);
+    }
+}
+
 #[derive(Default)]
 pub struct Specifics {
     samples_per_evaluation: usize,
     a: Vec<f64>,
     b: Vec<f64>,
     d: Vec<f64>,
+    poles: Vec<Complex64>,
+    zeros: Vec<Complex64>,
+    gain: f64,
+    smooth: Option<f64>,
+    poles_dst: Vec<Complex64>,
+    zeros_dst: Vec<Complex64>,
+    gain_dst: f64,
     output: Option<View>,
 }
 
@@ -35,6 +55,37 @@ impl Specifics {
         } else {
             self.b.resize(self.d.len(), 0.0);
         }
+    }
+
+    fn pole_zero(&mut self) {
+        /*
+        The polynomials package only works with positive exponents, but we want negative ones. So let's define z' as 1/z.
+
+        The equation we want to evaluate:
+        H(z) = gain * [(1 - q_1 / z)(1 - q_2 / z)...(1 - q_m / z)] / [(1 - p_1 / z)(1 - p_2 / z)...(1 - p_n / z)]
+        where q_k is the kth zero and p_k is the kth pole.
+
+        With z' = 1/z:
+        H(z) = gain * [(1 - q_1 * z')(1 - q_2 * z')...(1 - q_m * z')] / [(1 - p_1 * z')(1 - p_2 * z')...(1 - p_n * z')]
+        */
+        // b
+        let mut b = Polynomial::new();
+        b.push(Complex64::new(1.0, 0.0));
+        for zero in &self.zeros {
+            b *= poly![Complex64::new(1.0, 0.0), -zero];
+        }
+        b *= Complex64::new(self.gain, 0.0);
+        // a
+        let mut a = Polynomial::new();
+        a.push(Complex64::new(1.0, 0.0));
+        for pole in &self.poles {
+            a *= poly![Complex64::new(1.0, 0.0), -pole];
+        }
+        // set
+        let a: Vec<Complex64> = a.into();
+        let b: Vec<Complex64> = b.into();
+        self.set_a(a.iter().map(|i| i.re).collect());
+        self.set_b(b.iter().map(|i| i.re).collect());
     }
 }
 
@@ -70,6 +121,7 @@ impl SpecificsTrait for Specifics {
                     }
                     soul.set_a(a);
                 }
+                soul.smooth = None;
                 Ok(Some(json!(soul.a)))
             },
             { "args": ["a"] },
@@ -81,6 +133,7 @@ impl SpecificsTrait for Specifics {
                 if let Ok(b) = marg!(arg &body, 0) {
                     soul.set_b(marg!(json_f64s b)?);
                 }
+                soul.smooth = None;
                 Ok(Some(json!(soul.b)))
             },
             { "args": ["b"] },
@@ -128,38 +181,26 @@ impl SpecificsTrait for Specifics {
                     })
                     .collect::<Result<_, _>>()?;
                 // gain
-                let gain = poly![Complex64::new(marg!(arg_num &body, 2)?, 0.0)];
-                /*
-                The polynomials package only works with positive exponents, but we want negative ones. So let's define z' as 1/z.
-
-                The equation we want to evaluate:
-                H(z) = gain * [(1 - q_1 / z)(1 - q_2 / z)...(1 - q_m / z)] / [(1 - p_1 / z)(1 - p_2 / z)...(1 - p_n / z)]
-                where q_k is the kth zero and p_k is the kth pole.
-
-                With z' = 1/z:
-                H(z) = gain * [(1 - q_1 * z')(1 - q_2 * z')...(1 - q_m * z')] / [(1 - p_1 * z')(1 - p_2 * z')...(1 - p_n * z')]
-                */
-                // b
-                let mut b = Polynomial::new();
-                b.push(Complex64::new(1.0, 0.0));
-                for zero in zeros {
-                    b *= poly![Complex64::new(1.0, 0.0), -zero];
-                }
-                b *= gain;
-                // a
-                let mut a = Polynomial::new();
-                a.push(Complex64::new(1.0, 0.0));
-                for pole in poles {
-                    a *= poly![Complex64::new(1.0, 0.0), -pole];
-                }
+                let gain = marg!(arg_num &body, 2)?;
                 // finish
-                let a: Vec<Complex64> = a.into();
-                let b: Vec<Complex64> = b.into();
-                soul.set_a(a.iter().map(|i| i.re).collect());
-                soul.set_b(b.iter().map(|i| i.re).collect());
+                if let Ok(smooth) = marg!(kwarg &body, "smooth") {
+                    soul.smooth = Some(smooth.as_f64().ok_or_else(|| "smooth isn't a number")?);
+                    soul.poles_dst = poles;
+                    soul.zeros_dst = zeros;
+                    soul.gain_dst = gain;
+                } else {
+                    soul.smooth = None;
+                    soul.poles = poles;
+                    soul.zeros = zeros;
+                    soul.gain = gain;
+                    soul.pole_zero();
+                }
                 Ok(None)
             },
-            { "args": ["poles", "zeros", "gain"] },
+            {
+                "args": ["poles", "zeros", "gain"],
+                "kwargs": ["smooth"],
+            },
         );
         command!(
             commands,
@@ -198,10 +239,19 @@ impl SpecificsTrait for Specifics {
     }
 
     fn evaluate(&mut self) {
+        if let Some(smooth) = self.smooth {
+            hysteresis_vec(&mut self.poles, &self.poles_dst, smooth);
+            hysteresis_vec(&mut self.zeros, &self.zeros_dst, smooth);
+            hysteresis(&mut self.gain, self.gain_dst, smooth);
+            self.pole_zero();
+        }
         let output = match &self.output {
             Some(output) => output,
             None => return,
         };
+        if self.a.is_empty() || self.b.is_empty() || self.d.is_empty() {
+            return;
+        }
         for i in output.audio(self.samples_per_evaluation).unwrap() {
             let y = (self.b[0] * (*i as f64) + self.d[0]) / self.a[0];
             for j in 1..self.d.len() {
