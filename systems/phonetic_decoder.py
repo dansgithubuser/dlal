@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(description=
 )
 parser.add_argument('--phonetic_file_path', default='assets/phonetics')
 parser.add_argument('--phonetics')
-parser.add_argument('--plot', choices=['irs', 'spectra'])
+parser.add_argument('--plot', choices=['irs', 'spectra', 'pole-zero'])
 args = parser.parse_args()
 
 #===== consts =====#
@@ -232,26 +232,61 @@ def tell_story():
 
 if args.plot:
     import dansplotcore
-    if args.plot == 'spectra':
+    if args.plot == 'pole-zero':
         plot = dansplotcore.Plot(
-            transform=dansplotcore.transforms.Grid(22050, 100, 6),
+            transform=dansplotcore.transforms.Grid(3, 2, 6),
             hide_axes=True,
         )
+        for k, v in sorted(phonetics.items()):
+            if v.get('type', 'continuant') == 'continuant' and k != '0':
+                plot.text(k, **plot.transform(0, 0, 0, plot.series))
+                for i, u in enumerate(v['poles']):
+                    t = plot.transform(u['re'], u['im'], 0, plot.series)
+                    z = plot.transform(0, 0.1*i, 0, plot.series)
+                    plot.line(xi=z['x'], yi=z['y'], xf=t['x'], yf=t['y'], r=0, g=255, b=0)
+                for i, u in enumerate(v['zeros']):
+                    t = plot.transform(u['re'], u['im'], 0, plot.series)
+                    z = plot.transform(0, 0.1*i, 0, plot.series)
+                    plot.line(xi=z['x'], yi=z['y'], xf=t['x'], yf=t['y'], r=255, g=0, b=0)
+                unit_half = []
+                for theta in range(100):
+                    t = plot.transform(
+                        math.cos(math.pi * theta / 100),
+                        math.sin(math.pi * theta / 100),
+                        0,
+                        plot.series,
+                    )
+                    unit_half.append((t['x'], t['y']))
+                for i in range(len(unit_half) - 1):
+                    plot.line(
+                        xi=unit_half[i+0][0],
+                        yi=unit_half[i+0][1],
+                        xf=unit_half[i+1][0],
+                        yf=unit_half[i+1][1],
+                        r=0, g=0, b=255,
+                    )
+                plot.series += 1
     else:
-        plot = dansplotcore.Plot(
-            transform=dansplotcore.transforms.Grid(4096, 4, 6),
-            hide_axes=True,
-        )
-    for k, v in sorted(phonetics.items()):
-        if v.get('type', 'continuant') == 'continuant' and k != '0':
-            plot.text(k, **plot.transform(0, 0, 0, plot.series))
-            iir_become_phonetic(v)
-            if args.plot == 'spectra':
-                plot.plot(dlal.frequency_response(mix_buf, mix_buf, audio))
-            else:
-                plot.plot(dlal.impulse_response(mix_buf, mix_buf, audio))
-            iir_become_phonetic(phonetics['0'])
-            audio.run()
+        if args.plot == 'spectra':
+            plot = dansplotcore.Plot(
+                transform=dansplotcore.transforms.Grid(22050, 100, 6),
+                hide_axes=True,
+            )
+        else:
+            plot = dansplotcore.Plot(
+                transform=dansplotcore.transforms.Grid(4096, 4, 6),
+                hide_axes=True,
+            )
+        for k, v in sorted(phonetics.items()):
+            if v.get('type', 'continuant') == 'continuant' and k != '0':
+                plot.text(k, **plot.transform(0, 0, 0, plot.series))
+                iir_become_phonetic(v)
+                if args.plot == 'spectra':
+                    plot.plot(dlal.frequency_response(mix_buf, mix_buf, audio))
+                else:
+                    plot.plot(dlal.impulse_response(mix_buf, mix_buf, audio))
+                iir_become_phonetic(phonetics['0'])
+                audio.run()
     plot.show()
 else:
     tone.midi([0x90, 40, 0x7f])
