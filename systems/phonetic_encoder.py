@@ -183,6 +183,7 @@ def parameterize(x):
             w, h = self.spectrum()
             return sum((abs(h_i) - envelope_i.amp) ** 2 for h_i, envelope_i in zip(h, envelope))
 
+        # move each pole toward unit circle or origin, increase or decrease gain
         def mutate(self, heat):
             def mutate_one(i):
                 ret = i * abs(i) ** random.uniform(-0.5, 0.5)
@@ -217,10 +218,10 @@ def parameterize(x):
             plot.show()
 
     # init
-    p = [
+    p = sorted([
         cmath.rect(min(0.9 * MAX_POLE_ABS, 1 - 1 / max(amp, 2)), freq)
         for freq, amp in formants.items()
-    ]
+    ], key=cmath.phase)
     if any(i.imag < 0 for i in p) or any(abs(i) > MAX_POLE_ABS for i in p):
         raise Exception('improper initial pole')
     z = [
@@ -229,7 +230,7 @@ def parameterize(x):
     ]
     z.append(cmath.rect(
         abs(p[-1]),
-        cmath.phase(p[-1]) + cmath.phase(p[0]),
+        (cmath.phase(p[-1]) + math.pi) / 2,
     ))
     fil = Filter(p, z, 1)
     e = fil.calc_error()
