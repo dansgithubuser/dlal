@@ -73,6 +73,7 @@ def stop_ranges(x):
                 silent = True
     return result
 
+# plot spectrum of sampled signal
 def plot_sample_spectrum(plot, x):
     if plot == None:
         plot = dpc.Plot()
@@ -83,6 +84,7 @@ def plot_sample_spectrum(plot, x):
     ])
     return plot
 
+# plot spectrum of filter(b, a)
 def plot_filter_spectrum(plot, b, a):
     if plot == None:
         plot = dpc.Plot()
@@ -90,6 +92,7 @@ def plot_filter_spectrum(plot, b, a):
     plot.plot([float(abs(i)) for i in h])
     return plot
 
+# plot poles and zeros of filter(z, p)
 def plot_pole_zero(plot, z, p):
     if plot == None:
         plot = dpc.Plot()
@@ -210,11 +213,18 @@ def parameterize(x):
             w, h = self.spectrum()
             return max(float(abs(i)) for i in h)
 
-        def plot(self):
+        def plot(self, log=False):
             w, h = self.spectrum()
-            plot = dpc.Plot()
-            plot.plot([float(abs(i)) for i in h])
-            plot.plot([i.amp for i in envelope])
+            plot = dpc.Plot(primitive=dpc.primitives.Line())
+            if log:
+                f = lambda x: 20 * math.log10(x)
+            else:
+                f = lambda x: x
+            plot.plot([f(float(abs(i))) for i in h])
+            plot.plot([f(i.amp) for i in envelope])
+            for i in self.p:
+                x = cmath.phase(i) / (2*math.pi) * n
+                plot.line(x, 0, x, 100, r=0, g=0, b=255)
             plot.show()
 
     # init
