@@ -213,6 +213,10 @@ def parameterize(x):
             w, h = self.spectrum()
             return max(float(abs(i)) for i in h)
 
+        def energy(self):
+            w, h = self.spectrum()
+            return sum((abs(i)/len(h))**2 for i in h)
+
         def plot(self, log=False):
             w, h = self.spectrum()
             plot = dpc.Plot(primitive=dpc.primitives.Line())
@@ -256,7 +260,7 @@ def parameterize(x):
     if any(i.imag < 0 for i in fil.p) or any(abs(i) > MAX_POLE_ABS for i in fil.p):
         raise Exception('improper final pole')
     # normalize
-    fil.k /= fil.h_max()
+    fil.k /= math.sqrt(fil.energy())
     #----- tone vs noise -----#
     x = x[:4096]  # we don't need entire signal, just a few cycles of lowest frequency
     # autocorrelation
