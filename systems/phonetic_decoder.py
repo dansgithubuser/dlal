@@ -102,14 +102,18 @@ def say_one(phonetic):
     for frame_i, frame in enumerate(frames):
         frame_start = time.time()
         while time.time() - frame_start < duration / SAMPLE_RATE / len(frames):
-            if say_one.phonetic == '0':  # starting from silence
-                c = 0.5
-            elif len(frames) > 1:  # stop
-                c = 0.5
+            FAST = 0.5
+            SLOW = 0.9
+            if any([
+                say_one.phonetic == '0',  # starting from silence
+                phonetics[phonetic].get('type') == 'stop',  # moving to stop
+                phonetics[say_one.phonetic].get('type') == 'stop',  # moving from stop
+            ]):
+                c = FAST
             else:  # moving between continuants
-                c = 0.96
-            say_one.tone_amp = hysteresis(say_one.tone_amp, frame['tone_amp'], c)
-            say_one.noise_amp = hysteresis(say_one.noise_amp, frame['noise_amp'], c)
+                c = SLOW
+            say_one.tone_amp = hysteresis(say_one.tone_amp, frame['tone_amp'], FAST)
+            say_one.noise_amp = hysteresis(say_one.noise_amp, frame['noise_amp'], FAST)
             tone_gain.command_detach('set', [say_one.tone_amp])
             noise_gain.command_detach('set', [say_one.noise_amp / 10])  # noise is ~100x more powerful than a 100Hz impulse train
             iir_become_phonetic(iir, frame, c)
