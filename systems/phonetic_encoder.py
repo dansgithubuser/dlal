@@ -69,7 +69,7 @@ def stop_ranges(x):
                 result.append([i + window_size // 2])
                 silent = False
         else:
-            if v < maximum / 4:
+            if v < maximum / 8:
                 result[-1].append(i + window_size // 2)
                 silent = True
     return result
@@ -317,10 +317,10 @@ def parameterize(x):
     tone = max_ac / energy
     tone_amp = math.sqrt(power * tone)
     noise_amp = math.sqrt(power * (1 - tone))
-    if tone_amp / noise_amp > 2:
+    if noise_amp == 0 or tone_amp / noise_amp > 2:
         tone_amp += noise_amp
         noise_amp = 0
-    elif noise_amp / tone_amp > 2:
+    elif tone_amp == 0 or noise_amp / tone_amp > 2:
         noise_amp += tone_amp
         tone_amp = 0
     #----- outputs -----#
