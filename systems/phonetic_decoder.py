@@ -295,9 +295,8 @@ if args.plot:
 else:
     tone.midi([0x90, 40, 0x7f])
     noise.midi([0x90, 60, 0x7f])
+    dlal.typical_setup()
     if args.phonetics:
         tape.to_file_i16le_start()
         say(args.phonetics)
         tape.to_file_i16le_stop()
-    else:
-        dlal.typical_setup()
