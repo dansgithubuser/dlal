@@ -86,14 +86,19 @@ dlal.connect(
 iir_become_phonetic(iir, phonetics['0'])
 
 #===== main =====#
+def get_frames(phonetic):
+    params = phonetics[phonetic]
+    if params.get('type') in [None, 'continuant']:
+        return [params]
+    elif params['type'] == 'stop':
+        return params['frames']
+    raise Exception(f'''unknown phonetic type "{params['type']}"''')
+
 def say_one(phonetic):
     if phonetic == ' ':
         phonetic = '0'
     params = phonetics[phonetic]
-    if params.get('type') in [None, 'continuant']:
-        frames = [params]
-    elif params['type'] == 'stop':
-        frames = params['frames']
+    frames = get_frames(phonetic)
 
     def hysteresis(curr, dst, c):
         return c * curr + (1 - c) * dst
@@ -229,7 +234,7 @@ def say_sentence(sentence):
 
 def tell_story():
     say_sentence('''
-        [wuns] upon a time,
+        [wuns] [upan] a time,
         there was a man,
         a [beys] man
     ''')
@@ -242,13 +247,15 @@ if args.plot:
             hide_axes=True,
         )
         for k, v in sorted(phonetics.items()):
-            if v.get('type', 'continuant') == 'continuant' and k != '0':
+            if k == '0': continue
+            frames = get_frames(k)
+            for frame in frames:
                 plot.text(k, **plot.transform(0, 0, 0, plot.series))
-                for i, u in enumerate(v['poles']):
+                for i, u in enumerate(frame['poles']):
                     t = plot.transform(u['re'], u['im'], 0, plot.series)
                     z = plot.transform(0, 0.1*i, 0, plot.series)
                     plot.line(xi=z['x'], yi=z['y'], xf=t['x'], yf=t['y'], r=0, g=255, b=0)
-                for i, u in enumerate(v['zeros']):
+                for i, u in enumerate(frame['zeros']):
                     t = plot.transform(u['re'], u['im'], 0, plot.series)
                     z = plot.transform(0, 0.1*i, 0, plot.series)
                     plot.line(xi=z['x'], yi=z['y'], xf=t['x'], yf=t['y'], r=255, g=0, b=0)
@@ -282,14 +289,16 @@ if args.plot:
                 hide_axes=True,
             )
         for k, v in sorted(phonetics.items()):
-            if v.get('type', 'continuant') == 'continuant' and k != '0':
+            if k == '0': continue
+            frames = get_frames(k)
+            for frame in frames:
                 plot.text(k, **plot.transform(0, 0, 0, plot.series))
-                iir_become_phonetic(v)
+                iir_become_phonetic(iir, frame)
                 if args.plot == 'spectra':
                     plot.plot(dlal.frequency_response(mix_buf, mix_buf, audio))
                 else:
                     plot.plot(dlal.impulse_response(mix_buf, mix_buf, audio))
-                iir_become_phonetic(phonetics['0'])
+                iir_become_phonetic(iir, phonetics['0'])
                 audio.run()
     plot.show()
 else:
