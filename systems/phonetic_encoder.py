@@ -28,6 +28,7 @@ parser.add_argument('--only')
 parser.add_argument('--start-from')
 parser.add_argument('--order', type=int, default=5)
 parser.add_argument('--plot-spectra', action='store_true')
+parser.add_argument('--plot-stop-ranges', action='store_true')
 args = parser.parse_args()
 
 #===== consts =====#
@@ -72,6 +73,16 @@ def stop_ranges(x):
             if v < maximum / 8:
                 result[-1].append(i + window_size // 2)
                 silent = True
+    if args.plot_stop_ranges:
+        plot = dpc.Plot()
+        plot.plot(x)
+        plot.plot(envelope)
+        plot.line(0, maximum * 1/4, len(envelope), maximum * 1/4, r=255, g=0, b=0)
+        plot.line(0, maximum * 1/8, len(envelope), maximum * 1/8, r=255, g=0, b=0)
+        plot.line(0, threshold, len(envelope), threshold, r=0, g=0, b=255)
+        for start, stop in result:
+            plot.line(start, 0, stop, 0, r=0, g=255, b=0)
+        plot.show()
     return result
 
 # plot spectrum of sampled signal
