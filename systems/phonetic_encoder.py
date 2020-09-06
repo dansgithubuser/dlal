@@ -49,11 +49,16 @@ def stop_ranges(x):
     window_size = 512
     silence_factor = 4
     # estimate envelope
-    total_amp = sum(abs(i) for i in x[:window_size])
-    envelope = [total_amp / window_size]
+    envelope = []
+    maximum = None
     for i in range(window_size, len(x)):
-        total_amp += abs(x[i]) - abs(x[i - window_size])
-        envelope.append(total_amp / window_size)
+        if maximum == None:
+            maximum = max(x[i-window_size:i+1])
+        else:
+            maximum = max(maximum, x[i])
+        envelope.append(maximum)
+        if maximum == x[i-window_size]:
+            maximum = None
     # figure threshold
     sorted_envelope = sorted(envelope)
     threshold = sorted_envelope[len(envelope) // silence_factor]
@@ -61,18 +66,21 @@ def stop_ranges(x):
     maximum = sorted_envelope[-1]
     if threshold / maximum > 1 / silence_factor:
         return None
-    # figure stop starts
+    # figure starts and stops
     result = []
     silent = True
     for i, v in enumerate(envelope):
         if silent:
-            if v > maximum * 3 / 4:
-                result.append([i + window_size // 2])
+            if v > maximum * 1/4:
+                result.append([i])
                 silent = False
         else:
-            if v < maximum / 8:
-                result[-1].append(i + window_size // 2)
+            if v < maximum * 1/8:
+                result[-1].append(i + window_size)
                 silent = True
+    if len(result[-1]) == 1:
+        result[-1].append(len(x)-1)
+    # plot
     if args.plot_stop_ranges:
         plot = dpc.Plot()
         plot.plot(x)
@@ -83,6 +91,7 @@ def stop_ranges(x):
         for start, stop in result:
             plot.line(start, 0, stop, 0, r=0, g=255, b=0)
         plot.show()
+    # done
     return result
 
 # plot spectrum of sampled signal
