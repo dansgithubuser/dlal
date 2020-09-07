@@ -27,7 +27,8 @@ parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics
 parser.add_argument('--only')
 parser.add_argument('--start-from')
 parser.add_argument('--order', type=int, default=5)
-parser.add_argument('--plot-spectra', action='store_true')
+parser.add_argument('--plot-phonetic-spectra', action='store_true')
+parser.add_argument('--plot-filter-spectra', action='store_true')
 parser.add_argument('--plot-stop-ranges', action='store_true')
 args = parser.parse_args()
 
@@ -249,7 +250,10 @@ def parameterize(x):
             plot.plot([f(i.amp) for i in envelope])
             for i in self.p:
                 x = cmath.phase(i) / (2*math.pi) * n
-                plot.line(x, 0, x, 100, r=0, g=0, b=255)
+                plot.line(x, 0, x, 100, r=0, g=255, b=0)
+            for i in self.z:
+                x = cmath.phase(i) / (2*math.pi) * n
+                plot.line(x, 0, x, 100, r=255, g=0, b=0)
             plot.show()
 
     # init
@@ -302,6 +306,8 @@ def parameterize(x):
     tone_amp = math.sqrt(power * tone)
     noise_amp = math.sqrt(power * (1 - tone))
     #----- outputs -----#
+    if args.plot_filter_spectra:
+        fil.plot()
     return {
         'poles': [json_complex(i.real, i.imag) for i in fil.p],
         'zeros': [json_complex(i.real, i.imag) for i in fil.z],
@@ -338,7 +344,7 @@ phonetics = [
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j', '0',
 ]
-if args.plot_spectra:
+if args.plot_phonetic_spectra:
     plot = dpc.Plot(
         transform=dpc.transforms.Grid(2100, 2000, 6),
         hide_axes=True,
@@ -351,7 +357,7 @@ for i, phonetic in enumerate(phonetics):
     print(phonetic)
     if phonetic != '0':
         x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
-    if args.plot_spectra:
+    if args.plot_phonetic_spectra:
         if phonetic == '0':
             continue
         plot.text(phonetic, **plot.transform(0, 0, 0, plot.series))
@@ -375,5 +381,5 @@ for i, phonetic in enumerate(phonetics):
     print(params)
     with open(out_file_path, 'w') as file:
         file.write(params)
-if args.plot_spectra:
+if args.plot_phonetic_spectra:
     plot.show()
