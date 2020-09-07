@@ -195,11 +195,11 @@ def say_sentence(sentence):
     }
     words = sentence.split()
     for word in words:
+        word = re.sub(r'''['.,"]''', '', word)
         if word.startswith('['):
             word = word[1:-1]
         else:
-            word.lower()
-            word = re.sub(r'''['.,"]''', '', word)
+            word = word.lower()
             if word in pronunciations:
                 word = pronunciations[word]
             else:
@@ -232,12 +232,18 @@ def say_sentence(sentence):
         print(word)
         say(word)
 
-def tell_story():
-    say_sentence('''
+def tell_story(i=0):
+    say_sentence([
+        '''
         [wuns] [upan] a time,
         there was a man,
         a [beys] man
-    ''')
+        ''',
+        '''
+        A big [kunery] [duznt] get [[th_v]u] [wurm].
+        A [[ch]yry] [jelyfi[sh]] [peynts] too [mu[ch]].
+        ''',
+    ][i])
 
 if args.plot:
     import dansplotcore

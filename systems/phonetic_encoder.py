@@ -357,7 +357,7 @@ def analyze(x):
     if ranges:
         i_i, i_f = ranges[0]
         duration = i_f - i_i
-        i_step = duration // 4
+        i_step = duration // int(duration / 512)
         frames = []
         for i in range(
             i_i,
