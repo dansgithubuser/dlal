@@ -283,42 +283,6 @@ def parameterize(x):
     # normalize
     fil.k /= math.sqrt(fil.energy())
     #----- tone vs noise -----#
-    # do LPC so we can figure tone vs noise based on a equalized signal
-    LPC_ORDER = 24
-    # coeffs
-    past = np.array([
-        x[i:i+LPC_ORDER]
-        for i in range(len(x) - LPC_ORDER)
-    ])
-    actual = np.array([
-        [x[i+args.order]]
-        for i in range(len(x) - LPC_ORDER)
-    ])
-    coeffs = np.linalg.pinv(past).dot(actual)
-    # stabilize and smooth
-    b = [1]
-    a = [1] + [i for i in coeffs]
-    w, h = signal.freqz(b, a)
-    max_gain_unstable = max(abs(i) for i in h)
-    z, p, k = signal.tf2zpk(b, a)
-    new_p = []
-    for i in p:
-        if abs(i) > 1:
-            i /= abs(i) ** 2
-        i *= 0.9  # so peaks are not too sharp
-        new_p.append(i)
-    b, a = signal.zpk2tf(z, new_p, k)
-    w, h = signal.freqz(b, a)
-    max_gain_stable = max(abs(i) for i in h)
-    z, p, k = signal.tf2zpk(b, a)
-    k *= max_gain_unstable / max_gain_stable
-    b, a = signal.zpk2tf(z, p, k)
-    coeffs = a[1:]
-    # residual
-    RESIDUAL_SIZE = 4096 # we don't need entire residual, just a few cycles of lowest frequency
-    coeffs.shape = (len(coeffs), 1)
-    residual = actual[:RESIDUAL_SIZE] - past[:RESIDUAL_SIZE].dot(coeffs)
-    residual = [float(i/b[0]) for i in residual]
     # autocorrelation
     freq_i = 60
     freq_f = 120
@@ -326,30 +290,24 @@ def parameterize(x):
     shift_f = int(SAMPLE_RATE / freq_i)
     max_ac = 0
     for shift in range(shift_i, shift_f):
-        while shift >= len(residual):
+        while shift >= len(x):
             shift //= 2
-        ac = autocorrelation(residual, shift)
+        ac = autocorrelation(x, shift)
         if ac > max_ac: max_ac = ac
     # energy
-    energy = sum(i**2 for i in residual)
-    power = energy / len(residual)
+    energy = sum(i**2 for i in x)
+    power = energy / len(x)
     # amplitudes
     tone = max_ac / energy
     tone_amp = math.sqrt(power * tone)
     noise_amp = math.sqrt(power * (1 - tone))
-    if noise_amp == 0 or tone_amp / noise_amp > 2:
-        tone_amp += noise_amp
-        noise_amp = 0
-    elif tone_amp == 0 or noise_amp / tone_amp > 2:
-        noise_amp += tone_amp
-        tone_amp = 0
     #----- outputs -----#
     return {
         'poles': [json_complex(i.real, i.imag) for i in fil.p],
         'zeros': [json_complex(i.real, i.imag) for i in fil.z],
         'gain': fil.k,
-        'tone_amp': float(b[0]) * tone_amp,
-        'noise_amp': float(b[0]) * noise_amp,
+        'tone_amp': tone_amp,
+        'noise_amp': noise_amp,
     }
 
 def analyze(x):
