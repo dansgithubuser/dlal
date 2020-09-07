@@ -234,14 +234,33 @@ def say_sentence(sentence):
 
 def tell_story(i=0):
     say_sentence([
+        # 0
         '''
         [wuns] [upan] a time,
         there was a man,
-        a [beys] man
+        a [b[ay]ys] man
         ''',
+        # 1
         '''
         A big [kunery] [duznt] get [[th_v]u] [wurm].
-        A [[ch]yry] [jelyfi[sh]] [peynts] too [mu[ch]].
+        A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
+        ''',
+        # 2
+        '''
+        [[th_v]u] [wurd] [l[ay]ydy] [iz] a [trm] [uv] [respekt] [for] a [grl] [or] [w[uu]min],
+        [[th_v]u] [ekwivulent] [uv] [jentlmin].
+        ''',
+        # 3
+        '''
+        [tw[ng]kl] [tw[ng]kl] [litl] [star]
+        ''',
+        # 4
+        '''
+        [d[ay]yzy] [d[ay]yzy] [giv] [my] [yor] [[ae]nsr] [dw]
+        ''',
+        # 5
+        '''
+        [[th]in] [herz] [pruper] [for] [[th_v]u] [ok[ay]y[sh_v]in]
         ''',
     ][i])
 
