@@ -7,6 +7,7 @@ from scipy import signal
 
 import argparse
 import cmath
+import copy
 import json
 import math
 import os
@@ -189,7 +190,7 @@ def parameterize(x):
     STEPS = 10
     HEAT = 1
     ANNEALING_MULTIPLIER = 0.9
-    BRANCHES = 1 << args.order
+    BRANCHES = (1 << args.order) * 5
     MAX_POLE_ABS = 0.99
     # helpers
     class Filter:
@@ -208,21 +209,39 @@ def parameterize(x):
             w, h = self.spectrum()
             return sum((abs(h_i) - envelope_i.amp) ** 2 for h_i, envelope_i in zip(h, envelope))
 
-        # move each pole toward unit circle or origin, increase or decrease gain
         def mutate(self, heat):
-            def mutate_one(i):
-                ret = i * abs(i) ** random.uniform(-0.5, 0.5)
-                if abs(ret) >= MAX_POLE_ABS:
-                    ret = i
-                return ret
-            k = self.k * random.uniform(0.5, 2) ** heat
-            if k == 0:
-                k = self.k
-            return Filter(
-                [mutate_one(i) for i in self.p],
-                self.z,
-                k,
-            )
+            r = random.randint(0, 100)
+            if r < 80:
+                # move each pole toward unit circle or origin, increase or decrease gain
+                def mutate_one(i):
+                    ret = i * abs(i) ** random.uniform(-0.5, 0.5)
+                    if abs(ret) >= MAX_POLE_ABS:
+                        ret = i
+                    return ret
+                k = self.k * random.uniform(0.5, 2) ** heat
+                if k == 0:
+                    k = self.k
+                return Filter(
+                    [mutate_one(i) for i in self.p],
+                    self.z,
+                    k,
+                )
+            else:
+                # alter frequency of a zero
+                i = random.randint(0, len(self.z)-1)
+                phase = cmath.phase(self.z[i])
+                if random.randint(0, 1):
+                    if i == len(self.z)-1:
+                        p = math.pi
+                    else:
+                        p = cmath.phase(self.p[i+1])
+                else:
+                    p = cmath.phase(self.p[i])
+                t = random.uniform(0, heat)
+                phase = phase * (1-t) + p * t
+                z = copy.copy(self.z)
+                z[i] = cmath.rect(abs(z[i]), phase)
+                return Filter(self.p, z, self.k)
 
         def tf(self):
             return signal.zpk2tf(self.all_z(), self.all_p(), self.k)
@@ -263,7 +282,7 @@ def parameterize(x):
     ], key=cmath.phase)
     if any(i.imag < 0 for i in p) or any(abs(i) > MAX_POLE_ABS for i in p):
         raise Exception('improper initial pole')
-    z = [
+    z = [  # cmath.phase(p[i]) < cmath.phase(z[i]) < cmath.phase(p[i+1])
         cmath.rect(1, (cmath.phase(p[i]) + cmath.phase(p[i+1])) / 2)
         for i in range(len(p) - 1)
     ]
