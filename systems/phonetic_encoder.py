@@ -312,16 +312,21 @@ def parameterize(x):
     shift_i = int(SAMPLE_RATE / freq_f)
     shift_f = int(SAMPLE_RATE / freq_i)
     max_ac = 0
+    min_ac_samples = 128
     for shift in range(shift_i, shift_f):
-        while shift >= len(x):
-            shift //= 2
-        ac = autocorrelation(x, shift)
-        if ac > max_ac: max_ac = ac
+        ac_samples = len(x) - shift
+        if ac_samples <= min_ac_samples:
+            break
+        ac = abs(autocorrelation(x, shift))
+        ac_power = ac / ac_samples
+        ac = ac_power * len(x)  # for fair comparison w energy
+        if ac > max_ac:
+            max_ac = ac
     # energy
     energy = sum(i**2 for i in x)
     power = energy / len(x)
     # amplitudes
-    tone = max_ac / energy
+    tone = min(max_ac / energy, 1)
     tone_amp = math.sqrt(power * tone)
     noise_amp = math.sqrt(power * (1 - tone))
     #----- outputs -----#
