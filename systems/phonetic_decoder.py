@@ -8,6 +8,7 @@ import glob
 import json
 import math
 import os
+import random
 import re
 import time
 
@@ -244,7 +245,6 @@ def tell_story(i=0):
         # 1
         '''
         A big [kunery] [duznt] get [[th_v]u] [wurm].
-        A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
         ''',
         # 2
         '''
@@ -263,7 +263,157 @@ def tell_story(i=0):
         '''
         [[th]in] [herz] [pruper] [for] [[th_v]u] [ok[ay]y[sh_v]in]
         ''',
+        # 6
+        '''
+        A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
+        '''
     ][i])
+
+def say_random():
+    decompositions = {
+        's': [
+            ['np', 'vp'],
+        ],
+        'np': [
+            ['n'],
+            ['d', 'n'],
+            ['adj', 'n'],
+        ],
+        'vp': [
+            ['v'],
+            ['v', 'np'],
+            ['v', 'adv'],
+            ['adv', 'v'],
+        ],
+        'cp': [
+            ['c', 's'],
+        ],
+    }
+    words = {
+        'adj': [
+            'artistik',
+            'br[ae]wn',
+            'kold', 'kreyzy',
+            'dery[ng]g',
+            'rly',
+            'f[ae]st',
+            'greyt',
+            'hard', 'hu[ng]gry',
+            'intresti[ng]g',
+            'jaly',
+            'nuytly',
+            'litl', 'luvly', 'luky',
+            'moldy', 'metl',
+            'nuys',
+            'old',
+            'prity', 'prpl',
+            'kwik',
+            'red',
+            'si[ng]gy[ng]g',
+            'temporery',
+            'unkempt',
+            'v[ae]st',
+            'wity',
+            'yelo',
+            'zamby',
+        ],
+        'adv': [
+            'akwrdly', 'e[ng]grily',
+            'bori[ng]gly', 'beysikly',
+            'keri[ng]gly',
+            'jrayly',
+            'rly',
+            'fr[ae]ntikly',
+            'gler[ng]gly',
+            'h[ae]pily',
+            'impraprly',
+            'jelusly',
+            'nowy[ng]gly',
+            'libruly', 'l[ae]st',
+            'm[ae]nywly',
+            'n[ae]stily',
+            'openly',
+            'praprly',
+            'kwizikly',
+            'rily',
+            'sint[ae]ktikly', 'srtinly', 'skilf[uu]ly',
+            '[ch]rw[th]f[uu]ly',
+            'rjintly',
+            'veygly',
+            'wili[ng]gly',
+            'yrni[ng]gly',
+            'zelusly',
+        ],
+        'd': [
+            'u',
+            'hiz', 'hr',
+            'muy',
+            '[th_v]u',
+            'yor',
+        ],
+        'n': [
+            '[ae]pl', '[ae]ntytr',
+            'brd', 'bujy',
+            'k[ae]t', 'kunery',
+            'dag',
+            'elufint',
+            'fery',
+            'greyp',
+            'hipo',
+            'iglw',
+            'jelyfi[sh]',
+            'key[ng]gurww',
+            'luyma byn',
+            'm[ae]n', 'mi[ng]ks',
+            'nu[th][ng]g',
+            'askr',
+            'pal', 'pretzul',
+            'kwetzul',
+            'rojr',
+            's[ae]m', 'skwid',
+            'tim',
+            'umbrelu',
+            'vyikl',
+            'wumin',
+            'zaylufown',
+            'yeloj[ae]kit',
+            'zybru',
+        ],
+        'v': [
+            '[ae]kts',
+            'kunsidrz',
+            'yts',
+            'left',
+            'nowz',
+            'red',
+            'studyz', 'sed',
+        ],
+        'c': [
+            '[ae]nd',
+            'wuyl',
+            'but',
+            'hawevr',
+        ],
+    }
+    tree = ['s']
+    while any(i in decompositions for i in tree):
+        print(tree)
+        if len(tree) < 10:
+            while True:
+                i = random.randint(0, len(tree)-1)
+                v = tree[i]
+                if v in decompositions:
+                    tree = tree[:i] + random.choice(decompositions[v]) + tree[i+1:]
+                    break
+        else:
+            for i, v in enumerate(tree):
+                if v in decompositions:
+                    tree = tree[:i] + decompositions[v][0] + tree[i+1:]
+                    break
+    sentence = ' '.join(random.choice(words[i]) for i in tree)
+    print(sentence)
+    say(sentence)
+    return sentence
 
 if args.plot:
     import dansplotcore
