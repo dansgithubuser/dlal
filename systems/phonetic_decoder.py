@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description=
 )
 parser.add_argument('--phonetic_file_path', default='assets/phonetics')
 parser.add_argument('--phonetics')
+parser.add_argument('--tell-story', type=int)
 parser.add_argument('--plot', choices=['irs', 'spectra', 'pole-zero'])
 args = parser.parse_args()
 
@@ -330,7 +331,10 @@ else:
     tone.midi([0x90, 40, 0x7f])
     noise.midi([0x90, 60, 0x7f])
     dlal.typical_setup()
-    if args.phonetics:
+    if args.phonetics or type(args.tell_story) == int:
         tape.to_file_i16le_start()
-        say(args.phonetics)
+        if args.phonetics:
+            say(args.phonetics)
+        if type(args.tell_story) == int:
+            tell_story(args.tell_story)
         tape.to_file_i16le_stop()
