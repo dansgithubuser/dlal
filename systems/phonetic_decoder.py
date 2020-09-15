@@ -1,8 +1,6 @@
 #===== imports =====#
 import dlal
 
-from scipy import signal
-
 import argparse
 import glob
 import json
@@ -17,7 +15,7 @@ parser = argparse.ArgumentParser(description=
     'Takes phonetic parameters as produced by phonetic_encoder.py, '
     'and synthesizes a sound.'
 )
-parser.add_argument('--phonetic_file_path', default='assets/phonetics')
+parser.add_argument('--phonetic-file-path', default='assets/phonetics')
 parser.add_argument('--phonetics')
 parser.add_argument('--tell-story', type=int)
 parser.add_argument('--plot', choices=['irs', 'spectra', 'pole-zero'])
@@ -105,7 +103,7 @@ def say_one(phonetic):
     def hysteresis(curr, dst, c):
         return c * curr + (1 - c) * dst
 
-    duration = params.get('duration', SAMPLE_RATE / 8)
+    duration = params.get('duration', SAMPLE_RATE / 6)
     for frame_i, frame in enumerate(frames):
         frame_start = time.time()
         while time.time() - frame_start < duration / SAMPLE_RATE / len(frames):
@@ -369,7 +367,7 @@ def say_random():
             'askr',
             'pal', 'pretzul',
             'kwetzul',
-            'rojr',
+            'rajr',
             's[ae]m', 'skwid',
             'tim',
             'umbrelu',
@@ -452,7 +450,7 @@ if args.plot:
                         yf=unit_half[i+1][1],
                         r=0, g=0, b=255,
                     )
-                plot.series += 1
+                plot.next_series()
     else:
         if args.plot == 'spectra':
             plot = dansplotcore.Plot(
@@ -478,7 +476,7 @@ if args.plot:
                 audio.run()
     plot.show()
 else:
-    tone.midi([0x90, 40, 0x7f])
+    tone.midi([0x90, 42, 0x7f])
     noise.midi([0x90, 60, 0x7f])
     dlal.typical_setup()
     if args.phonetics or type(args.tell_story) == int:

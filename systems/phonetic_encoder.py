@@ -28,8 +28,7 @@ parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics
 parser.add_argument('--only')
 parser.add_argument('--start-from')
 parser.add_argument('--order', type=int, default=5)
-parser.add_argument('--plot-phonetic-spectra', action='store_true')
-parser.add_argument('--plot-filter-spectra', action='store_true')
+parser.add_argument('--plot-spectra', action='store_true')
 parser.add_argument('--plot-stop-ranges', action='store_true')
 args = parser.parse_args()
 
@@ -132,6 +131,105 @@ def plot_pole_zero(plot, z, p):
 def json_complex(re, im):
     return {'re': re, 'im': im}
 
+class Filter:
+    def __init__(self, p, z, k, n, envelope=None):
+        self.p = p
+        self.z = z
+        self.k = k
+        self.n = n
+        self.envelope = envelope
+
+    def all_p(self):
+        return self.p + [i.conjugate() for i in self.p]
+
+    def all_z(self):
+        return self.z + [i.conjugate() for i in self.z]
+
+    def calc_error(self):
+        w, h = self.spectrum()
+        return sum(
+            (abs(h_i) - envelope_i.amp) ** 2
+            for h_i, envelope_i
+            in zip(h, self.envelope)
+        )
+
+    def mutate(self, heat, max_pole_abs):
+        r = random.randint(0, 100)
+        if r < 80:
+            # move each pole toward unit circle or origin, increase or decrease gain
+            def mutate_one(i):
+                ret = i * abs(i) ** random.uniform(-0.5, 0.5)
+                if abs(ret) >= max_pole_abs:
+                    ret = i
+                return ret
+            k = self.k * random.uniform(0.5, 2) ** heat
+            if k == 0:
+                k = self.k
+            return Filter(
+                [mutate_one(i) for i in self.p],
+                self.z,
+                k,
+                self.n,
+                self.envelope,
+            )
+        else:
+            # alter frequency of a zero
+            i = random.randint(0, len(self.z)-1)
+            phase = cmath.phase(self.z[i])
+            if random.randint(0, 1):
+                if i == len(self.z)-1:
+                    p = math.pi
+                else:
+                    p = cmath.phase(self.p[i+1])
+            else:
+                p = cmath.phase(self.p[i])
+            t = random.uniform(0, heat)
+            phase = phase * (1-t) + p * t
+            z = copy.copy(self.z)
+            z[i] = cmath.rect(abs(z[i]), phase)
+            return Filter(self.p, z, self.k, self.n, self.envelope)
+
+    def tf(self):
+        return signal.zpk2tf(self.all_z(), self.all_p(), self.k)
+
+    def spectrum(self):
+        b, a = self.tf()
+        return signal.freqz(b, a, self.n//2+1, include_nyquist=True)
+
+    def h_max(self):
+        w, h = self.spectrum()
+        return max(float(abs(i)) for i in h)
+
+    def energy(self):
+        w, h = self.spectrum()
+        return sum((abs(i)/len(h))**2 for i in h)
+
+    def plot(self, log=False, bottom=None, plot=None):
+        w, h = self.spectrum()
+        if plot == None:
+            plot = dpc.Plot(primitive=dpc.primitives.Line())
+        if log:
+            f = lambda x: 20 * math.log10(x)
+        else:
+            f = lambda x: x
+        y = [f(float(abs(i))) for i in h]
+        if bottom:
+            y = [max(bottom, i) for i in y]
+        for i in self.p:
+            x = cmath.phase(i) / (2*math.pi) * self.n
+            xyi = plot.transform(x,  0, 0, plot.series)
+            xyf = plot.transform(x, 10, 0, plot.series)
+            plot.line(xyi['x'], xyi['y'], xyf['x'], xyf['y'], r=0, g=255, b=0)
+        for i in self.z:
+            x = cmath.phase(i) / (2*math.pi) * self.n
+            xyi = plot.transform(x,  0, 0, plot.series)
+            xyf = plot.transform(x, 10, 0, plot.series)
+            plot.line(xyi['x'], xyi['y'], xyf['x'], xyf['y'], r=255, g=0, b=0)
+        plot.plot(y)
+        if self.envelope:
+            plot.plot([f(i.amp) for i in self.envelope])
+        return plot
+
 def parameterize(x):
     #----- find formants -----#
     # parameters
@@ -192,89 +290,6 @@ def parameterize(x):
     ANNEALING_MULTIPLIER = 0.9
     BRANCHES = (1 << args.order) * 5
     MAX_POLE_ABS = 0.99
-    # helpers
-    class Filter:
-        def __init__(self, p, z, k):
-            self.p = p
-            self.z = z
-            self.k = k
-
-        def all_p(self):
-            return self.p + [i.conjugate() for i in self.p]
-
-        def all_z(self):
-            return self.z + [i.conjugate() for i in self.z]
-
-        def calc_error(self):
-            w, h = self.spectrum()
-            return sum((abs(h_i) - envelope_i.amp) ** 2 for h_i, envelope_i in zip(h, envelope))
-
-        def mutate(self, heat):
-            r = random.randint(0, 100)
-            if r < 80:
-                # move each pole toward unit circle or origin, increase or decrease gain
-                def mutate_one(i):
-                    ret = i * abs(i) ** random.uniform(-0.5, 0.5)
-                    if abs(ret) >= MAX_POLE_ABS:
-                        ret = i
-                    return ret
-                k = self.k * random.uniform(0.5, 2) ** heat
-                if k == 0:
-                    k = self.k
-                return Filter(
-                    [mutate_one(i) for i in self.p],
-                    self.z,
-                    k,
-                )
-            else:
-                # alter frequency of a zero
-                i = random.randint(0, len(self.z)-1)
-                phase = cmath.phase(self.z[i])
-                if random.randint(0, 1):
-                    if i == len(self.z)-1:
-                        p = math.pi
-                    else:
-                        p = cmath.phase(self.p[i+1])
-                else:
-                    p = cmath.phase(self.p[i])
-                t = random.uniform(0, heat)
-                phase = phase * (1-t) + p * t
-                z = copy.copy(self.z)
-                z[i] = cmath.rect(abs(z[i]), phase)
-                return Filter(self.p, z, self.k)
-
-        def tf(self):
-            return signal.zpk2tf(self.all_z(), self.all_p(), self.k)
-
-        def spectrum(self):
-            b, a = self.tf()
-            return signal.freqz(b, a, n//2+1, include_nyquist=True)
-
-        def h_max(self):
-            w, h = self.spectrum()
-            return max(float(abs(i)) for i in h)
-
-        def energy(self):
-            w, h = self.spectrum()
-            return sum((abs(i)/len(h))**2 for i in h)
-
-        def plot(self, log=False):
-            w, h = self.spectrum()
-            plot = dpc.Plot(primitive=dpc.primitives.Line())
-            if log:
-                f = lambda x: 20 * math.log10(x)
-            else:
-                f = lambda x: x
-            plot.plot([f(float(abs(i))) for i in h])
-            plot.plot([f(i.amp) for i in envelope])
-            for i in self.p:
-                x = cmath.phase(i) / (2*math.pi) * n
-                plot.line(x, 0, x, 100, r=0, g=255, b=0)
-            for i in self.z:
-                x = cmath.phase(i) / (2*math.pi) * n
-                plot.line(x, 0, x, 100, r=255, g=0, b=0)
-            plot.show()
-
     # init
     p = sorted([
         cmath.rect(min(0.9 * MAX_POLE_ABS, 1 - 1 / max(amp, 2)), freq)
@@ -290,12 +305,12 @@ def parameterize(x):
         abs(p[-1]),
         (cmath.phase(p[-1]) + math.pi) / 2,
     ))
-    fil = Filter(p, z, 1)
+    fil = Filter(p, z, 1, n, envelope)
     e = fil.calc_error()
     heat = HEAT
     # loop
     for i in range(STEPS):
-        fil_tries = [fil]+[fil.mutate(heat) for i in range(BRANCHES)]
+        fil_tries = [fil]+[fil.mutate(heat, MAX_POLE_ABS) for i in range(BRANCHES)]
         e_tries = [i.calc_error() for i in fil_tries]
         i = e_tries.index(min(e_tries))
         fil = fil_tries[i]
@@ -330,8 +345,6 @@ def parameterize(x):
     tone_amp = math.sqrt(power * tone)
     noise_amp = math.sqrt(power * (1 - tone))
     #----- outputs -----#
-    if args.plot_filter_spectra:
-        fil.plot()
     return {
         'poles': [json_complex(i.real, i.imag) for i in fil.p],
         'zeros': [json_complex(i.real, i.imag) for i in fil.z],
@@ -340,27 +353,28 @@ def parameterize(x):
         'noise_amp': noise_amp,
     }
 
-def analyze(x):
+def cut_stop(x):
+    step = len(x) // int(len(x) / 512)
+    return [x[i:i+step] for i in range(0, len(x)-step, step)]
+
+def cut_phonetic(x):
     ranges = stop_ranges(x)
     if ranges:
         i_i, i_f = ranges[0]
-        duration = i_f - i_i
-        i_step = duration // int(duration / 512)
-        frames = []
-        for i in range(
-            i_i,
-            i_f-i_step,
-            i_step
-        ):
-            print(i, i+i_step)
-            frames.append(parameterize(x[i:i+i_step]))
+        return cut_stop(x[i_i:i_f])
+    else:
+        return [x]
+
+def analyze(x):
+    cuts = cut_phonetic(x)
+    if len(cuts) == 1:
+        return parameterize(cuts[0])
+    else:
         return {
             'type': 'stop',
-            'duration': duration,
-            'frames': frames,
+            'duration': sum(len(cut) for cut in cuts),
+            'frames': [parameterize(cut) for cut in cuts],
         }
-    else:
-        return parameterize(x)
 
 #===== main =====#
 phonetics = [
@@ -368,9 +382,13 @@ phonetics = [
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j', '0',
 ]
-if args.plot_phonetic_spectra:
+if args.plot_spectra:
     plot = dpc.Plot(
-        transform=dpc.transforms.Grid(2100, 2000, 6),
+        transform=dpc.transforms.Compound(
+            dpc.transforms.Grid(300, 60, 8),
+            (dpc.transforms.Default(), 2),
+        ),
+        primitive=dpc.primitives.Line(),
         hide_axes=True,
     )
 for i, phonetic in enumerate(phonetics):
@@ -381,11 +399,36 @@ for i, phonetic in enumerate(phonetics):
     print(phonetic)
     if phonetic != '0':
         x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
-    if args.plot_phonetic_spectra:
+    if args.plot_spectra:
         if phonetic == '0':
             continue
-        plot.text(phonetic, **plot.transform(0, 0, 0, plot.series))
-        plot.plot([float(abs(i)) for i in fft(x[:4096])[:2049]])
+        asset_path = f'assets/phonetics/{phonetic}.phonetic.json'
+        if os.path.exists(asset_path):
+            with open(asset_path) as f:
+                asset = json.loads(f.read())
+            asset_iter = iter(asset.get('frames', [asset]))
+        else:
+            asset_iter = None
+        cuts = cut_phonetic(x)
+        for j, cut in enumerate(cuts):
+            name = phonetic
+            if len(cuts) != 1:
+                name += str(j)
+            t = plot.transform(-20, 0, 0, plot.series)
+            t.update({'r': 255, 'g': 0, 'b': 255})
+            plot.text(name, **t)
+            xf = fft(cut[:512])
+            xf = [math.log(float(abs(i))) for i in xf[:len(xf)//2+1]]
+            xf = [i for i in xf]
+            plot.plot(xf)
+            if asset_iter:
+                asset_frame = next(asset_iter)
+                poles = asset_frame['poles']
+                poles = [i['re'] + 1j * i['im'] for i in poles]
+                zeros = asset_frame['zeros']
+                zeros = [i['re'] + 1j * i['im'] for i in zeros]
+                gain = asset_frame['gain']
+                Filter(poles, zeros, gain, 512).plot(log=True, bottom=-10, plot=plot)
         continue
     if phonetic == '0':
         params = {
@@ -405,5 +448,5 @@ for i, phonetic in enumerate(phonetics):
     print(params)
     with open(out_file_path, 'w') as file:
         file.write(params)
-if args.plot_phonetic_spectra:
+if args.plot_spectra:
     plot.show()
