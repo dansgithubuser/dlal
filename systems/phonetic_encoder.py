@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(description=
     'and transforms into phonetic parameters that can be consumed by phonetic_decoder.py.'
 )
 parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
-parser.add_argument('--only')
+parser.add_argument('--only', nargs='+')
 parser.add_argument('--start-from')
 parser.add_argument('--order', type=int, default=5)
 parser.add_argument('--plot-spectra', action='store_true')
@@ -383,16 +383,19 @@ phonetics = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j', '0',
 ]
 if args.plot_spectra:
+    grid_w = 8
+    if args.only:
+        grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(300, 60, 8),
+            dpc.transforms.Grid(300, 60, grid_w),
             (dpc.transforms.Default(), 2),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
     )
 for i, phonetic in enumerate(phonetics):
-    if args.only and phonetic != args.only:
+    if args.only and phonetic not in args.only:
         continue
     if args.start_from and i < phonetics.index(args.start_from):
         continue
