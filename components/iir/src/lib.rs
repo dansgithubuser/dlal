@@ -3,6 +3,7 @@ use dlal_component_base::{command, err, gen_component, join, json, marg, uni, Vi
 use num_complex::Complex64;
 use polynomials::{Polynomial, poly};
 
+use std::collections::HashMap;
 use std::vec::Vec;
 
 fn hysteresis(a: &mut f64, b: f64, smooth: f64) {
@@ -201,6 +202,28 @@ impl SpecificsTrait for Specifics {
                 "args": ["poles", "zeros", "gain"],
                 "kwargs": ["smooth"],
             },
+        );
+        command!(
+            commands,
+            "pole_zero_get",
+            |soul, _body| {
+                Ok(Some(json!({
+                    "poles": soul.poles.iter().map(|i| {
+                        let mut ret = HashMap::new();
+                        ret.insert("re", i.re);
+                        ret.insert("im", i.im);
+                        ret
+                    }).collect::<Vec<_>>(),
+                    "zeros": soul.zeros.iter().map(|i| {
+                        let mut ret = HashMap::new();
+                        ret.insert("re", i.re);
+                        ret.insert("im", i.im);
+                        ret
+                    }).collect::<Vec<_>>(),
+                    "gain": soul.gain,
+                })))
+            },
+            { "args": ["b"] },
         );
         command!(
             commands,
