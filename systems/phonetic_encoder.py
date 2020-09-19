@@ -208,7 +208,8 @@ class Filter:
 
     def spectrum(self):
         b, a = self.tf()
-        return signal.freqz(b, a, self.n//2+1, include_nyquist=True)
+        w, h = signal.freqz(b, a, self.n//2+1, include_nyquist=True)
+        return w, h
 
     def h_max(self):
         w, h = self.spectrum()
@@ -334,7 +335,7 @@ def parameterize(x):
     if any(i.imag < 0 for i in fil.p) or any(abs(i) > MAX_POLE_ABS for i in fil.p):
         raise Exception('improper final pole')
     # normalize
-    fil.k /= math.sqrt(fil.energy())
+    fil.k /= fil.h_max()
     #----- tone vs noise -----#
     # autocorrelation
     freq_i = 60
@@ -436,10 +437,13 @@ for i, phonetic in enumerate(phonetics):
             t.update({'r': 255, 'g': 0, 'b': 255})
             plot.text(name, **t)
             xf = fft(cut[:4096])
-            xf = [math.log(float(abs(i))) for i in xf[:len(xf)//2+1]]
-            xf = [i for i in xf]
+            xf = xf[:len(xf)//2+1]
+            h_max = max(float(abs(i)) for i in xf)
+            xf = [i / h_max for i in xf]
+            xf = [math.log(float(abs(i))) for i in xf]
+            xf = [max(-10, i) for i in xf]
             if len(xf) < 4096:
-                plot.plot([i / len(xf) * 4096 for i in range(len(xf))], xf)
+                plot.plot([i / len(xf) * 2048 for i in range(len(xf))], xf)
             else:
                 plot.plot(xf)
             if asset_iter:
