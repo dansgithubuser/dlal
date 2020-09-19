@@ -95,39 +95,6 @@ def stop_ranges(x):
     # done
     return result
 
-# plot spectrum of sampled signal
-def plot_sample_spectrum(plot, x):
-    if plot == None:
-        plot = dpc.Plot()
-    f = fft(x)
-    plot.plot([
-        float(abs(i))
-        for i in f[:len(f) // 2 + 1]
-    ])
-    return plot
-
-# plot spectrum of filter(b, a)
-def plot_filter_spectrum(plot, b, a):
-    if plot == None:
-        plot = dpc.Plot()
-    w, h = signal.freqz(b, a)
-    plot.plot([float(abs(i)) for i in h])
-    return plot
-
-# plot poles and zeros of filter(z, p)
-def plot_pole_zero(plot, z, p):
-    if plot == None:
-        plot = dpc.Plot()
-    for i in range(1000):
-        x = math.cos(2*math.pi*i/1000)
-        y = math.sin(2*math.pi*i/1000)
-        plot.point(x=x, y=y, r=0, g=0)
-    for zero in z:
-        plot.line(xi=0, yi=0, xf=zero.real, yf=zero.imag, r=0, b=0)
-    for pole in p:
-        plot.line(xi=0, yi=0, xf=pole.real, yf=pole.imag, g=0, b=0)
-    return plot
-
 def json_complex(re, im):
     return {'re': re, 'im': im}
 
@@ -232,13 +199,13 @@ class Filter:
             y = [max(bottom, i) for i in y]
         for i in self.p:
             x = cmath.phase(i) / (2*math.pi) * self.n
-            xyi = plot.transform(x,  0, 0, plot.series)
-            xyf = plot.transform(x, 10, 0, plot.series)
+            xyi = plot.transform(x, 0, 0, plot.series)
+            xyf = plot.transform(x, 1, 0, plot.series)
             plot.line(xyi['x'], xyi['y'], xyf['x'], xyf['y'], r=0, g=255, b=0)
         for i in self.z:
             x = cmath.phase(i) / (2*math.pi) * self.n
-            xyi = plot.transform(x,  0, 0, plot.series)
-            xyf = plot.transform(x, 10, 0, plot.series)
+            xyi = plot.transform(x, 0, 0, plot.series)
+            xyf = plot.transform(x, 1, 0, plot.series)
             plot.line(xyi['x'], xyi['y'], xyf['x'], xyf['y'], r=255, g=0, b=0)
         plot.plot(y)
         if self.envelope:
@@ -386,10 +353,14 @@ def analyze(x):
     if len(cuts) == 1:
         return parameterize(cuts[0])
     else:
+        frames = []
+        for i, cut in enumerate(cuts):
+            print('frame', i)
+            frames.append(parameterize(cut))
         return {
             'type': 'stop',
             'duration': sum(len(cut) for cut in cuts),
-            'frames': [parameterize(cut) for cut in cuts],
+            'frames': frames,
         }
 
 #===== main =====#
@@ -404,7 +375,7 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(4200, 60, grid_w),
+            dpc.transforms.Grid(4200, 2, grid_w),
             (dpc.transforms.Default(), 2),
         ),
         primitive=dpc.primitives.Line(),
@@ -439,9 +410,7 @@ for i, phonetic in enumerate(phonetics):
             xf = fft(cut[:4096])
             xf = xf[:len(xf)//2+1]
             h_max = max(float(abs(i)) for i in xf)
-            xf = [i / h_max for i in xf]
-            xf = [math.log(float(abs(i))) for i in xf]
-            xf = [max(-10, i) for i in xf]
+            xf = [float(abs(i)) / h_max for i in xf]
             if len(xf) < 4096:
                 plot.plot([i / len(xf) * 2048 for i in range(len(xf))], xf)
             else:
@@ -453,7 +422,7 @@ for i, phonetic in enumerate(phonetics):
                 zeros = asset_frame['zeros']
                 zeros = [i['re'] + 1j * i['im'] for i in zeros]
                 gain = asset_frame['gain']
-                Filter(poles, zeros, gain, 4096).plot(log=True, bottom=-10, plot=plot)
+                Filter(poles, zeros, gain, 4096).plot(plot=plot)
         continue
     if phonetic == '0':
         params = {
