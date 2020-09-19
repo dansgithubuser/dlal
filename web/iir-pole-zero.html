@@ -34,6 +34,7 @@ const N = 1024; // samples of frequency response
 //===== globals =====//
 let gZeros = [];
 let gPoles = [];
+let gGain = 1;
 
 let gSelected;
 
@@ -87,6 +88,7 @@ function render() {
       if (j.im != 0)
         h_i = h_i.mul((z.sub(j.conjugate())));
     }
+    h_i = h_i.mul(gGain);
     h.push(h_i);
     if (h_i.abs() > h_max) h_max = h_i.abs();
     if (h_i.abs() < h_min) h_min = h_i.abs();
@@ -154,7 +156,6 @@ listenToTouches(CANVAS, {
     } else {
       gSelected = gZeros[i_min];
     }
-    console.log(gSelected);
   },
   onDrag(touches) {
     const { xi, yi, xf, yf } = touches[0];
@@ -166,15 +167,13 @@ listenToTouches(CANVAS, {
     const z = [];
     for (const i of gPoles) {
       p.push(i);
-      if (i.im != 0)
-        p.push(i.conjugate());
+      p.push(i.conjugate());
     }
     for (const i of gZeros) {
       z.push(i);
-      if (i.im != 0)
-        z.push(i.conjugate());
+      z.push(i.conjugate());
     }
-    command('pole_zero', [p, z]);
+    command('command', ['pole_zero', [p, z, String(gGain)]], { do_json_prep: false });
   },
   onEnd(id, x, y) {
     gSelected = null;
@@ -184,7 +183,22 @@ listenToTouches(CANVAS, {
 //===== setup =====//
 window.onload = function () {
   render();
-  socketConnect();
+  socketConnect({
+    onOpen: async () => {
+      const resp = await command('pole_zero_get');
+      const { poles, zeros, gain } = resp.result;
+      gPoles = [];
+      gZeros = [];
+      for (let i = 0; i < poles.length; i += 2) {
+        gPoles.push(Complex(poles[i]['re'], poles[i]['im']));
+      }
+      for (let i = 0; i < zeros.length; i += 2) {
+        gZeros.push(Complex(zeros[i]['re'], zeros[i]['im']));
+      }
+      gGain = gain;
+      render();
+    },
+  });
 }
 
 </script>
