@@ -155,7 +155,7 @@ class Filter:
 
     def mutate(self, heat, max_pole_abs):
         r = random.randint(0, 100)
-        if r < 80:
+        if r < 40:
             # move each pole toward unit circle or origin, increase or decrease gain
             def mutate_one(i):
                 ret = i * abs(i) ** random.uniform(-0.5, 0.5)
@@ -169,6 +169,20 @@ class Filter:
                 [mutate_one(i) for i in self.p],
                 self.z,
                 k,
+                self.n,
+                self.envelope,
+            )
+        elif r < 80:
+            # move each zero toward unit circle or origin
+            def mutate_one(i):
+                ret = i * abs(i) ** random.uniform(-0.5, 0.5)
+                if abs(ret) >= 1:
+                    ret = 1
+                return ret
+            return Filter(
+                self.p,
+                [mutate_one(i) for i in self.z],
+                self.k,
                 self.n,
                 self.envelope,
             )
@@ -285,10 +299,10 @@ def parameterize(x):
                 break
             i -= 1
     #----- gradient descent poles to match spectrum -----#
-    STEPS = 10
+    STEPS = 20
     HEAT = 1
-    ANNEALING_MULTIPLIER = 0.9
-    BRANCHES = (1 << args.order) * 5
+    ANNEALING_MULTIPLIER = 1
+    BRANCHES = (1 << args.order) * 10
     MAX_POLE_ABS = 0.99
     # init
     p = sorted([
@@ -309,12 +323,13 @@ def parameterize(x):
     e = fil.calc_error()
     heat = HEAT
     # loop
-    for i in range(STEPS):
+    for step in range(STEPS):
         fil_tries = [fil]+[fil.mutate(heat, MAX_POLE_ABS) for i in range(BRANCHES)]
         e_tries = [i.calc_error() for i in fil_tries]
         i = e_tries.index(min(e_tries))
         fil = fil_tries[i]
         e = e_tries[i]
+        print('step', step, 'error:', e)
         heat *= ANNEALING_MULTIPLIER
     if any(i.imag < 0 for i in fil.p) or any(abs(i) > MAX_POLE_ABS for i in fil.p):
         raise Exception('improper final pole')
