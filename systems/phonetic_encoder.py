@@ -197,16 +197,18 @@ class Filter:
         y = [f(float(abs(i))) for i in h]
         if bottom:
             y = [max(bottom, i) for i in y]
+        def transformed_line(xi, yi, xf, yf, r, g, b):
+            i = plot.transform(xi, yi, 0, plot.series)
+            f = plot.transform(xf, yf, 0, plot.series)
+            plot.line(i['x'], i['y'], f['x'], f['y'], r, g, b)
         for i in self.p:
             x = cmath.phase(i) / (2*math.pi) * self.n
-            xyi = plot.transform(x, 0, 0, plot.series)
-            xyf = plot.transform(x, 1, 0, plot.series)
-            plot.line(xyi['x'], xyi['y'], xyf['x'], xyf['y'], r=0, g=255, b=0)
+            transformed_line(x, 0, x, abs(i), 0, 255, 0)
+            transformed_line(x-10, abs(i)-0.1, x, abs(i), 0, 255, 0)
         for i in self.z:
             x = cmath.phase(i) / (2*math.pi) * self.n
-            xyi = plot.transform(x, 0, 0, plot.series)
-            xyf = plot.transform(x, 1, 0, plot.series)
-            plot.line(xyi['x'], xyi['y'], xyf['x'], xyf['y'], r=255, g=0, b=0)
+            transformed_line(x, 0, x, abs(i), 255, 0, 0)
+            transformed_line(x+10, abs(i)-0.1, x, abs(i), 255, 0, 0)
         plot.plot(y)
         if self.envelope:
             plot.plot([f(i.amp) for i in self.envelope])
@@ -376,7 +378,7 @@ if args.plot_spectra:
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
             dpc.transforms.Grid(4200, 2, grid_w),
-            (dpc.transforms.Default(), 2),
+            (dpc.transforms.Default('wb'), 2),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
@@ -408,9 +410,9 @@ for i, phonetic in enumerate(phonetics):
             t.update({'r': 255, 'g': 0, 'b': 255})
             plot.text(name, **t)
             xf = fft(cut[:4096])
-            xf = xf[:len(xf)//2+1]
-            h_max = max(float(abs(i)) for i in xf)
-            xf = [float(abs(i)) / h_max for i in xf]
+            xf = [float(abs(i)) for i in xf[:len(xf)//2+1]]
+            h_max = max(xf)
+            xf = [i / h_max for i in xf]
             if len(xf) < 4096:
                 plot.plot([i / len(xf) * 2048 for i in range(len(xf))], xf)
             else:
