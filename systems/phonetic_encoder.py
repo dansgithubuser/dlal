@@ -249,9 +249,9 @@ def parameterize(x):
     # parameters
     FREQUENCY = 100
     # consts
-    n = 1 << 12
+    n = 512
     while n > len(x):
-        n >>= 1
+        n //= 2
     spectrum = fft(x[:n])[:n//2+1]
     # calculate envelope
     width = FREQUENCY * n // SAMPLE_RATE + 1  # span enough bins that we ignore harmonics
