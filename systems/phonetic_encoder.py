@@ -403,7 +403,7 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(300, 60, grid_w),
+            dpc.transforms.Grid(4200, 60, grid_w),
             (dpc.transforms.Default(), 2),
         ),
         primitive=dpc.primitives.Line(),
@@ -435,10 +435,13 @@ for i, phonetic in enumerate(phonetics):
             t = plot.transform(-20, 0, 0, plot.series)
             t.update({'r': 255, 'g': 0, 'b': 255})
             plot.text(name, **t)
-            xf = fft(cut[:512])
+            xf = fft(cut[:4096])
             xf = [math.log(float(abs(i))) for i in xf[:len(xf)//2+1]]
             xf = [i for i in xf]
-            plot.plot(xf)
+            if len(xf) < 4096:
+                plot.plot([i / len(xf) * 4096 for i in range(len(xf))], xf)
+            else:
+                plot.plot(xf)
             if asset_iter:
                 asset_frame = next(asset_iter)
                 poles = asset_frame['poles']
@@ -446,7 +449,7 @@ for i, phonetic in enumerate(phonetics):
                 zeros = asset_frame['zeros']
                 zeros = [i['re'] + 1j * i['im'] for i in zeros]
                 gain = asset_frame['gain']
-                Filter(poles, zeros, gain, 512).plot(log=True, bottom=-10, plot=plot)
+                Filter(poles, zeros, gain, 4096).plot(log=True, bottom=-10, plot=plot)
         continue
     if phonetic == '0':
         params = {
