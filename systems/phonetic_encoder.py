@@ -189,8 +189,7 @@ class Filter:
 
     def spectrum(self):
         b, a = self.tf()
-        w, h = signal.freqz(b, a, self.n//2+1, include_nyquist=True)
-        return w, h
+        return signal.freqz(b, a, self.n//2+1, include_nyquist=True)
 
     def h_max(self):
         w, h = self.spectrum()
@@ -200,7 +199,7 @@ class Filter:
         w, h = self.spectrum()
         return sum((abs(i)/len(h))**2 for i in h)
 
-    def plot(self, log=False, bottom=None, plot=None):
+    def plot(self, log=False, bottom=None, scale=None, plot=None):
         w, h = self.spectrum()
         if plot == None:
             plot = dpc.Plot(primitive=dpc.primitives.Line())
@@ -209,6 +208,9 @@ class Filter:
         else:
             f = lambda x: x
         y = [f(float(abs(i))) for i in h]
+        if scale:
+            y_max = max(y)
+            y = [i/y_max*scale for i in y]
         if bottom:
             y = [max(bottom, i) for i in y]
         def transformed_line(xi, yi, xf, yf, r, g, b):
@@ -318,7 +320,7 @@ def parameterize(x):
     if any(i.imag < 0 for i in fil.p) or any(abs(i) > MAX_POLE_ABS for i in fil.p):
         raise Exception('improper final pole')
     # normalize
-    fil.k /= fil.h_max()
+    fil.k /= math.sqrt(fil.energy())
     #----- tone vs noise -----#
     # autocorrelation
     freq_i = 60
@@ -438,7 +440,7 @@ for i, phonetic in enumerate(phonetics):
                 zeros = asset_frame['zeros']
                 zeros = [i['re'] + 1j * i['im'] for i in zeros]
                 gain = asset_frame['gain']
-                Filter(poles, zeros, gain, 4096).plot(plot=plot)
+                Filter(poles, zeros, gain, 4096).plot(scale=1, plot=plot)
         continue
     if phonetic == '0':
         params = {
