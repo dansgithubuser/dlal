@@ -121,19 +121,38 @@ class Filter:
         )
 
     def mutate(self, heat, max_pole_abs):
+        # individual mutations
+        def mutate_pole(i):
+            ret = i * abs(i) ** random.uniform(-0.5, 0.5)
+            if abs(ret) >= max_pole_abs:
+                ret = i
+            return ret
+        def mutate_zero(i):
+            ret = i * abs(i) ** random.uniform(-0.5, 0.5)
+            if abs(ret) >= 1:
+                ret = 1
+            return ret
+        # total mutations
         r = random.randint(0, 100)
-        if r < 40:
+        if r < 20:
+            # move one pole
+            poles = copy.copy(self.p)
+            i = random.randint(0, len(poles)-1)
+            poles[i] = mutate_pole(poles[i])
+            return Filter(
+                poles,
+                self.z,
+                self.k,
+                self.n,
+                self.envelope,
+            )
+        elif r < 40:
             # move each pole toward unit circle or origin, increase or decrease gain
-            def mutate_one(i):
-                ret = i * abs(i) ** random.uniform(-0.5, 0.5)
-                if abs(ret) >= max_pole_abs:
-                    ret = i
-                return ret
             k = self.k * random.uniform(0.5, 2) ** heat
             if k == 0:
                 k = self.k
             return Filter(
-                [mutate_one(i) for i in self.p],
+                [mutate_pole(i) for i in self.p],
                 self.z,
                 k,
                 self.n,
@@ -141,14 +160,9 @@ class Filter:
             )
         elif r < 80:
             # move each zero toward unit circle or origin
-            def mutate_one(i):
-                ret = i * abs(i) ** random.uniform(-0.5, 0.5)
-                if abs(ret) >= 1:
-                    ret = 1
-                return ret
             return Filter(
                 self.p,
-                [mutate_one(i) for i in self.z],
+                [mutate_zero(i) for i in self.z],
                 self.k,
                 self.n,
                 self.envelope,
