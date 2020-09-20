@@ -114,11 +114,13 @@ class Filter:
 
     def calc_error(self):
         w, h = self.spectrum()
-        return sum(
-            (abs(h_i) - envelope_i.amp) ** 2
-            for h_i, envelope_i
-            in zip(h, self.envelope)
-        )
+        env_max = max([i.amp for i in self.envelope])
+        error = 0
+        for h_i, envelope_i in zip(h, self.envelope):
+            if envelope_i.amp < env_max / 50 and abs(h_i) < envelope_i.amp:
+                continue
+            error += (abs(h_i) - envelope_i.amp) ** 2
+        return error
 
     def mutate(self, heat, max_pole_abs):
         # individual mutations
