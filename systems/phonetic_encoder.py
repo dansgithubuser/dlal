@@ -11,6 +11,7 @@ import copy
 import json
 import math
 import os
+import pdb
 import random
 import re
 
@@ -30,10 +31,12 @@ parser.add_argument('--start-from')
 parser.add_argument('--order', type=int, default=5)
 parser.add_argument('--plot-spectra', action='store_true')
 parser.add_argument('--plot-stop-ranges', action='store_true')
+parser.add_argument('--mutate-interactive', action='store_true')
 args = parser.parse_args()
 
 #===== consts =====#
 SAMPLE_RATE = 44100
+FREQUENCY = 100  # of voice in args.phonetics_file_path
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -114,12 +117,12 @@ class Filter:
 
     def calc_error(self):
         w, h = self.spectrum()
-        env_max = max([i.amp for i in self.envelope])
+        env_max = max(self.envelope)
         error = 0
-        for h_i, envelope_i in zip(h, self.envelope):
-            if envelope_i.amp < env_max / 50 and abs(h_i) < envelope_i.amp:
+        for w_i, h_i, envelope_i in zip(w, h, self.envelope):
+            if envelope_i < env_max / 50 and abs(h_i) < envelope_i:
                 continue
-            error += (abs(h_i) - envelope_i.amp) ** 2
+            error += (abs(h_i) - envelope_i) ** 2
         return error
 
     def mutate(self, heat, max_pole_abs):
@@ -217,19 +220,22 @@ class Filter:
             transformed_line(x+10, abs(i)-0.1, x, abs(i), 255, 0, 0)
         plot.plot(y)
         if self.envelope:
-            plot.plot([f(i.amp) for i in self.envelope])
+            y = [f(i) for i in self.envelope]
+            if scale:
+                y_max = max(y)
+                y = [scale*i/y_max for i in y]
+            x = [(self.n//2+1)*i/len(self.envelope) for i in range(len(self.envelope))]
+            plot.plot(x, y)
         return plot
 
-def parameterize(x):
-    #----- find formants -----#
-    # parameters
-    FREQUENCY = 100
-    # consts
+def calc_n(x):
     n = 512
     while n > len(x):
         n //= 2
+    return n
+
+def calc_envelope(x, n):
     spectrum = fft(x[:n])[:n//2+1]
-    # calculate envelope
     width = FREQUENCY * n // SAMPLE_RATE + 1  # span enough bins that we ignore harmonics
     envelope = []
     for i in range(len(spectrum)):
@@ -243,6 +249,13 @@ def parameterize(x):
         for j in range(j_i, j_f):
             amp = max(amp, float(abs(spectrum[j])))
         envelope.append(amp)
+    return envelope
+
+def parameterize(x):
+    #----- find formants -----#
+    # consts
+    n = calc_n(x)
+    envelope = calc_envelope(x, n)
     # calculate frequency of formants
     class Amp:
         def __init__(self, amp):
@@ -295,18 +308,24 @@ def parameterize(x):
         abs(p[-1]),
         (cmath.phase(p[-1]) + math.pi) / 2,
     ))
-    fil = Filter(p, z, 1, n, envelope)
+    fil = Filter(p, z, 1, n, [i.amp for i in envelope])
     e = fil.calc_error()
     heat = HEAT
     # loop
-    for step in range(STEPS):
-        fil_tries = [fil]+[fil.mutate(heat, MAX_POLE_ABS) for i in range(BRANCHES)]
+    step = 0
+    while step < STEPS:
+        if step == STEPS-1 and args.mutate_interactive:
+            fil_tries = [copy.deepcopy(fil)]
+            pdb.set_trace()
+        else:
+            fil_tries = [fil]+[fil.mutate(heat, MAX_POLE_ABS) for i in range(BRANCHES)]
         e_tries = [i.calc_error() for i in fil_tries]
         i = e_tries.index(min(e_tries))
         fil = fil_tries[i]
         e = e_tries[i]
         print('step', step, 'error:', e)
         heat *= ANNEALING_MULTIPLIER
+        step += 1
     if any(i.imag < 0 for i in fil.p) or any(abs(i) > MAX_POLE_ABS for i in fil.p):
         raise Exception('improper final pole')
     # normalize
@@ -384,7 +403,7 @@ if args.plot_spectra:
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
             dpc.transforms.Grid(4200, 2, grid_w),
-            (dpc.transforms.Default('wb'), 2),
+            (dpc.transforms.Default('wby'), 3),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
@@ -430,7 +449,8 @@ for i, phonetic in enumerate(phonetics):
                 zeros = asset_frame['zeros']
                 zeros = [i['re'] + 1j * i['im'] for i in zeros]
                 gain = asset_frame['gain']
-                Filter(poles, zeros, gain, 4096).plot(scale=1, plot=plot)
+                envelope = calc_envelope(cut, calc_n(cut))
+                Filter(poles, zeros, gain, 4096, envelope).plot(scale=1, plot=plot)
         continue
     if phonetic == '0':
         params = {
