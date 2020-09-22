@@ -296,9 +296,11 @@ def impulse_response(ci, co, driver):
             ir.extend(tape.read())
         train.disconnect(ci)
         co.disconnect(tape)
+    train.__del__()
+    tape.__del__()
     return ir
 
-def frequency_response(ci, co, driver, n=64, settling_time=1):
+def frequency_response(ci, co, driver, n=64, settling_time=0.01):
     from . import Osc
     from . import Tape
     settling_runs = int(settling_time * driver.sample_rate() / driver.samples_per_evaluation())
@@ -319,4 +321,8 @@ def frequency_response(ci, co, driver, n=64, settling_time=1):
             for _ in range(settling_runs):
                 driver.run()
                 tape.read()
+        osc.disconnect(ci)
+        co.disconnect(tape)
+    osc.__del__()
+    tape.__del__()
     return fr

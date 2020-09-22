@@ -1,6 +1,6 @@
 use dlal_component_base::{
-    arg, arg_num, arg_str, command, err, gen_component, join, json, json_get, json_num, kwarg_num,
-    multi, JsonValue, View,
+    arg, arg_num, arg_str, command, err, gen_component, join, json, json_get, json_num, json_nums,
+    kwarg_num, multi, JsonValue, View,
 };
 
 use std::collections::HashMap;
@@ -59,6 +59,21 @@ impl SpecificsTrait for Specifics {
             ["samples_per_evaluation", "sample_rate"],
         );
         multi!(connect commands, true);
+        command!(
+            commands,
+            "set",
+            |soul, body| {
+                let samples: Vec<f32> = json_nums(arg(&body, 0)?)?;
+                for i in 0..samples.len() {
+                    if i >= soul.audio.len() {
+                        break;
+                    }
+                    soul.audio[i] = samples[i];
+                }
+                Ok(None)
+            },
+            { "args": ["samples"] },
+        );
         command!(
             commands,
             "load",

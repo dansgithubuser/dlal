@@ -96,6 +96,6 @@ export async function getComponent(name) {
   return gComponents[name];
 }
 
-export function command(c, args = []) {
-  return socketSend(`${getUrlParam('component')}.${c}`, { args });
+export function command(c, args = [], kwargs = {}) {
+  return socketSend(`${getUrlParam('component')}.${c}`, { args, kwargs });
 }

@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, args, command, gen_component, json, kwarg_num, multi, View};
+use dlal_component_base::{arg_num, args, command, err, gen_component, json, kwarg_num, multi, View};
 
 use colored::*;
 use portaudio as pa;
@@ -130,6 +130,9 @@ impl SpecificsTrait for Specifics {
                     if let Some(index) = soul.addees[slot].iter().position(|i| i.raw == view.raw) {
                         soul.addees[slot].remove(index);
                         break;
+                    }
+                    if slot == soul.addees.len() - 1 {
+                        return err!("no such component");
                     }
                 }
                 Ok(None)

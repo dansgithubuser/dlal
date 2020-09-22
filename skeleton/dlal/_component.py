@@ -82,15 +82,14 @@ class Component:
         if Component._driver: Component._driver.add(self, slot)
 
     def __del__(self):
-        self._remove()
+        if hasattr(self, 'deleted'):
+            return
+        del Component._components[self.name]
         self._lib.destruct(self._raw)
+        self.deleted = True
 
     def __repr__(self):
         return self.name
-
-    def _remove(self):
-        if self.name in Component._components:
-            del Component._components[self.name]
 
     def command(self, name, args=[], kwargs={}, do_json_prep=True, timeout_ms=20):
         if do_json_prep: args, kwargs = json_prep(args, kwargs)
