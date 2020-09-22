@@ -227,7 +227,7 @@ class Filter:
         return plot
 
 def calc_n(x):
-    n = 512
+    n = 4096
     while n > len(x):
         n //= 2
     return n

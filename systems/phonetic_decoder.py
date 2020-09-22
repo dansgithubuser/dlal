@@ -372,7 +372,7 @@ def say_random():
             'tim',
             'umbrelu',
             'vyikl',
-            'wumin',
+            'w[uu]min',
             'zaylufown',
             'yeloj[ae]kit',
             'zybru',
