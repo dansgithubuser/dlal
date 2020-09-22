@@ -136,19 +136,7 @@ class Filter:
             return ret
         # total mutations
         r = random.randint(0, 100)
-        if r < 20:
-            # move one pole
-            poles = copy.copy(self.p)
-            i = random.randint(0, len(poles)-1)
-            poles[i] = mutate_pole(poles[i])
-            return Filter(
-                poles,
-                self.z,
-                self.k,
-                self.n,
-                self.envelope,
-            )
-        elif r < 40:
+        if r < 40:
             # move each pole toward unit circle or origin, increase or decrease gain
             k = self.k * random.uniform(0.5, 2) ** heat
             if k == 0:
@@ -290,7 +278,7 @@ def parameterize(x):
     STEPS = 20
     HEAT = 1
     ANNEALING_MULTIPLIER = 1
-    BRANCHES = (1 << args.order) * 10
+    BRANCHES = 320
     MAX_POLE_ABS = 0.99
     # init
     p = sorted([
