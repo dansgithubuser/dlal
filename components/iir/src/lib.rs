@@ -183,9 +183,13 @@ impl SpecificsTrait for Specifics {
                     .collect::<Result<_, _>>()?;
                 // gain
                 let gain = marg!(arg_num &body, 2)?;
-                // finish
-                if let Ok(smooth) = marg!(kwarg &body, "smooth") {
-                    soul.smooth = Some(smooth.as_f64().ok_or_else(|| "smooth isn't a number")?);
+                // smooth
+                let smooth = match marg!(kwarg &body, "smooth") {
+                    Ok(smooth) => smooth.as_f64().ok_or_else(|| "smooth isn't a number")?,
+                    Err(_) => 0.0,
+                };
+                if smooth != 0.0 {
+                    soul.smooth = Some(smooth);
                     soul.poles_dst = poles;
                     soul.zeros_dst = zeros;
                     soul.gain_dst = gain;
@@ -196,6 +200,7 @@ impl SpecificsTrait for Specifics {
                     soul.gain = gain;
                     soul.pole_zero();
                 }
+                // finish
                 Ok(None)
             },
             {

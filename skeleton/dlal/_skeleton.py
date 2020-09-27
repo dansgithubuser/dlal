@@ -17,6 +17,7 @@ import re as _re
 class _Default: pass
 
 def driver_set(driver):
+    'Setting a driver causes components to be added to it when they are constructed.'
     result = _Component._driver
     _Component._driver = driver
     return result
