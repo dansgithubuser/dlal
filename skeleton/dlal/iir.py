@@ -31,7 +31,7 @@ class Iir(Component):
         p = cmath.rect(1 - width, w)
         z_w = cmath.rect(1, w)
         gain = peak * abs((z_w - p)*(z_w - p.conjugate()))
-        self.command(
+        self.command_detach(
             'pole_zero',
             [
                 [
