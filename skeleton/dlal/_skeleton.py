@@ -6,7 +6,10 @@ It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
 from ._server import audio_broadcast_start, serve
-from ._utils import snake_to_upper_camel_case as _snake_to_upper_camel_case
+from ._utils import (
+    snake_to_upper_camel_case as _snake_to_upper_camel_case,
+    iterable as _iterable,
+)
 
 import midi
 
@@ -49,8 +52,9 @@ def connect(*instructions):
     '''\
     Terse connection function.
 
-    Each instruction can be a component or a list.
+    Each instruction can be a component, list, or tuple.
     Components or lists of components are fully connected from left to right.
+    Tuples of components are connected component-wise from left to right.
     Components may be subsystems.
 
     For example,
@@ -62,7 +66,11 @@ def connect(*instructions):
     - `e` to `g`
     - `f` to `g`
 
-    Lists may also contain special instruction strings (SISs).
+    `connect((a, b), (c, d))` connects
+    - `a` to `c`
+    - `b` to `d`
+
+    Lists and tuples may also contain special instruction strings (SISs).
     Components that are listed in an instruction _before_ any SISs are "primary".
     Primary components are fully connected from left to right.
 
@@ -110,7 +118,7 @@ def connect(*instructions):
     instr_prev = None
     for instr in instructions:
         # normalize instruction type
-        if type(instr) != list: instr = [instr]
+        if not _iterable(instr): instr = [instr]
         # special instructions
         last_primary = None
         i = 0
@@ -132,14 +140,22 @@ def connect(*instructions):
             else:
                 last_primary = instr[i]
                 i += 1
-        # connect all primary components in previous instruction
-        # to all primary components in current instruction
+        # primary component connections
         if instr_prev:
-            for src in instr_prev:
-                if type(src) == str: break
-                for dst in instr:
-                    if type(dst) == str: break
+            if type(instr_prev) == tuple and type(instr) == tuple:
+                # connect primary components in previous instruction component-wise
+                # to primary components in current instruction
+                for src, dst in zip(instr_prev, instr):
+                    if type(src) == str or type(dst) == str: break
                     connect_agnostic(src, dst)
+            else:
+                # connect all primary components in previous instruction
+                # to all primary components in current instruction
+                for src in instr_prev:
+                    if type(src) == str: break
+                    for dst in instr:
+                        if type(dst) == str: break
+                        connect_agnostic(src, dst)
         # prep for next
         instr_prev = instr
 
