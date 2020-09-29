@@ -9,6 +9,9 @@ class Subsystem:
         self.inputs = [self.components[i] for i in inputs]
         self.outputs = [self.components[i] for i in outputs]
 
+    def __repr__(self):
+        return self.name
+
     def add(self, name, kind=None, args=[], kwargs={}):
         from ._skeleton import component_class
         if kind == None:

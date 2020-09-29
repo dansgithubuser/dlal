@@ -51,6 +51,7 @@ def connect(*instructions):
 
     Each instruction can be a component or a list.
     Components or lists of components are fully connected from left to right.
+    Components may be subsystems.
 
     For example,
     `connect(a, b, [c, d], [e, f], g)` connects
@@ -88,6 +89,24 @@ def connect(*instructions):
     - `c` to `f`
     - `d` to `f`
     '''
+
+    def connect_agnostic(a, b):
+        from ._subsystem import Subsystem
+        if isinstance(a, _Component):
+            if isinstance(b, _Component):
+                a.connect(b)
+            elif isinstance(b, Subsystem):
+                b.connect_inputs(a)
+            else:
+                raise Exception(f'not sure how to connect to {b}')
+        elif isinstance(a, Subsystem):
+            if isinstance(b, _Component):
+                a.connect_outputs(b)
+            else:
+                raise Exception('not sure how to connect subsystem to {b}')
+        else:
+            raise Exception(f'not sure how to connect {a}')
+
     instr_prev = None
     for instr in instructions:
         # normalize instruction type
@@ -98,17 +117,17 @@ def connect(*instructions):
         while i < len(instr):
             if instr[i] == '>':
                 i += 1
-                last_primary.connect(instr[i])
+                connect_agnostic(last_primary, instr[i])
                 i += 1
-                while i < len(instr) and isinstance(instr[i], _Component):
-                    instr[i-1].connect(instr[i])
+                while i < len(instr) and type(instr[i]) != str:
+                    connect_agnostic(instr[i-1], instr[i])
                     i += 1
             elif instr[i] == '<':
                 i += 1
-                instr[i].connect(last_primary)
+                connect_agnostic(instr[i], last_primary)
                 i += 1
-                while i < len(instr) and isinstance(instr[i], _Component):
-                    instr[i].connect(instr[i-1])
+                while i < len(instr) and type(instr[i]) != str:
+                    connect_agnostic(instr[i], instr[i-1])
                     i += 1
             else:
                 last_primary = instr[i]
@@ -117,10 +136,10 @@ def connect(*instructions):
         # to all primary components in current instruction
         if instr_prev:
             for src in instr_prev:
-                if not isinstance(src, _Component): break
+                if type(src) == str: break
                 for dst in instr:
-                    if not isinstance(dst, _Component): break
-                    src.connect(dst)
+                    if type(dst) == str: break
+                    connect_agnostic(src, dst)
         # prep for next
         instr_prev = instr
 
