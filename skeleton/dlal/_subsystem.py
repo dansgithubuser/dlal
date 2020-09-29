@@ -40,18 +40,3 @@ class Subsystem:
     def disconnect_outputs(self, other):
         for i in self.outputs:
             i.disconnect(other)
-
-class Bpf(Subsystem):
-    def __init__(self, order=1, name='bpf'):
-        components = {}
-        for i in range(1, order+1):
-            components[f'lpf{i}'] = ('lpf', [], {})
-            components[f'hpf{i}'] = ('hpf', [], {})
-        Subsystem.__init__(self, name,
-            components, components.keys(), components.keys())
-
-    def freq(self, freq, sample_rate=None):
-        args = [freq]
-        if sample_rate: args.append(sample_rate)
-        for i in self.components.values():
-            i.freq(*args)
