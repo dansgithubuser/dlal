@@ -19,3 +19,6 @@ class Comm(Component):
             ],
             do_json_prep=False,
         )
+
+    def wait(self, samples):
+        return self.command_immediate('wait', [samples])
