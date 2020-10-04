@@ -112,72 +112,89 @@ def calc_envelope(x, n):
         envelope.append(amp / n)
     return envelope
 
-def parameterize(x):
-    #----- find formants -----#
-    # consts
-    n = calc_n(x)
-    envelope = calc_envelope(x, n)
-    # calculate frequency of formants
-    class Amp:
-        def __init__(self, amp):
-            self.amp = amp
-            self.visited = False
+def parameterize(x=None):
+    if x:
+        #----- find formants -----#
+        # consts
+        n = calc_n(x)
+        envelope = calc_envelope(x, n)
+        # calculate frequency of formants
+        class Amp:
+            def __init__(self, amp):
+                self.amp = amp
+                self.visited = False
 
-    envelope = [Amp(i) for i in envelope]
-    formants = {}
-    for i in range(args.order):
-        # find center of max unvisited formant
-        peak_amp = max([i.amp for i in envelope if not i.visited])
-        peak_i = [i.amp for i in envelope].index(peak_amp)
-        peak_f = peak_i
-        while peak_f+1 < len(envelope) and envelope[peak_f+1].amp == peak_amp:
-            peak_f += 1
-        freq = (peak_i + peak_f) / 2 * SAMPLE_RATE
-        formants[freq] = peak_amp
-        # visit right
-        i = peak_i
-        while i+1 < len(envelope):
-            envelope[i].visited = True
-            if envelope[i].amp < envelope[i+1].amp:
+        envelope = [Amp(i) for i in envelope]
+        formants = []
+        for i in range(args.order):
+            # find center of max unvisited formant
+            peak_amp = max([i.amp for i in envelope if not i.visited])
+            peak_i = [i.amp for i in envelope].index(peak_amp)
+            peak_f = peak_i
+            while peak_f+1 < len(envelope) and envelope[peak_f+1].amp == peak_amp:
+                peak_f += 1
+            freq = (peak_i + peak_f) / 2 / n * SAMPLE_RATE
+            formants.append({
+                'freq': freq,
+                'amp': peak_amp,
+            })
+            # visit right
+            i = peak_i
+            while i+1 < len(envelope):
+                envelope[i].visited = True
+                if envelope[i].amp < envelope[i+1].amp:
+                    break
+                i += 1
+            # visit left
+            i = peak_i
+            while i-1 >= 0:
+                envelope[i].visited = True
+                if envelope[i].amp < envelope[i-1].amp:
+                    break
+                i -= 1
+        formants = sorted(formants, key=lambda i: i['freq'])
+        #----- tone vs noise -----#
+        # autocorrelation
+        freq_i = 60
+        freq_f = 120
+        shift_i = int(SAMPLE_RATE / freq_f)
+        shift_f = int(SAMPLE_RATE / freq_i)
+        max_ac = 0
+        min_ac_samples = 128
+        for shift in range(shift_i, shift_f):
+            ac_samples = len(x) - shift
+            if ac_samples <= min_ac_samples:
                 break
-            i += 1
-        # visit left
-        i = peak_i
-        while i-1 >= 0:
-            envelope[i].visited = True
-            if envelope[i].amp < envelope[i-1].amp:
-                break
-            i -= 1
-    #----- tone vs noise -----#
-    # autocorrelation
-    freq_i = 60
-    freq_f = 120
-    shift_i = int(SAMPLE_RATE / freq_f)
-    shift_f = int(SAMPLE_RATE / freq_i)
-    max_ac = 0
-    min_ac_samples = 128
-    for shift in range(shift_i, shift_f):
-        ac_samples = len(x) - shift
-        if ac_samples <= min_ac_samples:
-            break
-        ac = abs(autocorrelation(x, shift))
-        ac_power = ac / ac_samples
-        ac = ac_power * len(x)  # for fair comparison w energy
-        if ac > max_ac:
-            max_ac = ac
-    # energy
-    energy = sum(i**2 for i in x)
-    power = energy / len(x)
-    # amplitudes
-    tone = min(max_ac / energy, 1)
-    tone_amp = math.sqrt(power * tone)
-    noise_amp = math.sqrt(power * (1 - tone))
-    #----- outputs -----#
-    return {
-        'formants': formants,
-        'tone_amp': tone_amp,
-        'noise_amp': noise_amp,
-    }
+            ac = abs(autocorrelation(x, shift))
+            ac_power = ac / ac_samples
+            ac = ac_power * len(x)  # for fair comparison w energy
+            if ac > max_ac:
+                max_ac = ac
+        # energy
+        energy = sum(i**2 for i in x)
+        power = energy / len(x)
+        # amplitudes
+        tone = min(max_ac / energy, 1)
+        tone_amp = math.sqrt(power * tone)
+        noise_amp = math.sqrt(power * (1 - tone))
+        #----- outputs -----#
+        return {
+            'formants': formants,
+            'tone_amp': tone_amp,
+            'noise_amp': noise_amp,
+        }
+    else:
+        return {
+            'formants': [
+                {
+                    'freq': 0,
+                    'amp': 0,
+                }
+                for i in range(args.order)
+            ],
+            'tone_amp': 0,
+            'noise_amp': 0,
+        }
 
 def cut_stop(x):
     step = len(x) // int(len(x) / 512)
@@ -191,10 +208,18 @@ def cut_phonetic(x):
     else:
         return [x]
 
-def analyze(x):
+def analyze(x=None):
+    if x == None:
+        return {
+            'type': 'continuant',
+            'frames': [parameterize()],
+        }
     cuts = cut_phonetic(x)
     if len(cuts) == 1:
-        return parameterize(cuts[0])
+        return {
+            'type': 'continuant',
+            'frames': [parameterize(cuts[0])],
+        }
     else:
         frames = []
         for i, cut in enumerate(cuts):
@@ -218,15 +243,10 @@ for i, phonetic in enumerate(phonetics):
     if args.start_from and i < phonetics.index(args.start_from):
         continue
     print(phonetic)
-    if phonetic != '0':
-        x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
     if phonetic == '0':
-        params = {
-            'formants': {0: 0 for i in range(args.order)},
-            'tone_amp': 0,
-            'noise_amp': 0,
-        }
+        params = analyze()
     else:
+        x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
         params = analyze(x)
     out_file_path = os.path.join(
         os.path.dirname(args.phonetics_file_path),

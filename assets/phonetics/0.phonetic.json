@@ -1,7 +1,31 @@
 {
-  "formants": {
-    "0": 0
-  },
-  "tone_amp": 0,
-  "noise_amp": 0
+  "type": "continuant",
+  "frames": [
+    {
+      "formants": [
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        }
+      ],
+      "tone_amp": 0,
+      "noise_amp": 0
+    }
+  ]
 }
