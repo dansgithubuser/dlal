@@ -25,7 +25,8 @@ def driver_set(driver):
     _Component._driver = driver
     return result
 
-def queue_set(comm):
+def comm_set(comm):
+    'Setting a comm causes components to use it to queue commands.'
     _Component._comm = comm
 
 class Immediate:
@@ -35,6 +36,17 @@ class Immediate:
 
     def __exit__(self, *args):
         _Component._comm = self.comm
+
+class UseComm:
+    def __init__(self, comm):
+        self.comm = comm
+
+    def __enter__(self):
+        self.old_comm = _Component._comm
+        _Component._comm = self.comm
+
+    def __exit__(self, *args):
+        _Component._comm = self.old_comm
 
 def component(name, default=_Default):
     if default == _Default:
@@ -179,7 +191,7 @@ def typical_setup():
             audio.start()
             atexit.register(lambda: audio.stop())
         if comm:
-            queue_set(comm)
+            comm_set(comm)
         serve()
 
 def system_info():

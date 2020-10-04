@@ -196,5 +196,5 @@ class Component:
             str(ctypes.cast(self._lib.evaluate, ctypes.c_void_p).value),
         ]
 
-def queue_set(comm):
+def comm_set(comm):
     Component._comm = comm
