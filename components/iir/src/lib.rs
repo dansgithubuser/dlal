@@ -232,6 +232,60 @@ impl SpecificsTrait for Specifics {
         );
         command!(
             commands,
+            "single_pole_bandpass",
+            |soul, body| {
+                let w = marg!(arg_num &body, 0)?;
+                let width: f64 = marg!(arg_num &body, 1)?;
+                let peak = marg!(arg_num &body, 2).unwrap_or(1.0);
+                let smooth = marg!(arg_num &body, 3).unwrap_or(0.0);
+                /* How would we get a peak of 1?
+                H(z) = gain / ((z - p)*(z - p.conjugate()))
+                We can control gain
+                Max response is at z_w = cmath.rect(1, w)
+                gain = abs((z_w - p)*(z_w - p.conjugate())) */
+                let p = Complex64::from_polar(1.0 - width, w);
+                let z_w = Complex64::from_polar(1.0, w);
+                let gain = peak * ((z_w - p) * (z_w - p.conj())).norm();
+                if smooth != 0.0 {
+                    soul.smooth = Some(smooth);
+                    soul.poles_dst = vec![p, p.conj()];
+                    soul.zeros_dst = vec![];
+                    soul.gain_dst = gain;
+                } else {
+                    soul.smooth = None;
+                    soul.poles = vec![p, p.conj()];
+                    soul.zeros = vec![];
+                    soul.gain = gain;
+                    soul.pole_zero();
+                }
+                Ok(None)
+            },
+            {
+                "args": [
+                    {
+                        "name": "w",
+                        "desc": "angular frequency",
+                        "range": "[0, 2*pi)",
+                    },
+                    {
+                        "name": "width",
+                        "range": "(0, 1]",
+                    },
+                    {
+                        "name": "peak",
+                        "default": 1,
+                        "range": "[0, 1]",
+                    },
+                    {
+                        "name": "smooth",
+                        "default": 0,
+                        "range": "[0, 1]",
+                    },
+                ],
+            },
+        );
+        command!(
+            commands,
             "wash",
             |soul, _body| {
                 let result = Ok(Some(json!(soul.d)));
