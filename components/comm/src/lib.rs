@@ -25,8 +25,8 @@ gen_component!(Specifics, {"in": ["cmd"], "out": ["cmd"]});
 
 impl SpecificsTrait for Specifics {
     fn new() -> Self {
-        let (to_audio_send, to_audio_recv) = multiqueue2::mpmc_queue(64);
-        let (fro_audio_send, fro_audio_recv) = multiqueue2::mpmc_queue(64);
+        let (to_audio_send, to_audio_recv) = multiqueue2::mpmc_queue(128);
+        let (fro_audio_send, fro_audio_recv) = multiqueue2::mpmc_queue(128);
         Self {
             to_audio_send,
             to_audio_recv: to_audio_recv.into_single().expect("into_single failed"),

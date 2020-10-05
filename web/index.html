@@ -120,7 +120,7 @@ async function updateDiagram() {
   gSystemInfo = (await socketSend('system_info'))['result'];
   const diagram = (await socketSend('system_diagram'))['result'];
   e('diagram').innerHTML = diagram.split('\n').map(i => {
-    return i.replace(/(.*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => { 
+    return i.replace(/([^[]*\[)([^|]+)(\|*)(\].*)/, (match, left, name, space, right) => {
       const connectify = (s, side, name) => `<span class='wire' onclick="wire('${name}', '${side}')" id="${name}-${side}">` + s + '</span>';
       const kind = gSystemInfo['components'][name].kind;
       return [

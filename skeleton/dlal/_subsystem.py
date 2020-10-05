@@ -1,4 +1,4 @@
-from ._skeleton import connect as _connect
+from ._skeleton import connect as _connect, UseComm as _UseComm
 
 import glob
 import json
@@ -81,6 +81,7 @@ class IirBank(Subsystem):
 class Phonetizer(IirBank):
     def __init__(self, name, phonetics_path='assets/phonetics', sample_rate=44100):
         Subsystem.__init__(self, name, {
+            'comm': 'comm',
             'tone_gain': ('gain', [0]),
             'tone_buf': 'buf',
             'noise_gain': ('gain', [0]),
@@ -100,10 +101,31 @@ class Phonetizer(IirBank):
             phonetic = os.path.basename(path).split('.')[0]
             with open(path) as file:
                 self.phonetics[phonetic] = json.loads(file.read())
+        self.phonetic_name = '0'
         # sample rate
         self.sample_rate = sample_rate
+        # filter init
+        self.say('0', 0, smooth=0)
 
-    def say(self, phonetics, smooth=0):
-        for iir, (freq, peak) in zip(self.iirs, self.phonetics[phonetic]['formants'].items()):
-            w = freq / self.sample_rate * 2 * math.pi
-            iir.single_pole_bandpass(w, 0.01, peak, smooth)
+    def say(self, phonetic_name, continuant_wait=44100//8, smooth=None):
+        phonetic = self.phonetics[phonetic_name]
+        if smooth == None:
+            if any([
+                self.phonetic_name == '0',  # starting from silence
+                phonetic['type'] == 'stop',  # moving to stop
+                self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
+            ]):
+                smooth = 0.7
+            else:  # moving between continuants
+                smooth = 0.9
+        wait = phonetic.get('duration', continuant_wait)
+        with _UseComm(self.comm):
+            for frame in phonetic['frames']:
+                self.tone_gain.command_detach('set', [frame['tone_amp'], smooth])
+                self.noise_gain.command_detach('set', [frame['noise_amp'], smooth])
+                for iir, formant in zip(self.iirs, frame['formants']):
+                    w = formant['freq'] / self.sample_rate * 2 * math.pi
+                    iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
+                self.comm.wait(wait // len(phonetic['frames']))
+        self.phonetic_name = phonetic_name
+        return wait
