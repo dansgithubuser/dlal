@@ -1,5 +1,6 @@
 from ._component import Component
 
+import cmath
 import math
 
 class Iir(Component):

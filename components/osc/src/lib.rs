@@ -39,6 +39,7 @@ pub struct Specifics {
     bend: f32,
     step: f32,
     phase: f32,
+    vol: f32,
     output: Option<View>,
 }
 
@@ -65,6 +66,7 @@ impl SpecificsTrait for Specifics {
             sample_rate: 44100,
             wave_str: "sin".into(),
             wave: wave_sin,
+            vol: 1.0,
             bend: 1.0,
             step: 0.0,
             phase: 0.0,
@@ -169,10 +171,12 @@ impl SpecificsTrait for Specifics {
         }
         match msg[0] & 0xf0 {
             0x90 => {
-                if msg[2] != 0 {
-                    self.step = 440.0 * 2.0_f32.powf((msg[1] as f32 - 69.0) / 12.0)
-                        / self.sample_rate as f32;
-                }
+                self.step = 440.0 * 2.0_f32.powf((msg[1] as f32 - 69.0) / 12.0)
+                    / self.sample_rate as f32;
+                self.vol = msg[2] as f32 / 127.0;
+            }
+            0x80 => {
+                self.vol = 0.0;
             }
             _ => {}
         }
@@ -182,7 +186,7 @@ impl SpecificsTrait for Specifics {
         for i in uni!(audio self).iter_mut() {
             self.phase += self.step * self.bend;
             self.phase -= self.phase.floor();
-            *i += (self.wave)(self.phase);
+            *i += self.vol * (self.wave)(self.phase);
         }
     }
 }

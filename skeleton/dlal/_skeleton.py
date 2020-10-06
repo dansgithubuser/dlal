@@ -6,7 +6,10 @@ It serves as an interface to such logic.'''
 
 from ._component import Component as _Component, component_kinds
 from ._server import audio_broadcast_start, serve
-from ._utils import snake_to_upper_camel_case as _snake_to_upper_camel_case
+from ._utils import (
+    snake_to_upper_camel_case as _snake_to_upper_camel_case,
+    iterable as _iterable,
+)
 
 import midi
 
@@ -17,11 +20,13 @@ import re as _re
 class _Default: pass
 
 def driver_set(driver):
+    'Setting a driver causes components to be added to it when they are constructed.'
     result = _Component._driver
     _Component._driver = driver
     return result
 
-def queue_set(comm):
+def comm_set(comm):
+    'Setting a comm causes components to use it to queue commands.'
     _Component._comm = comm
 
 class Immediate:
@@ -31,6 +36,17 @@ class Immediate:
 
     def __exit__(self, *args):
         _Component._comm = self.comm
+
+class UseComm:
+    def __init__(self, comm):
+        self.comm = comm
+
+    def __enter__(self):
+        self.old_comm = _Component._comm
+        _Component._comm = self.comm
+
+    def __exit__(self, *args):
+        _Component._comm = self.old_comm
 
 def component(name, default=_Default):
     if default == _Default:
@@ -48,8 +64,10 @@ def connect(*instructions):
     '''\
     Terse connection function.
 
-    Each instruction can be a component or a list.
+    Each instruction can be a component, list, or tuple.
     Components or lists of components are fully connected from left to right.
+    Tuples of components are connected component-wise from left to right.
+    Components may be subsystems.
 
     For example,
     `connect(a, b, [c, d], [e, f], g)` connects
@@ -60,7 +78,11 @@ def connect(*instructions):
     - `e` to `g`
     - `f` to `g`
 
-    Lists may also contain special instruction strings (SISs).
+    `connect((a, b), (c, d))` connects
+    - `a` to `c`
+    - `b` to `d`
+
+    Lists and tuples may also contain special instruction strings (SISs).
     Components that are listed in an instruction _before_ any SISs are "primary".
     Primary components are fully connected from left to right.
 
@@ -87,39 +109,65 @@ def connect(*instructions):
     - `c` to `f`
     - `d` to `f`
     '''
+
+    def connect_agnostic(a, b):
+        from ._subsystem import Subsystem
+        if isinstance(a, _Component):
+            if isinstance(b, _Component):
+                a.connect(b)
+            elif isinstance(b, Subsystem):
+                b.connect_inputs(a)
+            else:
+                raise Exception(f'not sure how to connect to {b}')
+        elif isinstance(a, Subsystem):
+            if isinstance(b, _Component):
+                a.connect_outputs(b)
+            else:
+                raise Exception('not sure how to connect subsystem to {b}')
+        else:
+            raise Exception(f'not sure how to connect {a}')
+
     instr_prev = None
     for instr in instructions:
         # normalize instruction type
-        if type(instr) != list: instr = [instr]
+        if not _iterable(instr): instr = [instr]
         # special instructions
         last_primary = None
         i = 0
         while i < len(instr):
             if instr[i] == '>':
                 i += 1
-                last_primary.connect(instr[i])
+                connect_agnostic(last_primary, instr[i])
                 i += 1
-                while i < len(instr) and isinstance(instr[i], _Component):
-                    instr[i-1].connect(instr[i])
+                while i < len(instr) and type(instr[i]) != str:
+                    connect_agnostic(instr[i-1], instr[i])
                     i += 1
             elif instr[i] == '<':
                 i += 1
-                instr[i].connect(last_primary)
+                connect_agnostic(instr[i], last_primary)
                 i += 1
-                while i < len(instr) and isinstance(instr[i], _Component):
-                    instr[i].connect(instr[i-1])
+                while i < len(instr) and type(instr[i]) != str:
+                    connect_agnostic(instr[i], instr[i-1])
                     i += 1
             else:
                 last_primary = instr[i]
                 i += 1
-        # connect all primary components in previous instruction
-        # to all primary components in current instruction
+        # primary component connections
         if instr_prev:
-            for src in instr_prev:
-                if not isinstance(src, _Component): break
-                for dst in instr:
-                    if not isinstance(dst, _Component): break
-                    src.connect(dst)
+            if type(instr_prev) == tuple and type(instr) == tuple:
+                # connect primary components in previous instruction component-wise
+                # to primary components in current instruction
+                for src, dst in zip(instr_prev, instr):
+                    if type(src) == str or type(dst) == str: break
+                    connect_agnostic(src, dst)
+            else:
+                # connect all primary components in previous instruction
+                # to all primary components in current instruction
+                for src in instr_prev:
+                    if type(src) == str: break
+                    for dst in instr:
+                        if type(dst) == str: break
+                        connect_agnostic(src, dst)
         # prep for next
         instr_prev = instr
 
@@ -143,7 +191,7 @@ def typical_setup():
             audio.start()
             atexit.register(lambda: audio.stop())
         if comm:
-            queue_set(comm)
+            comm_set(comm)
         serve()
 
 def system_info():

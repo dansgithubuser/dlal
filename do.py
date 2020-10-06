@@ -35,6 +35,7 @@ parser.add_argument('--run', '-r', nargs='?', const=True, help=(
     'run interactive Python with dlal imported, '
     'or run specified system, optionally with args'
 ))
+parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
 parser.add_argument('--web', '-w', action='store_true',
     help='open web interface and run web server'
 )
@@ -352,6 +353,8 @@ if args.run:
         os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'skeleton')
     else:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
+    if args.debug:
+        os.environ['DLAL_LOG_LEVEL'] = 'debug'
     if args.run != True:
         invoke('python', '-i', *args.run.split())
     else:

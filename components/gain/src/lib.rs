@@ -2,6 +2,8 @@ use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View
 
 pub struct Specifics {
     amount: f32,
+    amount_dst: f32,
+    smooth: f32,
     samples_per_evaluation: usize,
     output: Option<View>,
 }
@@ -12,6 +14,8 @@ impl SpecificsTrait for Specifics {
     fn new() -> Self {
         Self {
             amount: 1.0,
+            amount_dst: 1.0,
+            smooth: 0.0,
             samples_per_evaluation: 0,
             output: None,
         }
@@ -31,10 +35,14 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
+                soul.amount_dst = arg_num(&body, 0)?;
+                soul.smooth = arg_num(&body, 1).unwrap_or(0.0);
+                if soul.smooth == 0.0 {
+                    soul.amount = soul.amount_dst;
+                }
                 Ok(None)
             },
-            { "args": ["gain"] },
+            { "args": ["gain", "smooth"] },
         );
         command!(
             commands,
@@ -59,5 +67,6 @@ impl SpecificsTrait for Specifics {
                 *i *= self.amount;
             }
         }
+        self.amount = self.smooth * self.amount + (1.0 - self.smooth) * self.amount_dst;
     }
 }

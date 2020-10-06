@@ -1,49 +1,31 @@
 {
-  "poles": [
+  "type": "continuant",
+  "frames": [
     {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
+      "formants": [
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        },
+        {
+          "freq": 0,
+          "amp": 0
+        }
+      ],
+      "tone_amp": 0,
+      "noise_amp": 0
     }
-  ],
-  "zeros": [
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    },
-    {
-      "re": 0,
-      "im": 0
-    }
-  ],
-  "gain": 0,
-  "tone_amp": 0,
-  "noise_amp": 0
+  ]
 }
