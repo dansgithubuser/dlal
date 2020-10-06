@@ -4,6 +4,7 @@ import dlal
 from numpy.fft import fft
 
 import argparse
+import cmath
 import json
 import math
 import os
@@ -23,6 +24,7 @@ parser.add_argument('--only', nargs='+')
 parser.add_argument('--start-from')
 parser.add_argument('--order', type=int, default=5)
 parser.add_argument('--plot-stop-ranges', action='store_true')
+parser.add_argument('--plot-spectra', action='store_true')
 args = parser.parse_args()
 
 #===== consts =====#
@@ -231,28 +233,70 @@ def analyze(x=None):
             'frames': frames,
         }
 
+def plot_spectrum(formants, n, plot):
+    from scipy import signal
+    spectrum = [0]*(n // 2 + 1)
+    for formant in formants:
+        w = formant['freq'] / SAMPLE_RATE * 2*math.pi
+        width = 0.01
+        p = cmath.rect(1.0 - width, w);
+        z_w = cmath.rect(1.0, w);
+        gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate()));
+        b, a = signal.zpk2tf([], [p, p.conjugate()], gain)
+        w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
+        for i in range(len(spectrum)):
+            spectrum[i] += h[i]
+    plot.plot([float(abs(i)) for i in spectrum])
+
 #===== main =====#
 phonetics = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j', '0',
 ]
+if args.plot_spectra:
+    grid_w = 8
+    if args.only:
+        grid_w = 1
+    plot = dpc.Plot(
+        transform=dpc.transforms.Compound(
+            dpc.transforms.Grid(4200, 2, grid_w),
+            (dpc.transforms.Default('wby'), 3),
+        ),
+        primitive=dpc.primitives.Line(),
+        hide_axes=True,
+    )
 for i, phonetic in enumerate(phonetics):
     if args.only and phonetic not in args.only:
         continue
     if args.start_from and i < phonetics.index(args.start_from):
         continue
-    print(phonetic)
-    if phonetic == '0':
-        params = analyze()
-    else:
-        x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
-        params = analyze(x)
     out_file_path = os.path.join(
         os.path.dirname(args.phonetics_file_path),
         phonetic + '.phonetic.json',
     )
-    params = json.dumps(params, indent=2)
-    print(params)
-    with open(out_file_path, 'w') as file:
-        file.write(params)
+    if args.plot_spectra:
+        if phonetic == '0': continue
+        x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
+        n = calc_n(x)
+        with open(out_file_path) as file:
+            params = json.loads(file.read())
+        t = plot.transform(-20, 0, 0, plot.series)
+        t.update({'r': 255, 'g': 0, 'b': 255})
+        plot.text(phonetic, **t)
+        plot.plot([float(abs(i)) / n for i in fft(x[:n])[:n//2+1]])
+        plot.plot(calc_envelope(x, n))
+        plot_spectrum(params['frames'][0]['formants'], n, plot)
+    else:
+        print(phonetic)
+        if phonetic == '0':
+            params = analyze()
+        else:
+            x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
+            params = analyze(x)
+        params = json.dumps(params, indent=2)
+        print(params)
+        with open(out_file_path, 'w') as file:
+            file.write(params)
+if args.plot_spectra:
+    plot.show()
