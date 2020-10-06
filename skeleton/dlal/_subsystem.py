@@ -79,7 +79,14 @@ class IirBank(Subsystem):
             self.iirs[-1].connect(self.bufs[-1])
 
 class Phonetizer(IirBank):
-    def __init__(self, name, phonetics_path='assets/phonetics', sample_rate=44100):
+    def __init__(
+        self,
+        name,
+        tone_pregain=1,
+        noise_pregain=1,
+        phonetics_path='assets/phonetics',
+        sample_rate=44100,
+    ):
         Subsystem.__init__(self, name, {
             'comm': 'comm',
             'tone_gain': ('gain', [0]),
@@ -95,6 +102,9 @@ class Phonetizer(IirBank):
         )
         # inputs must be explicit
         self.inputs = None
+        # pregains
+        self.tone_pregain = tone_pregain
+        self.noise_pregain = noise_pregain
         # phonetics
         self.phonetics = {}
         for path in glob.glob(os.path.join(phonetics_path, '*.phonetic.json')):
@@ -121,8 +131,8 @@ class Phonetizer(IirBank):
         wait = phonetic.get('duration', continuant_wait)
         with _UseComm(self.comm):
             for frame in phonetic['frames']:
-                self.tone_gain.command_detach('set', [frame['tone_amp'], smooth])
-                self.noise_gain.command_detach('set', [frame['noise_amp'], smooth])
+                self.tone_gain.command_detach('set', [frame['tone_amp'] * self.tone_pregain, smooth])
+                self.noise_gain.command_detach('set', [frame['noise_amp'] * self.noise_pregain, smooth])
                 for iir, formant in zip(self.iirs, frame['formants']):
                     w = formant['freq'] / self.sample_rate * 2 * math.pi
                     iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])

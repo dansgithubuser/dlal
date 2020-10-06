@@ -111,7 +111,7 @@ def calc_envelope(x, n):
         amp = 0
         for j in range(j_i, j_f):
             amp = max(amp, float(abs(spectrum[j])))
-        envelope.append(amp / n)
+        envelope.append(amp / math.sqrt(n))
     return envelope
 
 def parameterize(x=None):
@@ -284,7 +284,7 @@ for i, phonetic in enumerate(phonetics):
         t = plot.transform(-20, 0, 0, plot.series)
         t.update({'r': 255, 'g': 0, 'b': 255})
         plot.text(phonetic, **t)
-        plot.plot([float(abs(i)) / n for i in fft(x[:n])[:n//2+1]])
+        plot.plot([float(abs(i)) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]])
         plot.plot(calc_envelope(x, n))
         plot_spectrum(params['frames'][0]['formants'], n, plot)
     else:

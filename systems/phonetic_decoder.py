@@ -28,7 +28,7 @@ dlal.driver_set(audio)
 comm = dlal.Comm()
 tone = dlal.Train(name='tone')
 noise = dlal.Osc('noise', name='noise')
-phonetizer = dlal.subsystem.Phonetizer('phonetizer')
+phonetizer = dlal.subsystem.Phonetizer('phonetizer', tone_pregain=10, noise_pregain=20)
 tape = dlal.Tape(size=44100*5)
 
 dlal.connect(
@@ -162,12 +162,12 @@ def tell_story(i=0):
         ''',
         # 2
         '''
-        [[th_v]u] [wurd] [l[ay]ydy] [iz] a [trm] [uv] [respekt] [for] a [grl] [or] [w[uu]min],
+        [[th_v]u] [wrd] [l[ay]ydy] [iz] a [trm] [uv] [respekt] [for] a [grl] [or] [w[uu]min],
         [[th_v]u] [ekwivulent] [uv] [jentlmin].
         ''',
         # 3
         '''
-        [tw[ng]kl] [tw[ng]kl] [litl] [star]
+        [twi[ng]kl] [twi[ng]kl] [litl] [star]
         ''',
         # 4
         '''
