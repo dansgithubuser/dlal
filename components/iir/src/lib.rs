@@ -1,10 +1,9 @@
-use dlal_component_base::{command, err, gen_component, join, json, marg, uni, View};
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body, Error, Arg, serde_json};
 
 use num_complex::Complex64;
 use polynomials::{Polynomial, poly};
 
 use std::collections::HashMap;
-use std::vec::Vec;
 
 fn hysteresis(a: &mut f64, b: f64, smooth: f64) {
     *a = *a * smooth + b * (1.0 - smooth);
@@ -105,7 +104,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -115,10 +114,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "a",
             |soul, body| {
-                if let Ok(a) = marg!(arg &body, 0) {
-                    let a = marg!(json_f64s a)?;
+                if let Ok(a) = body.arg::<Vec<_>>(0) {
+                    let a = a.vec()?;
                     if a.len() == 0 {
-                        return err!("expecting an array with at least one element");
+                        Error::err("expecting an array with at least one element")?;
                     }
                     soul.set_a(a);
                 }
@@ -131,8 +130,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "b",
             |soul, body| {
-                if let Ok(b) = marg!(arg &body, 0) {
-                    soul.set_b(marg!(json_f64s b)?);
+                if let Ok(b) = body.arg::<Vec<_>>(0) {
+                    soul.set_b(b.vec()?);
                 }
                 soul.smooth = None;
                 Ok(Some(json!(soul.b)))
@@ -144,50 +143,19 @@ impl SpecificsTrait for Specifics {
             "pole_zero",
             |soul, body| {
                 // poles
-                let poles: Vec<Complex64> = marg!(arg &body, 0)?
-                    .as_array()
-                    .ok_or_else(|| err!(box "expecting an array, but didn't get one"))?
-                    .iter()
-                    .map::<Result<Complex64, String>, _>(|i| {
-                        let re = i
-                            .get("re")
-                            .unwrap_or(&json!(0))
-                            .as_f64()
-                            .ok_or_else(|| "real component isn't a number")?;
-                        let im = i
-                            .get("im")
-                            .unwrap_or(&json!(0))
-                            .as_f64()
-                            .ok_or_else(|| "imaginary component isn't a number")?;
-                        Ok(Complex64::new(re, im))
-                    })
-                    .collect::<Result<_, _>>()?;
+                let poles: Vec<Complex64> = body.arg::<Vec<_>>(0)?
+                    .vec_map(|i| {
+                        Ok(Complex64::new(i.at("re")?, i.at("im")?))
+                    })?;
                 // zeros
-                let zeros: Vec<Complex64> = marg!(arg &body, 1)?
-                    .as_array()
-                    .ok_or_else(|| err!(box "expecting an array, but didn't get one"))?
-                    .iter()
-                    .map::<Result<Complex64, String>, _>(|i| {
-                        let re = i
-                            .get("re")
-                            .unwrap_or(&json!(0))
-                            .as_f64()
-                            .ok_or_else(|| "real component isn't a number")?;
-                        let im = i
-                            .get("im")
-                            .unwrap_or(&json!(0))
-                            .as_f64()
-                            .ok_or_else(|| "imaginary component isn't a number")?;
-                        Ok(Complex64::new(re, im))
-                    })
-                    .collect::<Result<_, _>>()?;
+                let zeros: Vec<Complex64> = body.arg::<Vec<_>>(1)?
+                    .vec_map(|i| {
+                        Ok(Complex64::new(i.at("re")?, i.at("im")?))
+                    })?;
                 // gain
-                let gain = marg!(arg_num &body, 2)?;
+                let gain = body.arg(2)?;
                 // smooth
-                let smooth = match marg!(kwarg &body, "smooth") {
-                    Ok(smooth) => smooth.as_f64().ok_or_else(|| "smooth isn't a number")?,
-                    Err(_) => 0.0,
-                };
+                let smooth = body.kwarg("smooth").unwrap_or(0.0);
                 if smooth != 0.0 {
                     soul.smooth = Some(smooth);
                     soul.poles_dst = poles;
@@ -234,10 +202,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "single_pole_bandpass",
             |soul, body| {
-                let w = marg!(arg_num &body, 0)?;
-                let width: f64 = marg!(arg_num &body, 1)?;
-                let peak = marg!(arg_num &body, 2).unwrap_or(1.0);
-                let smooth = marg!(arg_num &body, 3).unwrap_or(0.0);
+                let w = body.arg(0)?;
+                let width = body.arg::<f64>(1)?;
+                let peak = body.arg(2).unwrap_or(1.0);
+                let smooth = body.arg(3).unwrap_or(0.0);
                 /* How would we get a peak of 1?
                 H(z) = gain / ((z - p)*(z - p.conjugate()))
                 We can control gain
@@ -311,9 +279,9 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.set_a(marg!(json_f64s marg!(json_get j, "a")?)?);
-                soul.set_b(marg!(json_f64s marg!(json_get j, "b")?)?);
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.set_a(j.at::<Vec<_>>("a")?.vec()?);
+                soul.set_b(j.at::<Vec<_>>("b")?.vec()?);
                 Ok(None)
             },
             { "args": ["json"] },

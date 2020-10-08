@@ -41,4 +41,4 @@ class Liner(Component):
         return self.command_immediate('get_midi_all')
 
     def from_json(self, j):
-        self.command('from_json', [j], do_json_prep=False)
+        self.command('from_json', [j])

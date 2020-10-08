@@ -225,7 +225,7 @@ function commandPoleZero() {
     z.push(i);
     z.push(i.conjugate());
   }
-  command('command_detach', ['pole_zero', [p, z, String(gGain)]], { do_json_prep: false });
+  command('command_detach', ['pole_zero', [p, z, String(gGain)]]);
 }
 
 //===== setup =====//

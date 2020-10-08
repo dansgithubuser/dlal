@@ -1,6 +1,4 @@
-use dlal_component_base::{gen_component, join, multi, View};
-
-use std::vec::Vec;
+use dlal_component_base::{gen_component, join, multi, View, Body};
 
 const SENTINEL: u8 = 0xff;
 
@@ -73,8 +71,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             ["samples_per_evaluation", "sample_rate"],

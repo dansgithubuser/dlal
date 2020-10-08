@@ -1,9 +1,7 @@
 use dlal_component_base::{
-    arg, arg_num, arg_str, command, gen_component, join, json, json_from_str, json_get, json_num,
-    json_str, kwarg_num, multi, View,
+    command, gen_component, join, json, serde_json,
+    multi, View, Body,
 };
-
-use std::vec::Vec;
 
 const MODE_F32: u8 = 0;
 const MODE_I32: u8 = 1;
@@ -37,7 +35,7 @@ impl SpecificsTrait for Specifics {
             commands,
             |soul, body| {
                 soul.cv
-                    .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
+                    .resize(body.kwarg("samples_per_evaluation")?, 0.0);
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -47,7 +45,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "format",
             |soul, body| {
-                soul.format = arg_str(&body, 0)?.to_string();
+                soul.format = body.arg(0)?;
                 Ok(Some(json!(soul.format)))
             },
             {
@@ -58,7 +56,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "mode",
             |soul, body| {
-                soul.mode = arg_num(&body, 0)?;
+                soul.mode = body.arg(0)?;
                 Ok(Some(json!(soul.mode)))
             },
             {
@@ -69,7 +67,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "m",
             |soul, body| {
-                soul.m = arg_num(&body, 0)?;
+                soul.m = body.arg(0)?;
                 Ok(Some(json!(soul.m)))
             },
             {
@@ -80,7 +78,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "b",
             |soul, body| {
-                soul.b = arg_num(&body, 0)?;
+                soul.b = body.arg(0)?;
                 Ok(Some(json!(soul.b)))
             },
             {
@@ -114,11 +112,11 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = arg(&body, 0)?;
-                soul.m = json_num(json_get(j, "m")?)?;
-                soul.b = json_num(json_get(j, "b")?)?;
-                soul.mode = json_num(json_get(j, "mode")?)?;
-                soul.format = json_str(json_get(j, "format")?)?.to_string();
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.m = j.at("m")?;
+                soul.b = j.at("b")?;
+                soul.mode = j.at("mode")?;
+                soul.format = j.at("format")?;
                 Ok(None)
             },
             { "args": ["json"] },
@@ -128,8 +126,8 @@ impl SpecificsTrait for Specifics {
     fn evaluate(&mut self) {
         let y = self.m * self.cv[0] + self.b;
         let text = match self.mode {
-            MODE_F32 => self.format.replace("%", &y.to_string()),
-            MODE_I32 => self.format.replace("%", &(y as i32).to_string()),
+            MODE_F32 => self.format.replace(r#""%""#, &y.to_string()),
+            MODE_I32 => self.format.replace(r#""%""#, &(y as i32).to_string()),
             MODE_PITCH_WHEEL => {
                 let y = y as i32;
                 let y = {
@@ -142,12 +140,12 @@ impl SpecificsTrait for Specifics {
                     }
                 };
                 self.format
-                    .replace("%l", &(y & 0x7f).to_string())
-                    .replace("%h", &(y >> 7).to_string())
+                    .replace(r#""%l""#, &(y & 0x7f).to_string())
+                    .replace(r#""%h""#, &(y >> 7).to_string())
             }
             _ => return,
         };
-        if let Ok(body) = json_from_str(&text) {
+        if let Ok(body) = serde_json::from_str(&text) {
             for output in &self.outputs {
                 if let Some(result) = output.command(&body) {
                     if let Some(error) = result.get("error") {

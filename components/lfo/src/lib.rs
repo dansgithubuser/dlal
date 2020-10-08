@@ -1,5 +1,5 @@
 use dlal_component_base::{
-    arg, arg_num, command, gen_component, join, json, json_get, json_num, uni, View,
+    command, gen_component, join, json, uni, View, Body, serde_json,
 };
 
 use std::f32::consts::PI;
@@ -29,8 +29,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             ["samples_per_evaluation", "sample_rate"],
@@ -40,7 +40,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "freq",
             |soul, body| {
-                if let Ok(v) = arg_num::<f32>(&body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.freq = v;
                 }
                 Ok(Some(json!(soul.freq)))
@@ -56,7 +56,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "amp",
             |soul, body| {
-                if let Ok(v) = arg_num::<f32>(&body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.amp = v;
                 }
                 Ok(Some(json!(soul.amp)))
@@ -83,9 +83,9 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = arg(&body, 0)?;
-                soul.freq = json_num(json_get(j, "freq")?)?;
-                soul.amp = json_num(json_get(j, "amp")?)?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.freq = j.at("freq")?;
+                soul.amp = j.at("amp")?;
                 Ok(None)
             },
             { "args": ["json"] },

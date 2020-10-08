@@ -1,6 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, marg, multi, View};
-
-use std::vec::Vec;
+use dlal_component_base::{command, gen_component, join, json, multi, View, Body};
 
 #[derive(Default)]
 pub struct Specifics {
@@ -23,7 +21,7 @@ impl SpecificsTrait for Specifics {
             commands,
             |soul, body| {
                 soul.audio
-                    .resize(marg!(kwarg_num & body, "samples_per_evaluation")?, 0.0);
+                    .resize(body.kwarg("samples_per_evaluation")?, 0.0);
                 Ok(None)
             },
             ["samples_per_evaluation"],

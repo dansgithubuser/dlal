@@ -1,6 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, marg, multi, View};
-
-use std::vec::Vec;
+use dlal_component_base::{command, gen_component, join, json, multi, View, Body, serde_json};
 
 #[derive(Default)]
 pub struct Specifics {
@@ -27,7 +25,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -37,7 +35,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "soft",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.soft = v;
                 }
                 Ok(Some(json!(soul.soft)))
@@ -53,7 +51,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "soft_gain",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.soft_gain = v;
                 }
                 Ok(Some(json!(soul.soft_gain)))
@@ -69,7 +67,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "hard",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.hard = v;
                     if soul.soft > soul.hard {
                         soul.soft = soul.hard;
@@ -100,10 +98,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.soft = marg!(json_num marg!(json_get j, "soft")?)?;
-                soul.soft_gain = marg!(json_num marg!(json_get j, "soft_gain")?)?;
-                soul.hard = marg!(json_num marg!(json_get j, "hard")?)?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.soft = j.at("soft")?;
+                soul.soft_gain = j.at("soft_gain")?;
+                soul.hard = j.at("hard")?;
                 Ok(None)
             },
             { "args": ["json"] },

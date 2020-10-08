@@ -1,6 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, marg, multi, View};
-
-use std::vec::Vec;
+use dlal_component_base::{command, gen_component, join, json, multi, View, Body, serde_json};
 
 #[derive(Default)]
 pub struct Specifics {
@@ -22,7 +20,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -32,7 +30,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "mode",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.mode = v;
                 }
                 Ok(Some(json!(soul.mode)))
@@ -59,8 +57,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.mode= marg!(json_num marg!(json_get j, "mode")?)?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.mode = j.at("mode")?;
                 Ok(None)
             },
             { "args": ["json"] },

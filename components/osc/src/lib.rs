@@ -1,4 +1,4 @@
-use dlal_component_base::{command, err, gen_component, join, json, marg, uni, Error, View};
+use dlal_component_base::{command, gen_component, join, json, uni, Error, View, Body, serde_json};
 
 use std::f32;
 use std::time;
@@ -51,7 +51,7 @@ impl Specifics {
             "tri" => self.wave = wave_tri,
             "saw" => self.wave = wave_saw,
             "noise" => self.wave = wave_noise,
-            _ => return err!("unknown wave"),
+            _ => Error::err("unknown wave")?,
         };
         Ok(())
     }
@@ -78,8 +78,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             ["samples_per_evaluation", "sample_rate"],
@@ -89,7 +89,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "freq",
             |soul, body| {
-                if let Ok(freq) = marg!(arg_num &body, 0) as Result<f32, _> {
+                if let Ok(freq) = body.arg::<f32>(0) {
                     soul.step = freq / soul.sample_rate as f32;
                 }
                 Ok(Some(json!(soul.step * soul.sample_rate as f32)))
@@ -105,7 +105,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "wave",
             |soul, body| {
-                soul.wave_set(marg!(arg_str &body, 0)?)?;
+                soul.wave_set(&body.arg::<String>(0)?)?;
                 Ok(None)
             },
             {
@@ -119,7 +119,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "bend",
             |soul, body| {
-                soul.bend = marg!(arg_num &body, 0)?;
+                soul.bend = body.arg(0)?;
                 Ok(None)
             },
             {
@@ -133,7 +133,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "phase",
             |soul, body| {
-                soul.phase = marg!(arg_num &body, 0)?;
+                soul.phase = body.arg(0)?;
                 Ok(None)
             },
             {
@@ -157,8 +157,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.wave_set(marg!(json_str marg!(json_get j, "wave")?)?)?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.wave_set(&j.at::<String>("wave")?)?;
                 Ok(None)
             },
             { "args": ["json"] },

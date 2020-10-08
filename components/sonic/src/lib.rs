@@ -167,14 +167,14 @@ macro_rules! op_command {
             $commands,
             $name,
             |soul, body| {
-                let op: usize = arg_num(&body, 0)?;
-                if let Ok(v) = arg_num::<$type>(&body, 1) {
+                let op: usize = body.arg(0)?;
+                if let Ok(v) = body.arg::<$type>(1) {
                     soul.ops[op].$($member)+ = v;
                 }
                 if ($set) {
                     soul.set(soul.m);
                 }
-                Ok(Some(json!(soul.ops[op].$($member)+.to_string())))
+                Ok(Some(json!(soul.ops[op].$($member)+)))
             },
             {"args": ["operator", $($info)+]},
         );
@@ -182,7 +182,7 @@ macro_rules! op_command {
 }
 
 use dlal_component_base::{
-    arg, arg_num, command, gen_component, join, json, json_get, json_num, uni, JsonValue, View,
+    command, gen_component, join, json, uni, serde_json, View, Body,
 };
 
 use std::collections::HashMap;
@@ -230,8 +230,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 soul.set(1.0);
                 Ok(None)
             },
@@ -290,7 +290,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "to_json",
             |soul, _body| {
-                let mut ops = HashMap::<String, JsonValue>::new();
+                let mut ops = HashMap::<String, serde_json::Value>::new();
                 for (i, op) in soul.ops.iter().enumerate() {
                     ops.insert(
                         i.to_string(),
@@ -310,7 +310,7 @@ impl SpecificsTrait for Specifics {
                 }
                 Ok(Some(json!({
                     "ops": ops,
-                    "pitch_bend_range": soul.pitch_bend_range.to_string(),
+                    "pitch_bend_range": soul.pitch_bend_range,
                 })))
             },
             {},
@@ -319,26 +319,26 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = arg(&body, 0)?;
-                let ops = match json_get(j, "pitch_bend_range") {
+                let j = body.arg::<serde_json::Value>(0)?;
+                let ops = match j.at("pitch_bend_range") {
                     Ok(pbr) =>{
-                        soul.pitch_bend_range = json_num(pbr)?;
-                        json_get(j, "ops")?
+                        soul.pitch_bend_range = pbr;
+                        j.at("ops")?
                     }
                     Err(_) => j,
                 };
                 for i in 0..OPS {
-                    let op = json_get(ops, &i.to_string())?;
-                    soul.ops[i].a = json_num(json_get(op, "a")?)?;
-                    soul.ops[i].d = json_num(json_get(op, "d")?)?;
-                    soul.ops[i].s = json_num(json_get(op, "s")?)?;
-                    soul.ops[i].r = json_num(json_get(op, "r")?)?;
-                    soul.ops[i].m = json_num(json_get(op, "m")?)?;
-                    soul.ops[i].i[0] = json_num(json_get(op, "i0")?)?;
-                    soul.ops[i].i[1] = json_num(json_get(op, "i1")?)?;
-                    soul.ops[i].i[2] = json_num(json_get(op, "i2")?)?;
-                    soul.ops[i].i[3] = json_num(json_get(op, "i3")?)?;
-                    soul.ops[i].o = json_num(json_get(op, "o")?)?;
+                    let op = ops.at::<serde_json::Value>(&i.to_string())?;
+                    soul.ops[i].a = op.at("a")?;
+                    soul.ops[i].d = op.at("d")?;
+                    soul.ops[i].s = op.at("s")?;
+                    soul.ops[i].r = op.at("r")?;
+                    soul.ops[i].m = op.at("m")?;
+                    soul.ops[i].i[0] = op.at("i0")?;
+                    soul.ops[i].i[1] = op.at("i1")?;
+                    soul.ops[i].i[2] = op.at("i2")?;
+                    soul.ops[i].i[3] = op.at("i3")?;
+                    soul.ops[i].o = op.at("o")?;
                 }
                 soul.set(1.0);
                 Ok(None)

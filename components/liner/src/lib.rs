@@ -1,13 +1,12 @@
 use dlal_component_base::{
-    arg, arg_num, args, command, err, gen_component, join, json, json_from_str, json_get, kwarg,
-    JsonValue, View, VIEW_ARGS,
+    command, gen_component, join, json, Body, Arg,
+    View, VIEW_ARGS, Error, serde_json,
 };
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 use serde::{Deserialize, Serialize, Serializer, ser::SerializeSeq};
 
-use std::error::Error;
-use std::vec::Vec;
+use std::error::Error as StdError;
 
 #[derive(Debug, Deserialize)]
 enum Msg {
@@ -16,30 +15,16 @@ enum Msg {
 }
 
 impl Msg {
-    fn new(msg: &JsonValue) -> Result<Self, Box<dyn Error>> {
-        let array = msg
-            .as_array()
-            .ok_or_else(|| err!(box "msg isn't an array"))?;
+    fn new(msg: &serde_json::Value) -> Result<Self, Box<dyn StdError>> {
+        let array = msg.to::<Vec<_>>()?.vec()?;
         Ok(if array.len() <= 3 {
             let mut msg = [0, 0, 0];
             for i in 0..array.len() {
-                msg[i] = array[i]
-                    .as_str()
-                    .ok_or_else(|| err!(box "byte isn't a string"))?
-                    .parse()?;
+                msg[i] = array[i];
             }
             Msg::Short(msg)
         } else {
-            let mut msg = Vec::new();
-            for i in 0..array.len() {
-                msg.push(
-                    array[i]
-                        .as_str()
-                        .ok_or_else(|| err!(box "byte isn't a string"))?
-                        .parse()?,
-                );
-            }
-            Msg::Long(msg)
+            Msg::Long(array)
         })
     }
 
@@ -72,15 +57,10 @@ struct Deltamsg {
 }
 
 impl Deltamsg {
-    fn new(deltamsg: &JsonValue) -> Result<Self, Box<dyn Error>> {
+    fn new(deltamsg: &serde_json::Value) -> Result<Self, Box<dyn StdError>> {
         Ok(Self {
-            delta: deltamsg
-                .get("delta")
-                .ok_or_else(|| err!(box "missing delta"))?
-                .as_str()
-                .ok_or_else(|| err!(box "delta isn't a string"))?
-                .parse()?,
-            msg: Msg::new(deltamsg.get("msg").ok_or_else(|| err!(box "missing msg"))?)?,
+            delta: deltamsg.at("delta")?,
+            msg: Msg::new(&deltamsg.at("msg")?)?,
         })
     }
 }
@@ -98,19 +78,12 @@ struct Line {
 
 impl Line {
     fn new(
-        deltamsgs: &JsonValue,
+        deltamsgs: &serde_json::Value,
         ticks_per_quarter: u32,
         index: usize,
-    ) -> Result<Self, Box<dyn Error>> {
-        let array = deltamsgs
-            .as_array()
-            .ok_or_else(|| err!(box "deltamsgs isn't an array"))?;
-        let mut deltamsgs = Vec::<Deltamsg>::new();
-        for deltamsg in array {
-            deltamsgs.push(Deltamsg::new(deltamsg)?);
-        }
+    ) -> Result<Self, Box<dyn StdError>> {
         Ok(Self {
-            deltamsgs,
+            deltamsgs: deltamsgs.to::<Vec<_>>()?.vec_map(|i| Deltamsg::new(&i))?,
             ticks_per_quarter,
             us_per_quarter: 500_000,
             index,
@@ -214,8 +187,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             ["samples_per_evaluation", "sample_rate"],
@@ -224,7 +197,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "connect",
             |soul, body| {
-                let output = View::new(args(&body)?)?;
+                let output = View::new(&body.at("args")?)?;
                 soul.outputs.push(Some(output));
                 Ok(None)
             },
@@ -234,7 +207,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "disconnect",
             |soul, body| {
-                let output = View::new(args(&body)?)?;
+                let output = View::new(&body.at("args")?)?;
                 if let Some(i) = soul
                     .outputs
                     .iter()
@@ -250,9 +223,9 @@ impl SpecificsTrait for Specifics {
             commands,
             "get_midi",
             |soul, body| {
-                let line_index: usize = arg_num(&body, 0)?;
+                let line_index: usize = body.arg(0)?;
                 if line_index >= soul.lines.len() {
-                    return err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len());
+                    Error::err(&format!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
                 }
                 let line = &soul.lines[line_index];
                 Ok(Some(json!({
@@ -290,20 +263,20 @@ impl SpecificsTrait for Specifics {
             commands,
             "set_midi",
             |soul, body| {
-                let line_index: usize = arg_num(&body, 0)?;
-                let ticks_per_quarter: u32 = arg_num(&body, 1)?;
-                let deltamsgs = arg(&body, 2)?;
+                let line_index: usize = body.arg(0)?;
+                let ticks_per_quarter: u32 = body.arg(1)?;
+                let deltamsgs = body.arg(2)?;
                 if line_index >= soul.lines.len() {
-                    return err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len());
+                    Error::err(&format!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
                 }
-                if let Ok(immediate) = kwarg(&body, "immediate") {
-                    if immediate.as_bool().ok_or_else(|| err!(box "immediate isn't a bool"))? {
+                if let Ok(immediate) = body.kwarg("immediate") {
+                    if immediate {
                         soul.lines[line_index] = Box::new(Line::new(
-                            deltamsgs, ticks_per_quarter, soul.lines[line_index].index
+                            &deltamsgs, ticks_per_quarter, soul.lines[line_index].index
                         )?);
                     }
                 }
-                soul.send.try_send(Box::new(Line::new(deltamsgs, ticks_per_quarter, line_index)?))?;
+                soul.send.try_send(Box::new(Line::new(&deltamsgs, ticks_per_quarter, line_index)?))?;
                 Ok(None)
             },
             {
@@ -328,10 +301,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "offset",
             |soul, body| {
-                let line_index: usize = arg_num(&body, 0)?;
-                let seconds: f64 = arg_num(&body, 1)?;
+                let line_index: usize = body.arg(0)?;
+                let seconds: f64 = body.arg(1)?;
                 if line_index >= soul.lines.len() {
-                    return err!("invalid line_index");
+                    Error::err("invalid line_index")?;
                 }
                 soul.lines[line_index].offset = seconds;
                 Ok(None)
@@ -344,7 +317,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "advance",
             |soul, body| {
-                let seconds: f32 = arg_num(&body, 0)?;
+                let seconds: f32 = body.arg(0)?;
                 let evaluations_per_second = soul.sample_rate as f32 / soul.samples_per_evaluation as f32;
                 let evaluations = (seconds * evaluations_per_second) as u32;
                 for _ in 0..evaluations {
@@ -366,10 +339,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = arg(&body, 0)?;
-                let lines = json_get(j, "lines")?.as_array().ok_or_else(|| err!(box "lines isn't an array"))?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                let lines = j.at::<Vec<_>>("lines")?;
                 for i in 0..lines.len() {
-                    soul.lines[i] = json_from_str(&lines[i].to_string())?;
+                    soul.lines[i] = serde_json::from_str(&lines[i].to_string())?;
                 }
                 Ok(None)
             },

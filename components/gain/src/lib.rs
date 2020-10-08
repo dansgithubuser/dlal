@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
+use dlal_component_base::{Body, command, gen_component, join, json, uni, View};
 
 pub struct Specifics {
     amount: f32,
@@ -25,7 +25,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -35,8 +35,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                soul.amount_dst = arg_num(&body, 0)?;
-                soul.smooth = arg_num(&body, 1).unwrap_or(0.0);
+                soul.amount_dst = body.arg(0)?;
+                soul.smooth = body.arg(1).unwrap_or(0.0);
                 if soul.smooth == 0.0 {
                     soul.amount = soul.amount_dst;
                 }
@@ -47,14 +47,14 @@ impl SpecificsTrait for Specifics {
         command!(
             commands,
             "to_json",
-            |soul, _body| { Ok(Some(json!(soul.amount.to_string()))) },
+            |soul, _body| { Ok(Some(json!(soul.amount))) },
             {},
         );
         command!(
             commands,
             "from_json",
             |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
+                soul.amount = body.arg(0)?;
                 Ok(None)
             },
             { "args": ["json"] },

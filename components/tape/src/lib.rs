@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, command, err, gen_component, join, json, kwarg_num};
+use dlal_component_base::{command, gen_component, join, json, Body, Error};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
@@ -34,7 +34,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                let samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
+                let samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 soul.audio.resize(samples_per_evaluation, 0.0);
                 if soul.size == 0 {
                     soul.resize(samples_per_evaluation as u64);
@@ -47,7 +47,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "resize",
             |soul, body| {
-                soul.resize(arg_num(&body, 0)?);
+                soul.resize(body.arg(0)?);
                 Ok(None)
             },
             {
@@ -74,10 +74,10 @@ impl SpecificsTrait for Specifics {
             "read",
             |soul, body| {
                 if soul.recv.is_none() {
-                    return err!("not initialized");
+                    Error::err("not initialized")?;
                 }
                 let mut audio = Vec::<String>::new();
-                match arg_num::<usize>(&body, 0) {
+                match body.arg(0) {
                     Ok(size) =>  {
                         for _ in 0..size {
                             audio.push(soul.recv.as_ref().unwrap().recv().unwrap().to_string());
@@ -109,7 +109,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                soul.resize(arg_num(&body, 0)?);
+                soul.resize(body.arg(0)?);
                 Ok(None)
             },
             { "args": ["json"] },

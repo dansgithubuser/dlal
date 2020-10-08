@@ -1,4 +1,4 @@
-use dlal_component_base::{arg, arg_num, args, command, err, gen_component, join, JsonValue, View};
+use dlal_component_base::{Body, command, Error, gen_component, join, View, serde_json};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
@@ -6,7 +6,7 @@ use multiqueue2::{MPMCSender, MPMCUniReceiver};
 enum QueuedItem {
     Command {
         view: View,
-        body: Box<JsonValue>,
+        body: Box<serde_json::Value>,
         detach: bool,
     },
     Wait(usize),
@@ -15,8 +15,8 @@ enum QueuedItem {
 pub struct Specifics {
     to_audio_send: MPMCSender<QueuedItem>,
     to_audio_recv: MPMCUniReceiver<QueuedItem>,
-    fro_audio_send: MPMCSender<Box<Option<JsonValue>>>,
-    fro_audio_recv: MPMCUniReceiver<Box<Option<JsonValue>>>,
+    fro_audio_send: MPMCSender<Box<Option<serde_json::Value>>>,
+    fro_audio_recv: MPMCUniReceiver<Box<Option<serde_json::Value>>>,
     wait: usize,
     samples_per_evaluation: usize,
 }
@@ -41,7 +41,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -50,22 +50,19 @@ impl SpecificsTrait for Specifics {
             commands,
             "queue",
             |soul, body| {
-                let detach = match arg(&body, 7)?.as_bool() {
-                    Some(v) => v,
-                    None => return err!("detach isn't Boolean"),
-                };
+                let detach = body.arg(7)?;
                 if let Err(_) = soul.to_audio_send
                     .try_send(QueuedItem::Command {
-                        view: View::new(args(&body)?)?,
-                        body: Box::new(arg(&body, 5)?.clone()),
+                        view: View::new(&body.at("args")?)?,
+                        body: Box::new(body.arg(5)?),
                         detach,
                     }) {
-                        return err!("try_send failed");
+                        Error::err("try_send failed")?;
                     }
                 if detach {
                     return Ok(None);
                 }
-                std::thread::sleep(std::time::Duration::from_millis(arg_num(&body, 6)?));
+                std::thread::sleep(std::time::Duration::from_millis(body.arg(6)?));
                 Ok(*soul.fro_audio_recv.try_recv()?)
             },
             { "args": ["component", "command", "audio", "midi", "evaluate", "body", "timeout_ms", "detach"] },
@@ -76,9 +73,9 @@ impl SpecificsTrait for Specifics {
             |soul, body| {
                 if let Err(_) = soul.to_audio_send
                     .try_send(QueuedItem::Wait(
-                        arg_num(&body, 0)?,
+                        body.arg(0)?,
                     )) {
-                        return err!("try_send failed");
+                        Error::err("try_send failed")?;
                     }
                 Ok(None)
             },

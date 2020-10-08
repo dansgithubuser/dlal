@@ -1,6 +1,4 @@
-use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
-
-use std::vec::Vec;
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body};
 
 struct Ring {
     vec: Vec<f32>,
@@ -58,7 +56,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -68,7 +66,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
+                soul.amount = body.arg(0)?;
                 Ok(None)
             },
             { "args": ["amount"] },
@@ -76,14 +74,14 @@ impl SpecificsTrait for Specifics {
         command!(
             commands,
             "to_json",
-            |soul, _body| { Ok(Some(json!(soul.amount.to_string()))) },
+            |soul, _body| { Ok(Some(json!(soul.amount))) },
             {},
         );
         command!(
             commands,
             "from_json",
             |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
+                soul.amount = body.arg(0)?;
                 Ok(None)
             },
             { "args": ["json"] },

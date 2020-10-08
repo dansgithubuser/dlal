@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, args, command, err, gen_component, json, kwarg_num, multi, View};
+use dlal_component_base::{Body, command, gen_component, json, multi, Error, View};
 
 use colored::*;
 use portaudio as pa;
@@ -75,10 +75,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "samples_per_evaluation",
             |soul, body| {
-                if let Ok(v) = arg_num(&body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.samples_per_evaluation = v;
                 }
-                Ok(Some(json!(soul.samples_per_evaluation.to_string())))
+                Ok(Some(json!(soul.samples_per_evaluation)))
             },
             { "args": [{"name": "samples_per_evaluation", "optional": true}] },
         );
@@ -86,10 +86,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "sample_rate",
             |soul, body| {
-                if let Ok(v) = arg_num(&body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.sample_rate = v;
                 }
-                Ok(Some(json!(soul.sample_rate.to_string())))
+                Ok(Some(json!(soul.sample_rate)))
             },
             { "args": [{"name": "sample_rate", "optional": true}] },
         );
@@ -97,13 +97,18 @@ impl SpecificsTrait for Specifics {
             commands,
             "add",
             |soul, body| {
-                let view = View::new(args(&body)?)?;
-                let slot: usize = arg_num(&body, 5)?;
+                let view = View::new(&body.at("args")?)?;
+                let slot: usize = body.arg(5)?;
+                let sample_rate = if soul.sample_rate.fract() == 0.0 {
+                    json!(soul.sample_rate as u32)
+                } else {
+                    json!(soul.sample_rate)
+                };
                 let join_result = view.command(&json!({
                     "name": "join",
                     "kwargs": {
-                        "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
-                        "sample_rate": soul.sample_rate.to_string(),
+                        "samples_per_evaluation": soul.samples_per_evaluation,
+                        "sample_rate": sample_rate,
                     },
                 }));
                 if let Some(join_result) = join_result {
@@ -125,14 +130,14 @@ impl SpecificsTrait for Specifics {
             commands,
             "remove",
             |soul, body| {
-                let view = View::new(args(&body)?)?;
+                let view = View::new(&body.at("args")?)?;
                 for slot in 0..soul.addees.len() {
                     if let Some(index) = soul.addees[slot].iter().position(|i| i.raw == view.raw) {
                         soul.addees[slot].remove(index);
                         break;
                     }
                     if slot == soul.addees.len() - 1 {
-                        return err!("no such component");
+                        Error::err("no such component")?;
                     }
                 }
                 Ok(None)
@@ -247,8 +252,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             { "args": ["json"] },

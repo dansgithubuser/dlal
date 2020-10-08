@@ -1,10 +1,9 @@
 use dlal_component_base::{
-    arg, arg_num, arg_str, command, err, gen_component, join, json, json_get, json_num, json_nums,
-    kwarg_num, multi, JsonValue, View,
+    Arg, Body, command, gen_component, join, json, multi, serde_json, View, Error,
 };
 
+use std::cmp::min;
 use std::collections::HashMap;
-use std::vec::Vec;
 
 #[derive(Clone, Default)]
 struct Sound {
@@ -52,8 +51,8 @@ impl SpecificsTrait for Specifics {
             commands,
             |soul, body| {
                 soul.audio
-                    .resize(kwarg_num(&body, "samples_per_evaluation")?, 0.0);
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
+                    .resize(body.kwarg("samples_per_evaluation")?, 0.0);
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             ["samples_per_evaluation", "sample_rate"],
@@ -63,11 +62,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                let samples: Vec<f32> = json_nums(arg(&body, 0)?)?;
-                for i in 0..samples.len() {
-                    if i >= soul.audio.len() {
-                        break;
-                    }
+                let samples = body.arg::<Vec<_>>(0)?.vec()?;
+                for i in 0..min(samples.len(), soul.audio.len()) {
                     soul.audio[i] = samples[i];
                 }
                 Ok(None)
@@ -78,10 +74,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "load",
             |soul, body| {
-                let file_path = arg_str(&body, 0)?;
-                let note: usize = arg_num(&body, 1)?;
+                let file_path: String = body.arg(0)?;
+                let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    return err!("invalid note");
+                    Error::err("invalid note")?;
                 }
                 let mut reader = hound::WavReader::open(file_path)?;
                 let spec = reader.spec();
@@ -111,10 +107,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "resample",
             |soul, body| {
-                let ratio = arg_num::<f32>(&body, 0)?;
-                let note: usize = arg_num(&body, 1)?;
+                let ratio: f32 = body.arg(0)?;
+                let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    return err!("invalid note");
+                    Error::err("invalid note")?;
                 }
                 let samples = &mut soul.sounds[note].samples;
                 let mut resamples = Vec::<f32>::new();
@@ -132,21 +128,21 @@ impl SpecificsTrait for Specifics {
             commands,
             "crop",
             |soul, body| {
-                let start = (arg_num::<f32>(&body, 0)? * soul.sample_rate as f32) as usize;
-                let end   = (arg_num::<f32>(&body, 1)? * soul.sample_rate as f32) as usize;
+                let start = (body.arg::<f32>(0)? * soul.sample_rate as f32) as usize;
+                let end   = (body.arg::<f32>(1)? * soul.sample_rate as f32) as usize;
                 if end < start {
-                    return err!("end is before start");
+                    Error::err("end is before start")?;
                 }
-                let note: usize = arg_num(&body, 2)?;
+                let note: usize = body.arg(2)?;
                 if note >= 128 {
-                    return err!("invalid note");
+                    Error::err("invalid note")?;
                 }
                 let samples = &mut soul.sounds[note].samples;
                 if start >= samples.len() {
-                    return err!("start is too late");
+                    Error::err("start is too late")?;
                 }
                 if end >= samples.len() {
-                    return err!("end is too late");
+                    Error::err("end is too late")?;
                 }
                 *samples = samples[start..end].to_vec();
                 Ok(None)
@@ -157,10 +153,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "clip",
             |soul, body| {
-                let amplitude = arg_num::<f32>(&body, 0)?;
-                let note: usize = arg_num(&body, 1)?;
+                let amplitude = body.arg(0)?;
+                let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    return err!("invalid note");
+                    Error::err("invalid note")?;
                 }
                 for i in &mut soul.sounds[note].samples {
                     if *i > amplitude {
@@ -177,10 +173,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "amplify",
             |soul, body| {
-                let amount = arg_num::<f32>(&body, 0)?;
-                let note: usize = arg_num(&body, 1)?;
+                let amount: f32 = body.arg(0)?;
+                let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    return err!("invalid note");
+                    Error::err("invalid note")?;
                 }
                 for sample in &mut soul.sounds[note].samples {
                     *sample *= amount;
@@ -193,13 +189,13 @@ impl SpecificsTrait for Specifics {
             commands,
             "add",
             |soul, body| {
-                let note_to: usize = arg_num(&body, 0)?;
+                let note_to: usize = body.arg(0)?;
                 if note_to >= 128 {
-                    return err!("invalid note_to");
+                    Error::err("invalid note_to")?;
                 }
-                let note_from: usize = arg_num(&body, 1)?;
+                let note_from: usize = body.arg(1)?;
                 if note_from >= 128 {
-                    return err!("invalid note_from");
+                    Error::err("invalid note_from")?;
                 }
                 if soul.sounds[note_from].samples.len() > soul.sounds[note_to].samples.len() {
                     let len = soul.sounds[note_from].samples.len();
@@ -216,7 +212,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "to_json",
             |soul, _body| {
-                let mut sounds = HashMap::<String, JsonValue>::new();
+                let mut sounds = HashMap::<String, serde_json::Value>::new();
                 for (note, sound) in soul.sounds.iter().enumerate() {
                     if sound.samples.is_empty() {
                         continue;
@@ -224,8 +220,8 @@ impl SpecificsTrait for Specifics {
                     sounds.insert(
                         note.to_string(),
                         json!({
-                            "samples": sound.samples.iter().map(|i| i.to_string()).collect::<Vec<_>>(),
-                            "sample_rate": sound.sample_rate.to_string(),
+                            "samples": sound.samples,
+                            "sample_rate": sound.sample_rate,
                         }),
                     );
                 }
@@ -238,20 +234,13 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 soul.sounds = vec![Sound::default(); 128];
-                let arg_sounds = arg(&body, 0)?
-                    .as_object()
-                    .ok_or_else(|| err!(box "sounds isn't an object"))?;
-                for (note, arg_sound) in arg_sounds.iter() {
-                    let note: usize = note.parse()?;
-                    let mut sound = Sound::default();
-                    sound.sample_rate = json_num(json_get(arg_sound, "sample_rate")?)?;
-                    let arg_samples = json_get(arg_sound, "samples")?
-                        .as_array()
-                        .ok_or_else(|| err!(box "samples isn't an array"))?;
-                    for sample in arg_samples {
-                        sound.samples.push(json_num(sample)?);
-                    }
-                    soul.sounds[note] = sound;
+                let sounds: serde_json::Map<String, serde_json::Value> = body.arg(0)?;
+                for (note, sound) in sounds.iter() {
+                    soul.sounds[note.parse::<usize>()?] = Sound {
+                        sample_rate: sound.at("sample_rate")?,
+                        samples: sound.at::<Vec<_>>("samples")?.vec()?,
+                        ..Sound::default()
+                    };
                 }
                 Ok(None)
             },

@@ -1,8 +1,6 @@
-use dlal_component_base::{command, gen_component, join, json, marg, uni, View};
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body, serde_json, Arg};
 
 use rustfft::{num_complex::Complex, FFTplanner};
-
-use std::vec::Vec;
 
 #[derive(Default)]
 pub struct Specifics {
@@ -36,7 +34,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -46,7 +44,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "ir",
             |soul, body| {
-                soul.set_ir(marg!(json_f32s marg!(arg &body, 0)?)?);
+                soul.set_ir(body.arg::<Vec<_>>(0)?.vec()?);
                 Ok(None)
             },
             { "args": ["ir"] },
@@ -55,16 +53,16 @@ impl SpecificsTrait for Specifics {
             commands,
             "bandpass",
             |soul, body| {
-                let center: f32 = marg!(arg_num &body, 0)?;
-                let width: f32 = match marg!(arg_num &body, 1) {
+                let center: f32 = body.arg(0)?;
+                let width: f32 = match body.arg(1) {
                     Ok(width) => width,
                     Err(_) => 2.0,
                 };
-                let size: usize = match marg!(arg_num &body, 2) {
+                let size: usize = match body.arg(2) {
                     Ok(size) => size,
                     Err(_) => 128,
                 };
-                let amplitude: f32 = match marg!(arg_num &body, 3) {
+                let amplitude: f32 = match body.arg(3) {
                     Ok(amplitude) => amplitude,
                     Err(_) => 1.0,
                 };
@@ -122,8 +120,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.set_ir(marg!(json_f32s marg!(json_get j, "ir")?)?);
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.set_ir(j.at::<Vec<_>>("ir")?.vec()?);
                 Ok(None)
             },
             { "args": ["json"] },

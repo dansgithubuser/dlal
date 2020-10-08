@@ -14,9 +14,9 @@ class Iir(Component):
     def a(self, a=None):
         args = []
         if a != None: args.append(a)
-        return self.command('a', args, do_json_prep=False)
+        return self.command('a', args)
 
     def b(self, b=None):
         args = []
         if b != None: args.append(b)
-        return self.command('b', args, do_json_prep=False)
+        return self.command('b', args)

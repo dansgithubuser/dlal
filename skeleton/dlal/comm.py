@@ -14,10 +14,9 @@ class Comm(Component):
                     'args': args,
                     'kwargs': kwargs,
                 },
-                str(timeout_ms),
+                timeout_ms,
                 detach,
             ],
-            do_json_prep=False,
         )
 
     def wait(self, samples):

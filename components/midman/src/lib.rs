@@ -1,18 +1,18 @@
 use dlal_component_base::{
-    command, err, gen_component, json, json_from_str, marg, multi, JsonValue, View,
+    command, gen_component, json, serde_json, multi, View, Body, Error, Arg,
 };
 
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use std::vec::Vec;
-
 lazy_static! {
     static ref RE: Regex = Regex::new(concat!(
+        r#"""#,
         r"%(\d+)",
         r"(?:\*([\d.e-]+))?",
         r"(?:\+([\d.e-]+))?",
+        r#"""#,
     ))
     .unwrap();
 }
@@ -60,7 +60,7 @@ impl Directive {
         true
     }
 
-    fn sub(&self, msg: &[u8]) -> JsonValue {
+    fn sub(&self, msg: &[u8]) -> serde_json::Value {
         let text = &RE
             .replace_all(&self.format, |captures: &regex::Captures| -> String {
                 let i = match captures.get(1) {
@@ -91,7 +91,7 @@ impl Directive {
                 (msg[i] as f32 * m + b).to_string()
             })
             .to_string();
-        match json_from_str(text) {
+        match serde_json::from_str(text) {
             Ok(body) => body,
             Err(_) => json!("null"),
         }
@@ -120,22 +120,19 @@ impl SpecificsTrait for Specifics {
             commands,
             "directive",
             |soul, body| {
-                let pattern = marg!(arg &body, 0)?
-                    .as_array()
-                    .ok_or_else(|| err!(box "pattern isn't an array"))?
-                    .iter()
-                    .map(|i| {
+                let pattern = body.arg::<Vec<_>>(0)?
+                    .vec_map(|i| {
                         match i {
-                            JsonValue::Null => Ok(Piece::Null),
-                            JsonValue::String(_) => {
-                                Ok(Piece::Byte(marg!(json_num &i)?))
+                            serde_json::Value::Null => Ok(Piece::Null),
+                            serde_json::Value::Number(_) => {
+                                Ok(Piece::Byte(i.to()?))
                             },
-                            JsonValue::Object(map) => {
+                            serde_json::Value::Object(map) => {
                                 if let Some(nibble) = map.get("nibble") {
-                                    let nibble = marg!(json_num &nibble)?;
+                                    let nibble: u8 = nibble.to()?;
                                     if nibble >= 0x10 {
                                         if nibble & 0xf != 0 {
-                                            return err!("expected one nibble to be 0");
+                                            Error::err("expected one nibble to be 0")?;
                                         }
                                         Ok(Piece::MostSignificantNibble(nibble))
                                     }
@@ -143,17 +140,16 @@ impl SpecificsTrait for Specifics {
                                         Ok(Piece::LeastSignificantNibble(nibble))
                                     }
                                 } else {
-                                    err!("unknown pattern object")
+                                    Err(Box::new(Error::new("unknown pattern object")))
                                 }
                             },
-                            _ => err!("pattern element type is invalid"),
+                            v => Err(Box::new(Error::new(&format!("pattern element {:?} is invalid", v)))),
                         }
-                    })
-                    .collect::<Result<_, _>>()?;
+                    })?;
                 soul.directives.push(Directive {
                     pattern,
-                    component: marg!(arg_num &body, 1)?,
-                    format: marg!(arg_str &body, 2)?.into(),
+                    component: body.arg(1)?,
+                    format: body.arg(2)?,
                 });
                 Ok(None)
             },
@@ -219,8 +215,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.directives = json_from_str(&marg!(json_get j, "directives")?.to_string())?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.directives = serde_json::from_str(&j.at::<serde_json::Value>("directives")?.to_string())?;
                 Ok(None)
             },
             { "args": ["json"] },

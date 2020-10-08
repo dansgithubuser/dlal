@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, marg, uni, View};
+use dlal_component_base::{Body, command, gen_component, join, json, uni, View, serde_json};
 
 enum Stage {
     A,
@@ -33,10 +33,10 @@ macro_rules! stage_command {
             $commands,
             $name,
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.$member = v;
                 }
-                Ok(Some(json!(soul.$member.to_string())))
+                Ok(Some(json!(soul.$member)))
             },
             {"args": [$($info)+]},
         );
@@ -58,7 +58,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -114,11 +114,11 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.a = marg!(json_num marg!(json_get j, "a")?)?;
-                soul.d = marg!(json_num marg!(json_get j, "d")?)?;
-                soul.s = marg!(json_num marg!(json_get j, "s")?)?;
-                soul.r = marg!(json_num marg!(json_get j, "r")?)?;
+                let j: serde_json::Value = body.arg(0)?;
+                soul.a = j.at("a")?;
+                soul.d = j.at("d")?;
+                soul.s = j.at("s")?;
+                soul.r = j.at("r")?;
                 Ok(None)
             },
             { "args": ["json"] },

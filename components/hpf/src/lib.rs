@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body};
 
 use std::f32::consts::PI;
 
@@ -26,8 +26,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 Ok(None)
             },
             ["samples_per_evaluation", "sample_rate"],
@@ -37,7 +37,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                if let Ok(highness) = arg_num::<f32>(&body, 0) {
+                if let Ok(highness) = body.arg::<f32>(0) {
                     soul.a = 1.0 - highness;
                 }
                 Ok(Some(json!(1.0 - soul.a)))
@@ -54,10 +54,10 @@ impl SpecificsTrait for Specifics {
             commands,
             "freq",
             |soul, body| {
-                if let Ok(sample_rate) = arg_num::<u32>(&body, 1) {
+                if let Ok(sample_rate) = body.arg(1) {
                     soul.sample_rate = sample_rate;
                 }
-                if let Ok(freq) = arg_num::<f32>(&body, 0) {
+                if let Ok(freq) = body.arg::<f32>(0) {
                     soul.a = 1.0 / (2.0 * PI / soul.sample_rate as f32 * freq + 1.0);
                 }
                 Ok(Some(json!((1.0 / soul.a - 1.0) / (2.0 * PI / soul.sample_rate as f32))))
@@ -78,14 +78,14 @@ impl SpecificsTrait for Specifics {
         command!(
             commands,
             "to_json",
-            |soul, _body| { Ok(Some(json!(soul.a.to_string()))) },
+            |soul, _body| { Ok(Some(json!(soul.a))) },
             {},
         );
         command!(
             commands,
             "from_json",
             |soul, body| {
-                soul.a = arg_num(&body, 0)?;
+                soul.a = body.arg(0)?;
                 Ok(None)
             },
             { "args": ["json"] },

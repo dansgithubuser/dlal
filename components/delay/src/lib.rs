@@ -1,6 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, marg, uni, View};
-
-use std::vec::Vec;
+use dlal_component_base::{Body, command, gen_component, join, json, uni, View, serde_json};
 
 #[derive(Default)]
 pub struct Specifics {
@@ -30,7 +28,7 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
                 Ok(None)
             },
             ["samples_per_evaluation"],
@@ -40,7 +38,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "resize",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.audio.resize(v, 0.0);
                 }
                 Ok(Some(json!(soul.audio.len())))
@@ -56,7 +54,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "gain_x",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.gain_x = v;
                 }
                 Ok(Some(json!(soul.gain_x)))
@@ -74,7 +72,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "gain_y",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.gain_y = v;
                 }
                 Ok(Some(json!(soul.gain_y)))
@@ -92,7 +90,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "gain_o",
             |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
+                if let Ok(v) = body.arg(0) {
                     soul.gain_o = v;
                 }
                 Ok(Some(json!(soul.gain_o)))
@@ -123,11 +121,11 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.audio.resize(marg!(json_num marg!(json_get j, "size")?)?, 0.0);
-                soul.gain_x = marg!(json_num marg!(json_get j, "gain_x")?)?;
-                soul.gain_y = marg!(json_num marg!(json_get j, "gain_y")?)?;
-                soul.gain_o = marg!(json_num marg!(json_get j, "gain_o")?)?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.audio.resize(j.at("size")?, 0.0);
+                soul.gain_x = j.at("gain_x")?;
+                soul.gain_y = j.at("gain_y")?;
+                soul.gain_o = j.at("gain_o")?;
                 Ok(None)
             },
             { "args": ["json"] },

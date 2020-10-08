@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_str, command, err, gen_component, json, multi, View};
+use dlal_component_base::{command, gen_component, json, multi, View, Body, Error};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -69,15 +69,15 @@ impl SpecificsTrait for Specifics {
             commands,
             "open",
             |soul, body| {
-                let port = arg_str(&body, 0)?;
+                let port: String = body.arg(0)?;
                 let ports = soul.get_ports();
                 for (i, v) in ports.iter().enumerate() {
-                    if v.starts_with(port) {
+                    if v.starts_with(&port) {
                         soul.open(i);
                         return Ok(None);
                     }
                 }
-                err!("no such port")
+                Err(Box::new(Error::new("no such port")))
             },
             { "args": ["port_name_prefix"] },
         );

@@ -1,6 +1,4 @@
-use dlal_component_base::{command, err, gen_component, join, json, marg, uni, View};
-
-use std::vec::Vec;
+use dlal_component_base::{command, Error, gen_component, join, json, uni, View, Body, serde_json, Arg};
 
 // ===== note ===== //
 #[derive(Default)]
@@ -75,8 +73,8 @@ impl SpecificsTrait for Specifics {
         join!(
             commands,
             |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
+                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+                soul.sample_rate = body.kwarg("sample_rate")?;
                 soul.notes = (0..128)
                     .map(|i| {
                         Note::new(
@@ -94,12 +92,12 @@ impl SpecificsTrait for Specifics {
             commands,
             "impulse",
             |soul, body| {
-                if let Ok(v) = marg!(arg &body, 0) {
-                    let impulse = marg!(json_nums &v)?;
+                if let Ok(v) = body.arg::<serde_json::Value>(0) {
+                    let impulse = v.to::<Vec<_>>()?.vec()?;
                     if !impulse.is_empty() {
                         soul.impulse = impulse;
                     } else {
-                        return err!("impulse must have at least one element");
+                        Error::err("impulse must have at least one element")?;
                     }
                 }
                 Ok(Some(json!(soul.impulse)))
@@ -137,8 +135,8 @@ impl SpecificsTrait for Specifics {
             commands,
             "from_json",
             |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.impulse = marg!(json_f32s marg!(json_get j, "value")?)?;
+                let j = body.arg::<serde_json::Value>(0)?;
+                soul.impulse = j.at::<Vec<_>>("impulse")?.vec()?;
                 Ok(None)
             },
             { "args": ["json"] },

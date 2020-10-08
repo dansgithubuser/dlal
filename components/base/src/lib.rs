@@ -1,16 +1,15 @@
-pub use serde_json::from_str as json_from_str;
+pub use serde_json;
 pub use serde_json::json;
-pub use serde_json::Value as JsonValue;
 
+use std::any::type_name;
 pub use std::collections::HashMap;
-use std::error;
+use std::error::Error as StdError;
 pub use std::ffi::{CStr, CString};
 use std::fmt;
 pub use std::mem::transmute;
 pub use std::os::raw::{c_char, c_void};
 pub use std::ptr::null_mut;
 use std::slice::from_raw_parts_mut;
-pub use std::vec::Vec;
 
 // ===== generic error ===== //
 #[derive(Debug)]
@@ -19,8 +18,12 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new(msg: String) -> Self {
-        Self { msg }
+    pub fn new(msg: &str) -> Self {
+        Self { msg: msg.into() }
+    }
+
+    pub fn err<T>(msg: &str) -> Result<T, Self> {
+        Err(Self::new(msg))
     }
 }
 
@@ -30,179 +33,140 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
+impl StdError for Error {
     fn description(&self) -> &str {
         &self.msg
     }
 
-    fn cause(&self) -> Option<&(dyn error::Error)> {
+    fn cause(&self) -> Option<&(dyn StdError)> {
         None
     }
 }
 
-#[macro_export]
-macro_rules! err {
-    (box $($arg:tt)+) => {
-        Box::new($crate::Error::new(format!($($arg)+)))
-    };
-    ($($arg:tt)+) => {
-        Err($crate::err!(box $($arg)+))
-    };
-}
-
-#[macro_export]
-macro_rules! res {
-    ($expr:expr) => {
-        match $expr {
-            Ok(t) => Ok(t),
-            Err(e) => err!("{}", e.to_string()),
-        }
-    };
-}
-
 // ===== arg handling ===== //
-pub fn args(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
-    body.get("args").ok_or_else(|| err!(box "missing args"))
-}
+// ----- Arg ------ //
+pub trait Arg {
+    fn from_value(value: &serde_json::Value) -> Option<Self> where Self: Sized;
 
-pub fn arg(body: &JsonValue, index: usize) -> Result<&JsonValue, Box<Error>> {
-    args(body)?
-        .get(index)
-        .ok_or_else(|| err!(box "missing arg {}", index))
-}
+    fn vec_map<B, F>(self, f: F) -> Result<Vec<B>, Box<dyn StdError>>
+    where
+        Self: Sized,
+        Self: IntoIterator,
+        F: FnMut(<Self as IntoIterator>::Item) -> Result<B, Box<dyn StdError>>,
+    {
+        self.into_iter().map(f).collect()
+    }
 
-pub fn arg_str(body: &JsonValue, index: usize) -> Result<&str, Box<Error>> {
-    arg(body, index)?
-        .as_str()
-        .ok_or_else(|| err!(box "arg {} isn't a string", index))
-}
-
-pub fn arg_num<T: std::str::FromStr>(body: &JsonValue, index: usize) -> Result<T, Box<Error>> {
-    match arg_str(body, index)?.parse::<T>() {
-        Ok(num) => Ok(num),
-        Err(_) => err!("couldn't parse arg {} as appropriate number", index),
+    fn vec<T: Arg>(self) -> Result<Vec<T>, Box<dyn StdError>>
+    where
+        Self: Sized,
+        Self: IntoIterator,
+        <Self as IntoIterator>::Item: Body,
+    {
+        self.vec_map(|i| Ok(i.to()?))
     }
 }
 
-pub fn kwargs(body: &JsonValue) -> Result<&JsonValue, Box<Error>> {
-    body.get("kwargs").ok_or_else(|| err!(box "missing kwargs"))
-}
-
-pub fn kwarg<'a>(body: &'a JsonValue, name: &str) -> Result<&'a JsonValue, Box<Error>> {
-    kwargs(body)?
-        .get(name)
-        .ok_or_else(|| err!(box "missing kwarg {}", name))
-}
-
-pub fn kwarg_str<'a>(body: &'a JsonValue, name: &str) -> Result<&'a str, Box<Error>> {
-    kwarg(body, name)?
-        .as_str()
-        .ok_or_else(|| err!(box "kwarg {} isn't a string", name))
-}
-
-pub fn kwarg_num<T: std::str::FromStr>(body: &JsonValue, name: &str) -> Result<T, Box<Error>> {
-    match kwarg_str(body, name)?.parse::<T>() {
-        Ok(num) => Ok(num),
-        Err(_) => err!("couldn't parse kwarg {} as appropriate number", name),
+// ----- Arg impls ----- //
+impl Arg for String {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_str().map(|i| i.into())
     }
 }
 
-pub fn json_get<'a>(value: &'a JsonValue, name: &str) -> Result<&'a JsonValue, Box<Error>> {
-    value
-        .get(name)
-        .ok_or_else(|| err!(box "missing value {}", name))
-}
-
-pub fn json_str(value: &JsonValue) -> Result<&str, Box<Error>> {
-    value
-        .as_str()
-        .ok_or_else(|| err!(box "expected a string, but didn't get one"))
-}
-
-pub fn json_num<T: std::str::FromStr>(value: &JsonValue) -> Result<T, Box<Error>> {
-    match json_str(value)?.parse::<T>() {
-        Ok(num) => Ok(num),
-        Err(_) => err!("couldn't parse number"),
+impl Arg for f64 {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_f64()
     }
 }
 
-pub fn json_nums<T: std::str::FromStr>(value: &JsonValue) -> Result<Vec<T>, Box<Error>> {
-    value
-        .as_array()
-        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
-        .iter()
-        .map(|i| json_num::<T>(i))
-        .collect::<Result<_, _>>()
+impl Arg for f32 {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_f64().map(|i| i as f32)
+    }
 }
 
-pub fn json_f32s(value: &JsonValue) -> Result<Vec<f32>, Box<Error>> {
-    value
-        .as_array()
-        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
-        .iter()
-        .map(|i| match i.as_f64() {
-            Some(i) => Ok(i as f32),
-            None => err!("expected an array of numbers, but didn't get one"),
-        })
-        .collect::<Result<_, _>>()
+impl Arg for i32 {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_i64().map(|i| i as i32)
+    }
 }
 
-pub fn json_f64s(value: &JsonValue) -> Result<Vec<f64>, Box<Error>> {
-    value
-        .as_array()
-        .ok_or_else(|| err!(box "expected an array, but didn't get one"))?
-        .iter()
-        .map(|i| match i.as_f64() {
-            Some(i) => Ok(i),
-            None => err!("expected an array of numbers, but didn't get one"),
-        })
-        .collect::<Result<_, _>>()
+impl Arg for u64 {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_u64()
+    }
 }
 
-#[macro_export]
-macro_rules! marg {
-    (args $body:expr) => {
-        $crate::args($body)
-    };
-    (arg $body:expr, $index:expr) => {
-        $crate::arg($body, $index)
-    };
-    (arg_str $body:expr, $index:expr) => {
-        $crate::arg_str($body, $index)
-    };
-    (arg_num $body:expr, $index:expr) => {
-        $crate::arg_num($body, $index)
-    };
-    (kwargs $body:expr) => {
-        $crate::kwargs($body)
-    };
-    (kwarg $body:expr, $index:expr) => {
-        $crate::kwarg($body, $index)
-    };
-    (kwarg_str $body:expr, $index:expr) => {
-        $crate::kwarg_str($body, $index)
-    };
-    (kwarg_num $body:expr, $index:expr) => {
-        $crate::kwarg_num($body, $index)
-    };
-    (json_get $json:expr, $name:expr) => {
-        $crate::json_get($json, $name)
-    };
-    (json_str $json:expr) => {
-        $crate::json_str($json)
-    };
-    (json_num $json:expr) => {
-        $crate::json_num($json)
-    };
-    (json_nums$json:expr) => {
-        $crate::json_nums($json)
-    };
-    (json_f32s $json:expr) => {
-        $crate::json_f32s($json)
-    };
-    (json_f64s $json:expr) => {
-        $crate::json_f64s($json)
-    };
+impl Arg for u32 {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_u64().map(|i| i as u32)
+    }
+}
+
+impl Arg for u8 {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_u64().map(|i| i as u8)
+    }
+}
+
+impl Arg for usize {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_u64().map(|i| i as usize)
+    }
+}
+
+impl Arg for bool {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_bool()
+    }
+}
+
+impl Arg for Vec<serde_json::Value> {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_array().map(|i| i.clone())
+    }
+}
+
+impl Arg for serde_json::Map<String, serde_json::Value> {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        value.as_object().map(|i| i.clone())
+    }
+}
+
+impl Arg for serde_json::Value {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        Some(value.clone())
+    }
+}
+
+// ----- Body ----- //
+pub trait Body {
+    fn arg<T: Arg>(&self, index: usize) -> Result<T, Error>;
+    fn kwarg<T: Arg>(&self, key: &str) -> Result<T, Error>;
+    fn at<T: Arg>(&self, key: &str) -> Result<T, Error>;
+    fn to<T: Arg>(&self) -> Result<T, Error>;
+}
+
+impl Body for serde_json::Value {
+    fn arg<T: Arg>(&self, index: usize) -> Result<T, Error> {
+        let value = self.get("args").ok_or_else(|| Error::new("missing args"))?.get(index).ok_or_else(|| Error::new(&format!("missing arg {}", index)))?;
+        T::from_value(value).ok_or_else(|| Error::new(&format!("arg {}: {:?} isn't a {}", index, value, type_name::<T>())))
+    }
+
+    fn kwarg<T: Arg>(&self, key: &str) -> Result<T, Error> {
+        let value = self.get("kwargs").ok_or_else(|| Error::new("missing kwargs"))?.get(key).ok_or_else(|| Error::new(&format!("missing kwarg {}", key)))?;
+        T::from_value(value).ok_or_else(|| Error::new(&format!("kwarg {}: {:?} isn't a {}", key, value, type_name::<T>())))
+    }
+
+    fn at<T: Arg>(&self, key: &str) -> Result<T, Error> {
+        let value = self.get(key).ok_or_else(|| Error::new(&format!("missing value {}", key)))?;
+        T::from_value(value).ok_or_else(|| Error::new(&format!("value {}: {:?} isn't a {}", key, value, type_name::<T>())))
+    }
+
+    fn to<T: Arg>(&self) -> Result<T, Error> {
+        T::from_value(self).ok_or_else(|| Error::new(&format!("expected a {} but got {:?}", type_name::<T>(), self)))
+    }
 }
 
 // ===== views ===== //
@@ -226,7 +190,7 @@ macro_rules! json_to_ptr {
     ($value:expr, $type:ty) => {{
         let u = match $value.as_str() {
             Some(s) => s.parse::<usize>()?,
-            None => return err!("pointer isn't a string"),
+            None => return Error::err("pointer isn't a string")?,
         };
         unsafe { transmute::<*const c_void, $type>(u as *const c_void) }
     }};
@@ -234,7 +198,7 @@ macro_rules! json_to_ptr {
 
 impl View {
     #[allow(clippy::useless_transmute)]
-    pub fn new(args: &JsonValue) -> Result<Self, Box<dyn error::Error>> {
+    pub fn new(args: &serde_json::Value) -> Result<Self, Box<dyn StdError>> {
         Ok(Self {
             raw: json_to_ptr!(&args[0], *const c_void),
             command_view: json_to_ptr!(&args[1], CommandView),
@@ -244,7 +208,7 @@ impl View {
         })
     }
 
-    pub fn command(&self, body: &JsonValue) -> Option<JsonValue> {
+    pub fn command(&self, body: &serde_json::Value) -> Option<serde_json::Value> {
         let text = CString::new(body.to_string()).expect("CString::new failed");
         let result = (self.command_view)(self.raw, text.as_ptr());
         if result.is_null() {
@@ -253,7 +217,7 @@ impl View {
         let result = unsafe { CStr::from_ptr(result) }
             .to_str()
             .expect("CStr::to_str failed");
-        Some(json_from_str(result).expect("invalid result"))
+        Some(serde_json::from_str(result).expect("invalid result"))
     }
 
     pub fn midi(&self, msg: &[u8]) {
@@ -297,8 +261,8 @@ macro_rules! gen_component {
 
         // ===== commands ===== //
         pub struct Command {
-            pub func: Box<FnMut(&mut $specifics, $crate::JsonValue) -> Result<Option<$crate::JsonValue>, Box<dyn std::error::Error>>>,
-            pub info: $crate::JsonValue,
+            pub func: Box<FnMut(&mut $specifics, $crate::serde_json::Value) -> Result<Option<$crate::serde_json::Value>, Box<dyn std::error::Error>>>,
+            pub info: $crate::serde_json::Value,
         }
 
         pub type CommandMap = $crate::HashMap<&'static str, Command>;
@@ -375,17 +339,17 @@ macro_rules! gen_component {
                     "midi",
                     Command {
                         func: Box::new(move |soul, body| {
-                            let arr = $crate::arg(&body, 0)?.as_array().ok_or_else(|| $crate::err!(box "msg isn't an array"))?;
+                            let arr: Vec<_> = body.arg(0)?;
                             if arr.len() <= 3 {
                                 let mut slice = [0 as u8; 3];
                                 for i in 0..arr.len() {
-                                    slice[i] = arr[i].as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?;
+                                    slice[i] = arr[i].to()?;
                                 }
                                 soul.midi(&slice);
                             } else {
                                 let mut vec = Vec::<u8>::new();
                                 for i in arr {
-                                    vec.push(i.as_str().ok_or_else(|| $crate::err!(box "msg element isn't a str"))?.parse::<u8>()?);
+                                    vec.push(i.to()?);
                                 }
                                 soul.midi(vec.as_slice());
                             }
@@ -398,7 +362,7 @@ macro_rules! gen_component {
                 );
             }
             // list
-            let mut list: $crate::Vec<$crate::JsonValue> = Default::default();
+            let mut list: Vec<$crate::serde_json::Value> = Default::default();
             for (name, command) in &component.commands {
                 list.push($crate::json!({
                     "name": name,
@@ -445,7 +409,7 @@ macro_rules! gen_component {
             if std::option_env!("DLAL_SNOOP_COMMAND").is_some() {
                 println!("{:?} command {:02x?}", component, text);
             }
-            let body: $crate::JsonValue = match $crate::json_from_str(text) {
+            let body: $crate::serde_json::Value = match $crate::serde_json::from_str(text) {
                 Ok(body) => body,
                 Err(err) => return component.set_result(&$crate::json!({"error": err.to_string()}).to_string()),
             };
@@ -539,12 +503,6 @@ macro_rules! join {
             },
         );
     };
-    (samples_per_evaluation $soul:ident, $body:ident) => {
-        $soul.samples_per_evaluation = $crate::kwarg_num(&$body, "samples_per_evaluation")?;
-    };
-    (sample_rate $soul:ident, $body:ident) => {
-        $soul.sample_rate = $crate::kwarg_num(&$body, "sample_rate")?;
-    };
 }
 
 #[macro_export]
@@ -554,9 +512,10 @@ macro_rules! uni {
             $commands,
             "connect",
             |soul, body| {
-                let output = $crate::View::new($crate::args(&body)?)?;
+                use $crate::Body;
+                let output = $crate::View::new(&body.at("args")?)?;
                 if $check_audio && output.audio(0) == None {
-                    return $crate::err!("output must have audio");
+                    $crate::Error::err("output must have audio")?;
                 }
                 soul.output = Some(output);
                 Ok(None)
@@ -567,7 +526,8 @@ macro_rules! uni {
             $commands,
             "disconnect",
             |soul, body| {
-                let output = View::new($crate::args(&body)?)?;
+                use $crate::Body;
+                let output = View::new(&body.at("args")?)?;
                 if soul.output == Some(output) {
                     soul.output = None;
                 }
@@ -591,9 +551,10 @@ macro_rules! multi {
             $commands,
             "connect",
             |soul, body| {
-                let output = $crate::View::new($crate::args(&body)?)?;
+                use $crate::Body;
+                let output = $crate::View::new(&body.at("args")?)?;
                 if $check_audio && output.audio(0) == None {
-                    return $crate::err!("output must have audio");
+                    $crate::Error::err("output must have audio")?;
                 }
                 soul.outputs.push(output);
                 Ok(None)
@@ -604,7 +565,8 @@ macro_rules! multi {
             $commands,
             "disconnect",
             |soul, body| {
-                let output = $crate::View::new($crate::args(&body)?)?;
+                use $crate::Body;
+                let output = $crate::View::new(&body.at("args")?)?;
                 if let Some(i) = soul.outputs.iter().position(|i| i == &output) {
                     soul.outputs.remove(i);
                 }
