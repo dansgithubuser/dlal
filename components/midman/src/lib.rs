@@ -1,5 +1,5 @@
 use dlal_component_base::{
-    command, gen_component, json, serde_json, multi, View, Body, Error, Arg,
+    command, gen_component, json, serde_json, multi, View, Body, err, Arg,
 };
 
 use lazy_static::lazy_static;
@@ -132,7 +132,7 @@ impl SpecificsTrait for Specifics {
                                     let nibble: u8 = nibble.to()?;
                                     if nibble >= 0x10 {
                                         if nibble & 0xf != 0 {
-                                            Error::err("expected one nibble to be 0")?;
+                                            Err(err!("expected one nibble to be 0"))?;
                                         }
                                         Ok(Piece::MostSignificantNibble(nibble))
                                     }
@@ -140,10 +140,10 @@ impl SpecificsTrait for Specifics {
                                         Ok(Piece::LeastSignificantNibble(nibble))
                                     }
                                 } else {
-                                    Err(Box::new(Error::new("unknown pattern object")))
+                                    Err(err!("unknown pattern object"))?
                                 }
                             },
-                            v => Err(Box::new(Error::new(&format!("pattern element {:?} is invalid", v)))),
+                            v => Err(err!("pattern element {:?} is invalid", v))?,
                         }
                     })?;
                 soul.directives.push(Directive {

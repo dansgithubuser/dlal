@@ -21,10 +21,6 @@ impl Error {
     pub fn new(msg: &str) -> Self {
         Self { msg: msg.into() }
     }
-
-    pub fn err<T>(msg: &str) -> Result<T, Self> {
-        Err(Self::new(msg))
-    }
 }
 
 impl fmt::Display for Error {
@@ -41,6 +37,13 @@ impl StdError for Error {
     fn cause(&self) -> Option<&(dyn StdError)> {
         None
     }
+}
+
+#[macro_export]
+macro_rules! err {
+    ($($arg:tt)+) => {
+        $crate::Error::new(&format!($($arg)+))
+    };
 }
 
 // ===== arg handling ===== //
@@ -150,22 +153,22 @@ pub trait Body {
 
 impl Body for serde_json::Value {
     fn arg<T: Arg>(&self, index: usize) -> Result<T, Error> {
-        let value = self.get("args").ok_or_else(|| Error::new("missing args"))?.get(index).ok_or_else(|| Error::new(&format!("missing arg {}", index)))?;
-        T::from_value(value).ok_or_else(|| Error::new(&format!("arg {}: {:?} isn't a {}", index, value, type_name::<T>())))
+        let value = self.get("args").ok_or_else(|| err!("missing args"))?.get(index).ok_or_else(|| err!("missing arg {}", index))?;
+        T::from_value(value).ok_or_else(|| err!("arg {}: {:?} isn't a {}", index, value, type_name::<T>()))
     }
 
     fn kwarg<T: Arg>(&self, key: &str) -> Result<T, Error> {
-        let value = self.get("kwargs").ok_or_else(|| Error::new("missing kwargs"))?.get(key).ok_or_else(|| Error::new(&format!("missing kwarg {}", key)))?;
-        T::from_value(value).ok_or_else(|| Error::new(&format!("kwarg {}: {:?} isn't a {}", key, value, type_name::<T>())))
+        let value = self.get("kwargs").ok_or_else(|| err!("missing kwargs"))?.get(key).ok_or_else(|| err!("missing kwarg {}", key))?;
+        T::from_value(value).ok_or_else(|| err!("kwarg {}: {:?} isn't a {}", key, value, type_name::<T>()))
     }
 
     fn at<T: Arg>(&self, key: &str) -> Result<T, Error> {
-        let value = self.get(key).ok_or_else(|| Error::new(&format!("missing value {}", key)))?;
-        T::from_value(value).ok_or_else(|| Error::new(&format!("value {}: {:?} isn't a {}", key, value, type_name::<T>())))
+        let value = self.get(key).ok_or_else(|| err!("missing value {}", key))?;
+        T::from_value(value).ok_or_else(|| err!("value {}: {:?} isn't a {}", key, value, type_name::<T>()))
     }
 
     fn to<T: Arg>(&self) -> Result<T, Error> {
-        T::from_value(self).ok_or_else(|| Error::new(&format!("expected a {} but got {:?}", type_name::<T>(), self)))
+        T::from_value(self).ok_or_else(|| err!("expected a {} but got {:?}", type_name::<T>(), self))
     }
 }
 
@@ -190,7 +193,7 @@ macro_rules! json_to_ptr {
     ($value:expr, $type:ty) => {{
         let u = match $value.as_str() {
             Some(s) => s.parse::<usize>()?,
-            None => return Error::err("pointer isn't a string")?,
+            None => Err(err!("pointer isn't a string"))?,
         };
         unsafe { transmute::<*const c_void, $type>(u as *const c_void) }
     }};
@@ -515,7 +518,7 @@ macro_rules! uni {
                 use $crate::Body;
                 let output = $crate::View::new(&body.at("args")?)?;
                 if $check_audio && output.audio(0) == None {
-                    $crate::Error::err("output must have audio")?;
+                    Err($crate::err!("output must have audio"))?;
                 }
                 soul.output = Some(output);
                 Ok(None)
@@ -554,7 +557,7 @@ macro_rules! multi {
                 use $crate::Body;
                 let output = $crate::View::new(&body.at("args")?)?;
                 if $check_audio && output.audio(0) == None {
-                    $crate::Error::err("output must have audio")?;
+                    Err($crate::err!("output must have audio"))?;
                 }
                 soul.outputs.push(output);
                 Ok(None)

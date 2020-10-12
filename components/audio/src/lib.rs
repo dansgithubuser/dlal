@@ -1,4 +1,4 @@
-use dlal_component_base::{Body, command, gen_component, json, multi, Error, View};
+use dlal_component_base::{Body, command, gen_component, json, multi, View, err};
 
 use colored::*;
 use portaudio as pa;
@@ -137,7 +137,7 @@ impl SpecificsTrait for Specifics {
                         break;
                     }
                     if slot == soul.addees.len() - 1 {
-                        Error::err("no such component")?;
+                        Err(err!("no such component"))?;
                     }
                 }
                 Ok(None)

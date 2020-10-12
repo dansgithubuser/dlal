@@ -1,4 +1,4 @@
-use dlal_component_base::{command, Error, gen_component, join, json, uni, View, Body, serde_json, Arg};
+use dlal_component_base::{command, err, gen_component, join, json, uni, View, Body, serde_json, Arg};
 
 // ===== note ===== //
 #[derive(Default)]
@@ -97,7 +97,7 @@ impl SpecificsTrait for Specifics {
                     if !impulse.is_empty() {
                         soul.impulse = impulse;
                     } else {
-                        Error::err("impulse must have at least one element")?;
+                        Err(err!("impulse must have at least one element"))?;
                     }
                 }
                 Ok(Some(json!(soul.impulse)))

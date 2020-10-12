@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, uni, Error, View, Body, serde_json};
+use dlal_component_base::{command, gen_component, join, json, uni, err, Error, View, Body, serde_json};
 
 use std::f32;
 use std::time;
@@ -51,7 +51,7 @@ impl Specifics {
             "tri" => self.wave = wave_tri,
             "saw" => self.wave = wave_saw,
             "noise" => self.wave = wave_noise,
-            _ => Error::err("unknown wave")?,
+            _ => Err(err!("unknown wave"))?,
         };
         Ok(())
     }

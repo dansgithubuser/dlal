@@ -1,5 +1,5 @@
 use dlal_component_base::{
-    Arg, Body, command, gen_component, join, json, multi, serde_json, View, Error,
+    Arg, Body, command, gen_component, join, json, multi, serde_json, View, err,
 };
 
 use std::cmp::min;
@@ -77,7 +77,7 @@ impl SpecificsTrait for Specifics {
                 let file_path: String = body.arg(0)?;
                 let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    Error::err("invalid note")?;
+                    Err(err!("invalid note"))?;
                 }
                 let mut reader = hound::WavReader::open(file_path)?;
                 let spec = reader.spec();
@@ -110,7 +110,7 @@ impl SpecificsTrait for Specifics {
                 let ratio: f32 = body.arg(0)?;
                 let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    Error::err("invalid note")?;
+                    Err(err!("invalid note"))?;
                 }
                 let samples = &mut soul.sounds[note].samples;
                 let mut resamples = Vec::<f32>::new();
@@ -131,18 +131,18 @@ impl SpecificsTrait for Specifics {
                 let start = (body.arg::<f32>(0)? * soul.sample_rate as f32) as usize;
                 let end   = (body.arg::<f32>(1)? * soul.sample_rate as f32) as usize;
                 if end < start {
-                    Error::err("end is before start")?;
+                    Err(err!("end is before start"))?;
                 }
                 let note: usize = body.arg(2)?;
                 if note >= 128 {
-                    Error::err("invalid note")?;
+                    Err(err!("invalid note"))?;
                 }
                 let samples = &mut soul.sounds[note].samples;
                 if start >= samples.len() {
-                    Error::err("start is too late")?;
+                    Err(err!("start is too late"))?;
                 }
                 if end >= samples.len() {
-                    Error::err("end is too late")?;
+                    Err(err!("end is too late"))?;
                 }
                 *samples = samples[start..end].to_vec();
                 Ok(None)
@@ -156,7 +156,7 @@ impl SpecificsTrait for Specifics {
                 let amplitude = body.arg(0)?;
                 let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    Error::err("invalid note")?;
+                    Err(err!("invalid note"))?;
                 }
                 for i in &mut soul.sounds[note].samples {
                     if *i > amplitude {
@@ -176,7 +176,7 @@ impl SpecificsTrait for Specifics {
                 let amount: f32 = body.arg(0)?;
                 let note: usize = body.arg(1)?;
                 if note >= 128 {
-                    Error::err("invalid note")?;
+                    Err(err!("invalid note"))?;
                 }
                 for sample in &mut soul.sounds[note].samples {
                     *sample *= amount;
@@ -191,11 +191,11 @@ impl SpecificsTrait for Specifics {
             |soul, body| {
                 let note_to: usize = body.arg(0)?;
                 if note_to >= 128 {
-                    Error::err("invalid note_to")?;
+                    Err(err!("invalid note_to"))?;
                 }
                 let note_from: usize = body.arg(1)?;
                 if note_from >= 128 {
-                    Error::err("invalid note_from")?;
+                    Err(err!("invalid note_from"))?;
                 }
                 if soul.sounds[note_from].samples.len() > soul.sounds[note_to].samples.len() {
                     let len = soul.sounds[note_from].samples.len();

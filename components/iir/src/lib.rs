@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, uni, View, Body, Error, Arg, serde_json};
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body, err, Arg, serde_json};
 
 use num_complex::Complex64;
 use polynomials::{Polynomial, poly};
@@ -117,7 +117,7 @@ impl SpecificsTrait for Specifics {
                 if let Ok(a) = body.arg::<Vec<_>>(0) {
                     let a = a.vec()?;
                     if a.len() == 0 {
-                        Error::err("expecting an array with at least one element")?;
+                        Err(err!("expecting an array with at least one element"))?;
                     }
                     soul.set_a(a);
                 }

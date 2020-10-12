@@ -1,6 +1,6 @@
 use dlal_component_base::{
     command, gen_component, join, json, Body, Arg,
-    View, VIEW_ARGS, Error, serde_json,
+    View, VIEW_ARGS, err, serde_json,
 };
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -225,7 +225,7 @@ impl SpecificsTrait for Specifics {
             |soul, body| {
                 let line_index: usize = body.arg(0)?;
                 if line_index >= soul.lines.len() {
-                    Error::err(&format!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
+                    Err(err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
                 }
                 let line = &soul.lines[line_index];
                 Ok(Some(json!({
@@ -267,7 +267,7 @@ impl SpecificsTrait for Specifics {
                 let ticks_per_quarter: u32 = body.arg(1)?;
                 let deltamsgs = body.arg(2)?;
                 if line_index >= soul.lines.len() {
-                    Error::err(&format!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
+                    Err(err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
                 }
                 if let Ok(immediate) = body.kwarg("immediate") {
                     if immediate {
@@ -304,7 +304,7 @@ impl SpecificsTrait for Specifics {
                 let line_index: usize = body.arg(0)?;
                 let seconds: f64 = body.arg(1)?;
                 if line_index >= soul.lines.len() {
-                    Error::err("invalid line_index")?;
+                    Err(err!("invalid line_index"))?;
                 }
                 soul.lines[line_index].offset = seconds;
                 Ok(None)

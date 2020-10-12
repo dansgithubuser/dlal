@@ -1,4 +1,4 @@
-use dlal_component_base::{Body, command, Error, gen_component, join, View, serde_json};
+use dlal_component_base::{Body, command, err, gen_component, join, View, serde_json};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
@@ -57,7 +57,7 @@ impl SpecificsTrait for Specifics {
                         body: Box::new(body.arg(5)?),
                         detach,
                     }) {
-                        Error::err("try_send failed")?;
+                        Err(err!("try_send failed"))?;
                     }
                 if detach {
                     return Ok(None);
@@ -75,7 +75,7 @@ impl SpecificsTrait for Specifics {
                     .try_send(QueuedItem::Wait(
                         body.arg(0)?,
                     )) {
-                        Error::err("try_send failed")?;
+                        Err(err!("try_send failed"))?;
                     }
                 Ok(None)
             },

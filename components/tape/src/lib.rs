@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, Body, Error};
+use dlal_component_base::{command, gen_component, join, json, Body, err};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
@@ -74,7 +74,7 @@ impl SpecificsTrait for Specifics {
             "read",
             |soul, body| {
                 if soul.recv.is_none() {
-                    Error::err("not initialized")?;
+                    Err(err!("not initialized"))?;
                 }
                 let mut audio = Vec::<String>::new();
                 match body.arg(0) {
