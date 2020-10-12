@@ -1,5 +1,5 @@
 use dlal_component_base::{
-    Arg, Body, command, gen_component, join, json, multi, serde_json, View, err,
+    Body, command, gen_component, join, json, multi, serde_json, View, err,
 };
 
 use std::cmp::min;
@@ -62,7 +62,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "set",
             |soul, body| {
-                let samples = body.arg::<Vec<_>>(0)?.vec()?;
+                let samples = body.arg::<Vec<_>>(0)?;
                 for i in 0..min(samples.len(), soul.audio.len()) {
                     soul.audio[i] = samples[i];
                 }
@@ -238,7 +238,7 @@ impl SpecificsTrait for Specifics {
                 for (note, sound) in sounds.iter() {
                     soul.sounds[note.parse::<usize>()?] = Sound {
                         sample_rate: sound.at("sample_rate")?,
-                        samples: sound.at::<Vec<_>>("samples")?.vec()?,
+                        samples: sound.at("samples")?,
                         ..Sound::default()
                     };
                 }

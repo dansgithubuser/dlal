@@ -1,4 +1,4 @@
-use dlal_component_base::{command, err, gen_component, join, json, uni, View, Body, serde_json, Arg};
+use dlal_component_base::{command, err, gen_component, join, json, uni, View, Body, serde_json};
 
 // ===== note ===== //
 #[derive(Default)]
@@ -93,7 +93,7 @@ impl SpecificsTrait for Specifics {
             "impulse",
             |soul, body| {
                 if let Ok(v) = body.arg::<serde_json::Value>(0) {
-                    let impulse = v.to::<Vec<_>>()?.vec()?;
+                    let impulse = v.to::<Vec<_>>()?;
                     if !impulse.is_empty() {
                         soul.impulse = impulse;
                     } else {
@@ -136,7 +136,7 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = body.arg::<serde_json::Value>(0)?;
-                soul.impulse = j.at::<Vec<_>>("impulse")?.vec()?;
+                soul.impulse = j.at("impulse")?;
                 Ok(None)
             },
             { "args": ["json"] },

@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, uni, View, Body, serde_json, Arg};
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body, serde_json};
 
 use rustfft::{num_complex::Complex, FFTplanner};
 
@@ -44,7 +44,7 @@ impl SpecificsTrait for Specifics {
             commands,
             "ir",
             |soul, body| {
-                soul.set_ir(body.arg::<Vec<_>>(0)?.vec()?);
+                soul.set_ir(body.arg(0)?);
                 Ok(None)
             },
             { "args": ["ir"] },
@@ -121,7 +121,7 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = body.arg::<serde_json::Value>(0)?;
-                soul.set_ir(j.at::<Vec<_>>("ir")?.vec()?);
+                soul.set_ir(j.at("ir")?);
                 Ok(None)
             },
             { "args": ["json"] },

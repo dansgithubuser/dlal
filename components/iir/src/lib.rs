@@ -1,4 +1,4 @@
-use dlal_component_base::{command, gen_component, join, json, uni, View, Body, err, Arg, serde_json};
+use dlal_component_base::{command, gen_component, join, json, uni, View, Body, err, serde_json, Arg};
 
 use num_complex::Complex64;
 use polynomials::{Polynomial, poly};
@@ -115,7 +115,6 @@ impl SpecificsTrait for Specifics {
             "a",
             |soul, body| {
                 if let Ok(a) = body.arg::<Vec<_>>(0) {
-                    let a = a.vec()?;
                     if a.len() == 0 {
                         Err(err!("expecting an array with at least one element"))?;
                     }
@@ -131,7 +130,7 @@ impl SpecificsTrait for Specifics {
             "b",
             |soul, body| {
                 if let Ok(b) = body.arg::<Vec<_>>(0) {
-                    soul.set_b(b.vec()?);
+                    soul.set_b(b);
                 }
                 soul.smooth = None;
                 Ok(Some(json!(soul.b)))
@@ -143,12 +142,12 @@ impl SpecificsTrait for Specifics {
             "pole_zero",
             |soul, body| {
                 // poles
-                let poles: Vec<Complex64> = body.arg::<Vec<_>>(0)?
+                let poles: Vec<Complex64> = body.arg::<Vec<serde_json::Value>>(0)?
                     .vec_map(|i| {
                         Ok(Complex64::new(i.at("re")?, i.at("im")?))
                     })?;
                 // zeros
-                let zeros: Vec<Complex64> = body.arg::<Vec<_>>(1)?
+                let zeros: Vec<Complex64> = body.arg::<Vec<serde_json::Value>>(1)?
                     .vec_map(|i| {
                         Ok(Complex64::new(i.at("re")?, i.at("im")?))
                     })?;
@@ -280,8 +279,8 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = body.arg::<serde_json::Value>(0)?;
-                soul.set_a(j.at::<Vec<_>>("a")?.vec()?);
-                soul.set_b(j.at::<Vec<_>>("b")?.vec()?);
+                soul.set_a(j.at("a")?);
+                soul.set_b(j.at("b")?);
                 Ok(None)
             },
             { "args": ["json"] },

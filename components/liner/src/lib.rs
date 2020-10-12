@@ -16,7 +16,7 @@ enum Msg {
 
 impl Msg {
     fn new(msg: &serde_json::Value) -> Result<Self, Box<dyn StdError>> {
-        let array = msg.to::<Vec<_>>()?.vec()?;
+        let array = msg.to::<Vec<_>>()?;
         Ok(if array.len() <= 3 {
             let mut msg = [0, 0, 0];
             for i in 0..array.len() {
@@ -340,7 +340,7 @@ impl SpecificsTrait for Specifics {
             "from_json",
             |soul, body| {
                 let j = body.arg::<serde_json::Value>(0)?;
-                let lines = j.at::<Vec<_>>("lines")?;
+                let lines = j.at::<Vec<serde_json::Value>>("lines")?;
                 for i in 0..lines.len() {
                     soul.lines[i] = serde_json::from_str(&lines[i].to_string())?;
                 }

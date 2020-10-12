@@ -125,9 +125,12 @@ impl Arg for bool {
     }
 }
 
-impl Arg for Vec<serde_json::Value> {
+impl<T: Arg> Arg for Vec<T> {
     fn from_value(value: &serde_json::Value) -> Option<Self> {
-        value.as_array().map(|i| i.clone())
+        match value.as_array() {
+            Some(v) => v.clone().vec().ok(),
+            None => None,
+        }
     }
 }
 
@@ -342,17 +345,17 @@ macro_rules! gen_component {
                     "midi",
                     Command {
                         func: Box::new(move |soul, body| {
-                            let arr: Vec<_> = body.arg(0)?;
+                            let arr: Vec<u8> = body.arg(0)?;
                             if arr.len() <= 3 {
                                 let mut slice = [0 as u8; 3];
                                 for i in 0..arr.len() {
-                                    slice[i] = arr[i].to()?;
+                                    slice[i] = arr[i];
                                 }
                                 soul.midi(&slice);
                             } else {
                                 let mut vec = Vec::<u8>::new();
                                 for i in arr {
-                                    vec.push(i.to()?);
+                                    vec.push(i);
                                 }
                                 soul.midi(vec.as_slice());
                             }
