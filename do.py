@@ -81,84 +81,36 @@ if args.venv_install:
 
 # ===== components ===== #
 new_lib_rs = '''\
-use dlal_component_base::{
-    command,
-    gen_component,
-    join,
-    json,
-    marg,
-    multi,
-    uni,
-    View,
-};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
-use std::vec::Vec;
+component!(
+    {"in": ["?"], "out": ["?"]},
+    [
+        "samples_per_evaluation",
+        "sample_rate",
+        //{"name": "join_info", "value": {}},
+        "uni",
+        //"multi",
+        //"check_audio",
+        //{"name": "connect_info", "value": {}},
+        //{"name": "disconnect_info", "value": {}},
+    ],
+    {
+        value: f32,
+    },
+    {
+        "value": {
+            "args": [{"name": "value", "optional": true}],
+        },
+    },
+);
 
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: u32,
-    outputs: Vec<View>,
-    output: Option<View>,
-}
-
-gen_component!(Specifics, {"in": ["?"], "out": ["?"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.value = 1.0;
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        multi!(connect commands, false);
-        uni!(connect commands, false);
-        command!(
-            commands,
-            "value",
-            |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
-                    soul.value = v;
-                }
-                Ok(Some(json!(soul.value)))
-            },
-            {
-                "args": [{
-                    "name": "value",
-                    "optional": true,
-                }],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "value": soul.value,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.value = marg!(json_num marg!(json_get j, "value")?)?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn evaluate(&mut self) {
     }
 
     fn midi(&mut self, msg: &[u8]) {
@@ -168,9 +120,37 @@ impl SpecificsTrait for Specifics {
         None
     }
 
-    fn evaluate(&mut self) {
+    fn join(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
     }
-}'''
+
+    fn connect(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+
+    fn disconnect(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.value)))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.value = body.arg(0)?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn value_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.value = v;
+        }
+        Ok(Some(json!(self.value)))
+    }
+}
+'''
 
 if args.component_new:
     os.chdir(os.path.join(DIR, 'components'))
@@ -421,7 +401,7 @@ if args.style_check or args.style_rust_fix:
                 'E301', 'E302', 'E305', 'E306',
                 'E402',
                 'E501',
-                'E701', 'E702', 'E704', 'E711', 'E722',
+                'E701', 'E702', 'E704', 'E711', 'E712', 'E722',
             ]),
             path,
             kwargs={'check': False},

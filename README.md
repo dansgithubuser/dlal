@@ -197,11 +197,6 @@ Driver components are responsible for calling `evaluate` on other components. In
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- clean up error handling and arg handling goes away
-- get rid of json paranoia
-- get rid of soul?
-	- `commands!` section instead of individual `command!`s
-
 - audiobro
 	- track 1
 		- bass slide down in B section

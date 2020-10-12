@@ -1,4 +1,4 @@
-use dlal_component_base::{Body, command, gen_component, join, json, uni, View, serde_json};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 enum Stage {
     A,
@@ -13,116 +13,59 @@ impl Default for Stage {
     }
 }
 
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    a: f32,
-    d: f32,
-    s: f32,
-    r: f32,
-    stage: Stage,
-    vol: f32,
-    output: Option<View>,
-}
+component!(
+    {"in": ["midi"], "out": ["audio"]},
+    ["uni", "check_audio", "samples_per_evaluation"],
+    {
+        a: f32,
+        d: f32,
+        s: f32,
+        r: f32,
+        stage: Stage,
+        vol: f32,
+    },
+    {
+        "a": {
+            "args": [{
+                "name": "amount",
+                "desc": "attack rate",
+                "units": "amplitude per sample",
+                "range": "(0, 1]",
+            }],
+        },
+        "d": {
+            "args": [{
+                "name": "amount",
+                "desc": "decay rate",
+                "units": "amplitude per sample",
+                "range": "(0, 1]",
+            }],
+        },
+        "s": {
+            "args": [{
+                "name": "amount",
+                "desc": "sustain level",
+                "range": "[0, 1]",
+            }],
+        },
+        "r": {
+            "args": [{
+                "name": "amount",
+                "desc": "release rate",
+                "units": "amplitude per sample",
+                "range": "(0, 1]",
+            }],
+        },
+        "reset": {},
+    },
+);
 
-gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
-
-macro_rules! stage_command {
-    ($commands:ident, $name:literal, $member:tt, ($($info:tt)+)) => {
-        command!(
-            $commands,
-            $name,
-            |soul, body| {
-                if let Ok(v) = body.arg(0) {
-                    soul.$member = v;
-                }
-                Ok(Some(json!(soul.$member)))
-            },
-            {"args": [$($info)+]},
-        );
-    }
-}
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            a: 0.01,
-            d: 0.01,
-            s: 0.5,
-            r: 0.01,
-            ..Default::default()
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        uni!(connect commands, true);
-        stage_command!(commands, "a", a, ({
-            "name": "amount",
-            "desc": "attack rate",
-            "units": "amplitude per sample",
-            "range": "(0, 1]",
-        }));
-        stage_command!(commands, "d", d, ({
-            "name": "amount",
-            "desc": "decay rate",
-            "units": "amplitude per sample",
-            "range": "(0, 1]",
-        }));
-        stage_command!(commands, "s", s, ({
-            "name": "amount",
-            "desc": "sustain level",
-            "range": "[0, 1]",
-        }));
-        stage_command!(commands, "r", r, ({
-            "name": "amount",
-            "desc": "release rate",
-            "units": "amplitude per sample",
-            "range": "(0, 1]",
-        }));
-        command!(
-            commands,
-            "reset",
-            |soul, _body| {
-                soul.stage = Stage::R;
-                soul.vol = 0.0;
-                Ok(None)
-            },
-            {},
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "a": soul.a,
-                    "d": soul.d,
-                    "s": soul.s,
-                    "r": soul.r,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j: serde_json::Value = body.arg(0)?;
-                soul.a = j.at("a")?;
-                soul.d = j.at("d")?;
-                soul.s = j.at("s")?;
-                soul.r = j.at("r")?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.a = 0.01;
+        self.d = 0.01;
+        self.s = 0.5;
+        self.r = 0.01;
     }
 
     fn evaluate(&mut self) {
@@ -168,5 +111,59 @@ impl SpecificsTrait for Specifics {
         } else if type_nibble == 0x90 {
             self.stage = Stage::A;
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "a": self.a,
+            "d": self.d,
+            "s": self.s,
+            "r": self.r,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j: serde_json::Value = body.arg(0)?;
+        self.a = j.at("a")?;
+        self.d = j.at("d")?;
+        self.s = j.at("s")?;
+        self.r = j.at("r")?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn a_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.a = v;
+        }
+        Ok(Some(json!(self.a)))
+    }
+
+    fn d_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.d = v;
+        }
+        Ok(Some(json!(self.d)))
+    }
+
+    fn s_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.s = v;
+        }
+        Ok(Some(json!(self.s)))
+    }
+
+    fn r_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.r = v;
+        }
+        Ok(Some(json!(self.r)))
+    }
+
+    fn reset_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        self.stage = Stage::R;
+        self.vol = 0.0;
+        Ok(None)
     }
 }

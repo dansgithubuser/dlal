@@ -1,4 +1,4 @@
-use dlal_component_base::{command, err, gen_component, join, json, uni, View, Body, serde_json};
+use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 
 // ===== note ===== //
 #[derive(Default)]
@@ -49,98 +49,39 @@ impl Note {
     }
 }
 
-// ===== components ===== //
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: u32,
-    impulse: Vec<f32>,
-    notes: Vec<Note>,
-    output: Option<View>,
-}
+// ===== component ===== //
+component!(
+    {"in": ["midi"], "out": ["audio"]},
+    ["samples_per_evaluation", "sample_rate", "uni", "check_audio"],
+    {
+        impulse: Vec<f32>,
+        notes: Vec<Note>,
+    },
+    {
+        "impulse": {
+            "args": [{
+                "name": "impulse",
+                "optional": true,
+            }],
+        },
+        "one": {},
+    },
+);
 
-gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            impulse: vec![1.0],
-            ..Default::default()
-        }
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.impulse.push(1.0);
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-                soul.sample_rate = body.kwarg("sample_rate")?;
-                soul.notes = (0..128)
-                    .map(|i| {
-                        Note::new(
-                            440.0 * (2.0 as f32).powf((i as f32 - 69.0) / 12.0)
-                                / soul.sample_rate as f32,
-                        )
-                    })
-                    .collect();
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        uni!(connect commands, true);
-        command!(
-            commands,
-            "impulse",
-            |soul, body| {
-                if let Ok(v) = body.arg::<serde_json::Value>(0) {
-                    let impulse = v.to::<Vec<_>>()?;
-                    if !impulse.is_empty() {
-                        soul.impulse = impulse;
-                    } else {
-                        Err(err!("impulse must have at least one element"))?;
-                    }
-                }
-                Ok(Some(json!(soul.impulse)))
-            },
-            {
-                "args": [{
-                    "name": "impulse",
-                    "optional": true,
-                }],
-            },
-        );
-        command!(
-            commands,
-            "one",
-            |soul, _body| {
-                let note = &mut soul.notes[0];
-                note.vol = 1.0;
-                note.phase = 0.0;
-                note.index = Some(0);
-                Ok(None)
-            },
-            { "args": [] },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "impulse": soul.impulse,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = body.arg::<serde_json::Value>(0)?;
-                soul.impulse = j.at("impulse")?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn join(&mut self, _body: serde_json::Value) -> CmdResult {
+        self.notes = (0..128)
+            .map(|i| {
+                Note::new(
+                    440.0 * (2.0 as f32).powf((i as f32 - 69.0) / 12.0) / self.sample_rate as f32,
+                )
+            })
+            .collect();
+        Ok(None)
     }
 
     fn midi(&mut self, msg: &[u8]) {
@@ -175,5 +116,39 @@ impl SpecificsTrait for Specifics {
                 *i += note.advance(&self.impulse);
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "impulse": self.impulse,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.impulse = j.at("impulse")?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn impulse_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg::<serde_json::Value>(0) {
+            let impulse = v.to::<Vec<_>>()?;
+            if !impulse.is_empty() {
+                self.impulse = impulse;
+            } else {
+                return Err(err!("impulse must have at least one element").into());
+            }
+        }
+        Ok(Some(json!(self.impulse)))
+    }
+
+    fn one_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let note = &mut self.notes[0];
+        note.vol = 1.0;
+        note.phase = 0.0;
+        note.index = Some(0);
+        Ok(None)
     }
 }

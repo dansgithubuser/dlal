@@ -1,6 +1,4 @@
-use dlal_component_base::{
-    command, gen_component, json, serde_json, multi, View, Body, err, Arg,
-};
+use dlal_component_base::{component, err, json, serde_json, Arg, Body, CmdResult};
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -98,143 +96,117 @@ impl Directive {
     }
 }
 
-#[derive(Default)]
-pub struct Specifics {
-    directives: Vec<Directive>,
-    outputs: Vec<View>,
-    last_error: String,
-}
-
-gen_component!(Specifics, {"in": ["midi"], "out": ["cmd"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        multi!(connect commands, false);
-        command!(
-            commands,
-            "directive",
-            |soul, body| {
-                let pattern = body.arg::<Vec<_>>(0)?
-                    .vec_map(|i| {
-                        match i {
-                            serde_json::Value::Null => Ok(Piece::Null),
-                            serde_json::Value::Number(_) => {
-                                Ok(Piece::Byte(i.to()?))
+component!(
+    {"in": ["midi"], "out": ["cmd"]},
+    ["multi"],
+    {
+        directives: Vec<Directive>,
+        last_error: String,
+    },
+    {
+        "directive": {
+            "args": [
+                {
+                    "name": "pattern",
+                    "type": "array",
+                    "element": {
+                        "choices": [
+                            {
+                                "name": "byte",
+                                "desc": "match equal",
                             },
-                            serde_json::Value::Object(map) => {
-                                if let Some(nibble) = map.get("nibble") {
-                                    let nibble: u8 = nibble.to()?;
-                                    if nibble >= 0x10 {
-                                        if nibble & 0xf != 0 {
-                                            Err(err!("expected one nibble to be 0"))?;
-                                        }
-                                        Ok(Piece::MostSignificantNibble(nibble))
-                                    }
-                                    else {
-                                        Ok(Piece::LeastSignificantNibble(nibble))
-                                    }
-                                } else {
-                                    Err(err!("unknown pattern object"))?
-                                }
+                            {
+                                "name": "null",
+                                "desc": "match anything",
                             },
-                            v => Err(err!("pattern element {:?} is invalid", v))?,
-                        }
-                    })?;
-                soul.directives.push(Directive {
-                    pattern,
-                    component: body.arg(1)?,
-                    format: body.arg(2)?,
-                });
-                Ok(None)
-            },
-            {
-                "args": [
-                    {
-                        "name": "pattern",
-                        "type": "array",
-                        "element": {
-                            "choices": [
-                                {
-                                    "name": "byte",
-                                    "desc": "match equal",
+                            {
+                                "name": "object",
+                                "values": {
+                                    "nibble": "nibble",
                                 },
-                                {
-                                    "name": "null",
-                                    "desc": "match anything",
-                                },
-                                {
-                                    "name": "object",
-                                    "values": {
-                                        "nibble": "nibble",
-                                    },
-                                    "desc": "match based on provided values",
-                                },
-                            ],
-                        },
+                                "desc": "match based on provided values",
+                            },
+                        ],
                     },
-                    {
-                        "name": "component",
-                        "type": "unsigned",
-                        "desc": "index into connected components to send the command to",
-                    },
-                    {
-                        "name": "format",
-                        "type": "string",
-                        "desc": "command text to have MIDI bytes subbed in; %1*2+3 becomes MIDI byte 1 multiplied by 2 plus 3"
-                    },
-                ],
-            },
-        );
-        command!(
-            commands,
-            "last_error",
-            |soul, _body| {
-                Ok(Some(json!(soul.last_error)))
-            },
-            {
-                "args": [],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "directives": soul.directives,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = body.arg::<serde_json::Value>(0)?;
-                soul.directives = serde_json::from_str(&j.at::<serde_json::Value>("directives")?.to_string())?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
-    }
+                },
+                {
+                    "name": "component",
+                    "type": "unsigned",
+                    "desc": "index into connected components to send the command to",
+                },
+                {
+                    "name": "format",
+                    "type": "string",
+                    "desc": "command text to have MIDI bytes subbed in; %1*2+3 becomes MIDI byte 1 multiplied by 2 plus 3"
+                },
+            ],
+        },
+        "last_error": {},
+    },
+);
 
+impl ComponentTrait for Component {
     fn midi(&mut self, msg: &[u8]) {
         for directive in &self.directives {
             if directive.matches(msg) {
                 if directive.component >= self.outputs.len() {
                     continue;
                 }
-                if let Some(result) = self.outputs[directive.component].command(&directive.sub(msg)) {
+                if let Some(result) = self.outputs[directive.component].command(&directive.sub(msg))
+                {
                     if let Some(error) = result.get("error") {
                         self.last_error = error.as_str().unwrap_or(&error.to_string()).into();
                     }
                 }
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "directives": self.directives,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.directives =
+            serde_json::from_str(&j.at::<serde_json::Value>("directives")?.to_string())?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn directive_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let pattern = body.arg::<Vec<_>>(0)?.vec_map(|i| match i {
+            serde_json::Value::Null => Ok(Piece::Null),
+            serde_json::Value::Number(_) => Ok(Piece::Byte(i.to()?)),
+            serde_json::Value::Object(map) => {
+                if let Some(nibble) = map.get("nibble") {
+                    let nibble: u8 = nibble.to()?;
+                    if nibble >= 0x10 {
+                        if nibble & 0xf != 0 {
+                            return Err(err!("expected one nibble to be 0").into());
+                        }
+                        Ok(Piece::MostSignificantNibble(nibble))
+                    } else {
+                        Ok(Piece::LeastSignificantNibble(nibble))
+                    }
+                } else {
+                    Err(err!("unknown pattern object").into())
+                }
+            }
+            v => Err(err!("pattern element {:?} is invalid", v).into()),
+        })?;
+        self.directives.push(Directive {
+            pattern,
+            component: body.arg(1)?,
+            format: body.arg(2)?,
+        });
+        Ok(None)
+    }
+
+    fn last_error_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.last_error)))
     }
 }

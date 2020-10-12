@@ -1,126 +1,40 @@
-use dlal_component_base::{
-    command, gen_component, join, json, serde_json,
-    multi, View, Body,
-};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 const MODE_F32: u8 = 0;
 const MODE_I32: u8 = 1;
 const MODE_PITCH_WHEEL: u8 = 2;
 
-#[derive(Default)]
-pub struct Specifics {
-    cv: Vec<f32>,
-    m: f32,
-    b: f32,
-    mode: u8,
-    format: String,
-    outputs: Vec<View>,
-    last_error: String,
-}
+component!(
+    {"in": ["audio"], "out": ["cmd", "midi"]},
+    [
+        "multi",
+        {"name": "join_info", "value": {"kwargs": ["samples_per_evaluation"]}},
+    ],
+    {
+        cv: Vec<f32>,
+        m: f32,
+        b: f32,
+        mode: u8,
+        format: String,
+        last_error: String,
+    },
+    {
+        "format": {"args": ["format"]},
+        "mode": {"args": ["mode"]},
+        "m": {"args": ["m"]},
+        "b": {"args": ["b"]},
+        "last_error": {},
+    },
+);
 
-gen_component!(Specifics, {"in": ["audio"], "out": ["cmd", "midi"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            outputs: Vec::with_capacity(1),
-            m: 1.0,
-            b: 0.0,
-            ..Default::default()
-        }
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.m = 1.0;
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.cv
-                    .resize(body.kwarg("samples_per_evaluation")?, 0.0);
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        multi!(connect commands, false);
-        command!(
-            commands,
-            "format",
-            |soul, body| {
-                soul.format = body.arg(0)?;
-                Ok(Some(json!(soul.format)))
-            },
-            {
-                "args": ["format"],
-            },
-        );
-        command!(
-            commands,
-            "mode",
-            |soul, body| {
-                soul.mode = body.arg(0)?;
-                Ok(Some(json!(soul.mode)))
-            },
-            {
-                "args": ["mode"],
-            },
-        );
-        command!(
-            commands,
-            "m",
-            |soul, body| {
-                soul.m = body.arg(0)?;
-                Ok(Some(json!(soul.m)))
-            },
-            {
-                "args": ["m"],
-            },
-        );
-        command!(
-            commands,
-            "b",
-            |soul, body| {
-                soul.b = body.arg(0)?;
-                Ok(Some(json!(soul.b)))
-            },
-            {
-                "args": ["b"],
-            },
-        );
-        command!(
-            commands,
-            "last_error",
-            |soul, _body| {
-                Ok(Some(json!(soul.last_error)))
-            },
-            {
-                "args": [],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "m": soul.m,
-                    "b": soul.b,
-                    "mode": soul.mode,
-                    "format": soul.format,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = body.arg::<serde_json::Value>(0)?;
-                soul.m = j.at("m")?;
-                soul.b = j.at("b")?;
-                soul.mode = j.at("mode")?;
-                soul.format = j.at("format")?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn join(&mut self, body: serde_json::Value) -> CmdResult {
+        self.cv.resize(body.kwarg("samples_per_evaluation")?, 0.0);
+        Ok(None)
     }
 
     fn evaluate(&mut self) {
@@ -161,5 +75,48 @@ impl SpecificsTrait for Specifics {
 
     fn audio(&mut self) -> Option<&mut [f32]> {
         Some(self.cv.as_mut_slice())
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "m": self.m,
+            "b": self.b,
+            "mode": self.mode,
+            "format": self.format,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.m = j.at("m")?;
+        self.b = j.at("b")?;
+        self.mode = j.at("mode")?;
+        self.format = j.at("format")?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn format_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.format = body.arg(0)?;
+        Ok(Some(json!(self.format)))
+    }
+
+    fn mode_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.mode = body.arg(0)?;
+        Ok(Some(json!(self.mode)))
+    }
+
+    fn m_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.m = body.arg(0)?;
+        Ok(Some(json!(self.m)))
+    }
+
+    fn b_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.b = body.arg(0)?;
+        Ok(Some(json!(self.b)))
+    }
+    fn last_error_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.last_error)))
     }
 }

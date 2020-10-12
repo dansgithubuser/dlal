@@ -1,10 +1,7 @@
-use dlal_component_base::{
-    command, gen_component, join, json, Body, Arg,
-    View, VIEW_ARGS, err, serde_json,
-};
+use dlal_component_base::{component, err, json, serde_json, Arg, Body, CmdResult, View};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
-use serde::{Deserialize, Serialize, Serializer, ser::SerializeSeq};
+use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 
 use std::error::Error as StdError;
 
@@ -19,9 +16,7 @@ impl Msg {
         let array = msg.to::<Vec<_>>()?;
         Ok(if array.len() <= 3 {
             let mut msg = [0, 0, 0];
-            for i in 0..array.len() {
-                msg[i] = array[i];
-            }
+            msg[..array.len()].clone_from_slice(&array);
             Msg::Short(msg)
         } else {
             Msg::Long(array)
@@ -153,205 +148,97 @@ impl Line {
     }
 }
 
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: u32,
+struct Queue {
     send: MPMCSender<Box<Line>>,
     recv: MPMCUniReceiver<Box<Line>>,
-    lines: Vec<Box<Line>>,
-    samples: u32,
-    outputs: Vec<Option<View>>,
 }
 
-gen_component!(Specifics, {"in": ["midi*"], "out": ["midi"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
+impl Default for Queue {
+    fn default() -> Self {
         let (send, recv) = multiqueue2::mpmc_queue(16);
-        let mut lines = Vec::new();
-        for _ in 0..16 {
-            lines.push(Box::new(Line::default()));
-        }
         Self {
-            samples_per_evaluation: 0,
-            sample_rate: 44100,
             send,
             recv: recv.into_single().expect("into_single failed"),
-            lines,
-            samples: 0,
-            outputs: Vec::with_capacity(16),
+        }
+    }
+}
+
+component!(
+    {"in": ["midi*"], "out": ["midi"]},
+    [
+        "samples_per_evaluation",
+        "sample_rate",
+        {"name": "connect_info", "value": {"args": "view"}},
+    ],
+    {
+        queue: Queue,
+        lines: Vec<Box<Line>>,
+        samples: u32,
+        outputs: Vec<Option<View>>,
+    },
+    {
+        "get_midi": {
+            "args": ["line_index"],
+            "return": {
+                "ticks_per_quarter": "number",
+                "deltamsgs": "[{delta, msg: [..]}, ..]",
+            },
+        },
+        "get_midi_all": {
+            "return": [{
+                "ticks_per_quarter": "number",
+                "deltamsgs": "[{delta, msg: [..]}, ..]",
+            }],
+        },
+        "set_midi": {
+            "args": [
+                "line_index",
+                "ticks_per_quarter",
+                {
+                    "name": "deltamsgs",
+                    "desc": "[{delta, msg: [..]}, ..]",
+                },
+            ],
+            "kwargs": [{
+                "name": "immediate",
+                "default": false,
+                "desc": "immediately enact the line after loading",
+            }],
+        },
+        "offset": {"args": ["line_index", "seconds"]},
+        "advance": {"args": ["seconds"]},
+    },
+);
+
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.sample_rate = 44100;
+        self.outputs.reserve(16);
+        for _ in 0..16 {
+            self.lines.push(Box::new(Line::default()));
         }
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-                soul.sample_rate = body.kwarg("sample_rate")?;
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        command!(
-            commands,
-            "connect",
-            |soul, body| {
-                let output = View::new(&body.at("args")?)?;
-                soul.outputs.push(Some(output));
-                Ok(None)
-            },
-            { "args": VIEW_ARGS },
-        );
-        command!(
-            commands,
-            "disconnect",
-            |soul, body| {
-                let output = View::new(&body.at("args")?)?;
-                if let Some(i) = soul
-                    .outputs
-                    .iter()
-                    .position(|i| i.as_ref() == Some(&output))
-                {
-                    soul.outputs[i] = None;
-                }
-                Ok(None)
-            },
-            { "args": VIEW_ARGS },
-        );
-        command!(
-            commands,
-            "get_midi",
-            |soul, body| {
-                let line_index: usize = body.arg(0)?;
-                if line_index >= soul.lines.len() {
-                    Err(err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
-                }
-                let line = &soul.lines[line_index];
-                Ok(Some(json!({
-                    "ticks_per_quarter": line.ticks_per_quarter,
-                    "deltamsgs": line.deltamsgs,
-                })))
-            },
-            {
-                "args": [
-                    "line_index",
-                ],
-                "return": {
-                    "ticks_per_quarter": "number",
-                    "deltamsgs": "[{delta, msg: [..]}, ..]",
-                },
-            },
-        );
-        command!(
-            commands,
-            "get_midi_all",
-            |soul, _body| {
-                Ok(Some(json!(soul.lines.iter().map(|line| json!({
-                    "ticks_per_quarter": line.ticks_per_quarter,
-                    "deltamsgs": line.deltamsgs,
-                })).collect::<Vec<_>>())))
-            },
-            {
-                "return": [{
-                    "ticks_per_quarter": "number",
-                    "deltamsgs": "[{delta, msg: [..]}, ..]",
-                }],
-            },
-        );
-        command!(
-            commands,
-            "set_midi",
-            |soul, body| {
-                let line_index: usize = body.arg(0)?;
-                let ticks_per_quarter: u32 = body.arg(1)?;
-                let deltamsgs = body.arg(2)?;
-                if line_index >= soul.lines.len() {
-                    Err(err!("got line_index {} but number of lines is only {}", line_index, soul.lines.len()))?;
-                }
-                if let Ok(immediate) = body.kwarg("immediate") {
-                    if immediate {
-                        soul.lines[line_index] = Box::new(Line::new(
-                            &deltamsgs, ticks_per_quarter, soul.lines[line_index].index
-                        )?);
-                    }
-                }
-                soul.send.try_send(Box::new(Line::new(&deltamsgs, ticks_per_quarter, line_index)?))?;
-                Ok(None)
-            },
-            {
-                "args": [
-                    "line_index",
-                    "ticks_per_quarter",
-                    {
-                        "name": "deltamsgs",
-                        "desc": "[{delta, msg: [..]}, ..]",
-                    },
-                ],
-                "kwargs": [
-                    {
-                        "name": "immediate",
-                        "default": false,
-                        "desc": "immediately enact the line after loading",
-                    },
-                ],
-            },
-        );
-        command!(
-            commands,
-            "offset",
-            |soul, body| {
-                let line_index: usize = body.arg(0)?;
-                let seconds: f64 = body.arg(1)?;
-                if line_index >= soul.lines.len() {
-                    Err(err!("invalid line_index"))?;
-                }
-                soul.lines[line_index].offset = seconds;
-                Ok(None)
-            },
-            {
-                "args": ["line_index", "seconds"],
-            },
-        );
-        command!(
-            commands,
-            "advance",
-            |soul, body| {
-                let seconds: f32 = body.arg(0)?;
-                let evaluations_per_second = soul.sample_rate as f32 / soul.samples_per_evaluation as f32;
-                let evaluations = (seconds * evaluations_per_second) as u32;
-                for _ in 0..evaluations {
-                    soul.evaluate();
-                }
-                Ok(None)
-            },
-            {
-                "args": ["seconds"],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| { Ok(Some(json!({ "lines": soul.lines }))) },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = body.arg::<serde_json::Value>(0)?;
-                let lines = j.at::<Vec<serde_json::Value>>("lines")?;
-                for i in 0..lines.len() {
-                    soul.lines[i] = serde_json::from_str(&lines[i].to_string())?;
-                }
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn connect(&mut self, body: serde_json::Value) -> CmdResult {
+        let output = View::new(&body.at("args")?)?;
+        self.outputs.push(Some(output));
+        Ok(None)
+    }
+
+    fn disconnect(&mut self, body: serde_json::Value) -> CmdResult {
+        let output = View::new(&body.at("args")?)?;
+        if let Some(i) = self
+            .outputs
+            .iter()
+            .position(|i| i.as_ref() == Some(&output))
+        {
+            self.outputs[i] = None;
+        }
+        Ok(None)
     }
 
     fn evaluate(&mut self) {
-        while let Ok(mut line) = self.recv.try_recv() {
+        while let Ok(mut line) = self.queue.recv.try_recv() {
             let line_index = (*line).index;
             (*line).index = (*self.lines[line_index]).index;
             self.lines[line_index] = line;
@@ -376,5 +263,96 @@ impl SpecificsTrait for Specifics {
                 line.reset();
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({ "lines": self.lines })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        let lines = j.at::<Vec<serde_json::Value>>("lines")?;
+        for i in 0..lines.len() {
+            self.lines[i] = serde_json::from_str(&lines[i].to_string())?;
+        }
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn get_midi_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let line_index: usize = body.arg(0)?;
+        if line_index >= self.lines.len() {
+            return Err(err!(
+                "got line_index {} but number of lines is only {}",
+                line_index,
+                self.lines.len()
+            )
+            .into());
+        }
+        let line = &self.lines[line_index];
+        Ok(Some(json!({
+            "ticks_per_quarter": line.ticks_per_quarter,
+            "deltamsgs": line.deltamsgs,
+        })))
+    }
+
+    fn get_midi_all_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self
+            .lines
+            .iter()
+            .map(|line| json!({
+                "ticks_per_quarter": line.ticks_per_quarter,
+                "deltamsgs": line.deltamsgs,
+            }))
+            .collect::<Vec<_>>())))
+    }
+
+    fn set_midi_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let line_index: usize = body.arg(0)?;
+        let ticks_per_quarter: u32 = body.arg(1)?;
+        let deltamsgs = body.arg(2)?;
+        if line_index >= self.lines.len() {
+            return Err(err!(
+                "got line_index {} but number of lines is only {}",
+                line_index,
+                self.lines.len()
+            )
+            .into());
+        }
+        if let Ok(immediate) = body.kwarg("immediate") {
+            if immediate {
+                self.lines[line_index] = Box::new(Line::new(
+                    &deltamsgs,
+                    ticks_per_quarter,
+                    self.lines[line_index].index,
+                )?);
+            }
+        }
+        self.queue.send.try_send(Box::new(Line::new(
+            &deltamsgs,
+            ticks_per_quarter,
+            line_index,
+        )?))?;
+        Ok(None)
+    }
+
+    fn offset_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let line_index: usize = body.arg(0)?;
+        let seconds: f64 = body.arg(1)?;
+        if line_index >= self.lines.len() {
+            return Err(err!("invalid line_index").into());
+        }
+        self.lines[line_index].offset = seconds;
+        Ok(None)
+    }
+    fn advance_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let seconds: f32 = body.arg(0)?;
+        let evaluations_per_second = self.sample_rate as f32 / self.samples_per_evaluation as f32;
+        let evaluations = (seconds * evaluations_per_second) as u32;
+        for _ in 0..evaluations {
+            self.evaluate();
+        }
+        Ok(None)
     }
 }

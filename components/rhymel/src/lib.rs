@@ -1,83 +1,65 @@
-use dlal_component_base::{gen_component, join, multi, View, Body};
+use dlal_component_base::{component, serde_json, Body, CmdResult};
 
 const SENTINEL: u8 = 0xff;
 
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: u32,
+component!(
+    {"in": ["midi"], "out": ["midi", "audio"]},
+    ["samples_per_evaluation", "sample_rate", "multi"],
+    {
+        /*
+        We have three states, with transitions as follows.
 
-    /*
-    We have three states, with transitions as follows.
+        fresh
+        |
+        +--> note, when a note is played
+                - rhythm: start E5 with same velocity
+                - store the number
+                - match pitch to note
 
-    fresh
-    |
-    +--> note, when a note is played
-            - rhythm: start E5 with same velocity
-            - store the number
-            - match pitch to note
+        note
+        |
+        +--> note, when a note is played
+        |       - rhythm: forward the velocity
+        |       - store the number
+        |       - match pitch to note
+        +--> grace, when the stored note ends
+                - store the velocity
+                - start silence timer
 
-    note
-    |
-    +--> note, when a note is played
-    |       - rhythm: forward the velocity
-    |       - store the number
-    |       - match pitch to note
-    +--> grace, when the stored note ends
-            - store the velocity
-            - start silence timer
+        grace
+        |
+        +--> note, when a note is played
+        |       - rhythm: forward the velocity
+        |       - store the number
+        |       - match pitch to note
+        |       - forget the velocity
+        +--> fresh, when silence timer exceeds grace period
+                - rhythm: end E5 with stored velocity
+                - forget the note
+                - forget the velocity
 
-    grace
-    |
-    +--> note, when a note is played
-    |       - rhythm: forward the velocity
-    |       - store the number
-    |       - match pitch to note
-    |       - forget the velocity
-    +--> fresh, when silence timer exceeds grace period
-            - rhythm: end E5 with stored velocity
-            - forget the note
-            - forget the velocity
+        The pitch is always equal to that of the stored note's.
 
-    The pitch is always equal to that of the stored note's.
+        By remembering and forgetting carefully, we can keep track of state implicitly.
+        if we remember a velocity  { grace }
+        else if we remember a note { note }
+        else                       { fresh }
+        */
+        note: u8,
+        pitch: f32,
+        velocity: u8,
+        silence: f32,
 
-    By remembering and forgetting carefully, we can keep track of state implicitly.
-    if we remember a velocity  { grace }
-    else if we remember a note { note }
-    else                       { fresh }
-    */
-    note: u8,
-    pitch: f32,
-    velocity: u8,
-    silence: f32,
+        grace: f32,
+    },
+    {},
+);
 
-    grace: f32,
-    outputs: Vec<View>,
-}
-
-gen_component!(Specifics, {"in": ["midi"], "out": ["midi", "audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            note: SENTINEL,
-            velocity: SENTINEL,
-            grace: 0.1,
-            ..Default::default()
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-                soul.sample_rate = body.kwarg("sample_rate")?;
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        multi!(connect commands, false);
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.note = SENTINEL;
+        self.velocity = SENTINEL;
+        self.grace = 0.1;
     }
 
     fn evaluate(&mut self) {
@@ -86,7 +68,7 @@ impl SpecificsTrait for Specifics {
             self.silence += self.samples_per_evaluation as f32 / self.sample_rate as f32;
             // grace -> fresh
             if self.silence > self.grace {
-                multi!(midi [0x80, 0x40, self.velocity], self.outputs);
+                self.multi_midi(&[0x80, 0x40, self.velocity]);
                 self.note = SENTINEL;
                 self.velocity = SENTINEL;
             }
@@ -115,17 +97,25 @@ impl SpecificsTrait for Specifics {
         } else if type_nibble == 0x90 {
             // fresh -> note
             if self.note == SENTINEL && self.velocity == SENTINEL {
-                multi!(midi [0x90, 0x40, msg[2]], self.outputs);
+                self.multi_midi(&[0x90, 0x40, msg[2]]);
                 self.note = msg[1];
             }
             // (note, grace) -> note
             else {
-                multi!(midi [0xa0, 0x40, msg[2]], self.outputs);
+                self.multi_midi(&[0xa0, 0x40, msg[2]]);
                 self.note = msg[1];
                 self.velocity = SENTINEL;
             }
             // pitch
             self.pitch = self.note as f32 / 128.0;
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+
+    fn from_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
     }
 }

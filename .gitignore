@@ -2,3 +2,4 @@ target/
 *.pyc
 matrix.html
 assets/local
+Cargo.lock

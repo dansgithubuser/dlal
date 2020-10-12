@@ -1,111 +1,40 @@
-use dlal_component_base::{command, gen_component, join, json, multi, View, Body, serde_json};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    soft: f32,
-    soft_gain: f32,
-    hard: f32,
-    outputs: Vec<View>,
-}
+component!(
+    {"in": [], "out": ["audio"]},
+    ["samples_per_evaluation", "multi", "check_audio"],
+    {
+        soft: f32,
+        soft_gain: f32,
+        hard: f32,
+    },
+    {
+        "soft": {
+            "args": [{
+                "name": "soft",
+                "optional": true,
+            }],
+        },
+        "soft_gain": {
+            "args": [{
+                "name": "soft_gain",
+                "optional": true,
+            }],
+        },
+        "hard": {
+            "args": [{
+                "name": "hard",
+                "optional": true,
+            }],
+        },
+    },
+);
 
-gen_component!(Specifics, {"in": [], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            soft: 0.4,
-            soft_gain: 0.5,
-            hard: 0.5,
-            ..Default::default()
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        multi!(connect commands, true);
-        command!(
-            commands,
-            "soft",
-            |soul, body| {
-                if let Ok(v) = body.arg(0) {
-                    soul.soft = v;
-                }
-                Ok(Some(json!(soul.soft)))
-            },
-            {
-                "args": [{
-                    "name": "soft",
-                    "optional": true,
-                }],
-            },
-        );
-        command!(
-            commands,
-            "soft_gain",
-            |soul, body| {
-                if let Ok(v) = body.arg(0) {
-                    soul.soft_gain = v;
-                }
-                Ok(Some(json!(soul.soft_gain)))
-            },
-            {
-                "args": [{
-                    "name": "soft_gain",
-                    "optional": true,
-                }],
-            },
-        );
-        command!(
-            commands,
-            "hard",
-            |soul, body| {
-                if let Ok(v) = body.arg(0) {
-                    soul.hard = v;
-                    if soul.soft > soul.hard {
-                        soul.soft = soul.hard;
-                    }
-                }
-                Ok(Some(json!(soul.hard)))
-            },
-            {
-                "args": [{
-                    "name": "hard",
-                    "optional": true,
-                }],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "soft": soul.soft,
-                    "soft_gain": soul.soft_gain,
-                    "hard": soul.hard,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = body.arg::<serde_json::Value>(0)?;
-                soul.soft = j.at("soft")?;
-                soul.soft_gain = j.at("soft_gain")?;
-                soul.hard = j.at("hard")?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.soft = 0.4;
+        self.soft_gain = 0.5;
+        self.hard = 0.5;
     }
 
     fn evaluate(&mut self) {
@@ -125,5 +54,47 @@ impl SpecificsTrait for Specifics {
                 }
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "soft": self.soft,
+            "soft_gain": self.soft_gain,
+            "hard": self.hard,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.soft = j.at("soft")?;
+        self.soft_gain = j.at("soft_gain")?;
+        self.hard = j.at("hard")?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn soft_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.soft = v;
+        }
+        Ok(Some(json!(self.soft)))
+    }
+
+    fn soft_gain_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.soft_gain = v;
+        }
+        Ok(Some(json!(self.soft_gain)))
+    }
+
+    fn hard_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.hard = v;
+            if self.soft > self.hard {
+                self.soft = self.hard;
+            }
+        }
+        Ok(Some(json!(self.hard)))
     }
 }

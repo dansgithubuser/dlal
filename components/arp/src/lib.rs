@@ -1,85 +1,30 @@
-use dlal_component_base::{Body, command, gen_component, join, json, multi, View, serde_json};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
-#[derive(Default)]
-pub struct Specifics {
-    notes: Vec<[u8; 2]>,
-    note: usize,
-    note_last: u8,
-    phase: f32,
-    rate: f32,
-    samples_per_evaluation: usize,
-    sample_rate: u32,
-    outputs: Vec<View>,
-}
-
-impl Specifics {
-    fn midi_for_note(&mut self) {
-        let note = self.notes[self.note];
-        for output in &self.outputs {
-            output.midi(&[0x90, note[0], note[1]]);
-            output.midi(&[0x80, self.note_last, 0]);
-        }
-        self.note_last = note[0];
-    }
-}
-
-gen_component!(Specifics, {"in": ["midi"], "out": ["midi"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            rate: 30.0,
-            ..Default::default()
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-                soul.sample_rate = body.kwarg("sample_rate")?;
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        multi!(connect commands, false);
-        command!(
-            commands,
-            "rate",
-            |soul, body| {
-                if let Ok(v) = body.arg(0) {
-                    soul.rate = v;
-                }
-                Ok(Some(json!(soul.rate)))
-            },
-            {
-                "args": [{
+component!(
+    {"in": ["midi"], "out": ["midi"]},
+    ["samples_per_evaluation", "sample_rate", "multi"],
+    {
+        notes: Vec<[u8; 2]>,
+        note: usize,
+        note_last: u8,
+        phase: f32,
+        rate: f32,
+    },
+    {
+        "rate": {
+            "args": [
+                {
                     "name": "rate",
                     "optional": true,
-                }],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "rate": soul.rate,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j: serde_json::Value = body.arg(0)?;
-                soul.rate = j.at("rate")?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+                },
+            ],
+        },
+    },
+);
+
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.rate = 30.0;
     }
 
     fn evaluate(&mut self) {
@@ -121,5 +66,35 @@ impl SpecificsTrait for Specifics {
                 }
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "rate": self.rate,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j: serde_json::Value = body.arg(0)?;
+        self.rate = j.at("rate")?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn midi_for_note(&mut self) {
+        let note = self.notes[self.note];
+        for output in &self.outputs {
+            output.midi(&[0x90, note[0], note[1]]);
+            output.midi(&[0x80, self.note_last, 0]);
+        }
+        self.note_last = note[0];
+    }
+
+    fn rate_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.rate = v;
+        }
+        Ok(Some(json!(self.rate)))
     }
 }
