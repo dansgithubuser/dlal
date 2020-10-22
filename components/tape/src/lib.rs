@@ -1,17 +1,27 @@
-use dlal_component_base::{arg_num, command, err, gen_component, join, json, kwarg_num};
+use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
 
-pub struct Specifics {
-    audio: Vec<f32>,
-    send: Option<MPMCSender<f32>>,
-    recv: Option<MPMCUniReceiver<f32>>,
-    size: u64,
-}
+component!(
+    {"in": ["audio"], "out": ["audio*"]},
+    [
+        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
+    ],
+    {
+        audio: Vec<f32>,
+        send: Option<MPMCSender<f32>>,
+        recv: Option<MPMCUniReceiver<f32>>,
+        size: u64,
+    },
+    {
+        "resize": {"args": ["size"]},
+        "size": {},
+        "clear": {},
+        "read": {"args": ["size"]},
+    },
+);
 
-gen_component!(Specifics, {"in": ["audio"], "out": ["audio*"]});
-
-impl Specifics {
+impl Component {
     fn resize(&mut self, size: u64) {
         let (send, recv) = multiqueue2::mpmc_queue(size);
         self.send = Some(send);
@@ -20,103 +30,17 @@ impl Specifics {
     }
 }
 
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            audio: Vec::new(),
-            send: None,
-            recv: None,
-            size: 0,
+impl ComponentTrait for Component {
+    fn join(&mut self, body: serde_json::Value) -> CmdResult {
+        let run_size = body.kwarg("run_size")?;
+        self.audio.resize(run_size, 0.0);
+        if self.size == 0 {
+            self.resize(run_size as u64);
         }
+        Ok(None)
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                let samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.audio.resize(samples_per_evaluation, 0.0);
-                if soul.size == 0 {
-                    soul.resize(samples_per_evaluation as u64);
-                }
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        command!(
-            commands,
-            "resize",
-            |soul, body| {
-                soul.resize(arg_num(&body, 0)?);
-                Ok(None)
-            },
-            {
-                "args": ["size"],
-            },
-        );
-        command!(
-            commands,
-            "size",
-            |soul, _body| { Ok(Some(json!(soul.size.to_string()))) },
-            {},
-        );
-        command!(
-            commands,
-            "clear",
-            |soul, _body| {
-                while let Ok(_) = soul.recv.as_ref().unwrap().try_recv() {}
-                Ok(None)
-            },
-            {},
-        );
-        command!(
-            commands,
-            "read",
-            |soul, body| {
-                if soul.recv.is_none() {
-                    return err!("not initialized");
-                }
-                let mut audio = Vec::<String>::new();
-                match arg_num::<usize>(&body, 0) {
-                    Ok(size) =>  {
-                        for _ in 0..size {
-                            audio.push(soul.recv.as_ref().unwrap().recv().unwrap().to_string());
-                        }
-                    }
-                    Err(_) => {
-                        loop {
-                            if let Ok(x) = soul.recv.as_ref().unwrap().try_recv() {
-                                audio.push(x.to_string());
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                };
-                Ok(Some(json!(audio)))
-            },
-            {
-                "args": ["size"],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| { Ok(Some(json!(soul.size.to_string()))) },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                soul.resize(arg_num(&body, 0)?);
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
-    }
-
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if self.send.is_none() {
             return;
         }
@@ -128,5 +52,50 @@ impl SpecificsTrait for Specifics {
 
     fn audio(&mut self) -> Option<&mut [f32]> {
         Some(self.audio.as_mut_slice())
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.size.to_string())))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.resize(body.arg(0)?);
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn resize_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.resize(body.arg(0)?);
+        Ok(None)
+    }
+
+    fn size_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.size.to_string())))
+    }
+
+    fn clear_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        while self.recv.as_ref().unwrap().try_recv().is_ok() {}
+        Ok(None)
+    }
+
+    fn read_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if self.recv.is_none() {
+            return Err(err!("not initialized").into());
+        }
+        let mut audio = Vec::<String>::new();
+        match body.arg(0) {
+            Ok(size) => {
+                for _ in 0..size {
+                    audio.push(self.recv.as_ref().unwrap().recv().unwrap().to_string());
+                }
+            }
+            Err(_) => {
+                while let Ok(x) = self.recv.as_ref().unwrap().try_recv() {
+                    audio.push(x.to_string());
+                }
+            }
+        };
+        Ok(Some(json!(audio)))
     }
 }

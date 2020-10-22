@@ -1,3 +1,8 @@
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
+
+use std::collections::HashMap;
+use std::f32;
+
 /*
 The YM2612 has:
 - 6 monophonic voices
@@ -161,46 +166,119 @@ impl Note {
 }
 
 // ===== component ===== //
-macro_rules! op_command {
-    ($commands:ident, $name:literal, $type:ty, ($($member:tt)+), ($($info:tt)+), $set:expr) => {
-        command!(
-            $commands,
-            $name,
-            |soul, body| {
-                let op: usize = arg_num(&body, 0)?;
-                if let Ok(v) = arg_num::<$type>(&body, 1) {
-                    soul.ops[op].$($member)+ = v;
-                }
-                if ($set) {
-                    soul.set(soul.m);
-                }
-                Ok(Some(json!(soul.ops[op].$($member)+.to_string())))
-            },
-            {"args": ["operator", $($info)+]},
-        );
-    }
-}
+component!(
+    {"in": ["midi"], "out": ["audio"]},
+    ["run_size", "sample_rate", "uni", "check_audio"],
+    {
+        ops: [Op; OPS],
+        notes: Vec<Note>,
+        m: f32,                //bend amount
+        rpn: u16,              //registered parameter number
+        pitch_bend_range: f32, //MIDI RPN 0x0000
+    },
+    {
+        "a": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "attack rate",
+                    "units": "amplitude per sample",
+                    "range": "(0, 1]",
+                },
+            ],
+        },
+        "d": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "decay rate",
+                    "units": "amplitude per sample",
+                    "range": "(0, 1]",
+                },
+            ],
+        },
+        "s": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "sustain level",
+                    "range": "[0, 1]",
+                },
+            ],
+        },
+        "r": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "release rate",
+                    "units": "amplitude per sample",
+                    "range": "(0, 1]",
+                },
+            ],
+        },
+        "m": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "frequency multiplier",
+                },
+            ],
+        },
+        "i0": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "FM from operator 0",
+                },
+            ],
+        },
+        "i1": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "FM from operator 1",
+                },
+            ],
+        },
+        "i2": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "FM from operator 2",
+                },
+            ],
+        },
+        "i3": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "FM from operator 3",
+                },
+            ],
+        },
+        "o": {
+            "args": [
+                "operator",
+                {
+                    "name": "amount",
+                    "desc": "amount to contribute to output",
+                    "range": "[0, 1]",
+                },
+            ],
+        },
+    },
+);
 
-use dlal_component_base::{
-    arg, arg_num, command, gen_component, join, json, json_get, json_num, uni, JsonValue, View,
-};
-
-use std::collections::HashMap;
-use std::f32;
-
-#[derive(Default)]
-pub struct Specifics {
-    ops: [Op; OPS],
-    notes: Vec<Note>,
-    m: f32,                //bend amount
-    rpn: u16,              //registered parameter number
-    pitch_bend_range: f32, //MIDI RPN 0x0000
-    samples_per_evaluation: usize,
-    sample_rate: u32,
-    output: Option<View>,
-}
-
-impl Specifics {
+impl Component {
     fn set(&mut self, m: f32) {
         self.m = m;
         for i in 0..self.notes.len() {
@@ -210,141 +288,70 @@ impl Specifics {
     }
 }
 
-gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        let mut result = Specifics {
-            pitch_bend_range: 2.0,
-            ..Default::default()
-        };
-        result.ops[0].o = 0.25;
-        result.notes.resize_with(NOTES, || Note {
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.pitch_bend_range = 2.0;
+        self.ops[0].o = 0.25;
+        self.notes.resize_with(NOTES, || Note {
             done: true,
             ..Default::default()
         });
-        result
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
-                soul.set(1.0);
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        uni!(connect commands, true);
-        op_command!(commands, "a", f32, (a), ({
-            "name": "amount",
-            "desc": "attack rate",
-            "units": "amplitude per sample",
-            "range": "(0, 1]",
-        }), false);
-        op_command!(commands, "d", f32, (d), ({
-            "name": "amount",
-            "desc": "decay rate",
-            "units": "amplitude per sample",
-            "range": "(0, 1]",
-        }), false);
-        op_command!(commands, "s", f32, (s), ({
-            "name": "amount",
-            "desc": "sustain level",
-            "range": "[0, 1]",
-        }), false);
-        op_command!(commands, "r", f32, (r), ({
-            "name": "amount",
-            "desc": "release rate",
-            "units": "amplitude per sample",
-            "range": "(0, 1]",
-        }), false);
-        op_command!(commands, "m", f32, (m), ({
-            "name": "amount",
-            "desc": "frequency multiplier",
-        }), true);
-        op_command!(commands, "i0", f32, (i[0]), ({
-            "name": "amount",
-            "desc": "FM from operator 0",
-        }), false);
-        op_command!(commands, "i1", f32, (i[1]), ({
-            "name": "amount",
-            "desc": "FM from operator 1",
-        }), false);
-        op_command!(commands, "i2", f32, (i[2]), ({
-            "name": "amount",
-            "desc": "FM from operator 2",
-        }), false);
-        op_command!(commands, "i3", f32, (i[3]), ({
-            "name": "amount",
-            "desc": "FM from operator 3",
-        }), false);
-        op_command!(commands, "o", f32, (o), ({
-            "name": "amount",
-            "desc": "amount to contribute to output",
-            "range": "[0, 1]",
-        }), false);
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                let mut ops = HashMap::<String, JsonValue>::new();
-                for (i, op) in soul.ops.iter().enumerate() {
-                    ops.insert(
-                        i.to_string(),
-                        json!({
-                            "a": op.a.to_string(),
-                            "d": op.d.to_string(),
-                            "s": op.s.to_string(),
-                            "r": op.r.to_string(),
-                            "m": op.m.to_string(),
-                            "i0": op.i[0].to_string(),
-                            "i1": op.i[1].to_string(),
-                            "i2": op.i[2].to_string(),
-                            "i3": op.i[3].to_string(),
-                            "o": op.o.to_string(),
-                        }),
-                    );
-                }
-                Ok(Some(json!({
-                    "ops": ops,
-                    "pitch_bend_range": soul.pitch_bend_range.to_string(),
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = arg(&body, 0)?;
-                let ops = match json_get(j, "pitch_bend_range") {
-                    Ok(pbr) =>{
-                        soul.pitch_bend_range = json_num(pbr)?;
-                        json_get(j, "ops")?
-                    }
-                    Err(_) => j,
-                };
-                for i in 0..OPS {
-                    let op = json_get(ops, &i.to_string())?;
-                    soul.ops[i].a = json_num(json_get(op, "a")?)?;
-                    soul.ops[i].d = json_num(json_get(op, "d")?)?;
-                    soul.ops[i].s = json_num(json_get(op, "s")?)?;
-                    soul.ops[i].r = json_num(json_get(op, "r")?)?;
-                    soul.ops[i].m = json_num(json_get(op, "m")?)?;
-                    soul.ops[i].i[0] = json_num(json_get(op, "i0")?)?;
-                    soul.ops[i].i[1] = json_num(json_get(op, "i1")?)?;
-                    soul.ops[i].i[2] = json_num(json_get(op, "i2")?)?;
-                    soul.ops[i].i[3] = json_num(json_get(op, "i3")?)?;
-                    soul.ops[i].o = json_num(json_get(op, "o")?)?;
-                }
-                soul.set(1.0);
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn join(&mut self, _body: serde_json::Value) -> CmdResult {
+        self.set(1.0);
+        Ok(None)
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let mut ops = HashMap::<String, serde_json::Value>::new();
+        for (i, op) in self.ops.iter().enumerate() {
+            ops.insert(
+                i.to_string(),
+                json!({
+                    "a": op.a.to_string(),
+                    "d": op.d.to_string(),
+                    "s": op.s.to_string(),
+                    "r": op.r.to_string(),
+                    "m": op.m.to_string(),
+                    "i0": op.i[0].to_string(),
+                    "i1": op.i[1].to_string(),
+                    "i2": op.i[2].to_string(),
+                    "i3": op.i[3].to_string(),
+                    "o": op.o.to_string(),
+                }),
+            );
+        }
+        Ok(Some(json!({
+            "ops": ops,
+            "pitch_bend_range": self.pitch_bend_range,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        let ops = match j.at("pitch_bend_range") {
+            Ok(pbr) => {
+                self.pitch_bend_range = pbr;
+                j.at("ops")?
+            }
+            Err(_) => j,
+        };
+        for i in 0..OPS {
+            let op = ops.at::<serde_json::Value>(&i.to_string())?;
+            self.ops[i].a = op.at("a")?;
+            self.ops[i].d = op.at("d")?;
+            self.ops[i].s = op.at("s")?;
+            self.ops[i].r = op.at("r")?;
+            self.ops[i].m = op.at("m")?;
+            self.ops[i].i[0] = op.at("i0")?;
+            self.ops[i].i[1] = op.at("i1")?;
+            self.ops[i].i[2] = op.at("i2")?;
+            self.ops[i].i[3] = op.at("i3")?;
+            self.ops[i].o = op.at("o")?;
+        }
+        self.set(1.0);
+        Ok(None)
     }
 
     fn midi(&mut self, msg: &[u8]) {
@@ -400,9 +407,9 @@ impl SpecificsTrait for Specifics {
         };
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         let audio = match &self.output {
-            Some(output) => output.audio(self.samples_per_evaluation).unwrap(),
+            Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
         for note in &mut self.notes {
@@ -417,4 +424,32 @@ impl SpecificsTrait for Specifics {
             }
         }
     }
+}
+
+macro_rules! op_command {
+    ($name:ident, ($($member:tt)+), $set:expr) => {
+        fn $name(&mut self, body: serde_json::Value) -> CmdResult {
+            let op: usize = body.arg(0)?;
+            if let Ok(v) = body.arg(1) {
+                self.ops[op].$($member)+ = v;
+            }
+            if ($set) {
+                self.set(self.m);
+            }
+            Ok(Some(json!(self.ops[op].$($member)+)))
+        }
+    }
+}
+
+impl Component {
+    op_command!(a_cmd, (a), false);
+    op_command!(d_cmd, (d), false);
+    op_command!(s_cmd, (s), false);
+    op_command!(r_cmd, (r), false);
+    op_command!(m_cmd, (m), true);
+    op_command!(i0_cmd, (i[0]), false);
+    op_command!(i1_cmd, (i[1]), false);
+    op_command!(i2_cmd, (i[2]), false);
+    op_command!(i3_cmd, (i[3]), false);
+    op_command!(o_cmd, (o), false);
 }

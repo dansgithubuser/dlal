@@ -1,6 +1,4 @@
-use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
-
-use std::vec::Vec;
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 struct Ring {
     vec: Vec<f32>,
@@ -26,73 +24,43 @@ impl Ring {
     }
 }
 
-pub struct Specifics {
-    amount: f32,
-    samples_per_evaluation: usize,
-    rings: Vec<Ring>,
-    output: Option<View>,
-}
+component!(
+    {"in": [], "out": ["audio"]},
+    ["run_size", "uni", "check_audio"],
+    {
+        amount: f32,
+        rings: Vec<Ring>,
+    },
+    {
+        "set": { "args": ["amount"] },
+    },
+);
 
-gen_component!(Specifics, {"in": [], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        let mut rings = Vec::<Ring>::new();
-        rings.push(Ring::new(1921));
-        rings.push(Ring::new(5240));
-        rings.push(Ring::new(5606));
-        rings.push(Ring::new(6152));
-        rings.push(Ring::new(6198));
-        rings.push(Ring::new(6342));
-        rings.push(Ring::new(7965));
-        rings.push(Ring::new(12965));
-        Self {
-            amount: 0.5,
-            samples_per_evaluation: 0,
-            rings,
-            output: None,
-        }
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.amount = 0.5;
+        self.rings.push(Ring::new(1921));
+        self.rings.push(Ring::new(5240));
+        self.rings.push(Ring::new(5606));
+        self.rings.push(Ring::new(6152));
+        self.rings.push(Ring::new(6198));
+        self.rings.push(Ring::new(6342));
+        self.rings.push(Ring::new(7965));
+        self.rings.push(Ring::new(12965));
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        uni!(connect commands, true);
-        command!(
-            commands,
-            "set",
-            |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
-                Ok(None)
-            },
-            { "args": ["amount"] },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| { Ok(Some(json!(soul.amount.to_string()))) },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.amount)))
     }
 
-    fn evaluate(&mut self) {
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.amount = body.arg(0)?;
+        Ok(None)
+    }
+
+    fn run(&mut self) {
         if let Some(output) = &self.output {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
+            for i in output.audio(self.run_size).unwrap() {
                 for j in 0..self.rings.len() {
                     *i += self.rings[j].read() * self.amount / (8 + j) as f32;
                 }
@@ -101,5 +69,12 @@ impl SpecificsTrait for Specifics {
                 }
             }
         }
+    }
+}
+
+impl Component {
+    fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.amount = body.arg(0)?;
+        Ok(None)
     }
 }

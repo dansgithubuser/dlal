@@ -1,49 +1,33 @@
-use dlal_component_base::{command, gen_component, join, json, marg, multi, View};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
-use std::vec::Vec;
+component!(
+    {"in": ["audio"], "out": ["audio"]},
+    [
+        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
+        "multi",
+        "check_audio",
+    ],
+    {
+        audio: Vec<f32>,
+        value: f32,
+    },
+    {
+        "value": {},
+    },
+);
 
-#[derive(Default)]
-pub struct Specifics {
-    audio: Vec<f32>,
-    value: f32,
-    outputs: Vec<View>,
-}
-
-gen_component!(Specifics, {"in": ["audio"], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                soul.audio
-                    .resize(marg!(kwarg_num & body, "samples_per_evaluation")?, 0.0);
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        multi!(connect commands, true);
-        command!(
-            commands,
-            "value",
-            |soul, _body| {
-                Ok(Some(json!(soul.value)))
-            },
-            { "args": [] },
-        );
+impl ComponentTrait for Component {
+    fn join(&mut self, body: serde_json::Value) -> CmdResult {
+        self.audio
+            .resize(body.kwarg("run_size")?, 0.0);
+        Ok(None)
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {
         Some(self.audio.as_mut_slice())
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         for i in &mut self.audio {
             self.value *= 0.999;
             if self.value < i.abs() {
@@ -51,9 +35,23 @@ impl SpecificsTrait for Specifics {
             }
             *i = self.value;
         }
-        multi!(audio self.audio, self.outputs, self.audio.len());
+        self.multi_audio(&self.audio);
         for i in &mut self.audio {
             *i = 0.0;
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+
+    fn from_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn value_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.value)))
     }
 }

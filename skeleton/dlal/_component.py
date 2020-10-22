@@ -31,18 +31,6 @@ def component_kinds(special=None):
         if not i.startswith('base') and i not in avoid
     ]
 
-def json_prep(args, kwargs):
-    def prep(x):
-        if type(x) in [int, float]:
-            return str(x)
-        elif isinstance(x, list):
-            return [prep(i) for i in x]
-        elif isinstance(x, dict):
-            return {k: prep(v) for k, v in x.items()}
-        else:
-            return x
-    return [prep(i) for i in args], {k: prep(v) for k, v in kwargs.items()}
-
 class Component:
     _libs = {}
     _components = {}
@@ -91,25 +79,22 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def command(self, name, args=[], kwargs={}, do_json_prep=True, timeout_ms=20):
-        if do_json_prep: args, kwargs = json_prep(args, kwargs)
+    def command(self, name, args=[], kwargs={}, timeout_ms=20):
         if Component._comm:
             log('debug', f'{self.name} queue {name} {args} {kwargs}')
             return Component._comm.queue(self, name, args, kwargs, timeout_ms=timeout_ms)
         else:
-            return self.command_immediate(name, args, kwargs, False)
+            return self.command_immediate(name, args, kwargs)
 
-    def command_detach(self, name, args=[], kwargs={}, do_json_prep=True):
-        if do_json_prep: args, kwargs = json_prep(args, kwargs)
+    def command_detach(self, name, args=[], kwargs={}):
         if Component._comm:
             log('debug', f'{self.name} queue (detach) {name} {args} {kwargs}')
             return Component._comm.queue(self, name, args, kwargs, detach=True)
         else:
-            return self.command_immediate(name, args, kwargs, False)
+            return self.command_immediate(name, args, kwargs)
 
-    def command_immediate(self, name, args=[], kwargs={}, do_json_prep=True):
+    def command_immediate(self, name, args=[], kwargs={}):
         log('debug', f'{self.name} {name} {args} {kwargs}')
-        if do_json_prep: args, kwargs = json_prep(args, kwargs)
         result = self._lib.command(self._raw, json.dumps({
             'name': name,
             'args': args,
@@ -193,7 +178,7 @@ class Component:
             str(ctypes.cast(self._lib.command , ctypes.c_void_p).value),
             str(ctypes.cast(self._lib.midi    , ctypes.c_void_p).value),
             str(ctypes.cast(self._lib.audio   , ctypes.c_void_p).value),
-            str(ctypes.cast(self._lib.evaluate, ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.run, ctypes.c_void_p).value),
         ]
 
 def comm_set(comm):

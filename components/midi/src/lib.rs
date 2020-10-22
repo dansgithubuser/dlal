@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_str, command, err, gen_component, json, multi, View};
+use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 
 use midir::{MidiInput, MidiInputConnection};
 use multiqueue2::{MPMCSender, MPMCUniReceiver};
@@ -9,15 +9,20 @@ fn new_midi_in() -> MidiInput {
     MidiInput::new("midir test input").expect("MidiInput::new failed")
 }
 
-pub struct Specifics {
-    conn: Option<MidiInputConnection<MPMCSender<[u8; MSG_CAP]>>>,
-    recv: Option<MPMCUniReceiver<[u8; MSG_CAP]>>,
-    outputs: Vec<View>,
-}
+component!(
+    {"in": ["midi**"], "out": ["midi"]},
+    ["multi"],
+    {
+        conn: Option<MidiInputConnection<MPMCSender<[u8; MSG_CAP]>>>,
+        recv: Option<MPMCUniReceiver<[u8; MSG_CAP]>>,
+    },
+    {
+        "ports": {},
+        "open": {"args": ["port_name_prefix"]},
+    },
+);
 
-gen_component!(Specifics, {"in": ["midi**"], "out": ["midi"]});
-
-impl Specifics {
+impl Component {
     fn get_ports(&self) -> Vec<String> {
         let midi_in = new_midi_in();
         (0..midi_in.port_count())
@@ -49,56 +54,48 @@ impl Specifics {
     }
 }
 
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Specifics {
-            conn: None,
-            recv: None,
-            outputs: Vec::with_capacity(1),
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
-            commands,
-            "ports",
-            |soul, _body| Ok(Some(json!(soul.get_ports()))),
-            {},
-        );
-        command!(
-            commands,
-            "open",
-            |soul, body| {
-                let port = arg_str(&body, 0)?;
-                let ports = soul.get_ports();
-                for (i, v) in ports.iter().enumerate() {
-                    if v.starts_with(port) {
-                        soul.open(i);
-                        return Ok(None);
-                    }
-                }
-                err!("no such port")
-            },
-            { "args": ["port_name_prefix"] },
-        );
-        multi!(connect commands, false);
-    }
-
+impl ComponentTrait for Component {
     fn midi(&mut self, msg: &[u8]) {
-        multi!(midi msg, self.outputs);
+        self.multi_midi(msg);
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if self.recv.is_none() {
             return;
         }
         loop {
             match self.recv.as_ref().unwrap().try_recv() {
                 Ok(msg) => {
-                    multi!(midi msg, self.outputs);
+                    self.multi_midi(&msg);
                 }
                 Err(_) => return,
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+
+    fn from_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn ports_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.get_ports())))
+    }
+
+    fn open_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let port: String = body.arg(0)?;
+        let ports = self.get_ports();
+        for (i, v) in ports.iter().enumerate() {
+            if v.starts_with(&port) {
+                self.open(i);
+                return Ok(None);
+            }
+        }
+        Err(err!("no such port").into())
     }
 }

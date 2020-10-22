@@ -1,4 +1,4 @@
-from ._component import Component, json_prep
+from ._component import Component
 
 import json
 
@@ -29,7 +29,6 @@ class Oracle(Component):
         return MODE.list[int(self.command('mode', args))]
 
     def format(self, name, *args, **kwargs):
-        args, kwargs = json_prep(args, kwargs)
         return self.command('format', [json.dumps({
             'name': name,
             'args': args,

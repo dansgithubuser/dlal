@@ -1,75 +1,38 @@
-use dlal_component_base::{command, gen_component, join, json, marg, multi, View};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
-use std::vec::Vec;
+component!(
+    {"in": [], "out": ["audio"]},
+    ["run_size", "multi", "check_audio"],
+    {
+        mode: String,
+    },
+    {
+        "mode": {
+            "args": [{
+                "name": "mode",
+                "optional": true,
+                "choices": ["exp2", "sqrt"],
+            }],
+        },
+    },
+);
 
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    mode: String,
-    outputs: Vec<View>,
-}
-
-gen_component!(Specifics, {"in": [], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            ..Default::default()
-        }
+impl ComponentTrait for Component {
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "mode": self.mode,
+        })))
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        multi!(connect commands, true);
-        command!(
-            commands,
-            "mode",
-            |soul, body| {
-                if let Ok(v) = marg!(arg_num &body, 0) {
-                    soul.mode = v;
-                }
-                Ok(Some(json!(soul.mode)))
-            },
-            {
-                "args": [{
-                    "name": "mode",
-                    "optional": true,
-                    "choices": ["exp2", "sqrt"],
-                }],
-            },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "mode": soul.mode,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.mode= marg!(json_num marg!(json_get j, "mode")?)?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.mode = j.at("mode")?;
+        Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         for output in &self.outputs {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
+            for i in output.audio(self.run_size).unwrap() {
                 *i = match self.mode.as_str() {
                     "exp2" => i.exp2(),
                     "sqrt" => {
@@ -83,5 +46,14 @@ impl SpecificsTrait for Specifics {
                 }
             }
         }
+    }
+}
+
+impl Component {
+    fn mode_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.mode = v;
+        }
+        Ok(Some(json!(self.mode)))
     }
 }

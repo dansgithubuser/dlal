@@ -1,4 +1,4 @@
-from ._component import Component, json_prep
+from ._component import Component
 
 import json
 
@@ -11,7 +11,6 @@ class Midman(Component):
                 self.directive(*i)
 
     def directive(self, pattern, component, name, *args, **kwargs):
-        args, kwargs = json_prep(args, kwargs)
         return self.command('directive', [
             pattern,
             component,

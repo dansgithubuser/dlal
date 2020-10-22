@@ -1,103 +1,73 @@
-use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 use std::f32::consts::PI;
 
-#[derive(Default)]
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: u32,
-    a: f32,
-    y: f32,
-    output: Option<View>,
-}
+component!(
+    {"in": [], "out": ["audio"]},
+    ["run_size", "sample_rate", "uni", "check_audio"],
+    {
+        a: f32,
+        y: f32,
+    },
+    {
+        "set": {
+            "args": [{
+                "name": "lowness",
+                "optional": true,
+                "range": "[0, 1]",
+            }],
+        },
+        "freq": {
+            "args": [
+                {"name": "freq", "optional": true},
+                {"name": "sample_rate", "optional": true},
+            ],
+        },
+    },
+);
 
-gen_component!(Specifics, {"in": [], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            a: 0.95,
-            ..Default::default()
-        }
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.a = 0.95;
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        uni!(connect commands, true);
-        command!(
-            commands,
-            "set",
-            |soul, body| {
-                if let Ok(lowness) = arg_num::<f32>(&body, 0) {
-                    soul.a = 1.0 - lowness;
-                }
-                Ok(Some(json!(1.0 - soul.a)))
-            },
-            {
-                "args": [{
-                    "name": "lowness",
-                    "optional": true,
-                    "range": "[0, 1]",
-                }],
-            }
-        );
-        command!(
-            commands,
-            "freq",
-            |soul, body| {
-                if let Ok(sample_rate) = arg_num::<u32>(&body, 1) {
-                    soul.sample_rate = sample_rate;
-                }
-                if let Ok(freq) = arg_num::<f32>(&body, 0) {
-                    soul.a = 1.0 / (1.0 + 1.0 / (2.0 * PI / soul.sample_rate as f32 * freq));
-                }
-                Ok(Some(json!(1.0 / (1.0 / soul.a - 1.0) / (2.0 * PI * soul.sample_rate as f32))))
-            },
-            {
-                "args": [
-                    {
-                        "name": "freq",
-                        "optional": true,
-                    },
-                    {
-                        "name": "sample_rate",
-                        "optional": true,
-                    },
-                ],
-            }
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| { Ok(Some(json!(soul.a.to_string()))) },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                soul.a = arg_num(&body, 0)?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
-    }
-
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if let Some(output) = &self.output {
-            let audio = output.audio(self.samples_per_evaluation).unwrap();
-            for i in 0..self.samples_per_evaluation {
+            let audio = output.audio(self.run_size).unwrap();
+            for i in 0..self.run_size {
                 audio[i] = self.y + self.a * (audio[i] - self.y);
                 self.y = audio[i];
             }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.a)))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.a = body.arg(0)?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(lowness) = body.arg::<f32>(0) {
+            self.a = 1.0 - lowness;
+        }
+        Ok(Some(json!(1.0 - self.a)))
+    }
+
+    fn freq_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(sample_rate) = body.arg(1) {
+            self.sample_rate = sample_rate;
+        }
+        if let Ok(freq) = body.arg::<f32>(0) {
+            self.a = 1.0 / (1.0 + 1.0 / (2.0 * PI / self.sample_rate as f32 * freq));
+        }
+        Ok(Some(json!(
+            1.0 / (1.0 / self.a - 1.0) / (2.0 * PI * self.sample_rate as f32)
+        )))
     }
 }

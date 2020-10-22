@@ -8,4 +8,4 @@ class Fir(Component):
             if ir != None: self.ir(ir)
 
     def ir(self, ir):
-        return self.command('ir', [ir], do_json_prep=False)
+        return self.command('ir', [ir])

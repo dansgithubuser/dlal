@@ -19,10 +19,10 @@ class Audio(Component):
             self.remove(i)
         self.with_components = None
 
-    def samples_per_evaluation(self, samples_per_evaluation=None):
-        args = ['samples_per_evaluation']
-        if samples_per_evaluation != None:
-            args.append([samples_per_evaluation])
+    def run_size(self, run_size=None):
+        args = ['run_size']
+        if run_size != None:
+            args.append([run_size])
         return int(self.command_immediate(*args))
 
     def sample_rate(self, sample_rate=None):

@@ -1,4 +1,4 @@
-use dlal_component_base::{arg_num, args, command, err, gen_component, json, kwarg_num, multi, View};
+use dlal_component_base::{component, err, json, serde_json, Body, CmdResult, View};
 
 use colored::*;
 use portaudio as pa;
@@ -6,35 +6,87 @@ use portaudio as pa;
 use std::ptr::{null, null_mut};
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: f64,
-    addees: Vec<Vec<View>>,
-    stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
-    audio_i: *const f32,
-    audio_o: *mut f32,
-    outputs: Vec<View>,
+struct Audio {
+    i: *const f32,
+    o: *mut f32,
 }
 
-impl Specifics {
-    fn evaluate_addees(&mut self) {
+impl Default for Audio {
+    fn default() -> Self {
+        Self {
+            i: null(),
+            o: null_mut(),
+        }
+    }
+}
+
+component!(
+    {"in": ["audio**"], "out": ["audio**"]},
+    ["multi", "check_audio", "run_size", "sample_rate"],
+    {
+        addees: Vec<Vec<View>>,
+        stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
+        audio: Audio,
+    },
+    {
+        "run_size": {"args": [{"name": "run_size", "optional": true}]},
+        "sample_rate": {"args": [{"name": "sample_rate", "optional": true}]},
+        "add": {"args": ["component", "command", "audio", "midi", "run"]},
+        "remove": {"args": ["component", "command", "audio", "midi", "run"]},
+        "start": {},
+        "stop": {},
+        "run": {},
+        "run_explain": {},
+    },
+);
+
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.run_size = 64;
+        self.sample_rate = 44100;
+    }
+
+    fn run(&mut self) {
+        let audio_i = unsafe { from_raw_parts(self.audio.i, self.run_size) };
+        self.multi_audio(audio_i);
+    }
+
+    fn audio(&mut self) -> Option<&mut [f32]> {
+        if self.audio.o.is_null() {
+            return Some(&mut []);
+        }
+        Some(unsafe { from_raw_parts_mut(self.audio.o, self.run_size) })
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "run_size": self.run_size.to_string(),
+            "sample_rate": self.sample_rate.to_string(),
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.run_size = body.kwarg("run_size")?;
+        self.sample_rate = body.kwarg("sample_rate")?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn run_addees(&mut self) {
         for slot in self.addees.iter().rev() {
             for i in slot {
-                i.evaluate();
+                i.run();
             }
         }
     }
 
-    fn evaluate_addees_explain(&mut self) {
+    fn run_addees_explain(&mut self) {
         for slot in self.addees.iter().rev() {
             for i in slot {
                 self.explain();
-                println!(
-                    "{} {}",
-                    "evaluate".green().bold(),
-                    i.name().green(),
-                );
-                i.evaluate();
+                println!("{} {}", "run".green().bold(), i.name().green(),);
+                i.run();
             }
         }
     }
@@ -42,7 +94,7 @@ impl Specifics {
     fn explain(&self) {
         for slot in self.addees.iter().rev() {
             for i in slot {
-                if let Some(audio) = i.audio(self.samples_per_evaluation) {
+                if let Some(audio) = i.audio(self.run_size) {
                     println!(
                         "{} {} {:?}",
                         "audio".yellow().bold(),
@@ -53,217 +105,131 @@ impl Specifics {
             }
         }
     }
-}
 
-gen_component!(Specifics, {"in": ["audio**"], "out": ["audio**"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Specifics {
-            samples_per_evaluation: 64,
-            sample_rate: 44100.0,
-            addees: vec![Vec::new()],
-            stream: None,
-            audio_i: null(),
-            audio_o: null_mut(),
-            outputs: Vec::new(),
+    fn run_size_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.run_size = v;
         }
+        Ok(Some(json!(self.run_size)))
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        command!(
-            commands,
-            "samples_per_evaluation",
-            |soul, body| {
-                if let Ok(v) = arg_num(&body, 0) {
-                    soul.samples_per_evaluation = v;
-                }
-                Ok(Some(json!(soul.samples_per_evaluation.to_string())))
-            },
-            { "args": [{"name": "samples_per_evaluation", "optional": true}] },
-        );
-        command!(
-            commands,
-            "sample_rate",
-            |soul, body| {
-                if let Ok(v) = arg_num(&body, 0) {
-                    soul.sample_rate = v;
-                }
-                Ok(Some(json!(soul.sample_rate.to_string())))
-            },
-            { "args": [{"name": "sample_rate", "optional": true}] },
-        );
-        command!(
-            commands,
-            "add",
-            |soul, body| {
-                let view = View::new(args(&body)?)?;
-                let slot: usize = arg_num(&body, 5)?;
-                let join_result = view.command(&json!({
-                    "name": "join",
-                    "kwargs": {
-                        "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
-                        "sample_rate": soul.sample_rate.to_string(),
-                    },
-                }));
-                if let Some(join_result) = join_result {
-                    if let Some(obj) = join_result.as_object() {
-                        if obj.get("error").is_some() {
-                            return Ok(Some(join_result));
-                        }
-                    }
-                }
-                if slot >= soul.addees.len() {
-                    soul.addees.resize(slot + 1, vec![]);
-                }
-                soul.addees[slot].push(view);
-                Ok(None)
-            },
-            { "args": ["component", "command", "audio", "midi", "evaluate"] },
-        );
-        command!(
-            commands,
-            "remove",
-            |soul, body| {
-                let view = View::new(args(&body)?)?;
-                for slot in 0..soul.addees.len() {
-                    if let Some(index) = soul.addees[slot].iter().position(|i| i.raw == view.raw) {
-                        soul.addees[slot].remove(index);
-                        break;
-                    }
-                    if slot == soul.addees.len() - 1 {
-                        return err!("no such component");
-                    }
-                }
-                Ok(None)
-            },
-            { "args": ["component", "command", "audio", "midi", "evaluate"] },
-        );
-        multi!(connect commands, true);
-        command!(
-            commands,
-            "start",
-            |mut soul, _body| {
-                const CHANNELS: i32 = 1;
-                const INTERLEAVED: bool = true;
-                let pa = pa::PortAudio::new()?;
-                let input_device = pa.default_input_device()?;
-                let input_params = pa::StreamParameters::<f32>::new(
-                    input_device,
-                    CHANNELS,
-                    INTERLEAVED,
-                    pa.device_info(input_device)?.default_high_input_latency,
-                );
-                let output_device = pa.default_output_device()?;
-                let output_params = pa::StreamParameters::<f32>::new(
-                    output_device,
-                    CHANNELS,
-                    INTERLEAVED,
-                    pa.device_info(output_device)?.default_high_output_latency,
-                );
-                pa.is_duplex_format_supported(input_params, output_params, soul.sample_rate)?;
-                let soul_scoped =
-                    unsafe { std::mem::transmute::<&mut Specifics, &mut Specifics>(&mut soul) };
-                soul.stream = Some(pa.open_non_blocking_stream(
-                    pa::DuplexStreamSettings::new(
-                        input_params,
-                        output_params,
-                        soul.sample_rate,
-                        soul.samples_per_evaluation as u32,
-                    ),
-                    move |args| {
-                        assert!(args.frames == soul_scoped.samples_per_evaluation);
-                        for output_sample in args.out_buffer.iter_mut() {
-                            *output_sample = 0.0;
-                        }
-                        soul_scoped.audio_i = args.in_buffer.as_ptr();
-                        soul_scoped.audio_o = args.out_buffer.as_mut_ptr();
-                        soul_scoped.evaluate_addees();
-                        pa::Continue
-                    },
-                )?);
-                match &mut soul.stream {
-                    Some(stream) => stream.start()?,
-                    None => (),
-                }
-                Ok(None)
-            },
-            {},
-        );
-        command!(
-            commands,
-            "stop",
-            |soul, _body| {
-                match &mut soul.stream {
-                    Some(stream) => stream.stop()?,
-                    None => (),
-                }
-                Ok(None)
-            },
-            {},
-        );
-        command!(
-            commands,
-            "run",
-            |soul, _body| {
-                let mut vec: Vec<f32> = Vec::new();
-                vec.resize(soul.samples_per_evaluation, 0.0);
-                soul.audio_o = vec.as_mut_ptr();
-                for j in &mut vec {
-                    *j = 0.0;
-                }
-                soul.evaluate_addees();
-                Ok(None)
-            },
-            {},
-        );
-        command!(
-            commands,
-            "run_explain",
-            |soul, _body| {
-                let mut vec: Vec<f32> = Vec::new();
-                vec.resize(soul.samples_per_evaluation, 0.0);
-                soul.audio_o = vec.as_mut_ptr();
-                for j in &mut vec {
-                    *j = 0.0;
-                }
-                soul.evaluate_addees_explain();
-                Ok(None)
-            },
-            {},
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "samples_per_evaluation": soul.samples_per_evaluation.to_string(),
-                    "sample_rate": soul.sample_rate.to_string(),
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                soul.samples_per_evaluation = kwarg_num(&body, "samples_per_evaluation")?;
-                soul.sample_rate = kwarg_num(&body, "sample_rate")?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
-    }
-
-    fn evaluate(&mut self) {
-        let audio_i = unsafe { from_raw_parts(self.audio_i, self.samples_per_evaluation) };
-        multi!(audio audio_i, self.outputs, self.samples_per_evaluation);
-    }
-
-    fn audio(&mut self) -> Option<&mut [f32]> {
-        if self.audio_o.is_null() {
-            return Some(&mut []);
+    fn sample_rate_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.sample_rate = v;
         }
-        Some(unsafe { from_raw_parts_mut(self.audio_o, self.samples_per_evaluation) })
+        Ok(Some(json!(self.sample_rate)))
+    }
+
+    fn add_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let view = View::new(&body.at("args")?)?;
+        let slot: usize = body.arg(5)?;
+        let join_result = view.command(&json!({
+            "name": "join",
+            "kwargs": {
+                "run_size": self.run_size,
+                "sample_rate": self.sample_rate,
+            },
+        }));
+        if let Some(join_result) = join_result {
+            if let Some(obj) = join_result.as_object() {
+                if obj.get("error").is_some() {
+                    return Ok(Some(join_result));
+                }
+            }
+        }
+        if slot >= self.addees.len() {
+            self.addees.resize(slot + 1, vec![]);
+        }
+        self.addees[slot].push(view);
+        Ok(None)
+    }
+
+    fn remove_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let view = View::new(&body.at("args")?)?;
+        for slot in 0..self.addees.len() {
+            if let Some(index) = self.addees[slot].iter().position(|i| i.raw == view.raw) {
+                self.addees[slot].remove(index);
+                break;
+            }
+            if slot == self.addees.len() - 1 {
+                return Err(err!("no such component").into());
+            }
+        }
+        Ok(None)
+    }
+
+    fn start_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        const CHANNELS: i32 = 1;
+        const INTERLEAVED: bool = true;
+        let pa = pa::PortAudio::new()?;
+        let input_device = pa.default_input_device()?;
+        let input_params = pa::StreamParameters::<f32>::new(
+            input_device,
+            CHANNELS,
+            INTERLEAVED,
+            pa.device_info(input_device)?.default_high_input_latency,
+        );
+        let output_device = pa.default_output_device()?;
+        let output_params = pa::StreamParameters::<f32>::new(
+            output_device,
+            CHANNELS,
+            INTERLEAVED,
+            pa.device_info(output_device)?.default_high_output_latency,
+        );
+        pa.is_duplex_format_supported(input_params, output_params, self.sample_rate.into())?;
+        let self_scoped = unsafe { std::mem::transmute::<&mut Component, &mut Component>(self) };
+        self.stream = Some(pa.open_non_blocking_stream(
+            pa::DuplexStreamSettings::new(
+                input_params,
+                output_params,
+                self.sample_rate.into(),
+                self.run_size as u32,
+            ),
+            move |args| {
+                assert!(args.frames == self_scoped.run_size);
+                for output_sample in args.out_buffer.iter_mut() {
+                    *output_sample = 0.0;
+                }
+                self_scoped.audio.i = args.in_buffer.as_ptr();
+                self_scoped.audio.o = args.out_buffer.as_mut_ptr();
+                self_scoped.run_addees();
+                pa::Continue
+            },
+        )?);
+        match &mut self.stream {
+            Some(stream) => stream.start()?,
+            None => (),
+        }
+        Ok(None)
+    }
+
+    fn stop_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        match &mut self.stream {
+            Some(stream) => stream.stop()?,
+            None => (),
+        }
+        Ok(None)
+    }
+
+    fn run_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let mut vec: Vec<f32> = Vec::new();
+        vec.resize(self.run_size, 0.0);
+        self.audio.o = vec.as_mut_ptr();
+        for j in &mut vec {
+            *j = 0.0;
+        }
+        self.run_addees();
+        Ok(None)
+    }
+
+    fn run_explain_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let mut vec: Vec<f32> = Vec::new();
+        vec.resize(self.run_size, 0.0);
+        self.audio.o = vec.as_mut_ptr();
+        for j in &mut vec {
+            *j = 0.0;
+        }
+        self.run_addees_explain();
+        Ok(None)
     }
 }

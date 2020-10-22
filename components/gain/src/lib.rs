@@ -1,72 +1,50 @@
-use dlal_component_base::{arg_num, command, gen_component, join, json, uni, View};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
-pub struct Specifics {
-    amount: f32,
-    amount_dst: f32,
-    smooth: f32,
-    samples_per_evaluation: usize,
-    output: Option<View>,
-}
+component!(
+    {"in": [], "out": ["audio"]},
+    ["run_size", "uni"],
+    {
+        amount: f32,
+        amount_dst: f32,
+        smooth: f32,
+    },
+    {
+        "set": {"args": ["gain", "smooth"]},
+    },
+);
 
-gen_component!(Specifics, {"in": [], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            amount: 1.0,
-            amount_dst: 1.0,
-            smooth: 0.0,
-            samples_per_evaluation: 0,
-            output: None,
-        }
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.amount = 1.0;
+        self.amount_dst = 1.0;
     }
 
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                Ok(None)
-            },
-            ["samples_per_evaluation"],
-        );
-        uni!(connect commands, true);
-        command!(
-            commands,
-            "set",
-            |soul, body| {
-                soul.amount_dst = arg_num(&body, 0)?;
-                soul.smooth = arg_num(&body, 1).unwrap_or(0.0);
-                if soul.smooth == 0.0 {
-                    soul.amount = soul.amount_dst;
-                }
-                Ok(None)
-            },
-            { "args": ["gain", "smooth"] },
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| { Ok(Some(json!(soul.amount.to_string()))) },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                soul.amount = arg_num(&body, 0)?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
-    }
-
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if let Some(output) = &self.output {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
+            for i in output.audio(self.run_size).unwrap() {
                 *i *= self.amount;
             }
         }
         self.amount = self.smooth * self.amount + (1.0 - self.smooth) * self.amount_dst;
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.amount)))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.amount = body.arg(0)?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.amount_dst = body.arg(0)?;
+        self.smooth = body.arg(1).unwrap_or(0.0);
+        if self.smooth == 0.0 {
+            self.amount = self.amount_dst;
+        }
+        Ok(None)
     }
 }

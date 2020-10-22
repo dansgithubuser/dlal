@@ -1,9 +1,12 @@
 [package]
-name = "dlal-component-base"
+name = "dlal-component-macro"
 version = "1.0.0"
 authors = ["Dan <dansonlinepresence@gmail.com>"]
 edition = "2018"
 
+[lib]
+proc-macro = true
+
 [dependencies]
-dlal-component-macro = { path = "macro" }
+handlebars = "3.5.0"
 serde_json = "1.0.48"

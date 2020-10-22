@@ -1,4 +1,4 @@
-use dlal_component_base::{command, err, gen_component, join, json, marg, uni, Error, View};
+use dlal_component_base::{component, err, json, serde_json, Body, CmdResult, Error};
 
 use std::f32;
 use std::time;
@@ -20,149 +20,90 @@ fn wave_saw(phase: f32) -> f32 {
 }
 
 fn wave_noise(phase: f32) -> f32 {
-    let t = time::SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap();
+    let t = time::SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
+        .unwrap();
     let r1 = t.as_secs();
     let r2 = t.subsec_nanos() as u64;
-    let r3 = unsafe {
-        *std::mem::transmute::<*const f32, *const u32>(&phase)
-    } as u64;
+    let r3 = unsafe { *std::mem::transmute::<*const f32, *const u32>(&phase) } as u64;
     const PERIOD: u64 = 77777;
     let rf = (r1 ^ r2 ^ r3) % PERIOD;
     2.0 * rf as f32 / PERIOD as f32 - 1.0
 }
 
-pub struct Specifics {
-    samples_per_evaluation: usize,
-    sample_rate: u32,
-    wave_str: String,
-    wave: fn(f32) -> f32,
-    bend: f32,
-    step: f32,
-    phase: f32,
-    vol: f32,
-    output: Option<View>,
+struct Wave {
+    f: fn(f32) -> f32,
+    name: String,
 }
 
-impl Specifics {
+impl Default for Wave {
+    fn default() -> Self {
+        Self {
+            f: wave_sin,
+            name: "sin".into(),
+        }
+    }
+}
+
+component!(
+    {"in": ["midi"], "out": ["audio"]},
+    ["run_size", "sample_rate", "uni", "check_audio"],
+    {
+        wave_str: String,
+        wave: Wave,
+        bend: f32,
+        step: f32,
+        phase: f32,
+        vol: f32,
+    },
+    {
+        "freq": {
+            "args": [{
+                "name": "freq",
+                "optional": true,
+            }],
+        },
+        "wave": {
+            "args": [{
+                "name": "wave",
+                "choices": ["sin", "tri", "saw", "noise"],
+            }],
+        },
+        "bend": {
+            "args": [{
+                "name": "bend",
+                "description": "1 is no bend",
+            }],
+        },
+        "phase": {
+            "args": [{
+                "name": "phase",
+                "range": "[0..1)",
+            }],
+        },
+    },
+);
+
+impl Component {
     fn wave_set(&mut self, wave: &str) -> Result<(), Box<Error>> {
-        self.wave_str = wave.into();
+        self.wave.name = wave.into();
         match wave {
-            "sin" => self.wave = wave_sin,
-            "tri" => self.wave = wave_tri,
-            "saw" => self.wave = wave_saw,
-            "noise" => self.wave = wave_noise,
-            _ => return err!("unknown wave"),
+            "sin" => self.wave.f = wave_sin,
+            "tri" => self.wave.f = wave_tri,
+            "saw" => self.wave.f = wave_saw,
+            "noise" => self.wave.f = wave_noise,
+            _ => return Err(err!("unknown wave").into()),
         };
         Ok(())
     }
 }
 
-gen_component!(Specifics, {"in": ["midi"], "out": ["audio"]});
-
-impl SpecificsTrait for Specifics {
-    fn new() -> Self {
-        Self {
-            samples_per_evaluation: 64,
-            sample_rate: 44100,
-            wave_str: "sin".into(),
-            wave: wave_sin,
-            vol: 1.0,
-            bend: 1.0,
-            step: 0.0,
-            phase: 0.0,
-            output: None,
-        }
-    }
-
-    fn register_commands(&self, commands: &mut CommandMap) {
-        join!(
-            commands,
-            |soul, body| {
-                join!(samples_per_evaluation soul, body);
-                join!(sample_rate soul, body);
-                Ok(None)
-            },
-            ["samples_per_evaluation", "sample_rate"],
-        );
-        uni!(connect commands, true);
-        command!(
-            commands,
-            "freq",
-            |soul, body| {
-                if let Ok(freq) = marg!(arg_num &body, 0) as Result<f32, _> {
-                    soul.step = freq / soul.sample_rate as f32;
-                }
-                Ok(Some(json!(soul.step * soul.sample_rate as f32)))
-            },
-            {
-                "args": [{
-                    "name": "freq",
-                    "optional": true,
-                }],
-            }
-        );
-        command!(
-            commands,
-            "wave",
-            |soul, body| {
-                soul.wave_set(marg!(arg_str &body, 0)?)?;
-                Ok(None)
-            },
-            {
-                "args": [{
-                    "name": "wave",
-                    "choices": ["sin", "tri", "saw", "noise"],
-                }],
-            }
-        );
-        command!(
-            commands,
-            "bend",
-            |soul, body| {
-                soul.bend = marg!(arg_num &body, 0)?;
-                Ok(None)
-            },
-            {
-                "args": [{
-                    "name": "bend",
-                    "description": "1 is no bend",
-                }],
-            }
-        );
-        command!(
-            commands,
-            "phase",
-            |soul, body| {
-                soul.phase = marg!(arg_num &body, 0)?;
-                Ok(None)
-            },
-            {
-                "args": [{
-                    "name": "phase",
-                    "range": "[0..1)",
-                }],
-            }
-        );
-        command!(
-            commands,
-            "to_json",
-            |soul, _body| {
-                Ok(Some(json!({
-                    "wave": soul.wave_str,
-                })))
-            },
-            {},
-        );
-        command!(
-            commands,
-            "from_json",
-            |soul, body| {
-                let j = marg!(arg &body, 0)?;
-                soul.wave_set(marg!(json_str marg!(json_get j, "wave")?)?)?;
-                Ok(None)
-            },
-            { "args": ["json"] },
-        );
+impl ComponentTrait for Component {
+    fn init(&mut self) {
+        self.run_size = 64;
+        self.sample_rate = 44100;
+        self.vol = 1.0;
+        self.bend = 1.0;
     }
 
     fn midi(&mut self, msg: &[u8]) {
@@ -171,8 +112,8 @@ impl SpecificsTrait for Specifics {
         }
         match msg[0] & 0xf0 {
             0x90 => {
-                self.step = 440.0 * 2.0_f32.powf((msg[1] as f32 - 69.0) / 12.0)
-                    / self.sample_rate as f32;
+                self.step =
+                    440.0 * 2.0_f32.powf((msg[1] as f32 - 69.0) / 12.0) / self.sample_rate as f32;
                 self.vol = msg[2] as f32 / 127.0;
             }
             0x80 => {
@@ -182,11 +123,49 @@ impl SpecificsTrait for Specifics {
         }
     }
 
-    fn evaluate(&mut self) {
-        for i in uni!(audio self).iter_mut() {
-            self.phase += self.step * self.bend;
-            self.phase -= self.phase.floor();
-            *i += self.vol * (self.wave)(self.phase);
+    fn run(&mut self) {
+        if let Some(output) = self.output.as_ref() {
+            for i in output.audio(self.run_size).unwrap() {
+                self.phase += self.step * self.bend;
+                self.phase -= self.phase.floor();
+                *i += self.vol * (self.wave.f)(self.phase);
+            }
         }
+    }
+
+    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!({
+            "wave": self.wave.name,
+        })))
+    }
+
+    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.wave_set(&j.at::<String>("wave")?)?;
+        Ok(None)
+    }
+}
+
+impl Component {
+    fn freq_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(freq) = body.arg::<f32>(0) {
+            self.step = freq / self.sample_rate as f32;
+        }
+        Ok(Some(json!(self.step * self.sample_rate as f32)))
+    }
+
+    fn wave_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.wave_set(&body.arg::<String>(0)?)?;
+        Ok(None)
+    }
+
+    fn bend_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.bend = body.arg(0)?;
+        Ok(None)
+    }
+
+    fn phase_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.phase = body.arg(0)?;
+        Ok(None)
     }
 }
