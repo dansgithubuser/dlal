@@ -2,7 +2,7 @@ use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["samples_per_evaluation", "uni", "check_audio"],
+    ["run_size", "uni", "check_audio"],
     {
         gain_x: f32,
         gain_y: f32,
@@ -51,12 +51,12 @@ impl ComponentTrait for Component {
         self.audio.resize(22050, 0.0);
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         let audio = match &self.output {
-            Some(output) => output.audio(self.samples_per_evaluation).unwrap(),
+            Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
-        for i in 0..self.samples_per_evaluation {
+        for i in 0..self.run_size {
             let x = audio[i];
             let echo = self.audio[self.index] * self.gain_o;
             audio[i] += echo;

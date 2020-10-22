@@ -48,8 +48,8 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | `DLAL_LOG_LEVEL` | critical, error, warning (default), info, debug, verbose |
 | `DLAL_SNOOP_COMMAND` | snoop on commands |
 | `DLAL_SNOOP_MIDI` | snoop on MIDI message |
-| `DLAL_SNOOP_AUDIO` | snoop on this many percent of audio evaluations |
-| `DLAL_SNOOP_AUDIO_SAMPLES` | snoop on this many samples of an audio evaluation, default 1 |
+| `DLAL_SNOOP_AUDIO` | snoop on this many percent of audio runs |
+| `DLAL_SNOOP_AUDIO_SAMPLES` | snoop on this many samples of an audio run, default 1 |
 
 ## layout
 ### files
@@ -163,9 +163,9 @@ Components interact in 3 ways:
 
 Audio is unique because it is exposed as a value, whereas the command and MIDI interfaces are functions. For this reason, audio is useful for conveying quantities other than actual audio. For example, components may share control voltage via the audio interface. Arguably, audio is one example of control voltage, but it is named for how it is usually, or at least necessarily, used.
 
-Additionally, components have an `evaluate` function called regularly when audio is being produced.
+Additionally, components have an `run` function called regularly when audio is being produced.
 
-Components may register a `connect` command defining how to connect to another component. The other component is always connected as an _output_. That is, during evaluation, information should flow from this component to the other component. If a component registers `connect`, it should register a `disconnect` command as well.
+Components may register a `connect` command defining how to connect to another component. The other component is always connected as an _output_. That is, during run, information should flow from this component to the other component. If a component registers `connect`, it should register a `disconnect` command as well.
 
 Components may register `to_json` and `from_json` commands to accomplish serialization.
 
@@ -190,9 +190,9 @@ Responses can be any JSON, but they should be an object with an `error` value to
 See `skeleton/dlal/_component.py` for more details.
 
 ### driver components
-Driver components are responsible for calling `evaluate` on other components. In particular, they:
+Driver components are responsible for calling `run` on other components. In particular, they:
 - have an `add` command that, on the Python side, takes a component as its first argument; and
-- call `join` on all added components when they are added, conveying the `samples_per_evaluation` and `sample_rate` as kwargs.
+- call `join` on all added components when they are added, conveying the `run_size` and `sample_rate` as kwargs.
 
 The `audio` component is the driver component for interactive audio.
 

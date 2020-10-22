@@ -1,7 +1,7 @@
 pub trait ComponentTrait {
     // fundamentals
     fn init(&mut self) {}
-    fn evaluate(&mut self) {}
+    fn run(&mut self) {}
     fn midi(&mut self, _msg: &[u8]) {}
     fn audio(&mut self) -> Option<&mut[f32]> { None }
 
@@ -19,8 +19,8 @@ pub trait ComponentTrait {
 pub struct Component {
     name: String,
     result: std::ffi::CString,
-    {{#if features.samples_per_evaluation}}
-        samples_per_evaluation: usize,
+    {{#if features.run_size}}
+        run_size: usize,
     {{/if}}
     {{#if features.sample_rate}}
         sample_rate: u32,
@@ -41,8 +41,8 @@ impl Component {
     }
 
     fn join_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
-        {{#if features.samples_per_evaluation}}
-            self.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+        {{#if features.run_size}}
+            self.run_size = body.kwarg("run_size")?;
         {{/if}}
         {{#if features.sample_rate}}
             self.sample_rate = body.kwarg("sample_rate")?;
@@ -228,8 +228,8 @@ pub unsafe extern "C" fn command(component: *mut Component, text: *const std::os
                     {{else}}
                         {
                             "kwargs": [
-                                {{#if features.samples_per_evaluation}}
-                                    "samples_per_evaluation",
+                                {{#if features.run_size}}
+                                    "run_size",
                                 {{/if}}
                                 {{#if features.sample_rate}}
                                     "sample_rate",
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn audio(component: *mut Component) -> *mut f32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn evaluate(component: *mut Component) {
+pub unsafe extern "C" fn run(component: *mut Component) {
     let component = unsafe { &mut *component };
     if let Some(percent) = std::option_env!("DLAL_SNOOP_AUDIO") {
         let mut audio = audio(component);
@@ -334,5 +334,5 @@ pub unsafe extern "C" fn evaluate(component: *mut Component) {
             }
         }
     }
-    component.evaluate();
+    component.run();
 }

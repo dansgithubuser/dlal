@@ -47,7 +47,7 @@ impl Default for Wave {
 
 component!(
     {"in": ["midi"], "out": ["audio"]},
-    ["samples_per_evaluation", "sample_rate", "uni", "check_audio"],
+    ["run_size", "sample_rate", "uni", "check_audio"],
     {
         wave_str: String,
         wave: Wave,
@@ -100,7 +100,7 @@ impl Component {
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.samples_per_evaluation = 64;
+        self.run_size = 64;
         self.sample_rate = 44100;
         self.vol = 1.0;
         self.bend = 1.0;
@@ -123,9 +123,9 @@ impl ComponentTrait for Component {
         }
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if let Some(output) = self.output.as_ref() {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
+            for i in output.audio(self.run_size).unwrap() {
                 self.phase += self.step * self.bend;
                 self.phase -= self.phase.floor();
                 *i += self.vol * (self.wave.f)(self.phase);

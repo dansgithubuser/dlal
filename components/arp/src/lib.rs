@@ -2,7 +2,7 @@ use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 component!(
     {"in": ["midi"], "out": ["midi"]},
-    ["samples_per_evaluation", "sample_rate", "multi"],
+    ["run_size", "sample_rate", "multi"],
     {
         notes: Vec<[u8; 2]>,
         note: usize,
@@ -27,8 +27,8 @@ impl ComponentTrait for Component {
         self.rate = 30.0;
     }
 
-    fn evaluate(&mut self) {
-        self.phase += self.rate / self.sample_rate as f32 * self.samples_per_evaluation as f32;
+    fn run(&mut self) {
+        self.phase += self.rate / self.sample_rate as f32 * self.run_size as f32;
         if self.phase >= 1.0 {
             self.note += 1;
             if self.note >= self.notes.len() {

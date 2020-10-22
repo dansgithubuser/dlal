@@ -86,7 +86,7 @@ use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 component!(
     {"in": ["?"], "out": ["?"]},
     [
-        "samples_per_evaluation",
+        "run_size",
         "sample_rate",
         //{"name": "join_info", "value": {}},
         "uni",
@@ -110,7 +110,7 @@ impl ComponentTrait for Component {
         self.value = 1.0;
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
     }
 
     fn midi(&mut self, msg: &[u8]) {

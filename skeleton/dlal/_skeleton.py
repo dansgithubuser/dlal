@@ -178,14 +178,14 @@ def typical_setup():
     comm = component('comm', None)
     tape = component('tape', None)
     if tape and 'DLAL_TO_FILE' in os.environ and audio:
-        samples_per_evaluation = audio.samples_per_evaluation()
+        run_size = audio.run_size()
         sample_rate = audio.sample_rate()
         duration = float(os.environ['DLAL_TO_FILE'])
-        runs = int(duration * sample_rate / samples_per_evaluation)
+        runs = int(duration * sample_rate / run_size)
         with open('out.i16le', 'wb') as file:
             for i in range(runs):
                 audio.run()
-                tape.to_file_i16le(samples_per_evaluation, file)
+                tape.to_file_i16le(run_size, file)
     else:
         if audio:
             audio.start()
@@ -351,7 +351,7 @@ def impulse_response(ci, co, driver):
 def frequency_response(ci, co, driver, n=64, settling_time=0.01):
     from . import Osc
     from . import Tape
-    settling_runs = int(settling_time * driver.sample_rate() / driver.samples_per_evaluation())
+    settling_runs = int(settling_time * driver.sample_rate() / driver.run_size())
     with driver:
         osc = Osc(name='dlal.frequency_response.osc', slot=1)
         osc.connect(ci)

@@ -89,7 +89,7 @@ impl Line {
     fn advance(
         &mut self,
         samples: u32,
-        samples_per_evaluation: usize,
+        run_size: usize,
         sample_rate: u32,
         output: Option<&View>,
     ) -> bool {
@@ -110,7 +110,7 @@ impl Line {
                 // we handle tempo
                 self.us_per_quarter =
                     ((msg[3] as u32) << 16) + ((msg[4] as u32) << 8) + msg[5] as u32;
-                self.samples_ere_last_tempo = samples - samples_per_evaluation as u32;
+                self.samples_ere_last_tempo = samples - run_size as u32;
                 self.ticks_aft_last_tempo = 0;
             } else {
                 // other msgs get forwarded
@@ -166,7 +166,7 @@ impl Default for Queue {
 component!(
     {"in": ["midi*"], "out": ["midi"]},
     [
-        "samples_per_evaluation",
+        "run_size",
         "sample_rate",
         {"name": "connect_info", "value": {"args": "view"}},
     ],
@@ -237,18 +237,18 @@ impl ComponentTrait for Component {
         Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         while let Ok(mut line) = self.queue.recv.try_recv() {
             let line_index = (*line).index;
             (*line).index = (*self.lines[line_index]).index;
             self.lines[line_index] = line;
         }
-        self.samples += self.samples_per_evaluation as u32;
+        self.samples += self.run_size as u32;
         let mut done = true;
         for i in 0..self.lines.len() {
             done &= self.lines[i].advance(
                 self.samples,
-                self.samples_per_evaluation,
+                self.run_size,
                 self.sample_rate,
                 if i >= self.outputs.len() {
                     None
@@ -348,10 +348,10 @@ impl Component {
     }
     fn advance_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let seconds: f32 = body.arg(0)?;
-        let evaluations_per_second = self.sample_rate as f32 / self.samples_per_evaluation as f32;
-        let evaluations = (seconds * evaluations_per_second) as u32;
-        for _ in 0..evaluations {
-            self.evaluate();
+        let runs_per_second = self.sample_rate as f32 / self.run_size as f32;
+        let runs = (seconds * runs_per_second) as u32;
+        for _ in 0..runs {
+            self.run();
         }
         Ok(None)
     }

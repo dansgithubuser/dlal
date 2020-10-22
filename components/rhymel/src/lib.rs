@@ -4,7 +4,7 @@ const SENTINEL: u8 = 0xff;
 
 component!(
     {"in": ["midi"], "out": ["midi", "audio"]},
-    ["samples_per_evaluation", "sample_rate", "multi"],
+    ["run_size", "sample_rate", "multi"],
     {
         /*
         We have three states, with transitions as follows.
@@ -62,10 +62,10 @@ impl ComponentTrait for Component {
         self.grace = 0.1;
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         // grace
         if self.velocity != SENTINEL {
-            self.silence += self.samples_per_evaluation as f32 / self.sample_rate as f32;
+            self.silence += self.run_size as f32 / self.sample_rate as f32;
             // grace -> fresh
             if self.silence > self.grace {
                 self.multi_midi(&[0x80, 0x40, self.velocity]);
@@ -75,8 +75,8 @@ impl ComponentTrait for Component {
         }
         // send pitch as control voltage to outputs
         for output in &self.outputs {
-            if let Some(audio) = output.audio(self.samples_per_evaluation) {
-                for i in 0..self.samples_per_evaluation {
+            if let Some(audio) = output.audio(self.run_size) {
+                for i in 0..self.run_size {
                     audio[i] += self.pitch;
                 }
             }

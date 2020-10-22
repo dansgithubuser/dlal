@@ -15,7 +15,7 @@ impl Default for Stage {
 
 component!(
     {"in": ["midi"], "out": ["audio"]},
-    ["uni", "check_audio", "samples_per_evaluation"],
+    ["uni", "check_audio", "run_size"],
     {
         a: f32,
         d: f32,
@@ -68,9 +68,9 @@ impl ComponentTrait for Component {
         self.r = 0.01;
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         let audio = match &self.output {
-            Some(output) => output.audio(self.samples_per_evaluation).unwrap(),
+            Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
         for i in audio {

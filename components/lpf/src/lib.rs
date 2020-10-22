@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["samples_per_evaluation", "sample_rate", "uni", "check_audio"],
+    ["run_size", "sample_rate", "uni", "check_audio"],
     {
         a: f32,
         y: f32,
@@ -31,10 +31,10 @@ impl ComponentTrait for Component {
         self.a = 0.95;
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if let Some(output) = &self.output {
-            let audio = output.audio(self.samples_per_evaluation).unwrap();
-            for i in 0..self.samples_per_evaluation {
+            let audio = output.audio(self.run_size).unwrap();
+            for i in 0..self.run_size {
                 audio[i] = self.y + self.a * (audio[i] - self.y);
                 self.y = audio[i];
             }

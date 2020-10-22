@@ -4,7 +4,7 @@ use rustfft::{num_complex::Complex, FFTplanner};
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["samples_per_evaluation", "uni", "check_audio"],
+    ["run_size", "uni", "check_audio"],
     {
         ir: Vec<f32>,
         state: Vec<f32>,
@@ -51,12 +51,12 @@ impl ComponentTrait for Component {
         Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if self.ir.is_empty() {
             return;
         }
         if let Some(output) = &self.output {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
+            for i in output.audio(self.run_size).unwrap() {
                 self.state[self.index] = *i;
                 *i = 0.0;
                 for j in 0..self.ir.len() {

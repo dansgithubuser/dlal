@@ -30,7 +30,7 @@ component!(
     [
         "sample_rate",
         "multi",
-        {"name": "join_info", "value": {"kwargs": ["samples_per_evaluation"]}},
+        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
     ],
     {
         audio: Vec<f32>,
@@ -54,11 +54,11 @@ impl ComponentTrait for Component {
 
     fn join(&mut self, body: serde_json::Value) -> CmdResult {
         self.audio
-            .resize(body.kwarg("samples_per_evaluation")?, 0.0);
+            .resize(body.kwarg("run_size")?, 0.0);
         Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         for sound in &mut self.sounds {
             if sound.play_vol == 0.0 {
                 continue;

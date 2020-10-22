@@ -59,7 +59,7 @@ impl ComponentTrait for Component {
         self.multi_midi(msg);
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if self.recv.is_none() {
             return;
         }

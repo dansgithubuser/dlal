@@ -8,7 +8,7 @@ component!(
     {"in": ["audio"], "out": ["cmd", "midi"]},
     [
         "multi",
-        {"name": "join_info", "value": {"kwargs": ["samples_per_evaluation"]}},
+        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
     ],
     {
         cv: Vec<f32>,
@@ -33,11 +33,11 @@ impl ComponentTrait for Component {
     }
 
     fn join(&mut self, body: serde_json::Value) -> CmdResult {
-        self.cv.resize(body.kwarg("samples_per_evaluation")?, 0.0);
+        self.cv.resize(body.kwarg("run_size")?, 0.0);
         Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         let y = self.m * self.cv[0] + self.b;
         let text = match self.mode {
             MODE_F32 => self.format.replace(r#""%""#, &y.to_string()),

@@ -168,7 +168,7 @@ impl Note {
 // ===== component ===== //
 component!(
     {"in": ["midi"], "out": ["audio"]},
-    ["samples_per_evaluation", "sample_rate", "uni", "check_audio"],
+    ["run_size", "sample_rate", "uni", "check_audio"],
     {
         ops: [Op; OPS],
         notes: Vec<Note>,
@@ -407,9 +407,9 @@ impl ComponentTrait for Component {
         };
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         let audio = match &self.output {
-            Some(output) => output.audio(self.samples_per_evaluation).unwrap(),
+            Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
         for note in &mut self.notes {

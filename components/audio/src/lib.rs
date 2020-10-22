@@ -22,17 +22,17 @@ impl Default for Audio {
 
 component!(
     {"in": ["audio**"], "out": ["audio**"]},
-    ["multi", "check_audio", "samples_per_evaluation", "sample_rate"],
+    ["multi", "check_audio", "run_size", "sample_rate"],
     {
         addees: Vec<Vec<View>>,
         stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
         audio: Audio,
     },
     {
-        "samples_per_evaluation": {"args": [{"name": "samples_per_evaluation", "optional": true}]},
+        "run_size": {"args": [{"name": "run_size", "optional": true}]},
         "sample_rate": {"args": [{"name": "sample_rate", "optional": true}]},
-        "add": {"args": ["component", "command", "audio", "midi", "evaluate"]},
-        "remove": {"args": ["component", "command", "audio", "midi", "evaluate"]},
+        "add": {"args": ["component", "command", "audio", "midi", "run"]},
+        "remove": {"args": ["component", "command", "audio", "midi", "run"]},
         "start": {},
         "stop": {},
         "run": {},
@@ -42,12 +42,12 @@ component!(
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.samples_per_evaluation = 64;
+        self.run_size = 64;
         self.sample_rate = 44100;
     }
 
-    fn evaluate(&mut self) {
-        let audio_i = unsafe { from_raw_parts(self.audio.i, self.samples_per_evaluation) };
+    fn run(&mut self) {
+        let audio_i = unsafe { from_raw_parts(self.audio.i, self.run_size) };
         self.multi_audio(audio_i);
     }
 
@@ -55,38 +55,38 @@ impl ComponentTrait for Component {
         if self.audio.o.is_null() {
             return Some(&mut []);
         }
-        Some(unsafe { from_raw_parts_mut(self.audio.o, self.samples_per_evaluation) })
+        Some(unsafe { from_raw_parts_mut(self.audio.o, self.run_size) })
     }
 
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(Some(json!({
-            "samples_per_evaluation": self.samples_per_evaluation.to_string(),
+            "run_size": self.run_size.to_string(),
             "sample_rate": self.sample_rate.to_string(),
         })))
     }
 
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
+        self.run_size = body.kwarg("run_size")?;
         self.sample_rate = body.kwarg("sample_rate")?;
         Ok(None)
     }
 }
 
 impl Component {
-    fn evaluate_addees(&mut self) {
+    fn run_addees(&mut self) {
         for slot in self.addees.iter().rev() {
             for i in slot {
-                i.evaluate();
+                i.run();
             }
         }
     }
 
-    fn evaluate_addees_explain(&mut self) {
+    fn run_addees_explain(&mut self) {
         for slot in self.addees.iter().rev() {
             for i in slot {
                 self.explain();
-                println!("{} {}", "evaluate".green().bold(), i.name().green(),);
-                i.evaluate();
+                println!("{} {}", "run".green().bold(), i.name().green(),);
+                i.run();
             }
         }
     }
@@ -94,7 +94,7 @@ impl Component {
     fn explain(&self) {
         for slot in self.addees.iter().rev() {
             for i in slot {
-                if let Some(audio) = i.audio(self.samples_per_evaluation) {
+                if let Some(audio) = i.audio(self.run_size) {
                     println!(
                         "{} {} {:?}",
                         "audio".yellow().bold(),
@@ -106,11 +106,11 @@ impl Component {
         }
     }
 
-    fn samples_per_evaluation_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+    fn run_size_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         if let Ok(v) = body.arg(0) {
-            self.samples_per_evaluation = v;
+            self.run_size = v;
         }
-        Ok(Some(json!(self.samples_per_evaluation)))
+        Ok(Some(json!(self.run_size)))
     }
 
     fn sample_rate_cmd(&mut self, body: serde_json::Value) -> CmdResult {
@@ -126,7 +126,7 @@ impl Component {
         let join_result = view.command(&json!({
             "name": "join",
             "kwargs": {
-                "samples_per_evaluation": self.samples_per_evaluation,
+                "run_size": self.run_size,
                 "sample_rate": self.sample_rate,
             },
         }));
@@ -183,16 +183,16 @@ impl Component {
                 input_params,
                 output_params,
                 self.sample_rate.into(),
-                self.samples_per_evaluation as u32,
+                self.run_size as u32,
             ),
             move |args| {
-                assert!(args.frames == self_scoped.samples_per_evaluation);
+                assert!(args.frames == self_scoped.run_size);
                 for output_sample in args.out_buffer.iter_mut() {
                     *output_sample = 0.0;
                 }
                 self_scoped.audio.i = args.in_buffer.as_ptr();
                 self_scoped.audio.o = args.out_buffer.as_mut_ptr();
-                self_scoped.evaluate_addees();
+                self_scoped.run_addees();
                 pa::Continue
             },
         )?);
@@ -213,23 +213,23 @@ impl Component {
 
     fn run_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         let mut vec: Vec<f32> = Vec::new();
-        vec.resize(self.samples_per_evaluation, 0.0);
+        vec.resize(self.run_size, 0.0);
         self.audio.o = vec.as_mut_ptr();
         for j in &mut vec {
             *j = 0.0;
         }
-        self.evaluate_addees();
+        self.run_addees();
         Ok(None)
     }
 
     fn run_explain_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         let mut vec: Vec<f32> = Vec::new();
-        vec.resize(self.samples_per_evaluation, 0.0);
+        vec.resize(self.run_size, 0.0);
         self.audio.o = vec.as_mut_ptr();
         for j in &mut vec {
             *j = 0.0;
         }
-        self.evaluate_addees_explain();
+        self.run_addees_explain();
         Ok(None)
     }
 }

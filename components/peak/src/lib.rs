@@ -3,7 +3,7 @@ use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 component!(
     {"in": ["audio"], "out": ["audio"]},
     [
-        {"name": "join_info", "value": {"kwargs": ["samples_per_evaluation"]}},
+        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
         "multi",
         "check_audio",
     ],
@@ -19,7 +19,7 @@ component!(
 impl ComponentTrait for Component {
     fn join(&mut self, body: serde_json::Value) -> CmdResult {
         self.audio
-            .resize(body.kwarg("samples_per_evaluation")?, 0.0);
+            .resize(body.kwarg("run_size")?, 0.0);
         Ok(None)
     }
 
@@ -27,7 +27,7 @@ impl ComponentTrait for Component {
         Some(self.audio.as_mut_slice())
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         for i in &mut self.audio {
             self.value *= 0.999;
             if self.value < i.abs() {

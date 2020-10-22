@@ -204,7 +204,7 @@ pub struct View {
     pub command_view: CommandView,
     pub midi_view: MidiView,
     pub audio_view: AudioView,
-    pub evaluate_view: EvaluateView,
+    pub run_view: EvaluateView,
 }
 
 macro_rules! json_to_ptr {
@@ -225,7 +225,7 @@ impl View {
             command_view: json_to_ptr!(&args[1], CommandView),
             midi_view: json_to_ptr!(&args[2], MidiView),
             audio_view: json_to_ptr!(&args[3], AudioView),
-            evaluate_view: json_to_ptr!(&args[4], EvaluateView),
+            run_view: json_to_ptr!(&args[4], EvaluateView),
         })
     }
 
@@ -245,17 +245,17 @@ impl View {
         (self.midi_view)(self.raw, msg.as_ptr(), msg.len());
     }
 
-    pub fn audio(&self, samples_per_evaluation: usize) -> Option<&mut [f32]> {
+    pub fn audio(&self, run_size: usize) -> Option<&mut [f32]> {
         let audio = (self.audio_view)(self.raw);
         if audio.is_null() {
             None
         } else {
-            Some(unsafe { from_raw_parts_mut(audio, samples_per_evaluation) })
+            Some(unsafe { from_raw_parts_mut(audio, run_size) })
         }
     }
 
-    pub fn evaluate(&self) {
-        (self.evaluate_view)(self.raw);
+    pub fn run(&self) {
+        (self.run_view)(self.raw);
     }
 
     pub fn name(&self) -> String {

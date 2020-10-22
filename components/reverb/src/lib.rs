@@ -26,7 +26,7 @@ impl Ring {
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["samples_per_evaluation", "uni", "check_audio"],
+    ["run_size", "uni", "check_audio"],
     {
         amount: f32,
         rings: Vec<Ring>,
@@ -58,9 +58,9 @@ impl ComponentTrait for Component {
         Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if let Some(output) = &self.output {
-            for i in output.audio(self.samples_per_evaluation).unwrap() {
+            for i in output.audio(self.run_size).unwrap() {
                 for j in 0..self.rings.len() {
                     *i += self.rings[j].read() * self.amount / (8 + j) as f32;
                 }

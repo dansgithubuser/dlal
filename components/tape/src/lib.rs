@@ -5,7 +5,7 @@ use multiqueue2::{MPMCSender, MPMCUniReceiver};
 component!(
     {"in": ["audio"], "out": ["audio*"]},
     [
-        {"name": "join_info", "value": {"kwargs": ["samples_per_evaluation"]}},
+        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
     ],
     {
         audio: Vec<f32>,
@@ -32,15 +32,15 @@ impl Component {
 
 impl ComponentTrait for Component {
     fn join(&mut self, body: serde_json::Value) -> CmdResult {
-        let samples_per_evaluation = body.kwarg("samples_per_evaluation")?;
-        self.audio.resize(samples_per_evaluation, 0.0);
+        let run_size = body.kwarg("run_size")?;
+        self.audio.resize(run_size, 0.0);
         if self.size == 0 {
-            self.resize(samples_per_evaluation as u64);
+            self.resize(run_size as u64);
         }
         Ok(None)
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if self.send.is_none() {
             return;
         }

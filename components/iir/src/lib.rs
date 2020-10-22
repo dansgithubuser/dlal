@@ -20,7 +20,7 @@ fn hysteresis_vec(a: &mut Vec<Complex64>, b: &[Complex64], smooth: f64) {
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["samples_per_evaluation", "uni", "check_audio"],
+    ["run_size", "uni", "check_audio"],
     {
         a: Vec<f64>,
         b: Vec<f64>,
@@ -103,7 +103,7 @@ impl Component {
         /*
         The polynomials package only works with positive exponents, but we want negative ones. So let's define z' as 1/z.
 
-        The equation we want to evaluate:
+        The equation we want to run:
         H(z) = gain * [(1 - q_1 / z)(1 - q_2 / z)...(1 - q_m / z)] / [(1 - p_1 / z)(1 - p_2 / z)...(1 - p_n / z)]
         where q_k is the kth zero and p_k is the kth pole.
 
@@ -137,7 +137,7 @@ impl ComponentTrait for Component {
         self.b = vec![1.0];
     }
 
-    fn evaluate(&mut self) {
+    fn run(&mut self) {
         if let Some(smooth) = self.smooth {
             hysteresis_vec(&mut self.poles, &self.poles_dst, smooth);
             hysteresis_vec(&mut self.zeros, &self.zeros_dst, smooth);
@@ -151,7 +151,7 @@ impl ComponentTrait for Component {
         if self.a.is_empty() || self.b.is_empty() || self.d.is_empty() {
             return;
         }
-        for i in output.audio(self.samples_per_evaluation).unwrap() {
+        for i in output.audio(self.run_size).unwrap() {
             let y = (self.b[0] * (*i as f64) + self.d[0]) / self.a[0];
             for j in 1..self.d.len() {
                 self.d[j - 1] = self.b[j] * (*i as f64) - self.a[j] * y + self.d[j];

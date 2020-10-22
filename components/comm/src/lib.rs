@@ -34,21 +34,21 @@ impl Default for Queues {
 
 component!(
     {"in": ["cmd"], "out": ["cmd"]},
-    ["samples_per_evaluation", "uni"],
+    ["run_size", "uni"],
     {
         queues: Queues,
         wait: usize,
     },
     {
-        "queue": {"args": ["component", "command", "audio", "midi", "evaluate", "body", "timeout_ms", "detach"]},
+        "queue": {"args": ["component", "command", "audio", "midi", "run", "body", "timeout_ms", "detach"]},
         "wait": {"args": ["samples"]},
     },
 );
 
 impl ComponentTrait for Component {
-    fn evaluate(&mut self) {
-        if self.wait > self.samples_per_evaluation {
-            self.wait -= self.samples_per_evaluation;
+    fn run(&mut self) {
+        if self.wait > self.run_size {
+            self.wait -= self.run_size;
             return;
         }
         while let Ok(item) = self.queues.to_audio_recv.try_recv() {

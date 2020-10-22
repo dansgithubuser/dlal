@@ -178,7 +178,7 @@ class Component:
             str(ctypes.cast(self._lib.command , ctypes.c_void_p).value),
             str(ctypes.cast(self._lib.midi    , ctypes.c_void_p).value),
             str(ctypes.cast(self._lib.audio   , ctypes.c_void_p).value),
-            str(ctypes.cast(self._lib.evaluate, ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.run, ctypes.c_void_p).value),
         ]
 
 def comm_set(comm):
