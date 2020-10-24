@@ -51,7 +51,7 @@ comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('piano', 'sonic')
 Voice('bass', 'sonic', 'lim', 'buf')
-Voice('ghost', 'gain', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', input=['rhymel'])
+Voice('ghost', 'gain', 'midman', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', 'lim', 'buf', input=['rhymel'])
 Lforacle('ghost_lfo_i20', 0.40000, 0.3, 0.3, 'i2', 0, '%')
 Lforacle('ghost_lfo_i30', 0.31221, 0.1, 0.1, 'i3', 0, '%')
 Lforacle('ghost_lfo_i03', 0.12219, 0.1, 0.1, 'i0', 3, '%')
@@ -161,6 +161,7 @@ piano.sonic.from_json({
 })
 
 ghost.gain.set(0)
+ghost.midman.directive([{'nibble': 0x90}], 0, 'midi', [0x90, '%1', 0])
 ghost.lpf.set(0.9992)
 ghost.lfo.freq(5)
 ghost.lfo.amp(1 / 128)
@@ -169,23 +170,25 @@ ghost.oracle.m(0x4000)
 ghost.oracle.format('midi', [0xe0, '%l', '%h'])
 ghost.sonic.from_json({
     "0": {
-        "a": 7e-4, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
-        "i0": 0, "i1": 0, "i2": 1, "i3": 1, "o": 0.05,
+        "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
+        "i0": 0, "i1": 0.15, "i2": 0, "i3": 0, "o": 0.95,
     },
     "1": {
-        "a": 7e-6, "d": 2e-3, "s": 1, "r": 6e-5, "m": 4,
-        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0.125,
+        "a": 1, "d": 2e-5, "s": 0, "r": 1, "m": 1,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
         "a": 1e-5, "d": 3e-5, "s": 1, "r": 6e-5, "m": 1,
-        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0.125,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "3": {
         "a": 4e-6, "d": 1e-5, "s": 1, "r": 6e-5, "m": 2,
-        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0.125,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
 ghost.sonic.midi(midi.Msg.pitch_bend_range(64))
+ghost.lim.hard(0.25)
+ghost.lim.soft(0.15)
 
 bell.sonic.from_json({
     "0": {
@@ -244,14 +247,18 @@ ghost.rhymel.connect(ghost.oracle)
 ghost.lpf.connect(ghost.oracle)
 ghost.lfo.connect(ghost.oracle)
 ghost.oracle.connect(ghost.sonic)
+ghost.sonic.connect(ghost.buf)
+ghost.lim.connect(ghost.buf)
 for voice in voices:
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
         i.connect(buf)
-ghost_lfo_i20.connect(ghost.sonic)
-ghost_lfo_i30.connect(ghost.sonic)
-ghost_lfo_i03.connect(ghost.sonic)
+liner.connect(ghost.midman)
+ghost.midman.connect(ghost.rhymel)
+#ghost_lfo_i20.connect(ghost.sonic)
+#ghost_lfo_i30.connect(ghost.sonic)
+#ghost_lfo_i03.connect(ghost.sonic)
 hat_osc.connect(hat_oracle)
 hat_oracle.connect(liner)
 lpf.connect(buf)

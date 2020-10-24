@@ -34,22 +34,34 @@ impl Directive {
     fn matches(&self, msg: &[u8]) -> bool {
         for i in 0..self.pattern.len() {
             if i > msg.len() {
+                if std::option_env!("DLAL_SNOOP_MIDMAN").is_some() {
+                    println!("no match, pattern longer than {:02x?}", msg);
+                }
                 break;
             }
             match self.pattern[i] {
                 Piece::Byte(b) => {
                     if b != msg[i] {
+                        if std::option_env!("DLAL_SNOOP_MIDMAN").is_some() {
+                            println!("no match, piece {} (byte), msg {:02x?}", i, msg);
+                        }
                         return false;
                     }
                 }
                 Piece::Null => (),
                 Piece::LeastSignificantNibble(b) => {
                     if b != msg[i] & 0xf {
+                        if std::option_env!("DLAL_SNOOP_MIDMAN").is_some() {
+                            println!("no match, piece {} (little nibble), msg {:02x?}", i, msg);
+                        }
                         return false;
                     }
                 }
                 Piece::MostSignificantNibble(b) => {
                     if b != msg[i] & 0xf0 {
+                        if std::option_env!("DLAL_SNOOP_MIDMAN").is_some() {
+                            println!("no match, piece {} (big nibble), msg {:02x?}", i, msg);
+                        }
                         return false;
                     }
                 }
@@ -150,12 +162,18 @@ impl ComponentTrait for Component {
         for directive in &self.directives {
             if directive.matches(msg) {
                 if directive.component >= self.outputs.len() {
+                    if std::option_env!("DLAL_SNOOP_MIDMAN").is_some() {
+                        println!("component index {} out of range", directive.component);
+                    }
                     continue;
                 }
                 if let Some(result) = self.outputs[directive.component].command(&directive.sub(msg))
                 {
                     if let Some(error) = result.get("error") {
                         self.last_error = error.as_str().unwrap_or(&error.to_string()).into();
+                        if std::option_env!("DLAL_SNOOP_MIDMAN").is_some() {
+                            println!("command error: {}", self.last_error);
+                        }
                     }
                 }
             }

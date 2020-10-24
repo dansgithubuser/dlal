@@ -38,7 +38,10 @@ component!(
                 - forget the note
                 - forget the velocity
 
-        The pitch is always equal to that of the stored note's.
+        The pitch is equal to that of the last MIDI message's.
+        This means:
+        1) the pitch is equal to the stored note's, unless two note-off events have been received in a row, and
+        2) the pitch can be controlled in isolation with note-off events.
 
         By remembering and forgetting carefully, we can keep track of state implicitly.
         if we remember a velocity  { grace }
@@ -94,6 +97,11 @@ impl ComponentTrait for Component {
                 self.velocity = msg[2];
                 self.silence = 0.0;
             }
+            // pitch
+            self.pitch = msg[1] as f32 / 128.0;
+            if std::option_env!("DLAL_SNOOP_RHYMEL").is_some() {
+                println!("pitch {}", self.pitch);
+            }
         } else if type_nibble == 0x90 {
             // fresh -> note
             if self.note == SENTINEL && self.velocity == SENTINEL {
@@ -108,6 +116,9 @@ impl ComponentTrait for Component {
             }
             // pitch
             self.pitch = self.note as f32 / 128.0;
+            if std::option_env!("DLAL_SNOOP_RHYMEL").is_some() {
+                println!("pitch {}", self.pitch);
+            }
         }
     }
 

@@ -160,6 +160,12 @@ impl std::fmt::Debug for Component {
     }
 }
 
+impl std::fmt::Display for Component {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn construct(name: *const std::os::raw::c_char) -> *mut Component {
     let name = unsafe { std::ffi::CStr::from_ptr(name) }.to_str().expect("CStr::to_str failed").to_string();
@@ -185,7 +191,7 @@ pub unsafe extern "C" fn command(component: *mut Component, text: *const std::os
     let component = unsafe { &mut *component };
     let text = unsafe { std::ffi::CStr::from_ptr(text) }.to_str().expect("CStr::to_str failed");
     if std::option_env!("DLAL_SNOOP_COMMAND").is_some() {
-        println!("{:?} command {:02x?}", component, text);
+        println!("{} command {:02x?}", component, text);
     }
     let body: dlal_component_base::serde_json::Value = match dlal_component_base::serde_json::from_str(text) {
         Ok(body) => body,
@@ -307,7 +313,7 @@ pub unsafe extern "C" fn midi(component: *mut Component, msg: *const u8, size: u
     let component = unsafe { &mut *component };
     let msg = unsafe { std::slice::from_raw_parts(msg, size) };
     if std::option_env!("DLAL_SNOOP_MIDI").is_some() {
-        println!("{:?} midi {:02x?}", component, msg);
+        println!("{} midi {:02x?}", component, msg);
     }
     component.midi(msg);
 }
@@ -334,7 +340,7 @@ pub unsafe extern "C" fn run(component: *mut Component) {
             let percent = percent.parse::<u8>()
                 .expect(&format!("couldn't parse DLAL_SNOOP_AUDIO={} as u8", percent));
             if (timestamp % 100 < percent as u128) {
-                print!("{:?} audio", component);
+                print!("{} audio", component);
                 let samples = std::option_env!("DLAL_SNOOP_AUDIO_SAMPLES").unwrap_or("1").parse::<u32>().unwrap();
                 for i in 0..samples {
                     print!(" {}", unsafe { *audio });
