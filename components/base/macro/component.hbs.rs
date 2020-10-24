@@ -246,6 +246,12 @@ pub unsafe extern "C" fn command(component: *mut Component, text: *const std::os
                     {{else}}
                         {
                             "args": "view",
+                            {{#if features.uni}}
+                                "flavor": "uni",
+                            {{/if}}
+                            {{#if features.multi}}
+                                "flavor": "multi",
+                            {{/if}}
                         },
                     {{/if}}
             },
@@ -256,8 +262,12 @@ pub unsafe extern "C" fn command(component: *mut Component, text: *const std::os
                         {{features.disconnect_info}}
                     {{else}}
                         {
+                            {{#if features.uni}}
+                                "flavor": "uni",
+                            {{/if}}
                             {{#if features.multi}}
                                 "args": "view",
+                                "flavor": "multi",
                             {{/if}}
                         },
                     {{/if}}
