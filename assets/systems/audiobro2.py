@@ -2,6 +2,7 @@ import dlal
 
 import midi
 
+import math
 import sys
 
 def sys_arg(i, f=str, default=None):
@@ -47,11 +48,10 @@ Voice('bass', 'sonic')
 Voice('arp', 'arp', 'sonic', 'osc', 'unary', 'oracle', output=['sonic'])
 Voice('harp1', 'osc', 'oracle', 'sonic', input=['sonic'])
 Voice('harp2', 'osc', 'oracle', 'sonic', input=['sonic'])
-bins = 512
 sample_rate = 44100
 sweep = 48 / 12
 b = 0 / (sample_rate/2)
-m = 440 / (sample_rate/2) / (1-b)
+m = 440 / (sample_rate/2) / (1-b) * 2 * math.pi
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
@@ -61,13 +61,16 @@ Subsystem('sweep', {
     'gain': ('gain', [], {}),
     'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
-    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('bandpass', '%', 1, bins)}),
+    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('single_pole_bandpass', '%', 0.02, 6)}),
     'train': ('osc', ['saw'], {}),
     'train2': ('osc', ['saw'], {'bend': 1.0081}),
     'train_adsr': ('adsr', [5e-8, 1, 1, 5e-5], {}),
     'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', '%')}),
     'train_gain': ('gain', [], {}),
-    'fir': ('fir', [], {}),
+    'iir1': ('iir', [], {}),
+    'iir2': ('iir', [], {}),
+    'iir3': ('iir', [], {}),
+    'iir4': ('iir', [], {}),
     'delay': ('delay', [22050], {'gain_x': 1}),
     'buf': ('buf', [], {}),
 })
@@ -309,7 +312,7 @@ dlal.connect(
         '<', sweep.unary,
         '<', sweep.gain,
     ],
-    sweep.fir,
+    [sweep.iir1, sweep.iir2, sweep.iir3, sweep.iir4],
     [sweep.buf,
         '<', sweep.delay, sweep.gate_oracle, sweep.gate_adsr,
         '<', sweep.train,
