@@ -1,8 +1,9 @@
 from ._component import Component
 
 class Sonic(Component):
-    def __init__(self, **kwargs):
+    def __init__(self, preset=None, **kwargs):
         Component.__init__(self, 'sonic', **kwargs)
+        if preset: self.preset_load(preset)
 
     def preset_list(self):
         return [i for i in presets.keys()]
