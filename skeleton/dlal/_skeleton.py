@@ -178,14 +178,13 @@ def typical_setup():
     comm = component('comm', None)
     tape = component('tape', None)
     if tape and 'DLAL_TO_FILE' in os.environ and audio:
-        run_size = audio.run_size()
-        sample_rate = audio.sample_rate()
         duration = float(os.environ['DLAL_TO_FILE'])
-        runs = int(duration * sample_rate / run_size)
+        runs = int(duration * audio.sample_rate() / audio.run_size())
+        n = tape.size() // audio.run_size()
         with open('out.i16le', 'wb') as file:
             for i in range(runs):
                 audio.run()
-                tape.to_file_i16le(run_size, file)
+                if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
     else:
         if audio:
             audio.start()

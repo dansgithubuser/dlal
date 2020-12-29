@@ -347,6 +347,6 @@ if end:
         for i in range(runs):
             audio.run()
             if i % (1 << 8) == 0xff:
-                tape.to_file_i16le(1 << 14, file)
+                tape.to_file_i16le(file, 1 << 14)
 else:
     dlal.typical_setup()
