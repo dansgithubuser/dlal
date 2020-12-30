@@ -2,6 +2,7 @@ pub trait ComponentTrait {
     // fundamentals
     fn init(&mut self) {}
     fn run(&mut self) {}
+    fn command(&mut self, body: &dlal_component_base::serde_json::Value) {}
     fn midi(&mut self, _msg: &[u8]) {}
     fn audio(&mut self) -> Option<&mut[f32]> { None }
 
@@ -19,11 +20,14 @@ pub trait ComponentTrait {
 pub struct Component {
     name: String,
     result: std::ffi::CString,
-    {{#if features.run_size}}
+    {{#if (or features.run_size features.audio)}}
         run_size: usize,
     {{/if}}
     {{#if features.sample_rate}}
         sample_rate: u32,
+    {{/if}}
+    {{#if features.audio}}
+        audio: Vec<f32>,
     {{/if}}
     {{#if features.uni}}
         output: Option<dlal_component_base::View>,
@@ -41,17 +45,20 @@ impl Component {
     }
 
     fn join_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
-        {{#if features.run_size}}
+        {{#if (or features.run_size features.audio)}}
             self.run_size = body.kwarg("run_size")?;
         {{/if}}
         {{#if features.sample_rate}}
             self.sample_rate = body.kwarg("sample_rate")?;
         {{/if}}
+        {{#if features.audio}}
+            self.audio.resize(self.run_size, 0.0);
+        {{/if}}
         self.join(body)
     }
 
     fn connect_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
-        {{#if features.uni}}
+        {{#if (or features.uni features.multi)}}
         {
             use dlal_component_base::Body;
             let output = dlal_component_base::View::new(&body.at("args")?)?;
@@ -60,41 +67,30 @@ impl Component {
                     Err(dlal_component_base::err!("output must have audio"))?;
                 }
             {{/if}}
-            self.output = Some(output);
-        }
-        {{/if}}
-        {{#if features.multi}}
-        {
-            use dlal_component_base::Body;
-            let output = dlal_component_base::View::new(&body.at("args")?)?;
-            {{#if features.check_audio}}
-                if output.audio(0) == None {
-                    Err(dlal_component_base::err!("output must have audio"))?;
-                }
+            {{#if features.uni}}
+                self.output = Some(output);
+            {{else}}
+                self.outputs.push(output);
             {{/if}}
-            self.outputs.push(output);
         }
         {{/if}}
         self.connect(body)
     }
 
     fn disconnect_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
-        {{#if features.uni}}
+        {{#if (or features.uni features.multi)}}
         {
             use dlal_component_base::Body;
             let output = dlal_component_base::View::new(&body.at("args")?)?;
-            if self.output == Some(output) {
-                self.output = None;
-            }
-        }
-        {{/if}}
-        {{#if features.multi}}
-        {
-            use dlal_component_base::Body;
-            let output = dlal_component_base::View::new(&body.at("args")?)?;
-            if let Some(i) = self.outputs.iter().position(|i| i == &output) {
-                self.outputs.remove(i);
-            }
+            {{#if features.uni}}
+                if self.output == Some(output) {
+                    self.output = None;
+                }
+            {{else}}
+                if let Some(i) = self.outputs.iter().position(|i| i == &output) {
+                    self.outputs.remove(i);
+                }
+            {{/if}}
         }
         {{/if}}
         self.disconnect(body)
@@ -134,6 +130,7 @@ impl Component {
             };
         }
     {{/if}}
+
     {{#if features.multi}}
         fn multi_midi(&self, msg: &[u8]) {
             for output in &self.outputs {
@@ -148,6 +145,12 @@ impl Component {
                     audio_o[i] += audio[i];
                 }
             }
+        }
+    {{/if}}
+
+    {{#if features.audio}}
+        fn audio(&mut self) -> Option<&mut[f32]> {
+            Some(self.audio.as_mut_slice())
         }
     {{/if}}
 }
@@ -197,6 +200,7 @@ pub unsafe extern "C" fn command(component: *mut Component, text: *const std::os
         Ok(body) => body,
         Err(err) => return component.set_result(&dlal_component_base::json!({"error": err.to_string()}).to_string()),
     };
+    component.command(&body);
     let name = match body["name"].as_str() {
         Some(name) => name,
         None => return component.set_result(&dlal_component_base::json!({"error": "command name isn't a string"}).to_string()),
@@ -234,7 +238,7 @@ pub unsafe extern "C" fn command(component: *mut Component, text: *const std::os
                     {{else}}
                         {
                             "kwargs": [
-                                {{#if features.run_size}}
+                                {{#if (or features.run_size features.audio)}}
                                     "run_size",
                                 {{/if}}
                                 {{#if features.sample_rate}}
@@ -343,7 +347,7 @@ pub unsafe extern "C" fn run(component: *mut Component) {
                 print!("{} audio", component);
                 let samples = std::option_env!("DLAL_SNOOP_AUDIO_SAMPLES").unwrap_or("1").parse::<u32>().unwrap();
                 for i in 0..samples {
-                    print!(" {}", unsafe { *audio });
+                    print!(" {:.2e}", unsafe { *audio });
                     unsafe { audio = audio.offset(1) };
                 }
                 println!("");

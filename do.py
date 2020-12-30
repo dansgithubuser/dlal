@@ -89,6 +89,7 @@ component!(
         "run_size",
         "sample_rate",
         //{"name": "join_info", "value": {}},
+        //"audio",
         "uni",
         //"multi",
         //"check_audio",
@@ -106,36 +107,45 @@ component!(
 );
 
 impl ComponentTrait for Component {
+    // optional
     fn init(&mut self) {
         self.value = 1.0;
     }
 
+    // optional
     fn run(&mut self) {
     }
 
+    // optional
     fn midi(&mut self, msg: &[u8]) {
     }
 
+    // optional
     fn audio(&mut self) -> Option<&mut [f32]> {
         None
     }
 
+    // optional
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
+    // optional
     fn connect(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
+    // optional
     fn disconnect(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
+    // required
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(Some(json!(self.value)))
     }
 
+    // required
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         self.value = body.arg(0)?;
         Ok(None)
