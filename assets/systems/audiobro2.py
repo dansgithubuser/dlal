@@ -71,7 +71,7 @@ Subsystem('sweep', {
     'iir2': ('iir', [], {}),
     'iir3': ('iir', [], {}),
     'iir4': ('iir', [], {}),
-    'delay': ('delay', [22050], {'gain_x': 1}),
+    'delay': ('delay', [22050], {'gain_i': 1}),
     'buf': ('buf', [], {}),
 })
 midman = dlal.Midman([
@@ -82,11 +82,7 @@ midman = dlal.Midman([
     ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
     ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
     ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),  # delay
-    ([{'nibble': 0x90}, 0x40], 2, 'gain_y', 0.3),
-    ([{'nibble': 0x90}, 0x40], 2, 'gain_o', 1),
     ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
-    ([{'nibble': 0x90}, 0x41], 2, 'gain_y', 0.3),
-    ([{'nibble': 0x90}, 0x41], 2, 'gain_o', 1),
     ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),  # arp.osc
     ([{'nibble': 0x90}, 0x45], 4, 'm', -28*m),  # sweep.oracle
     ([{'nibble': 0x90}, 0x45], 4, 'b', 16000 / (sample_rate/2)),
@@ -108,7 +104,7 @@ harp2.oracle.m(0/4)
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
-delay = dlal.Delay(11025, gain_o=0)
+delay = dlal.Delay(11025, gain_y=0.3, gain_i=1)
 lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)

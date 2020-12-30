@@ -28,7 +28,7 @@ component!(
         poles: Vec<Complex64>,
         zeros: Vec<Complex64>,
         gain: f64,
-        smooth: Option<f64>,
+        smooth: f64,
         poles_dst: Vec<Complex64>,
         zeros_dst: Vec<Complex64>,
         gain_dst: f64,
@@ -99,6 +99,7 @@ impl Component {
         }
     }
 
+    // transforms (self.poles, self.zeros, self.gain) into (self.a, self.b)
     fn pole_zero(&mut self) {
         /*
         The polynomials package only works with positive exponents, but we want negative ones. So let's define z' as 1/z.
@@ -129,6 +130,33 @@ impl Component {
         self.set_a(a.iter().map(|i| i.re).collect());
         self.set_b(b.iter().map(|i| i.re).collect());
     }
+
+    // sets appropriate internal state based on desired poles, zeros, gain, and smoothing
+    fn smooth_pole_zero(&mut self, poles: &[Complex64], zeros: &[Complex64], gain: f64, smooth: f64) {
+        self.smooth = smooth;
+        if smooth != 0.0 {
+            self.poles_dst = poles.to_vec();
+            self.zeros_dst = zeros.to_vec();
+            self.gain_dst = gain;
+            let mut do_pole_zero = false;
+            if self.poles.len() != poles.len() {
+                self.poles = poles.to_vec();
+                do_pole_zero = true;
+            }
+            if self.zeros.len() != zeros.len() {
+                self.zeros = zeros.to_vec();
+                do_pole_zero = true;
+            }
+            if do_pole_zero {
+                self.pole_zero();
+            }
+        } else {
+            self.poles = poles.to_vec();
+            self.zeros = zeros.to_vec();
+            self.gain = gain;
+            self.pole_zero();
+        }
+    }
 }
 
 impl ComponentTrait for Component {
@@ -138,10 +166,10 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
-        if let Some(smooth) = self.smooth {
-            hysteresis_vec(&mut self.poles, &self.poles_dst, smooth);
-            hysteresis_vec(&mut self.zeros, &self.zeros_dst, smooth);
-            hysteresis(&mut self.gain, self.gain_dst, smooth);
+        if self.smooth != 0.0 {
+            hysteresis_vec(&mut self.poles, &self.poles_dst, self.smooth);
+            hysteresis_vec(&mut self.zeros, &self.zeros_dst, self.smooth);
+            hysteresis(&mut self.gain, self.gain_dst, self.smooth);
             self.pole_zero();
         }
         let output = match &self.output {
@@ -183,7 +211,7 @@ impl Component {
             }
             self.set_a(a);
         }
-        self.smooth = None;
+        self.smooth = 0.0;
         Ok(Some(json!(self.a)))
     }
 
@@ -191,7 +219,7 @@ impl Component {
         if let Ok(b) = body.arg::<Vec<_>>(0) {
             self.set_b(b);
         }
-        self.smooth = None;
+        self.smooth = 0.0;
         Ok(Some(json!(self.b)))
     }
 
@@ -208,18 +236,7 @@ impl Component {
         let gain = body.arg(2)?;
         // smooth
         let smooth = body.kwarg("smooth").unwrap_or(0.0);
-        if smooth != 0.0 {
-            self.smooth = Some(smooth);
-            self.poles_dst = poles;
-            self.zeros_dst = zeros;
-            self.gain_dst = gain;
-        } else {
-            self.smooth = None;
-            self.poles = poles;
-            self.zeros = zeros;
-            self.gain = gain;
-            self.pole_zero();
-        }
+        self.smooth_pole_zero(&poles, &zeros, gain, smooth);
         // finish
         Ok(None)
     }
@@ -255,18 +272,7 @@ impl Component {
         let p = Complex64::from_polar(1.0 - width, w);
         let z_w = Complex64::from_polar(1.0, w);
         let gain = peak * ((z_w - p) * (z_w - p.conj())).norm();
-        if smooth != 0.0 {
-            self.smooth = Some(smooth);
-            self.poles_dst = vec![p, p.conj()];
-            self.zeros_dst = vec![];
-            self.gain_dst = gain;
-        } else {
-            self.smooth = None;
-            self.poles = vec![p, p.conj()];
-            self.zeros = vec![];
-            self.gain = gain;
-            self.pole_zero();
-        }
+        self.smooth_pole_zero(&[p, p.conj()], &[], gain, smooth);
         Ok(None)
     }
     fn wash_cmd(&mut self, _body: serde_json::Value) -> CmdResult {

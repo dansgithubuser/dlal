@@ -31,6 +31,7 @@ parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
+parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
 parser.add_argument('--run', '-r', nargs='?', const=True, help=(
     'run interactive Python with dlal imported, '
     'or run specified system, optionally with args'
@@ -324,6 +325,8 @@ if args.component_matrix:
 
 # ===== build ===== #
 if args.build is not None:
+    for i in args.build_snoop:
+        os.environ[f'DLAL_SNOOP_{i.upper()}'] = '1'
     for component_path in glob.glob(os.path.join(DIR, 'components', '*')):
         component = os.path.basename(component_path)
         if args.build and component not in args.build: continue
@@ -406,6 +409,7 @@ if args.style_check or args.style_rust_fix:
             'pycodestyle',
             '--ignore',
             ','.join([
+                'W503', 'W504',
                 'E124', 'E128', 'E131',
                 'E203', 'E226',
                 'E301', 'E302', 'E305', 'E306',

@@ -217,25 +217,25 @@ def system_diagram():
     name_to_index = {}
     for i, k in enumerate(components):
         name_to_index[k] = i
-    # helpers; char set: ┅ ┃ ━ ┏ ┗ ┛ ┓ ┳ ┻ ┣ ┫ ╋
+    # helpers; char set: ┈ │ ━ ┏ ┗ ┛ ┓ ┳ ┻ ┣ ┫ ╋
     def advance():
         for band in [band_f, band_b]:
             for i, v in enumerate(band):
-                if v in '┃┏┓┳┣┫╋':
-                    band[i] = '┃'
+                if v in '│┏┓┳┣┫╋':
+                    band[i] = '│'
                 else:
-                    band[i] = '┅'
+                    band[i] = '┈'
     def lay_f(index):
-        if band_f[index] == '┃':
+        if band_f[index] == '│':
             band_f[index] = '┣'
-        elif band_f[index] == '┅':
+        elif band_f[index] == '┈':
             band_f[index] = '┏'
     def receive_f(index):
         band_f[index] = '┗'
     def lay_b(index):
-        if band_b[index] == '┃':
+        if band_b[index] == '│':
             band_b[index] = '┫'
-        elif band_b[index] == '┅':
+        elif band_b[index] == '┈':
             band_b[index] = '┓'
     def receive_b(index):
         band_b[index] = '┛'
@@ -246,7 +246,7 @@ def system_diagram():
     # loop
     result = []
     max_len = str(max(len(i) for i in components))
-    component_format = '[{:|<' + max_len + '.' + max_len + '}]'
+    component_format = '[{:-<' + max_len + '.' + max_len + '}]'
     for index, name in enumerate(components):
         advance()
         # forward connections

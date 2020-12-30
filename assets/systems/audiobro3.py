@@ -12,14 +12,26 @@ def sys_arg(i):
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
 
+# bassoon1
 bassoon1 = dlal.Sonic('bassoon', name='bassoon1')
+# bassoon2
 bassoon2 = dlal.Sonic('bassoon', name='bassoon2')
+# accordion1
 accordion1 = dlal.Sonic('magic_bread', name='accordion1')
+# accordion2
 accordion2 = dlal.Sonic('magic_bread', name='accordion2')
+# drum
 drum = dlal.Buf(name='drum')
-voice = dlal.Sonic('cello', name='voice')
+# voice
+voice_midi = dlal.Midi()
+voice_tone = dlal.Train(name='voice_tone')
+voice_noise = dlal.Osc('noise', name='voice_noise')
+voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=10, noise_pregain=2)
+# guitar
 guitar = dlal.Sonic('harp', name='guitar')
+# shaker1
 shaker1 = dlal.Buf(name='shaker1')
+# shaker1
 shaker2 = dlal.Buf(name='shaker2')
 
 liner = dlal.Liner()
@@ -58,6 +70,32 @@ shaker2.amplify(0.5, 82)
 liner.load('assets/midis/audiobro3.mid', immediate=True)
 liner.advance(float(sys_arg(1) or 0))
 
+#----- voice -----#
+voice_phonetizer.prep_syllables(
+    '''
+        o.w [sh].i.t .i.ts ge.tn s y r.y .u.s
+
+        .[ae].nd [th]r.w sm.ow.k h.y a p.y .[uu].d
+        b.[ay]y.s m.a.n
+        [th_v].u t.[ae]w.n h.[ae].d b.y.n .wi.[th_v] .aw.t b.[ay]y.s f.o[uu] .o.v a f.o[uu] t.y.0 y .[uu].z
+        [th_v].eu w.u.z n.o d.a.n s.y.[ng]
+        [th_v].eu w.u.z n.o r.u.mp [sh].[ay]y k.y.[ng]
+        [th_v].eu h.[ae].d b.y.n n.o l.a.f t.u
+        .a.n d.e .e.[th]
+        w.u.z n.y r.y.[ng]
+        .e.v r.y b.u d.y
+        .w.y k.a.n s.u[uu] v.a ay.v w.i [th].aw.t f.w .w.d
+        b.u.t n.a.t w.i [th].aw.t b.[ay]y.s
+        w.e.l n.a.t v.e r.y l.a.[ng] .e n.y .wey
+        [th_v].u k.u l.u h.[ae].d jr.[ay]y.nd fr.u.m .e.v r.y w.u.nz f.[ay]y s.e.z
+        .e.v r.y d.ey [th_v].u t.[ae]w.nz p.y p.l w.e.nt t.w [th_v].u [ch].[uu].[ch] .[ae].nd pr.[ay]y.d f.o[uu] b.[ay]y.s
+        .[ae].nd b.[ay]y.s m.[ae].n l.[uu].kd .u p.a.n [th_v].u t.[ae]w.n .[ae].nd h.y sm.ay.ld f.o[uu] h.y ny.w
+    ''',
+    liner.get_notes(5),
+    advance=int(float(sys_arg(1) or 0) * audio.sample_rate()),
+    anticipation=0
+)
+
 #===== connect =====#
 dlal.connect(
     liner,
@@ -67,12 +105,27 @@ dlal.connect(
         accordion1,
         accordion2,
         drum,
-        voice,
+        voice_midi,
         guitar,
         shaker1,
         shaker2,
     ],
-    buf,
+    [],
+    voice_midi,
+    (voice_tone, voice_noise),
+    (voice_phonetizer.tone_buf, voice_phonetizer.noise_buf),
+    [],
+    [
+        bassoon1,
+        bassoon2,
+        accordion1,
+        accordion2,
+        drum,
+        guitar,
+        shaker1,
+        shaker2,
+    ],
+    [buf, '<', voice_phonetizer],
     [audio, tape],
 )
 

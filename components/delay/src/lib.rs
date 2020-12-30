@@ -6,6 +6,7 @@ component!(
     {
         gain_x: f32,
         gain_y: f32,
+        gain_i: f32,
         gain_o: f32,
         audio: Vec<f32>,
         index: usize,
@@ -21,7 +22,7 @@ component!(
             "args": [{
                 "name": "gain_x",
                 "optional": true,
-                "desc": "input",
+                "desc": "input tap amount",
                 "default": "1.0",
             }],
         },
@@ -29,7 +30,15 @@ component!(
             "args": [{
                 "name": "gain_y",
                 "optional": true,
-                "desc": "feedback",
+                "desc": "output tap amount (feedback)",
+                "default": "0.0",
+            }],
+        },
+        "gain_i": {
+            "args": [{
+                "name": "gain_i",
+                "optional": true,
+                "desc": "monitor amount",
                 "default": "0.0",
             }],
         },
@@ -37,7 +46,7 @@ component!(
             "args": [{
                 "name": "gain_o",
                 "optional": true,
-                "desc": "output",
+                "desc": "output amount",
                 "default": "1.0",
             }],
         },
@@ -58,9 +67,9 @@ impl ComponentTrait for Component {
         };
         for i in 0..self.run_size {
             let x = audio[i];
-            let echo = self.audio[self.index] * self.gain_o;
-            audio[i] += echo;
-            self.audio[self.index] = x * self.gain_x + echo * self.gain_y;
+            let y = self.audio[self.index];
+            audio[i] = x * self.gain_i + y * self.gain_o;
+            self.audio[self.index] = x * self.gain_x + y * self.gain_y;
             self.index += 1;
             self.index %= self.audio.len();
         }
@@ -71,6 +80,7 @@ impl ComponentTrait for Component {
             "size": self.audio.len(),
             "gain_x": self.gain_x,
             "gain_y": self.gain_y,
+            "gain_i": self.gain_i,
             "gain_o": self.gain_o,
         })))
     }
@@ -80,6 +90,7 @@ impl ComponentTrait for Component {
         self.audio.resize(j.at("size")?, 0.0);
         self.gain_x = j.at("gain_x")?;
         self.gain_y = j.at("gain_y")?;
+        self.gain_i = j.at("gain_i")?;
         self.gain_o = j.at("gain_o")?;
         Ok(None)
     }
@@ -105,6 +116,13 @@ impl Component {
             self.gain_y = v;
         }
         Ok(Some(json!(self.gain_y)))
+    }
+
+    fn gain_i_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if let Ok(v) = body.arg(0) {
+            self.gain_i = v;
+        }
+        Ok(Some(json!(self.gain_i)))
     }
 
     fn gain_o_cmd(&mut self, body: serde_json::Value) -> CmdResult {

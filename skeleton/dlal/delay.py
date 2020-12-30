@@ -6,6 +6,7 @@ class Delay(Component):
         size=None,
         gain_x=None,
         gain_y=None,
+        gain_i=None,
         gain_o=None,
         **kwargs,
     ):
@@ -15,4 +16,5 @@ class Delay(Component):
             if size != None: self.resize(size)
             if gain_x != None: self.gain_x(gain_x)
             if gain_y != None: self.gain_y(gain_y)
+            if gain_i != None: self.gain_i(gain_i)
             if gain_o != None: self.gain_o(gain_o)

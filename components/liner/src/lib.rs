@@ -5,7 +5,7 @@ use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 
 use std::error::Error as StdError;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 enum Msg {
     Short([u8; 3]),
     Long(Vec<u8>),
@@ -45,7 +45,7 @@ impl Serialize for Msg {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct Deltamsg {
     delta: u32,
     msg: Msg,
@@ -77,13 +77,14 @@ impl Line {
         ticks_per_quarter: u32,
         index: usize,
     ) -> Result<Self, Box<dyn StdError>> {
-        Ok(Self {
+        let mut r = Self {
             deltamsgs: deltamsgs.to::<Vec<_>>()?.vec_map(|i| Deltamsg::new(&i))?,
             ticks_per_quarter,
-            us_per_quarter: 500_000,
             index,
             ..Default::default()
-        })
+        };
+        r.reset();
+        Ok(r)
     }
 
     fn advance(
@@ -92,6 +93,7 @@ impl Line {
         run_size: usize,
         sample_rate: u32,
         output: Option<&View>,
+        mut msgs: Option<&mut Vec<Vec<u8>>>,
     ) -> bool {
         let mut delta = self.calculate_delta(samples, sample_rate);
         loop {
@@ -107,17 +109,20 @@ impl Line {
             // handle a msg
             let msg = deltamsg.msg.as_slice();
             if msg[0] == 0xff && msg[1] == 0x51 {
-                // we handle tempo
+                // keep track of tempo changes
                 self.us_per_quarter =
                     ((msg[3] as u32) << 16) + ((msg[4] as u32) << 8) + msg[5] as u32;
                 self.samples_ere_last_tempo = samples - run_size as u32;
                 self.ticks_aft_last_tempo = 0;
             } else {
-                // other msgs get forwarded
-                if let Some(output) = output {
-                    output.midi(msg);
-                }
-                self.ticks_aft_last_tempo += deltamsg.delta; // count ticks since last tempo
+                // count ticks since last tempo
+                self.ticks_aft_last_tempo += deltamsg.delta;
+            }
+            if let Some(output) = output {
+                output.midi(msg);
+            }
+            if let Some(msgs) = &mut msgs {
+                msgs.push(msg.to_vec());
             }
             // prepare for next
             delta -= deltamsg.delta; // reduce delta we owe by how far we advanced
@@ -126,6 +131,7 @@ impl Line {
     }
 
     fn reset(&mut self) {
+        self.us_per_quarter = 500_000;
         self.index = 0;
         self.ticks_aft_last_tempo = 0;
     }
@@ -145,6 +151,46 @@ impl Line {
             return 0;
         }
         ticks_aft_last_tempo - self.ticks_aft_last_tempo
+    }
+
+    fn get_notes(&self, run_size: usize, sample_rate: u32) -> serde_json::Value {
+        let mut copy = Self {
+            deltamsgs: self.deltamsgs.clone(),
+            ticks_per_quarter: self.ticks_per_quarter,
+            ..Default::default()
+        };
+        copy.reset();
+        let mut samples = 0;
+        let mut notes = vec![];
+        let mut done = false;
+        while !done {
+            samples += run_size as u32;
+            let mut msgs: Vec<Vec<u8>> = vec![];
+            done = copy.advance(samples, run_size, sample_rate, None, Some(&mut msgs));
+            for msg in msgs {
+                if msg[0] & 0xe0 != 0x80 {
+                    // not related to notes
+                    continue;
+                }
+                if msg[0] & 0xf0 == 0x90 && msg[2] != 0 {
+                    // note on
+                    notes.push(json!({
+                        "on": samples,
+                        "number": msg[1],
+                        "velocity_on": msg[2],
+                    }));
+                } else {
+                    // note off
+                    for note in &mut notes {
+                        if note.get("number").unwrap() == msg[1] && note.get("off").is_none() {
+                            note["off"] = json!(samples);
+                            note["velocity_off"] = json!(msg[2]);
+                        }
+                    }
+                }
+            }
+        }
+        json!(notes)
     }
 }
 
@@ -182,13 +228,13 @@ component!(
             "args": ["line_index"],
             "return": {
                 "ticks_per_quarter": "number",
-                "deltamsgs": "[{delta, msg: [..]}, ..]",
+                "deltamsgs": "[{delta, msg}, ..]",
             },
         },
         "get_midi_all": {
             "return": [{
                 "ticks_per_quarter": "number",
-                "deltamsgs": "[{delta, msg: [..]}, ..]",
+                "deltamsgs": "[{delta, msg}, ..]",
             }],
         },
         "set_midi": {
@@ -197,7 +243,7 @@ component!(
                 "ticks_per_quarter",
                 {
                     "name": "deltamsgs",
-                    "desc": "[{delta, msg: [..]}, ..]",
+                    "desc": "[{delta, msg}, ..]",
                 },
             ],
             "kwargs": [{
@@ -205,6 +251,11 @@ component!(
                 "default": false,
                 "desc": "immediately enact the line after loading",
             }],
+        },
+        "get_notes": {
+            "args": ["line_index"],
+            "return": "[{on, off, number, velocity_on, velocity_off}, ..]",
+            "desc": "on and off are measured in samples; off and velocity_off may be missing",
         },
         "offset": {"args": ["line_index", "seconds"]},
         "advance": {"args": ["seconds"]},
@@ -256,6 +307,7 @@ impl ComponentTrait for Component {
                 } else {
                     self.outputs[i].as_ref()
                 },
+                None,
             );
         }
         if done {
@@ -328,6 +380,7 @@ impl Component {
                     ticks_per_quarter,
                     self.lines[line_index].index,
                 )?);
+                return Ok(None);
             }
         }
         self.queue.send.try_send(Box::new(Line::new(
@@ -336,6 +389,21 @@ impl Component {
             line_index,
         )?))?;
         Ok(None)
+    }
+
+    fn get_notes_cmd(&self, body: serde_json::Value) -> CmdResult {
+        let line_index: usize = body.arg(0)?;
+        if line_index >= self.lines.len() {
+            return Err(err!(
+                "got line_index {} but number of lines is only {}",
+                line_index,
+                self.lines.len()
+            )
+            .into());
+        }
+        Ok(Some(
+            self.lines[line_index].get_notes(self.run_size, self.sample_rate),
+        ))
     }
 
     fn offset_cmd(&mut self, body: serde_json::Value) -> CmdResult {
@@ -347,6 +415,7 @@ impl Component {
         self.lines[line_index].offset = seconds;
         Ok(None)
     }
+
     fn advance_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let seconds: f32 = body.arg(0)?;
         let runs_per_second = self.sample_rate as f32 / self.run_size as f32;

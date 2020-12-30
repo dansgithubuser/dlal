@@ -197,6 +197,33 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- audiobro track 3
+	- lower?
+	- portamento?
+
+- `last_error` as feature, add to comm for detached commands
+	- or a more general "simple value"?
+- improve terse connect so audiobro3 works like:
+```
+    liner,
+    [
+        bassoon1,
+        bassoon2,
+        accordion1,
+        accordion2,
+        drum,
+        [voice_midi, '>',
+            [voice_tone, voice_noise],
+            [voice_phonetizer.tone_buf, voice_phonetizer.noise_buf],
+        ],
+        guitar,
+        shaker1,
+        shaker2,
+    ],
+    delay,
+    [buf, '<+', voice_phonetizer],
+    [audio, tape],
+```
 - audiobro
 	- track 1
 		- bass slide down in B section
