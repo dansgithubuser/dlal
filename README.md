@@ -197,6 +197,7 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- strummer
 - `last_error` as feature, add to comm for detached commands
 	- or a more general "simple value"?
 - improve terse connect so audiobro3 works like:

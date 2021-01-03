@@ -34,7 +34,7 @@ FREQUENCY = 100  # of voice in args.phonetics_file_path
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
     if not load.phonetics:
-        load.phonetics = dlal.read_sound(phonetics_file_path)[0]
+        load.phonetics = dlal.sound.read(phonetics_file_path).samples
     return load.phonetics[start:start+duration]
 load.phonetics = None
 

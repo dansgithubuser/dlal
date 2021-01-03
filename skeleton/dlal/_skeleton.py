@@ -309,25 +309,6 @@ def system_load(file_path, namespace):
         for connectee in connectees:
             component.connect(namespace[connectee])
 
-def read_sound(file_path):
-    import soundfile as sf
-    data, sample_rate = sf.read(file_path)
-    return [float(i) for i in data], sample_rate
-
-def i16le_to_flac(i16le_file_path, flac_file_path=None):
-    import soundfile as sf
-    if flac_file_path == None:
-        flac_file_path = _re.sub(r'\.i16le$', '', i16le_file_path) + '.flac'
-    data, sample_rate = sf.read(
-        i16le_file_path,
-        samplerate=44100,
-        channels=1,
-        format='RAW',
-        subtype='PCM_16',
-        endian='LITTLE',
-    )
-    sf.write(flac_file_path, data, sample_rate, format='FLAC')
-
 def impulse_response(ci, co, driver):
     from . import Train
     from . import Tape

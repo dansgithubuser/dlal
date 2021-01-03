@@ -58,4 +58,4 @@ for i in phonetics:
     time.sleep(1)
 
 tape.to_file_i16le_stop()
-dlal.i16le_to_flac('phonetics.i16le')
+dlal.sound.i16le_to_flac('phonetics.i16le')
