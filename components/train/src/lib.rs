@@ -29,8 +29,8 @@ impl Note {
         self.on = false;
     }
 
-    fn advance(&mut self, impulse: &[f32]) -> f32 {
-        self.phase += self.step;
+    fn advance(&mut self, impulse: &[f32], bend: f32) -> f32 {
+        self.phase += self.step * bend;
         if self.phase >= 1.0 {
             self.phase -= 1.0;
             self.index = Some(0);
@@ -56,6 +56,9 @@ component!(
     {
         impulse: Vec<f32>,
         notes: Vec<Note>,
+        bend: f32,
+        rpn: u16,              //registered parameter number
+        pitch_bend_range: f32, //MIDI RPN 0x0000
     },
     {
         "impulse": {
@@ -71,6 +74,8 @@ component!(
 impl ComponentTrait for Component {
     fn init(&mut self) {
         self.impulse.push(1.0);
+        self.bend = 1.0;
+        self.pitch_bend_range = 2.0;
     }
 
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
@@ -99,6 +104,30 @@ impl ComponentTrait for Component {
                     self.notes[msg[1] as usize].on(msg[2] as f32 / 127.0);
                 }
             }
+            0xa0 => {
+                self.notes[msg[1] as usize].vol = msg[2] as f32 / 127.0;
+            }
+            0xb0 => {
+                match msg[1] {
+                    0x65 => self.rpn = (msg[2] << 7) as u16,
+                    0x64 => self.rpn += msg[2] as u16,
+                    0x06 => match self.rpn {
+                        0x0000 => self.pitch_bend_range = msg[2] as f32,
+                        _ => (),
+                    },
+                    0x26 => match self.rpn {
+                        0x0000 => self.pitch_bend_range += msg[2] as f32 / 100.0,
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
+            0xe0 => {
+                const CENTER: f32 = 0x2000 as f32;
+                let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
+                let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
+                self.bend = (2.0 as f32).powf(octaves);
+            }
             _ => {}
         }
     }
@@ -113,7 +142,7 @@ impl ComponentTrait for Component {
                 continue;
             }
             for i in audio.iter_mut() {
-                *i += note.advance(&self.impulse);
+                *i += note.advance(&self.impulse, self.bend);
             }
         }
     }

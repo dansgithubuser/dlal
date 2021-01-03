@@ -1,5 +1,7 @@
 from ._skeleton import connect as _connect, driver_set as _driver_set, UseComm as _UseComm
 
+import midi
+
 import glob
 import json
 import math
@@ -220,3 +222,27 @@ class Phonetizer(IirBank):
             self.sample = start
         for phonetic in phonetics:
             self.sample += self.say(phonetic, continuant_wait=continuant_wait, speed=speed)
+
+class Portamento(Subsystem):
+    def init(self, name, slowness=0.999):
+        Subsystem.init(self, name,
+            {
+                'rhymel': 'rhymel',
+                'lpf': ('lpf', [slowness]),
+                'oracle': ('oracle', [], {
+                    'mode': 'pitch_wheel',
+                    'm': 0x4000,
+                    'format': ('midi', [0xe0, '%l', '%h']),
+                }),
+            },
+            ['rhymel'],
+            ['rhymel', 'oracle'],
+        )
+        _connect(
+            [self.rhymel, self.lpf],
+            self.oracle,
+        )
+
+    def connect_outputs(self, other):
+        other.midi(midi.Msg.pitch_bend_range(64))
+        Subsystem.connect_outputs(self, other)
