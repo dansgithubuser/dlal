@@ -198,7 +198,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - audiobro track 3
-	- lower?
 	- portamento?
 
 - `last_error` as feature, add to comm for detached commands
