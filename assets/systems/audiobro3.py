@@ -26,6 +26,7 @@ voice_tone = dlal.Train(name='voice_tone')
 voice_noise = dlal.Osc('noise', name='voice_noise')
 voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=10, noise_pregain=3)
 # guitar
+guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')
 # shaker
 shaker1 = dlal.Buf(name='shaker1')
@@ -63,6 +64,14 @@ drum.amplify(2, 37)
 drum.crop(0, 0.07, 37)
 # ride bell
 drum.load('assets/sounds/drum/ride-bell.wav', 55)
+
+#----- guitar -----#
+guitar_strummer.pattern(
+    'd u udu u ududu'
+    'd u udu u ududu'
+    'd u udu u ududu'
+    'd u udu u udd'
+)
 
 #----- shakers -----#
 shaker1.load('assets/sounds/drum/shaker1.wav', 82)
@@ -110,7 +119,7 @@ dlal.connect(
         accordion2,
         drum,
         voice_porta,
-        guitar,
+        guitar_strummer,
         shaker1,
         shaker2,
     ],
@@ -118,6 +127,9 @@ dlal.connect(
     voice_porta,
     (voice_tone, voice_noise),
     (voice_phonetizer.tone_buf, voice_phonetizer.noise_buf),
+    [],
+    guitar_strummer,
+    guitar,
     [],
     [
         bassoon1,

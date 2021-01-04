@@ -143,12 +143,15 @@ impl ComponentTrait for Component {
 
     // required
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.value)))
+        Ok(Some(json!({
+            "value": self.value,
+        })))
     }
 
     // required
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.value = body.arg(0)?;
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.value = j.at("value")?;
         Ok(None)
     }
 }
