@@ -35,15 +35,32 @@ component!(
     {
         audio: Vec<f32>,
         sounds: Vec<Sound>,
+        repeat: bool,
+        repeat_start: f32,
+        repeat_end: f32,
     },
     {
         "set": {"args": ["samples"]},
-        "load": {"args": ["wav_file_path", "note"]},
+        "load": {"args": ["file_path", "note"]},
         "resample": {"args": ["ratio", "note"]},
         "crop": {"args": ["start", "end", "note"]},
         "clip": {"args": ["amplitude", "note"]},
         "amplify": {"args": ["amount", "note"]},
         "add": {"args": ["note_to", "note_from"]},
+        "repeat": {
+            "args": ["enable"],
+            "kwargs": [
+                {
+                    "name": "start",
+                    "desc": "seconds into sound to repeat to",
+                },
+                {
+                    "name": "end",
+                    "desc": "seconds before end of sound to repeat from",
+                },
+            ],
+        },
+        "normalize": {"args": ["amplitude"]},
     },
 );
 
@@ -62,6 +79,9 @@ impl ComponentTrait for Component {
         for sound in &mut self.sounds {
             if sound.play_vol == 0.0 {
                 continue;
+            }
+            if self.repeat && sound.play_index + self.repeat_end > sound.samples.len() as f32 {
+                sound.play_index = self.repeat_start;
             }
             for i in 0..self.audio.len() {
                 if sound.play_index as usize >= sound.samples.len() {
@@ -147,21 +167,36 @@ impl Component {
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
-        let mut reader = hound::WavReader::open(file_path)?;
-        let spec = reader.spec();
-        let max = 1 << (spec.bits_per_sample - 1);
-        let samples: Vec<f32> = match spec.sample_format {
-            hound::SampleFormat::Float => reader.samples::<f32>().map(|i| i.unwrap()).collect(),
-            hound::SampleFormat::Int => reader
-                .samples::<i32>()
-                .map(|i| i.unwrap() as f32 / max as f32)
-                .collect(),
-        };
-        self.sounds[note] = Sound {
-            samples,
-            sample_rate: spec.sample_rate,
-            ..Default::default()
-        };
+        let mut sound = Sound { ..Default::default() };
+        if file_path.ends_with(".wav") {
+            let mut reader = hound::WavReader::open(file_path)?;
+            let spec = reader.spec();
+            let max = 1 << (spec.bits_per_sample - 1);
+            sound.samples = match spec.sample_format {
+                hound::SampleFormat::Float => reader.samples::<f32>().map(|i| i.unwrap()).collect(),
+                hound::SampleFormat::Int => reader
+                    .samples::<i32>()
+                    .map(|i| i.unwrap() as f32 / max as f32)
+                    .collect(),
+            };
+            sound.sample_rate = spec.sample_rate;
+        } else if file_path.ends_with(".flac") {
+            let mut stream = match flac::StreamReader::<std::fs::File>::from_file(&file_path) {
+                Ok(v) => v,
+                Err(e) => return Err(err!("{:?}", e).into()),
+            };
+            let info = stream.info();
+            for (i, v) in stream.iter::<i16>().enumerate() {
+                if i % info.channels as usize != 0 {
+                    continue;
+                }
+                sound.samples.push(v as f32 / 0x7fff as f32);
+            }
+            sound.sample_rate = info.sample_rate;
+        } else {
+            return Err(err!("unknown file extension").into());
+        }
+        self.sounds[note] = sound;
         Ok(None)
     }
 
@@ -246,6 +281,26 @@ impl Component {
         }
         for i in 0..self.sounds[note_from].samples.len() {
             self.sounds[note_to].samples[i] += self.sounds[note_from].samples[i];
+        }
+        Ok(None)
+    }
+
+    fn repeat_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.repeat = body.arg(0).unwrap_or(true);
+        if self.repeat {
+            self.repeat_start = body.kwarg("start").unwrap_or(0.2) * self.sample_rate as f32;
+            self.repeat_end = body.kwarg("end").unwrap_or(0.2) * self.sample_rate as f32;
+        }
+        Ok(None)
+    }
+
+    fn normalize_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let amount: f32 = body.arg(0)?;
+        for sound in &mut self.sounds {
+            let m = amount / sound.samples.iter().fold(0.0, |a, i| f32::max(a, *i));
+            for sample in &mut sound.samples {
+                *sample *= m;
+            }
         }
         Ok(None)
     }

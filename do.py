@@ -31,6 +31,7 @@ parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
+parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
 parser.add_argument('--run', '-r', nargs='?', const=True, help=(
     'run interactive Python with dlal imported, '
     'or run specified system, optionally with args'
@@ -89,6 +90,7 @@ component!(
         "run_size",
         "sample_rate",
         //{"name": "join_info", "value": {}},
+        //"audio",
         "uni",
         //"multi",
         //"check_audio",
@@ -106,38 +108,50 @@ component!(
 );
 
 impl ComponentTrait for Component {
+    // optional
     fn init(&mut self) {
         self.value = 1.0;
     }
 
+    // optional
     fn run(&mut self) {
     }
 
+    // optional
     fn midi(&mut self, msg: &[u8]) {
     }
 
+    // optional
     fn audio(&mut self) -> Option<&mut [f32]> {
         None
     }
 
+    // optional
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
+    // optional
     fn connect(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
+    // optional
     fn disconnect(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
+    // required
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.value)))
+        Ok(Some(json!({
+            "value": self.value,
+        })))
     }
 
+    // required
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.value = body.arg(0)?;
+        let j = body.arg::<serde_json::Value>(0)?;
+        self.value = j.at("value")?;
         Ok(None)
     }
 }
@@ -314,6 +328,8 @@ if args.component_matrix:
 
 # ===== build ===== #
 if args.build is not None:
+    for i in args.build_snoop:
+        os.environ[f'DLAL_SNOOP_{i.upper()}'] = '1'
     for component_path in glob.glob(os.path.join(DIR, 'components', '*')):
         component = os.path.basename(component_path)
         if args.build and component not in args.build: continue
@@ -396,6 +412,7 @@ if args.style_check or args.style_rust_fix:
             'pycodestyle',
             '--ignore',
             ','.join([
+                'W503', 'W504',
                 'E124', 'E128', 'E131',
                 'E203', 'E226',
                 'E301', 'E302', 'E305', 'E306',

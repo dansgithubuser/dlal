@@ -178,14 +178,13 @@ def typical_setup():
     comm = component('comm', None)
     tape = component('tape', None)
     if tape and 'DLAL_TO_FILE' in os.environ and audio:
-        run_size = audio.run_size()
-        sample_rate = audio.sample_rate()
         duration = float(os.environ['DLAL_TO_FILE'])
-        runs = int(duration * sample_rate / run_size)
+        runs = int(duration * audio.sample_rate() / audio.run_size())
+        n = tape.size() // audio.run_size()
         with open('out.i16le', 'wb') as file:
             for i in range(runs):
                 audio.run()
-                tape.to_file_i16le(run_size, file)
+                if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
     else:
         if audio:
             audio.start()
@@ -218,25 +217,25 @@ def system_diagram():
     name_to_index = {}
     for i, k in enumerate(components):
         name_to_index[k] = i
-    # helpers; char set: ┅ ┃ ━ ┏ ┗ ┛ ┓ ┳ ┻ ┣ ┫ ╋
+    # helpers; char set: ┈ │ ━ ┏ ┗ ┛ ┓ ┳ ┻ ┣ ┫ ╋
     def advance():
         for band in [band_f, band_b]:
             for i, v in enumerate(band):
-                if v in '┃┏┓┳┣┫╋':
-                    band[i] = '┃'
+                if v in '│┏┓┳┣┫╋':
+                    band[i] = '│'
                 else:
-                    band[i] = '┅'
+                    band[i] = '┈'
     def lay_f(index):
-        if band_f[index] == '┃':
+        if band_f[index] == '│':
             band_f[index] = '┣'
-        elif band_f[index] == '┅':
+        elif band_f[index] == '┈':
             band_f[index] = '┏'
     def receive_f(index):
         band_f[index] = '┗'
     def lay_b(index):
-        if band_b[index] == '┃':
+        if band_b[index] == '│':
             band_b[index] = '┫'
-        elif band_b[index] == '┅':
+        elif band_b[index] == '┈':
             band_b[index] = '┓'
     def receive_b(index):
         band_b[index] = '┛'
@@ -247,7 +246,7 @@ def system_diagram():
     # loop
     result = []
     max_len = str(max(len(i) for i in components))
-    component_format = '[{:|<' + max_len + '.' + max_len + '}]'
+    component_format = '[{:-<' + max_len + '.' + max_len + '}]'
     for index, name in enumerate(components):
         advance()
         # forward connections
@@ -309,25 +308,6 @@ def system_load(file_path, namespace):
         component = namespace[name]
         for connectee in connectees:
             component.connect(namespace[connectee])
-
-def read_sound(file_path):
-    import soundfile as sf
-    data, sample_rate = sf.read(file_path)
-    return [float(i) for i in data], sample_rate
-
-def i16le_to_flac(i16le_file_path, flac_file_path=None):
-    import soundfile as sf
-    if flac_file_path == None:
-        flac_file_path = _re.sub(r'\.i16le$', '', i16le_file_path) + '.flac'
-    data, sample_rate = sf.read(
-        i16le_file_path,
-        samplerate=44100,
-        channels=1,
-        format='RAW',
-        subtype='PCM_16',
-        endian='LITTLE',
-    )
-    sf.write(flac_file_path, data, sample_rate, format='FLAC')
 
 def impulse_response(ci, co, driver):
     from . import Train

@@ -1,12 +1,22 @@
-from ._skeleton import connect as _connect, UseComm as _UseComm
+from ._skeleton import connect as _connect, driver_set as _driver_set, UseComm as _UseComm
+
+import midi
 
 import glob
 import json
 import math
 import os
+import re
 
 class Subsystem:
-    def __init__(self, name, components={}, inputs=[], outputs=[]):
+    def __init__(self, *args, **kwargs):
+        driver = _driver_set(None)
+        self.init(*args, **kwargs)
+        if driver:
+            self.add_to(driver)
+            _driver_set(driver)
+
+    def init(self, name, components={}, inputs=[], outputs=[]):
         if name:
             self.name = name
             self.components = {}
@@ -64,13 +74,13 @@ class Subsystem:
             i.disconnect(other)
 
 class IirBank(Subsystem):
-    def __init__(self, name, order):
+    def init(self, name, order):
         components = {}
         for i in range(order):
             components[f'iirs[{i}]'] = 'iir'
             components[f'bufs[{i}]'] = 'buf'
         bufs = [f'bufs[{i}]' for i in range(order)]
-        Subsystem.__init__(self, name, components, bufs, bufs)
+        Subsystem.init(self, name, components, bufs, bufs)
         self.iirs = []
         self.bufs = []
         for i in range(order):
@@ -79,22 +89,23 @@ class IirBank(Subsystem):
             self.iirs[-1].connect(self.bufs[-1])
 
 class Phonetizer(IirBank):
-    def __init__(
+    def init(
         self,
         name,
         tone_pregain=1,
         noise_pregain=1,
         phonetics_path='assets/phonetics',
         sample_rate=44100,
+        continuant_wait=44100//8,
     ):
-        Subsystem.__init__(self, name, {
+        Subsystem.init(self, name, {
             'comm': 'comm',
             'tone_gain': ('gain', [0]),
             'tone_buf': 'buf',
             'noise_gain': ('gain', [0]),
             'noise_buf': 'buf',
         })
-        IirBank.__init__(self, None, 5)
+        IirBank.init(self, None, 5)
         _connect(
             (self.tone_gain, self.noise_gain),
             (self.tone_buf, self.noise_buf),
@@ -114,13 +125,18 @@ class Phonetizer(IirBank):
         self.phonetic_name = '0'
         # sample rate
         self.sample_rate = sample_rate
-        # filter init
-        self.say('0', 0, smooth=0)
+        self.grace = sample_rate // 100
+        # continuant_wait
+        self.continuant_wait = continuant_wait
 
-    def say(self, phonetic_name, continuant_wait=44100//8, smooth=None):
+    def say(self, phonetic_name, continuant_wait=None, smooth=None, speed=1):
         phonetic = self.phonetics[phonetic_name]
+        if continuant_wait == None:
+            continuant_wait = self.continuant_wait
         if smooth == None:
-            if any([
+            if speed > 1:
+                smooth = 0.5
+            elif any([
                 self.phonetic_name == '0',  # starting from silence
                 phonetic['type'] == 'stop',  # moving to stop
                 self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
@@ -128,7 +144,7 @@ class Phonetizer(IirBank):
                 smooth = 0.7
             else:  # moving between continuants
                 smooth = 0.9
-        wait = phonetic.get('duration', continuant_wait)
+        wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
         with _UseComm(self.comm):
             for frame in phonetic['frames']:
                 self.tone_gain.command_detach('set', [frame['tone_amp'] * self.tone_pregain, smooth])
@@ -136,6 +152,97 @@ class Phonetizer(IirBank):
                 for iir, formant in zip(self.iirs, frame['formants']):
                     w = formant['freq'] / self.sample_rate * 2 * math.pi
                     iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
-                self.comm.wait(wait // len(phonetic['frames']))
+                self.comm.wait(wait)
         self.phonetic_name = phonetic_name
-        return wait
+        return wait * len(phonetic['frames'])
+
+    def prep_syllables(self, syllables, notes, advance=0, anticipation=None):
+        if anticipation == None:
+            anticipation = self.sample_rate // 8
+        self.comm.resize(len(syllables) * (3 + 2 * len(self.iirs)))
+        self.sample = 0
+        for syllable, note in zip(syllables.split(), notes):
+            segments = [
+                [
+                    i.translate({ord('['): None, ord(']'): None})
+                    for i in re.findall(r'\w|\[\w+\]', segment)
+                ]
+                for segment in syllable.split('.')
+            ]
+            if len(segments) == 1:
+                onset, nucleus, coda = [], segments[0], []
+            elif len(segments) == 2:
+                onset, nucleus, coda = segments[0], segments[1], []
+            elif len(segments) == 3:
+                onset, nucleus, coda = segments 
+            else:
+                raise Exception(f'invalid syllable {syllable}')
+            start = note['on'] - advance
+            if start < 0: continue
+            if start - anticipation <= self.sample:  # not silence before this syllable
+                start -= anticipation
+            normal_durations = [self.phonetics_duration(i) for i in [onset, nucleus, coda]]
+            normal_duration = sum(normal_durations)
+            end = note['off'] - anticipation - advance
+            if normal_duration < end - start:
+                # enough time to say nucleus normally or extended
+                coda_start = end - normal_durations[2]
+                self.prep_phonetics(onset, start)
+                self.prep_phonetics(nucleus, total_continuant_wait=(coda_start - self.sample))
+                self.prep_phonetics(coda, coda_start)
+            else:
+                # need speed-up
+                speed = normal_duration / (end - start)
+                self.prep_phonetics(onset, start, speed=speed)
+                self.prep_phonetics(nucleus, speed=speed)
+                self.prep_phonetics(coda, speed=speed)
+
+    def phonetics_duration(self, phonetics, continuant_wait=None):
+        if continuant_wait == None:
+            continuant_wait = self.continuant_wait
+        return sum(
+            self.phonetics[phonetic].get('duration', continuant_wait)
+            for phonetic in phonetics
+        )
+
+    def prep_phonetics(self, phonetics, start=None, total_continuant_wait=None, speed=1):
+        if start == None:
+            start = self.sample
+        if total_continuant_wait != None:
+            continuant_wait = (
+                total_continuant_wait
+                //
+                len([i for i in phonetics if self.phonetics[i]['type'] == 'continuant'])
+            )
+        else:
+            continuant_wait = None
+        if start - self.sample > self.grace:
+            self.say('0', continuant_wait=0)
+            self.comm.wait(start - self.sample)
+            self.sample = start
+        for phonetic in phonetics:
+            self.sample += self.say(phonetic, continuant_wait=continuant_wait, speed=speed)
+
+class Portamento(Subsystem):
+    def init(self, name, slowness=0.999):
+        Subsystem.init(self, name,
+            {
+                'rhymel': 'rhymel',
+                'lpf': ('lpf', [slowness]),
+                'oracle': ('oracle', [], {
+                    'mode': 'pitch_wheel',
+                    'm': 0x4000,
+                    'format': ('midi', [0xe0, '%l', '%h']),
+                }),
+            },
+            ['rhymel'],
+            ['rhymel', 'oracle'],
+        )
+        _connect(
+            [self.rhymel, self.lpf],
+            self.oracle,
+        )
+
+    def connect_outputs(self, other):
+        other.midi(midi.Msg.pitch_bend_range(64))
+        Subsystem.connect_outputs(self, other)

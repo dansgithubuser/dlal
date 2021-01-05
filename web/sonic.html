@@ -2,7 +2,7 @@
 <style>
 
 td {
-  width: 6em;
+  width: 25%;
 }
 
 input {
@@ -22,8 +22,9 @@ import {
 
 function controlChange(control) {
   const ctrl = control.target.id.slice(0, -1);
-  const op = control.target.id.slice(-1);
-  command(ctrl, [op, control.target.value]).then(r => control.target.value = r.result);
+  const op = Number(control.target.id.slice(-1));
+  const value = control.target.value !== '' ? Number(control.target.value) : null;
+  command(ctrl, [op, value]).then(r => control.target.value = r.result);
 }
 
 function setupControls() {
@@ -35,22 +36,10 @@ function setupControls() {
     'r': 1,
     'm': 99,
     'o': 1,
-    'i0': 1,
-    'i1': 1,
-    'i2': 1,
-    'i3': 1,
-  };
-  const steps = {
-    'a': 0.00001,
-    'd': 0.00001,
-    's': 0.01,
-    'r': 0.00001,
-    'm': 0.5,
-    'o': 0.01,
-    'i0': 0.01,
-    'i1': 0.01,
-    'i2': 0.01,
-    'i3': 0.01,
+    'i0': 4,
+    'i1': 4,
+    'i2': 4,
+    'i3': 4,
   };
   const ctrls = ['a', 'd', 's', 'r', 'm', 'o', 'i0', 'i1', 'i2', 'i3'];
   for (const ctrl of ctrls) {
@@ -61,7 +50,7 @@ function setupControls() {
         type='number'
         min=0
         max=${maxes[ctrl]}
-        step=${steps[ctrl]}
+        step=any
       ></td>`;
     controlsHtml += '</tr>';
   }

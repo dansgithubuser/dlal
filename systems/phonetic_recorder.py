@@ -11,7 +11,7 @@ audio.add(tape)
 audio.connect(tape)
 
 dlal.typical_setup()
-tape.to_file_i16le_start(1 << 14, 'phonetics.i16le')
+tape.to_file_i16le_start('phonetics.i16le', 1 << 14)
 
 phonetics = [
     'a as in apple',
@@ -58,4 +58,4 @@ for i in phonetics:
     time.sleep(1)
 
 tape.to_file_i16le_stop()
-dlal.i16le_to_flac('phonetics.i16le')
+dlal.sound.i16le_to_flac('phonetics.i16le')

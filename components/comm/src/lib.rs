@@ -19,16 +19,22 @@ struct Queues {
     fro_audio_recv: MPMCUniReceiver<Box<Option<serde_json::Value>>>,
 }
 
-impl Default for Queues {
-    fn default() -> Self {
-        let (to_audio_send, to_audio_recv) = multiqueue2::mpmc_queue(128);
-        let (fro_audio_send, fro_audio_recv) = multiqueue2::mpmc_queue(128);
+impl Queues {
+    fn new(size: u64) -> Self {
+        let (to_audio_send, to_audio_recv) = multiqueue2::mpmc_queue(size);
+        let (fro_audio_send, fro_audio_recv) = multiqueue2::mpmc_queue(size);
         Self {
             to_audio_send,
             to_audio_recv: to_audio_recv.into_single().unwrap(),
             fro_audio_send,
             fro_audio_recv: fro_audio_recv.into_single().unwrap(),
         }
+    }
+}
+
+impl Default for Queues {
+    fn default() -> Self {
+        Self::new(128)
     }
 }
 
@@ -42,31 +48,35 @@ component!(
     {
         "queue": {"args": ["component", "command", "audio", "midi", "run", "body", "timeout_ms", "detach"]},
         "wait": {"args": ["samples"]},
+        "resize": {"args": ["size"]},
     },
 );
 
 impl ComponentTrait for Component {
     fn run(&mut self) {
-        if self.wait > self.run_size {
-            self.wait -= self.run_size;
-            return;
-        }
-        while let Ok(item) = self.queues.to_audio_recv.try_recv() {
-            match item {
-                QueuedItem::Wait(wait) => {
-                    self.wait = wait;
-                    break;
-                }
-                QueuedItem::Command { view, body, detach } => {
-                    let result = view.command(&*body);
-                    if !detach {
-                        self.queues
-                            .fro_audio_send
-                            .try_send(Box::new(result))
-                            .expect("try_send failed");
+        'outer: loop {
+            if self.wait > self.run_size {
+                self.wait -= self.run_size;
+                return;
+            }
+            while let Ok(item) = self.queues.to_audio_recv.try_recv() {
+                match item {
+                    QueuedItem::Wait(wait) => {
+                        self.wait += wait;
+                        continue 'outer;
+                    }
+                    QueuedItem::Command { view, body, detach } => {
+                        let result = view.command(&*body);
+                        if !detach {
+                            self.queues
+                                .fro_audio_send
+                                .try_send(Box::new(result))
+                                .expect("try_send failed");
+                        }
                     }
                 }
             }
+            break;
         }
     }
 
@@ -110,6 +120,11 @@ impl Component {
         {
             return Err(err!("try_send failed").into());
         }
+        Ok(None)
+    }
+
+    fn resize_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.queues = Queues::new(body.arg(0)?);
         Ok(None)
     }
 }

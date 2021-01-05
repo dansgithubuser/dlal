@@ -34,7 +34,7 @@ FREQUENCY = 100  # of voice in args.phonetics_file_path
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
     if not load.phonetics:
-        load.phonetics = dlal.read_sound(phonetics_file_path)[0]
+        load.phonetics = dlal.sound.read(phonetics_file_path).samples
     return load.phonetics[start:start+duration]
 load.phonetics = None
 
@@ -100,6 +100,13 @@ def calc_n(x):
 def calc_envelope(x, n):
     spectrum = fft(x[:n])[:n//2+1]
     width = FREQUENCY * n // SAMPLE_RATE + 1  # span enough bins that we ignore harmonics
+    avg = sum(float(abs(i)) for i in spectrum) / len(spectrum)
+    dev = math.sqrt(sum((float(abs(i)) - avg) ** 2 for i in spectrum))
+    dev_n = dev / len(spectrum)
+    threshold = 0.1
+    if dev_n < threshold:
+        # if this is a wide spectrum, make sure width is extra wide so we don't cluster formants
+        width = int(width * 0.1 / dev_n)
     envelope = []
     for i in range(len(spectrum)):
         j_i = i - width // 2
@@ -139,6 +146,7 @@ def parameterize(x=None):
             formants.append({
                 'freq': freq,
                 'amp': peak_amp,
+                'width': 0.01,
             })
             # visit right
             i = peak_i
@@ -155,6 +163,14 @@ def parameterize(x=None):
                     break
                 i -= 1
         formants = sorted(formants, key=lambda i: i['freq'])
+        # widen formants until filter has same energy as signal
+        energy = sum(i**2 for i in x[:n])
+        while formants[0]['width'] < 0.5:
+            e = energy_transfer(formants, n)
+            if math.sqrt(2) * e >= energy:
+                break
+            for formant in formants:
+                formant['width'] *= 2
         #----- tone vs noise -----#
         # autocorrelation
         freq_i = 60
@@ -172,13 +188,11 @@ def parameterize(x=None):
             ac = ac_power * len(x)  # for fair comparison w energy
             if ac > max_ac:
                 max_ac = ac
-        # energy
-        energy = sum(i**2 for i in x)
-        power = energy / len(x)
         # amplitudes
+        energy = sum(i**2 for i in x)
         tone = min(max_ac / energy, 1)
-        tone_amp = math.sqrt(power * tone)
-        noise_amp = math.sqrt(power * (1 - tone))
+        tone_amp = math.sqrt(tone)
+        noise_amp = math.sqrt(1 - tone)
         #----- outputs -----#
         return {
             'formants': formants,
@@ -233,20 +247,25 @@ def analyze(x=None):
             'frames': frames,
         }
 
-def plot_spectrum(formants, n, plot):
+def get_spectrum(formants, n):
     from scipy import signal
     spectrum = [0]*(n // 2 + 1)
     for formant in formants:
         w = formant['freq'] / SAMPLE_RATE * 2*math.pi
-        width = 0.01
-        p = cmath.rect(1.0 - width, w);
+        p = cmath.rect(1.0 - formant['width'], w);
         z_w = cmath.rect(1.0, w);
         gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate()));
         b, a = signal.zpk2tf([], [p, p.conjugate()], gain)
         w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
         for i in range(len(spectrum)):
             spectrum[i] += h[i]
-    plot.plot([float(abs(i)) for i in spectrum])
+    return [float(abs(i)) for i in spectrum]
+
+def plot_spectrum(formants, n, plot):
+    plot.plot(get_spectrum(formants, n))
+
+def energy_transfer(formants, n):
+    return sum(i ** 2 for i in get_spectrum(formants, n))
 
 #===== main =====#
 phonetics = [

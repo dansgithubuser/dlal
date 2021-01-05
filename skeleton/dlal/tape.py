@@ -20,7 +20,7 @@ class Tape(Component):
         if size: args.append(size)
         return [float(i) for i in self.command_immediate('read', args)]
 
-    def to_file_i16le(self, size, file):
+    def to_file_i16le(self, file, size=None):
         samples = self.read(size)
         for sample in samples:
             i = int(sample * 0x7fff)
@@ -28,7 +28,7 @@ class Tape(Component):
             elif i < -0x8000: i = -0x8000
             file.write(struct.pack('<h', i))
 
-    def to_file_i16le_start(self, size=64, file_path='out.i16le'):
+    def to_file_i16le_start(self, file_path='out.i16le', size=64):
         tape = weakref.proxy(self)
         class File:
             def __init__(self, file_path):
@@ -37,7 +37,7 @@ class Tape(Component):
                 weak_self = weakref.proxy(self)
                 def main():
                     while not weak_self.quit:
-                        tape.to_file_i16le(size, weak_self.file)
+                        tape.to_file_i16le(weak_self.file, size)
                 self.thread = threading.Thread(target=main)
                 self.thread.start()
             def stop(self):

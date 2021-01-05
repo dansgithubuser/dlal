@@ -355,53 +355,43 @@ impl ComponentTrait for Component {
     }
 
     fn midi(&mut self, msg: &[u8]) {
-        if msg.is_empty() {
+        if msg.len() < 3 {
             return;
         }
         match msg[0] & 0xf0 {
             0x80 => {
-                if msg.len() >= 3 {
-                    self.notes[msg[1] as usize].stop();
-                }
+                self.notes[msg[1] as usize].stop();
             }
             0x90 => {
-                if msg.len() >= 3 {
-                    if msg[2] == 0 {
-                        self.notes[msg[1] as usize].stop();
-                    } else {
-                        self.notes[msg[1] as usize].start(msg[2] as f32 / 127.0);
-                    }
+                if msg[2] == 0 {
+                    self.notes[msg[1] as usize].stop();
+                } else {
+                    self.notes[msg[1] as usize].start(msg[2] as f32 / 127.0);
                 }
             }
             0xa0 => {
-                if msg.len() >= 3 {
-                    self.notes[msg[1] as usize].vol_f = msg[2] as f32 / 127.0;
-                }
+                self.notes[msg[1] as usize].vol_f = msg[2] as f32 / 127.0;
             }
             0xb0 => {
-                if msg.len() >= 3 {
-                    match msg[1] {
-                        0x65 => self.rpn = (msg[2] << 7) as u16,
-                        0x64 => self.rpn += msg[2] as u16,
-                        0x06 => match self.rpn {
-                            0x0000 => self.pitch_bend_range = msg[2] as f32,
-                            _ => (),
-                        },
-                        0x26 => match self.rpn {
-                            0x0000 => self.pitch_bend_range += msg[2] as f32 / 100.0,
-                            _ => (),
-                        },
+                match msg[1] {
+                    0x65 => self.rpn = (msg[2] << 7) as u16,
+                    0x64 => self.rpn += msg[2] as u16,
+                    0x06 => match self.rpn {
+                        0x0000 => self.pitch_bend_range = msg[2] as f32,
                         _ => (),
-                    }
+                    },
+                    0x26 => match self.rpn {
+                        0x0000 => self.pitch_bend_range += msg[2] as f32 / 100.0,
+                        _ => (),
+                    },
+                    _ => (),
                 }
             }
             0xe0 => {
-                if msg.len() >= 3 {
-                    const CENTER: f32 = 0x2000 as f32;
-                    let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
-                    let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
-                    self.set((2.0 as f32).powf(octaves));
-                }
+                const CENTER: f32 = 0x2000 as f32;
+                let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
+                let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
+                self.set((2.0 as f32).powf(octaves));
             }
             _ => (),
         };

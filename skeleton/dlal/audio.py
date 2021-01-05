@@ -2,11 +2,12 @@ from ._component import Component
 from ._skeleton import driver_set
 
 class Audio(Component):
-    def __init__(self, **kwargs):
+    def __init__(self, driver=False, **kwargs):
         Component.__init__(self, 'audio', **kwargs)
         self.components = []
         self.slots = {}
         self.with_components = None
+        if driver: driver_set(self)
 
     def __enter__(self):
         assert self.with_components == None

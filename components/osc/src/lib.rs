@@ -55,6 +55,8 @@ component!(
         step: f32,
         phase: f32,
         vol: f32,
+        rpn: u16,              //registered parameter number
+        pitch_bend_range: f32, //MIDI RPN 0x0000
     },
     {
         "freq": {
@@ -104,6 +106,7 @@ impl ComponentTrait for Component {
         self.sample_rate = 44100;
         self.vol = 1.0;
         self.bend = 1.0;
+        self.pitch_bend_range = 2.0;
     }
 
     fn midi(&mut self, msg: &[u8]) {
@@ -111,13 +114,37 @@ impl ComponentTrait for Component {
             return;
         }
         match msg[0] & 0xf0 {
+            0x80 => {
+                self.vol = 0.0;
+            }
             0x90 => {
                 self.step =
                     440.0 * 2.0_f32.powf((msg[1] as f32 - 69.0) / 12.0) / self.sample_rate as f32;
                 self.vol = msg[2] as f32 / 127.0;
             }
-            0x80 => {
-                self.vol = 0.0;
+            0xa0 => {
+                self.vol = msg[2] as f32 / 127.0;
+            }
+            0xb0 => {
+                match msg[1] {
+                    0x65 => self.rpn = (msg[2] << 7) as u16,
+                    0x64 => self.rpn += msg[2] as u16,
+                    0x06 => match self.rpn {
+                        0x0000 => self.pitch_bend_range = msg[2] as f32,
+                        _ => (),
+                    },
+                    0x26 => match self.rpn {
+                        0x0000 => self.pitch_bend_range += msg[2] as f32 / 100.0,
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
+            0xe0 => {
+                const CENTER: f32 = 0x2000 as f32;
+                let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
+                let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
+                self.bend = (2.0 as f32).powf(octaves);
             }
             _ => {}
         }
