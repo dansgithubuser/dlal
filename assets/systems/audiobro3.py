@@ -24,7 +24,7 @@ drum = dlal.Buf(name='drum')
 voice_porta = dlal.subsystem.Portamento('voice_porta')
 voice_tone = dlal.Train(name='voice_tone')
 voice_noise = dlal.Osc('noise', name='voice_noise')
-voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=5, noise_pregain=2)
+voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=5, noise_pregain=1.5)
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')
@@ -33,6 +33,8 @@ shaker1 = dlal.Buf(name='shaker1')
 shaker2 = dlal.Buf(name='shaker2')
 
 liner = dlal.Liner()
+reverb = dlal.Reverb(0.1)
+lim = dlal.Lim(1, 0.9, 0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
 
@@ -57,9 +59,10 @@ drum.load('assets/sounds/drum/bass.wav', 36)
 drum.crop(0, 0.2, 36)
 # snare
 drum.load('assets/sounds/drum/snare.wav', 38)
+drum.clip(0.5, 38)
 # hat
 drum.load('assets/sounds/drum/hat.wav', 42)
-# snare
+# crash
 drum.load('assets/sounds/drum/crash.wav', 57)
 # side stick
 drum.load('assets/sounds/drum/side-stick.wav', 37)
@@ -146,7 +149,11 @@ dlal.connect(
         shaker1,
         shaker2,
     ],
-    [buf, '<', voice_phonetizer],
+    [buf,
+        '<', voice_phonetizer,
+        '<', reverb,
+        '<', lim,
+    ],
     [audio, tape],
 )
 
