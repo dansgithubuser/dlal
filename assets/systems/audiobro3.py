@@ -24,7 +24,7 @@ drum = dlal.Buf(name='drum')
 voice_porta = dlal.subsystem.Portamento('voice_porta')
 voice_tone = dlal.Train(name='voice_tone')
 voice_noise = dlal.Osc('noise', name='voice_noise')
-voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=10, noise_pregain=3)
+voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=5, noise_pregain=2)
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')
@@ -76,7 +76,7 @@ guitar_strummer.pattern(
     'd u udu u ududu'
     'd u udu u udd'
 )
-guitar.normalize(0.4)
+guitar.normalize(0.3)
 
 #----- shakers -----#
 shaker1.load('assets/sounds/drum/shaker1.wav', 82)
