@@ -40,10 +40,14 @@ tape = dlal.Tape(1 << 17)
 #----- bassoons -----#
 bassoon1.repeat()
 bassoon2.repeat()
+bassoon1.normalize(0.3)
+bassoon2.normalize(0.3)
 
 #----- accordion -----#
 accordion1.repeat()
 accordion2.repeat()
+accordion1.normalize(0.1)
+accordion2.normalize(0.1)
 
 #----- drum -----#
 # bass
@@ -72,6 +76,7 @@ guitar_strummer.pattern(
     'd u udu u ududu'
     'd u udu u udd'
 )
+guitar.normalize(0.4)
 
 #----- shakers -----#
 shaker1.load('assets/sounds/drum/shaker1.wav', 82)

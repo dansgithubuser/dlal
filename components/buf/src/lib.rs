@@ -60,6 +60,7 @@ component!(
                 },
             ],
         },
+        "normalize": {"args": ["amplitude"]},
     },
 );
 
@@ -289,6 +290,17 @@ impl Component {
         if self.repeat {
             self.repeat_start = body.kwarg("start").unwrap_or(0.2) * self.sample_rate as f32;
             self.repeat_end = body.kwarg("end").unwrap_or(0.2) * self.sample_rate as f32;
+        }
+        Ok(None)
+    }
+
+    fn normalize_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let amount: f32 = body.arg(0)?;
+        for sound in &mut self.sounds {
+            let m = amount / sound.samples.iter().fold(0.0, |a, i| f32::max(a, *i));
+            for sample in &mut sound.samples {
+                *sample *= m;
+            }
         }
         Ok(None)
     }
