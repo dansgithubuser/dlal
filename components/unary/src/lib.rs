@@ -1,8 +1,13 @@
-use dlal_component_base::{component, json, serde_json, Body, CmdResult};
+use dlal_component_base::component;
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["run_size", "multi", "check_audio"],
+    [
+        "run_size",
+        "multi",
+        "check_audio",
+        {"name": "field_helpers", "fields": ["mode"], "kinds": ["rw", "json"]},
+    ],
     {
         mode: String,
     },
@@ -18,18 +23,6 @@ component!(
 );
 
 impl ComponentTrait for Component {
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "mode": self.mode,
-        })))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j = body.arg::<serde_json::Value>(0)?;
-        self.mode = j.at("mode")?;
-        Ok(None)
-    }
-
     fn run(&mut self) {
         for output in &self.outputs {
             for i in output.audio(self.run_size).unwrap() {
@@ -46,14 +39,5 @@ impl ComponentTrait for Component {
                 }
             }
         }
-    }
-}
-
-impl Component {
-    fn mode_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.mode = v;
-        }
-        Ok(Some(json!(self.mode)))
     }
 }

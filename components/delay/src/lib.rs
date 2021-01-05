@@ -2,7 +2,12 @@ use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["run_size", "uni", "check_audio"],
+    [
+        "run_size",
+        "uni",
+        "check_audio",
+        {"name": "field_helpers", "fields": ["gain_x", "gain_y", "gain_i", "gain_o"], "kinds": ["rw", "json"]},
+    ],
     {
         gain_x: f32,
         gain_y: f32,
@@ -76,22 +81,14 @@ impl ComponentTrait for Component {
     }
 
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
+        Ok(Some(field_helper_to_json!(self, {
             "size": self.audio.len(),
-            "gain_x": self.gain_x,
-            "gain_y": self.gain_y,
-            "gain_i": self.gain_i,
-            "gain_o": self.gain_o,
         })))
     }
 
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j = body.arg::<serde_json::Value>(0)?;
+        let j = field_helper_from_json!(self, body);
         self.audio.resize(j.at("size")?, 0.0);
-        self.gain_x = j.at("gain_x")?;
-        self.gain_y = j.at("gain_y")?;
-        self.gain_i = j.at("gain_i")?;
-        self.gain_o = j.at("gain_o")?;
         Ok(None)
     }
 }
@@ -102,33 +99,5 @@ impl Component {
             self.audio.resize(v, 0.0);
         }
         Ok(Some(json!(self.audio.len())))
-    }
-
-    fn gain_x_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.gain_x = v;
-        }
-        Ok(Some(json!(self.gain_x)))
-    }
-
-    fn gain_y_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.gain_y = v;
-        }
-        Ok(Some(json!(self.gain_y)))
-    }
-
-    fn gain_i_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.gain_i = v;
-        }
-        Ok(Some(json!(self.gain_i)))
-    }
-
-    fn gain_o_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.gain_o = v;
-        }
-        Ok(Some(json!(self.gain_o)))
     }
 }

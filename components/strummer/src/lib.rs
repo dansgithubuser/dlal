@@ -6,6 +6,8 @@ component!(
         "run_size",
         "sample_rate",
         "multi",
+        {"name": "field_helpers", "fields": ["pattern"], "kinds": ["json"]},
+        {"name": "field_helpers", "fields": ["duration"], "kinds": ["rw", "json"]},
     ],
     {
         pattern: Vec<String>,
@@ -93,20 +95,6 @@ impl ComponentTrait for Component {
         self.msgs.push(msg.to_vec());
         self.age = 0.0;
     }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "pattern": self.pattern,
-            "duration": self.duration,
-        })))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j = body.arg::<serde_json::Value>(0)?;
-        self.pattern = j.at("pattern")?;
-        self.duration = j.at("duration")?;
-        Ok(None)
-    }
 }
 
 impl Component {
@@ -119,12 +107,5 @@ impl Component {
             }
         }
         Ok(Some(json!(self.pattern)))
-    }
-
-    fn duration_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.duration = v;
-        }
-        Ok(Some(json!(self.duration)))
     }
 }

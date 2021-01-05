@@ -22,15 +22,19 @@ impl Default for Audio {
 
 component!(
     {"in": ["audio**"], "out": ["audio**"]},
-    ["multi", "check_audio", "run_size", "sample_rate"],
+    [
+        "multi",
+        "check_audio",
+        "run_size",
+        "sample_rate",
+        {"name": "field_helpers", "fields": ["run_size", "sample_rate"], "kinds": ["rw", "json"]},
+    ],
     {
         addees: Vec<Vec<View>>,
         stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
         audio: Audio,
     },
     {
-        "run_size": {"args": [{"name": "run_size", "optional": true}]},
-        "sample_rate": {"args": [{"name": "sample_rate", "optional": true}]},
         "add": {"args": ["component", "command", "audio", "midi", "run"]},
         "remove": {"args": ["component", "command", "audio", "midi", "run"]},
         "start": {},
@@ -56,19 +60,6 @@ impl ComponentTrait for Component {
             return Some(&mut []);
         }
         Some(unsafe { from_raw_parts_mut(self.audio.o, self.run_size) })
-    }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "run_size": self.run_size.to_string(),
-            "sample_rate": self.sample_rate.to_string(),
-        })))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.run_size = body.kwarg("run_size")?;
-        self.sample_rate = body.kwarg("sample_rate")?;
-        Ok(None)
     }
 }
 
@@ -104,20 +95,6 @@ impl Component {
                 }
             }
         }
-    }
-
-    fn run_size_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.run_size = v;
-        }
-        Ok(Some(json!(self.run_size)))
-    }
-
-    fn sample_rate_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.sample_rate = v;
-        }
-        Ok(Some(json!(self.sample_rate)))
     }
 
     fn add_cmd(&mut self, body: serde_json::Value) -> CmdResult {

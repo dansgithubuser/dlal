@@ -30,7 +30,8 @@ component!(
     [
         "sample_rate",
         "multi",
-        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
+        {"name": "join_info", "kwargs": ["run_size"]},
+        {"name": "field_helpers", "fields": ["repeat", "repeat_start", "repeat_end"], "kinds": []},
     ],
     {
         audio: Vec<f32>,
@@ -135,12 +136,16 @@ impl ComponentTrait for Component {
                 }),
             );
         }
-        Ok(Some(json!(sounds)))
+            
+        Ok(Some(field_helper_to_json!(self, {
+            "sounds": sounds,
+        })))
     }
 
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let j = field_helper_from_json!(self, body);
         self.sounds = vec![Sound::default(); 128];
-        let sounds: serde_json::Map<String, serde_json::Value> = body.arg(0)?;
+        let sounds: serde_json::Map<String, serde_json::Value> = j.at("sounds")?;
         for (note, sound) in sounds.iter() {
             self.sounds[note.parse::<usize>()?] = Sound {
                 sample_rate: sound.at("sample_rate")?,

@@ -5,7 +5,8 @@ use multiqueue2::{MPMCSender, MPMCUniReceiver};
 component!(
     {"in": ["audio"], "out": ["audio*"]},
     [
-        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
+        {"name": "join_info", "kwargs": ["run_size"]},
+        {"name": "field_helpers", "fields": ["size"], "kinds": ["r"]},
     ],
     {
         audio: Vec<f32>,
@@ -15,7 +16,6 @@ component!(
     },
     {
         "resize": {"args": ["size"]},
-        "size": {},
         "clear": {},
         "read": {"args": ["size"]},
     },
@@ -68,10 +68,6 @@ impl Component {
     fn resize_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         self.resize(body.arg(0)?);
         Ok(None)
-    }
-
-    fn size_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.size.to_string())))
     }
 
     fn clear_cmd(&mut self, _body: serde_json::Value) -> CmdResult {

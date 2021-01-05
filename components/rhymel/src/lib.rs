@@ -1,4 +1,4 @@
-use dlal_component_base::{component, serde_json, Body, CmdResult};
+use dlal_component_base::component;
 
 const SENTINEL: u8 = 0xff;
 
@@ -120,13 +120,5 @@ impl ComponentTrait for Component {
                 println!("pitch {}", self.pitch);
             }
         }
-    }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(None)
-    }
-
-    fn from_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(None)
     }
 }

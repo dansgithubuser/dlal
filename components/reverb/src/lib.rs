@@ -1,4 +1,4 @@
-use dlal_component_base::{component, json, serde_json, Body, CmdResult};
+use dlal_component_base::{component, serde_json, Body, CmdResult};
 
 struct Ring {
     vec: Vec<f32>,
@@ -26,7 +26,12 @@ impl Ring {
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["run_size", "uni", "check_audio"],
+    [
+        "run_size",
+        "uni",
+        "check_audio",
+        {"name": "field_helpers", "fields": ["amount"], "kinds": ["json"]},
+    ],
     {
         amount: f32,
         rings: Vec<Ring>,
@@ -47,15 +52,6 @@ impl ComponentTrait for Component {
         self.rings.push(Ring::new(6342));
         self.rings.push(Ring::new(7965));
         self.rings.push(Ring::new(12965));
-    }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.amount)))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.amount = body.arg(0)?;
-        Ok(None)
     }
 
     fn run(&mut self) {

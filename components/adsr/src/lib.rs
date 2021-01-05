@@ -1,4 +1,4 @@
-use dlal_component_base::{component, json, serde_json, Body, CmdResult};
+use dlal_component_base::{component, serde_json, CmdResult};
 
 enum Stage {
     A,
@@ -15,7 +15,12 @@ impl Default for Stage {
 
 component!(
     {"in": ["midi"], "out": ["audio"]},
-    ["uni", "check_audio", "run_size"],
+    [
+        "uni",
+        "check_audio",
+        "run_size",
+        {"name": "field_helpers", "fields": ["a", "d", "s", "r"], "kinds": ["rw", "json"]},
+    ],
     {
         a: f32,
         d: f32,
@@ -112,55 +117,9 @@ impl ComponentTrait for Component {
             self.stage = Stage::A;
         }
     }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "a": self.a,
-            "d": self.d,
-            "s": self.s,
-            "r": self.r,
-        })))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j: serde_json::Value = body.arg(0)?;
-        self.a = j.at("a")?;
-        self.d = j.at("d")?;
-        self.s = j.at("s")?;
-        self.r = j.at("r")?;
-        Ok(None)
-    }
 }
 
 impl Component {
-    fn a_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.a = v;
-        }
-        Ok(Some(json!(self.a)))
-    }
-
-    fn d_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.d = v;
-        }
-        Ok(Some(json!(self.d)))
-    }
-
-    fn s_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.s = v;
-        }
-        Ok(Some(json!(self.s)))
-    }
-
-    fn r_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.r = v;
-        }
-        Ok(Some(json!(self.r)))
-    }
-
     fn reset_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         self.stage = Stage::R;
         self.vol = 0.0;

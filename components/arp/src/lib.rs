@@ -1,8 +1,13 @@
-use dlal_component_base::{component, json, serde_json, Body, CmdResult};
+use dlal_component_base::component;
 
 component!(
     {"in": ["midi"], "out": ["midi"]},
-    ["run_size", "sample_rate", "multi"],
+    [
+        "run_size",
+        "sample_rate",
+        "multi",
+        {"name": "field_helpers", "fields": ["rate"], "kinds": ["rw", "json"]},
+    ],
     {
         notes: Vec<[u8; 2]>,
         note: usize,
@@ -10,16 +15,7 @@ component!(
         phase: f32,
         rate: f32,
     },
-    {
-        "rate": {
-            "args": [
-                {
-                    "name": "rate",
-                    "optional": true,
-                },
-            ],
-        },
-    },
+    {},
 );
 
 impl ComponentTrait for Component {
@@ -67,18 +63,6 @@ impl ComponentTrait for Component {
             }
         }
     }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "rate": self.rate,
-        })))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j: serde_json::Value = body.arg(0)?;
-        self.rate = j.at("rate")?;
-        Ok(None)
-    }
 }
 
 impl Component {
@@ -89,12 +73,5 @@ impl Component {
             output.midi(&[0x80, self.note_last, 0]);
         }
         self.note_last = note[0];
-    }
-
-    fn rate_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.rate = v;
-        }
-        Ok(Some(json!(self.rate)))
     }
 }

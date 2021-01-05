@@ -47,7 +47,13 @@ impl Default for Wave {
 
 component!(
     {"in": ["midi"], "out": ["audio"]},
-    ["run_size", "sample_rate", "uni", "check_audio"],
+    [
+        "run_size",
+        "sample_rate",
+        "uni",
+        "check_audio",
+        {"name": "field_helpers", "fields": ["bend", "phase"], "kinds": ["rw"]},
+    ],
     {
         wave_str: String,
         wave: Wave,
@@ -183,16 +189,6 @@ impl Component {
 
     fn wave_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         self.wave_set(&body.arg::<String>(0)?)?;
-        Ok(None)
-    }
-
-    fn bend_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.bend = body.arg(0)?;
-        Ok(None)
-    }
-
-    fn phase_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.phase = body.arg(0)?;
         Ok(None)
     }
 }

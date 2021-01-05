@@ -110,7 +110,10 @@ impl Directive {
 
 component!(
     {"in": ["midi"], "out": ["cmd"]},
-    ["multi"],
+    [
+        "multi",
+        {"name": "field_helpers", "fields": ["last_error"], "kinds": ["r"]},
+    ],
     {
         directives: Vec<Directive>,
         last_error: String,
@@ -153,7 +156,6 @@ component!(
                 },
             ],
         },
-        "last_error": {},
     },
 );
 
@@ -222,9 +224,5 @@ impl Component {
             format: body.arg(2)?,
         });
         Ok(None)
-    }
-
-    fn last_error_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.last_error)))
     }
 }

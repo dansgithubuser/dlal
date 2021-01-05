@@ -12,8 +12,8 @@ pub trait ComponentTrait {
     fn disconnect(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult { Ok(None) }
 
     // serialization
-    fn to_json_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult;
-    fn from_json_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult;
+    fn to_json_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult { Ok(None) }
+    fn from_json_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult { Ok(None) }
 }
 
 #[derive(Default)]
@@ -45,6 +45,7 @@ impl Component {
     }
 
     fn join_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
+        use dlal_component_base::Body;
         {{#if (or features.run_size features.audio)}}
             self.run_size = body.kwarg("run_size")?;
         {{/if}}
@@ -59,7 +60,6 @@ impl Component {
 
     fn connect_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
         {{#if (or features.uni features.multi)}}
-        {
             use dlal_component_base::Body;
             let output = dlal_component_base::View::new(&body.at("args")?)?;
             {{#if features.check_audio}}
@@ -72,14 +72,12 @@ impl Component {
             {{else}}
                 self.outputs.push(output);
             {{/if}}
-        }
         {{/if}}
         self.connect(body)
     }
 
     fn disconnect_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
         {{#if (or features.uni features.multi)}}
-        {
             use dlal_component_base::Body;
             let output = dlal_component_base::View::new(&body.at("args")?)?;
             {{#if features.uni}}
@@ -91,12 +89,12 @@ impl Component {
                     self.outputs.remove(i);
                 }
             {{/if}}
-        }
         {{/if}}
         self.disconnect(body)
     }
 
     fn midi_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
+        use dlal_component_base::Body;
         let arr: Vec<u8> = body.arg(0)?;
         if arr.len() <= 3 {
             let mut slice = [0 as u8; 3];
@@ -153,6 +151,42 @@ impl Component {
             Some(self.audio.as_mut_slice())
         }
     {{/if}}
+
+    {{#if features.field_helpers.json}}
+        fn to_json_cmd(&mut self, _body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
+            Ok(Some(dlal_component_base::json!({
+                {{#each features.field_helpers.json}}
+                    "{{this}}": self.{{this}},
+                {{/each}}
+            })))
+        }
+
+        fn from_json_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
+            use dlal_component_base::Body;
+            let j: dlal_component_base::serde_json::Value = body.arg(0)?;
+            {{#each features.field_helpers.json}}
+                self.{{this}} = j.at("{{this}}")?;
+            {{/each}}
+            Ok(None)
+        }
+    {{/if}}
+
+    {{#each features.field_helpers.rw}}
+        fn {{this}}_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
+            use dlal_component_base::Body;
+            if let Ok(v) = body.arg(0) {
+                self.{{this}} = v;
+            }
+            Ok(Some(dlal_component_base::serde_json::json!(self.{{this}})))
+        }
+    {{/each}}
+
+    {{#each features.field_helpers.r}}
+        fn {{this}}_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
+            use dlal_component_base::Body;
+            Ok(Some(dlal_component_base::serde_json::json!(self.{{this}})))
+        }
+    {{/each}}
 }
 
 impl std::fmt::Debug for Component {
@@ -355,4 +389,28 @@ pub unsafe extern "C" fn run(component: *mut Component) {
         }
     }
     component.run();
+}
+
+macro_rules! field_helper_to_json {
+    ($self:expr, $extra:tt) => {
+        dlal_component_base::serde_json::json!({
+            {{#each features.field_helpers.all}}
+                "{{this}}": $self.{{this}},
+            {{/each}}
+            "_extra": $extra
+        })
+    }
+}
+
+macro_rules! field_helper_from_json {
+    ($self:expr, $body:expr) => {
+        {
+            use dlal_component_base::Body;
+            let j = $body.arg::<dlal_component_base::serde_json::Value>(0)?;
+            {{#each features.field_helpers.all}}
+                $self.{{this}} = j.at("{{this}}")?;
+            {{/each}}
+            j
+        }
+    }
 }

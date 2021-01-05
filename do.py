@@ -89,79 +89,79 @@ component!(
     [
         "run_size",
         "sample_rate",
-        //{"name": "join_info", "value": {}},
+        //{"name": "join_info"},
         //"audio",
         "uni",
         //"multi",
         //"check_audio",
-        //{"name": "connect_info", "value": {}},
-        //{"name": "disconnect_info", "value": {}},
+        //{"name": "connect_info"},
+        //{"name": "disconnect_info"},
+        //{"name": "field_helpers", "fields": ["value1"], "kinds": ["rw", "json"]},
     ],
     {
-        value: f32,
+        value1: f32,
+        value2: f32,
     },
     {
-        "value": {
-            "args": [{"name": "value", "optional": true}],
+        "value2": {
+            "args": [{"name": "value2", "optional": true}],
         },
     },
 );
 
 impl ComponentTrait for Component {
-    // optional
     fn init(&mut self) {
-        self.value = 1.0;
+        self.value1 = 1.0;
+        self.value2 = 2.0;
     }
 
-    // optional
     fn run(&mut self) {
     }
 
-    // optional
     fn midi(&mut self, msg: &[u8]) {
     }
 
-    // optional
     fn audio(&mut self) -> Option<&mut [f32]> {
         None
     }
 
-    // optional
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
-    // optional
     fn connect(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
-    // optional
     fn disconnect(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(None)
     }
 
-    // required
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "value": self.value,
+        Ok(Some(field_helper_to_json!(self, {
+            "value2": self.value2,
         })))
+        //Ok(Some(json!({
+        //    "value1": self.value1,
+        //    "value2": self.value2,
+        //})))
     }
 
-    // required
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j = body.arg::<serde_json::Value>(0)?;
-        self.value = j.at("value")?;
+        let j = field_helper_from_json!(self, body);
+        //let j = body.arg::<serde_json::Value>(0)?;
+        //self.value1 = j.at("value1")?;
+        self.value2 = j.at("value2")?;
         Ok(None)
     }
 }
 
 impl Component {
-    fn value_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+    fn value2_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         if let Ok(v) = body.arg(0) {
-            self.value = v;
+            self.value2 = v;
         }
-        Ok(Some(json!(self.value)))
+        Ok(Some(json!(self.value2)))
     }
 }
 '''

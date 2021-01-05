@@ -8,7 +8,7 @@ component!(
     {"in": ["audio"], "out": ["cmd", "midi"]},
     [
         "multi",
-        {"name": "join_info", "value": {"kwargs": ["run_size"]}},
+        {"name": "join_info", "kwargs": ["run_size"]},
     ],
     {
         cv: Vec<f32>,
@@ -116,6 +116,7 @@ impl Component {
         self.b = body.arg(0)?;
         Ok(Some(json!(self.b)))
     }
+
     fn last_error_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(Some(json!(self.last_error)))
     }
