@@ -60,54 +60,105 @@ def component_class(kind):
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
 
-def connect(*instructions):
+def connect(*args):
     '''\
     Terse connection function.
+    This function is best described as a set of rules that can be composed to create a concise structure.
 
-    Each instruction can be a component, list, or tuple.
-    Components or lists of components are fully connected from left to right.
-    Tuples of components are connected component-wise from left to right.
-    Components may be subsystems.
+    Arguments can be components or subsystems:
+    - `connect(a, b)` is equivalent to `a.connect(b)`
+        - if `a` is a subsystem, `a.connect_outputs(b)`
+        - if `b` is a subsystem, `b.connect_inputs(a)`
 
-    For example,
-    `connect(a, b, [c, d], [e, f], g)` connects
-    - `a` to `b`
-    - `b` to `c` and `d`
-    - `c` to `e` and `f`
-    - `d` to `e` and `f`
-    - `e` to `g`
-    - `f` to `g`
+    Arguments are connected left to right:
+    - `connect(*a)` is _like_ `for i, j in zip(a, a[1:]): connect(i, j)`
+        - equivalent to `connect(a[0]); for i, j in zip(a, a[1:]): connect(primary(i, 'o'), j)`
 
-    `connect((a, b), (c, d))` connects
-    - `a` to `c`
-    - `b` to `d`
+    `primary(a, x)` is equal to `a` for components and subsystems.
 
-    Lists and tuples may also contain special instruction strings (SISs).
-    Components that are listed in an instruction _before_ any SISs are "primary".
-    Primary components are fully connected from left to right.
+    Lists are fully connected; tuples are connected component-wise:
+    - `connect(*a, [*b], *c)` is _like_ `for i in b: connect(*a, i, *c)`
+        - equivalent to `connect(*a); connect(*c); for i in b: connect(primary(a[-1], 'o'), i, primary(c[0], 'i'))`
+    - `connect(*a, (*b,), (*c,), *d)` is _like_ `for i, j in zip(b, c): connect(a, i, j, d)`
+        - equivalent to `connect(*a); connect(*d); for i, j in zip(b, c): connect(primary(a[-1], 'o'), i, j, primary(d[0], 'i'))`
 
-    `'>'` connects the last primary component to the following component; components are connected left to right thereafter.
-    `'<'` connects the next component to the last primary component; components are connected right to left thereafter.
+    `primary([*a], x)` is equal to `[*primary(i, x) for i in a]`.
+    `primary((*a,), x)` is equal to `tuple(primary([*a], x))`.
 
-    For example,
+    Structure can be nested:
+    - `connect(*a, [*b, '+>', *c], *d)` is equivalent to:
+        - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
+        - `connect(*c)` nested structure
+        - `connect(*a, b, *d)` like a list (works with tuples as well)
+    - `connect(*a, [*b, '<+', *c], *d)` is equivalent to:
+        - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
+        - `connect(*c[::-1])` nested structure
+        - `connect(*a, b, *d)` like a list (works with tuples as well)
+    - `connect(*a, [*b, '>', *c], *d)` is equivalent to:
+        - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
+        - `connect(*c)` nested structure
+        - `connect(*a, b, [], *d)` like a list with a break on right (works with tuples as well)
+    - `connect(*a, [*b, '<', *c], *d)` is equivalent to:
+        - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
+        - `connect(*c[::-1])` nested structure
+        - `connect(*a, [], b, *d)` like a list with a break on left (works with tuples as well)
+
+    Multiple arrows can be used:
+    - `connect(*a, [*b, arrow1, *c, arrow2, *d], *e)` is _like_ `connect(*a, [*b, arrow1, *c], *e); connect(*a, [*b, arrow2, *d], *e)`
+        - equivalent to:
+            - `connect(a, [*b, arrow1, *c], e)`
+            - `connect([primary(b, 'o')[-1], arrow2, *d])`
+
+    `primary([*a, '>', *b], 'o')` is equal to `[]`.
+    `primary((*a, '<', *b), 'i')` is equal to `[]`.
+    `primary([*a, arrow, *b], x)` is equal to `primary([*a], x)`.
+    `primary((*a, arrow, *b), x)` is equal to `primary((*a,), x)`.
+
+    For example:
     ```
     connect(
-        [a,
-            '>', b, c,
-            '>', d,
+        a,
+        [
+            b,
+            [c, '>', d],
         ],
-        [e, f,
-            '<', c,
-            '<', d,
-        ],
+        [e, '<+', d],
+        f,
     )
     ```
-    connects
-    - `a` to `b` and `b` to `c`
-    - `a` to `d`
-    - `a` to `e` and `f`
-    - `c` to `f`
-    - `d` to `f`
+    is equivalent to
+    ```
+    connect(primary(               a), [b, [c, '>', d]])
+    connect(primary([b, [c, '>', d]]), [e, '<+', d]    )
+    connect(primary(    [e, '<+', d]), f               )
+    ```
+    is equivalent to
+    ```
+    connect(a, b)
+    connect(a, [c, '>', d])
+
+    connect([e, '<+', d])
+    connect(b, e)
+    - `connect(*a, [*b], *c)` is _like_ `for i in b: connect(*a, i, *c)`
+        - equivalent to `connect(*a); connect(*c); for i in b: connect(primary(a[-1], 'o'), i, primary(c[0], 'i'))`
+
+    connect(e, f)
+    ```
+    is equivalent to
+    ```
+    connect(a, b)
+    connect(c, d); connect(a, c)
+
+    connect(d, e)
+    connect(b, e)
+
+    connect(e, f)
+    ```
+    which looks like
+    ```
+    a -+-> b ------+-> e -> f
+       +-> c -> d -+
+    ```
     '''
 
     def connect_agnostic(a, b):
@@ -127,49 +178,71 @@ def connect(*instructions):
         else:
             raise Exception(f'not sure how to connect {a}')
 
-    instr_prev = None
-    for instr in instructions:
-        # normalize instruction type
-        if not _iterable(instr): instr = [instr]
-        # special instructions
+    def primary(arg, x=None):
+        if type(arg) == list:
+            result = []
+            for i in arg:
+                if type(i) == str:
+                    if (i, x) == ('>', 'o'): return []
+                    if (i, x) == ('<', 'i'): return []
+                    break
+                result.extend(primary(i, x))
+            return result
+        elif type(arg) == tuple:
+            return tuple(primary(list(arg), x))
+        else:
+            return [arg]
+
+    def connect_arrow(last_primary, stack, arrow):
+        if '>' in arrow:
+            connect(primary(last_primary, 'o'), *stack)
+        else:
+            connect(*stack[::-1], primary(last_primary, 'i'))
+
+    if len(args) == 0:
+        return
+    elif len(args) == 1:
+        arg = args[0]
+        if not _iterable(arg): return
+        prev = None
         last_primary = None
-        i = 0
-        while i < len(instr):
-            if instr[i] == '>':
-                i += 1
-                connect_agnostic(last_primary, instr[i])
-                i += 1
-                while i < len(instr) and type(instr[i]) != str:
-                    connect_agnostic(instr[i-1], instr[i])
-                    i += 1
-            elif instr[i] == '<':
-                i += 1
-                connect_agnostic(instr[i], last_primary)
-                i += 1
-                while i < len(instr) and type(instr[i]) != str:
-                    connect_agnostic(instr[i], instr[i-1])
-                    i += 1
+        arrow = None
+        stack = []
+        for i in arg:
+            if type(i) == str:
+                if last_primary == None:
+                    last_primary = prev
+                    connect(last_primary)
+                else:
+                    connect_arrow(last_primary, stack, arrow)
+                    stack = []
+                arrow = i
+            elif last_primary != None:
+                stack.append(i)
+            prev = i
+        if arrow:
+            connect_arrow(last_primary, stack, arrow)
+        for i in arg:
+            if type(i) == str: break
+            connect(i)
+    elif len(args) == 2:
+        src, dst = args
+        if not _iterable(src) and not _iterable(dst):
+            connect_agnostic(src, dst)
+        else:
+            if type(src) == tuple and type(dst) == tuple:
+                for i, j in zip(primary(src, 'o'), primary(dst, 'i')):
+                    connect(i, j)
             else:
-                last_primary = instr[i]
-                i += 1
-        # primary component connections
-        if instr_prev:
-            if type(instr_prev) == tuple and type(instr) == tuple:
-                # connect primary components in previous instruction component-wise
-                # to primary components in current instruction
-                for src, dst in zip(instr_prev, instr):
-                    if type(src) == str or type(dst) == str: break
-                    connect_agnostic(src, dst)
-            else:
-                # connect all primary components in previous instruction
-                # to all primary components in current instruction
-                for src in instr_prev:
-                    if type(src) == str: break
-                    for dst in instr:
-                        if type(dst) == str: break
-                        connect_agnostic(src, dst)
-        # prep for next
-        instr_prev = instr
+                for i in primary(src, 'o'):
+                    for j in primary(dst, 'i'):
+                        connect(i, j)
+            connect(src)
+            connect(dst)
+    else:
+        connect(args[0])
+        for i, j in zip(args, args[1:]):
+            connect(primary(i, 'o'), j)
 
 def typical_setup():
     import atexit

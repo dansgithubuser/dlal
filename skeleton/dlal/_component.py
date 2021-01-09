@@ -137,7 +137,10 @@ class Component:
         return py_only + result
 
     def connect(self, other, toggle=False):
-        log('debug', f'connect {self.name} {other.name}')
+        if os.environ.get('DLAL_SNOOP_CONNECT'):
+            print(f'connect {self.name} {other.name}')
+        else:
+            log('debug', f'connect {self.name} {other.name}')
         if toggle and other.name in Component._connections.get(self.name, []):
             result = self.command('disconnect', other._view())
             Component._connections[self.name].remove(other.name)

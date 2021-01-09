@@ -18,7 +18,7 @@ tape = dlal.Tape(1 << 17)
 dlal.connect(
     midi,
     train,
-    [buf, '<', iir],
+    [buf, '<+', iir],
     [audio, tape],
 )
 
