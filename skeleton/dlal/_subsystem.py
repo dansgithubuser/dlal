@@ -1,4 +1,7 @@
-from ._skeleton import connect as _connect, driver_set as _driver_set, UseComm as _UseComm
+from ._skeleton import component_class as _component_class
+from ._skeleton import connect as _connect
+from ._skeleton import driver_set as _driver_set
+from ._skeleton import UseComm as _UseComm
 
 import midi
 
@@ -42,10 +45,9 @@ class Subsystem:
         return self.name
 
     def add(self, name, kind=None, args=[], kwargs={}):
-        from ._skeleton import component_class
         if kind == None:
             kind = name
-        component = component_class(kind)(
+        component = _component_class(kind)(
             *args,
             **kwargs,
             name=self.name + '.' + kwargs.get('name', name),
@@ -246,3 +248,33 @@ class Portamento(Subsystem):
     def connect_outputs(self, other):
         other.midi(midi.Msg.pitch_bend_range(64))
         Subsystem.connect_outputs(self, other)
+
+class Voices(Subsystem):
+    def init(self, name, spec, n=7, cents=0.1, vol=0.25, randomize_phase=None):
+        Subsystem.init(
+            self,
+            name,
+            dict(
+                midi='midi',
+                **{f'voice{i}': spec for i in range(n)},
+                gain=('gain', [vol/n]),
+                buf='buf',
+            ),
+            ['midi'],
+            ['buf'],
+        )
+        _connect(
+            self.components['midi'],
+            [self.components[f'voice{i}'] for i in range(n)],
+            [self.components['buf'],
+                '<+', self.components['gain'],
+            ],
+        )
+        if n == 1: return
+        for i in range(n):
+            synth = self.components[f'voice{i}']
+            if randomize_phase: randomize_phase(synth)
+            bend = 0x2000 + int(0x500 * cents * (2*i/(n-1) - 1))
+            l = bend & 0x7f
+            h = bend >> 7
+            synth.midi([0xe1, l, h])
