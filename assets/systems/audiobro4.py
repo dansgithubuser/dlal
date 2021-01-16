@@ -7,24 +7,43 @@ def sys_arg(i):
     if len(sys.argv) > i:
         return sys.argv[i]
 
-def violin(name, n=7):
-    return dlal.subsystem.Voices(
-        name,
-        ('osc', ['saw']),
-        n=n,
-        vol=0.2,
-        randomize_phase=lambda osc: osc.phase(random.random()),
-    )
+class Violin(dlal.subsystem.Voices):
+    def init(self, name):
+        dlal.subsystem.Voices.init(
+            self,
+            name,
+            ('osc', ['saw'], {'stay_on': True}),
+            vol=0.5,
+            randomize_phase=lambda osc: osc.phase(random.random()),
+        )
+        dlal.subsystem.Subsystem.init(
+            self,
+            None,
+            {'adsr': ('adsr', [3e-5, 6e-6, 0.5, 3e-5])},
+        )
+        dlal.connect(
+            self.midi,
+            self.adsr,
+            self.buf,
+        )
+        components = self.components
+        self.components = {
+            k: v for
+            k, v in components.items()
+            if k not in ['adsr', 'buf']
+        }
+        self.components['adsr'] = components['adsr']
+        self.components['buf'] = components['buf']
 
 #===== init =====#
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
 
-violin1 = violin('violin1', n=3)
-violin2 = violin('violin2', n=3)
-violin3 = violin('violin3', n=3)
-cello = violin('cello', n=3)
-bass = violin('bass', n=3)
+violin1 = Violin('violin1')
+violin2 = Violin('violin2')
+violin3 = Violin('violin3')
+cello = Violin('cello')
+bass = Violin('bass')
 harp1 = dlal.Sonic('harp', name='harp1')
 harp2 = dlal.Sonic('harp', name='harp2')
 

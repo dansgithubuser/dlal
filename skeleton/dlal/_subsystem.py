@@ -44,6 +44,11 @@ class Subsystem:
     def __repr__(self):
         return self.name
 
+    def __getattr__(self, attr):
+        if attr not in self.components:
+            raise AttributeError(f"'{self.name}' has attribute or component '{attr}'")
+        return self.components[attr]
+
     def add(self, name, kind=None, args=[], kwargs={}):
         if kind == None:
             kind = name
@@ -250,7 +255,7 @@ class Portamento(Subsystem):
         Subsystem.connect_outputs(self, other)
 
 class Voices(Subsystem):
-    def init(self, name, spec, n=7, cents=0.1, vol=0.25, randomize_phase=None):
+    def init(self, name, spec, n=3, cents=0.1, vol=0.25, randomize_phase=None):
         Subsystem.init(
             self,
             name,
