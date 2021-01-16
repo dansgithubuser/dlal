@@ -50,7 +50,8 @@ harp2 = dlal.Sonic('harp', name='harp2')
 liner = dlal.Liner()
 lpf1 = dlal.Lpf(freq=200)
 lpf2 = dlal.Lpf(freq=800)
-reverb = dlal.Reverb(0.1)
+delay = dlal.Delay(10000, gain_y=0.5)
+reverb = dlal.Reverb(0.4)
 lim = dlal.Lim(1, 0.5, 0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -75,6 +76,7 @@ dlal.connect(
     [buf,
         '<+', lpf1,
         '<+', lpf2,
+        '<+', delay,
         '<+', reverb,
         '<+', lim,
     ],
