@@ -9,6 +9,9 @@ struct Note {
     index: f32,
     step: f32,
     y: f32,
+    lowness: f32,
+    feedback: f32,
+    freq: f32,
 }
 
 impl Note {
@@ -19,13 +22,16 @@ impl Note {
             release: freq / sample_rate as f32,
             delay: (0..delay_len).map(|_| 0.0).collect(),
             step: delay_len as f32 / size,
+            freq,
             ..Default::default()
         }
     }
 
-    fn on(&mut self, vol: f32) {
+    fn on(&mut self, vol: f32, lowness: f32, feedback: f32) {
         self.on = true;
         self.excitement = vol;
+        self.lowness = lowness.powf(self.freq / 440.0); // high freq, low lowness
+        self.feedback = feedback.powf(440.0 / self.freq); // high freq, high feedback
     }
 
     fn off(&mut self) {
@@ -37,12 +43,11 @@ impl Note {
         self.y = 0.0;
     }
 
-    fn advance(&mut self, lowness: f32, feedback: f32) -> f32 {
+    fn advance(&mut self) -> f32 {
         // delay output
-
         let delay_out = self.delay[(self.index as usize + 1) % self.delay.len()];
         // lpf update and output
-        self.y = lowness * self.y + (1.0 - lowness) * delay_out;
+        self.y = self.lowness * self.y + (1.0 - self.lowness) * delay_out;
         // final output
         let out = self.y + self.excitement;
         // update excitement
@@ -52,7 +57,7 @@ impl Note {
             self.excitement = 0.0;
         }
         // update delay
-        self.delay[self.index as usize] = out * feedback;
+        self.delay[self.index as usize] = out * self.feedback;
         self.index += self.step;
         if self.index as usize >= self.delay.len() {
             self.index -= self.delay.len() as f32;
@@ -82,6 +87,7 @@ component!(
                 {
                     "name": "lowness",
                     "optional": true,
+                    "default": 0.5,
                     "desc": "lowness of low pass filter applied to excitation",
                 },
             ],
@@ -91,6 +97,7 @@ component!(
                 {
                     "name": "feedback",
                     "optional": true,
+                    "default": 0.98,
                     "desc": "amount of feedback applied to excitation",
                 },
             ],
@@ -126,7 +133,7 @@ impl ComponentTrait for Component {
                 continue;
             }
             for i in audio.iter_mut() {
-                *i += note.advance(self.lowness, self.feedback);
+                *i += note.advance();
             }
         }
     }
@@ -143,7 +150,7 @@ impl ComponentTrait for Component {
                 if msg[2] == 0 {
                     self.notes[msg[1] as usize].off();
                 } else {
-                    self.notes[msg[1] as usize].on(msg[2] as f32 / 127.0);
+                    self.notes[msg[1] as usize].on(msg[2] as f32 / 127.0, self.lowness, self.feedback);
                 }
             }
             _ => {}
