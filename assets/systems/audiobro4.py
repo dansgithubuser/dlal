@@ -19,40 +19,66 @@ class Violin(dlal.subsystem.Voices):
         dlal.subsystem.Subsystem.init(
             self,
             None,
-            {'adsr': ('adsr', [3e-5, 6e-6, 0.5, 3e-5])},
+            {
+                'adsr': ('adsr', [3e-5, 6e-6, 0.5, 3e-5]),
+                'lim': ('lim', [0.25, 0.2]),
+            },
         )
         dlal.connect(
             self.midi,
             self.adsr,
-            self.buf,
+            [self.buf, '<+', self.lim],
         )
         components = self.components
         self.components = {
             k: v for
             k, v in components.items()
-            if k not in ['adsr', 'buf']
+            if k not in ['adsr', 'lim', 'buf']
         }
         self.components['adsr'] = components['adsr']
+        self.components['lim'] = components['lim']
         self.components['buf'] = components['buf']
+
+class Harp(dlal.subsystem.Subsystem):
+    def init(self, name):
+        dlal.subsystem.Subsystem.init(
+            self,
+            name,
+            {
+                'mgain': ('mgain', [0.3]),
+                'digitar': ('digitar', [0.3, 0.9999]),
+                'lim': ('lim', [0.25, 0.2]),
+                'buf': 'buf',
+            },
+            ['mgain'],
+            ['buf'],
+        )
+        dlal.connect(
+            self.mgain,
+            self.digitar,
+            [self.buf, '<+', self.lim],
+        )
 
 #===== init =====#
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
+liner = dlal.Liner()
 
 violin1 = Violin('violin1')
 violin2 = Violin('violin2')
 violin3 = Violin('violin3')
 cello = Violin('cello')
 bass = Violin('bass')
-harp1 = dlal.Digitar(lowness=0.2, name='harp1'); harp1_mgain = dlal.Mgain(0.5)
-harp2 = dlal.Digitar(lowness=0.2, name='harp2'); harp2_mgain = dlal.Mgain(0.5)
+harp1 = Harp('harp1')
+harp2 = Harp('harp2')
 
-liner = dlal.Liner()
 lpf1 = dlal.Lpf(freq=200)
+bow_buf = dlal.Buf(name='bow_buf')
+
 lpf2 = dlal.Lpf(freq=800)
-delay = dlal.Delay(10000, gain_y=0.2)
+delay = dlal.Delay(10000, gain_y=0.1)
 reverb = dlal.Reverb(0.4)
-lim = dlal.Lim(1, 0.5, 0.3)
+lim = dlal.Lim(1, 0.9, 0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
 
@@ -70,13 +96,13 @@ dlal.connect(
         violin3,
         cello,
         bass,
-        [harp1_mgain, '>', harp1],
-        [harp2_mgain, '>', harp2],
+        [harp1, '>', buf],
+        [harp2, '>', buf],
+    ],
+    [bow_buf,
+        '<+', lpf1,
     ],
     [buf,
-        '<+', harp1,
-        '<+', harp2,
-        '<+', lpf1,
         '<+', lpf2,
         '<+', delay,
         '<+', reverb,

@@ -18,18 +18,21 @@ component!(
             "args": [{
                 "name": "soft",
                 "optional": true,
+                "default": 1.0,
             }],
         },
         "soft_gain": {
             "args": [{
                 "name": "soft_gain",
                 "optional": true,
+                "default": 0.5,
             }],
         },
         "hard": {
             "args": [{
                 "name": "hard",
                 "optional": true,
+                "default": 1.0,
             }],
         },
     },
@@ -37,9 +40,9 @@ component!(
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.soft = 0.4;
+        self.soft = 1.0;
         self.soft_gain = 0.5;
-        self.hard = 0.5;
+        self.hard = 1.0;
     }
 
     fn run(&mut self) {
