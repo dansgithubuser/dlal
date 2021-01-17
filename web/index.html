@@ -158,6 +158,9 @@ async function componentContext(name) {
         updateDiagram();
       }, name);
       break;
+    case 'digitar':
+      await contextOptionPage('webboard', 'webboard.html');
+      break;
     case 'iir':
       await contextOptionPage('pole&#8209;zero', 'iir-pole-zero.html');
       break;
@@ -167,12 +170,18 @@ async function componentContext(name) {
     case 'midi':
       await contextOptionPage('webboard', 'webboard.html');
       break;
+    case 'osc':
+      await contextOptionPage('webboard', 'webboard.html');
+      break;
     case 'sonic':
       await contextOptionPage('sonic', 'sonic.html');
       await contextOptionPage('webboard', 'webboard.html');
       break;
     case 'tape':
       contextOption(dropdown, 'play', play, name);
+      break;
+    case 'train':
+      await contextOptionPage('webboard', 'webboard.html');
       break;
     default:
       space = false;
