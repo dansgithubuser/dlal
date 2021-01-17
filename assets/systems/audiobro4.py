@@ -44,13 +44,13 @@ violin2 = Violin('violin2')
 violin3 = Violin('violin3')
 cello = Violin('cello')
 bass = Violin('bass')
-harp1 = dlal.Sonic('harp', name='harp1')
-harp2 = dlal.Sonic('harp', name='harp2')
+harp1 = dlal.Digitar(lowness=0.2, name='harp1'); harp1_mgain = dlal.Mgain(0.5)
+harp2 = dlal.Digitar(lowness=0.2, name='harp2'); harp2_mgain = dlal.Mgain(0.5)
 
 liner = dlal.Liner()
 lpf1 = dlal.Lpf(freq=200)
 lpf2 = dlal.Lpf(freq=800)
-delay = dlal.Delay(10000, gain_y=0.5)
+delay = dlal.Delay(10000, gain_y=0.2)
 reverb = dlal.Reverb(0.4)
 lim = dlal.Lim(1, 0.5, 0.3)
 buf = dlal.Buf()
@@ -70,10 +70,12 @@ dlal.connect(
         violin3,
         cello,
         bass,
-        harp1,
-        harp2,
+        [harp1_mgain, '>', harp1],
+        [harp2_mgain, '>', harp2],
     ],
     [buf,
+        '<+', harp1,
+        '<+', harp2,
         '<+', lpf1,
         '<+', lpf2,
         '<+', delay,
