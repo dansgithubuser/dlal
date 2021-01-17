@@ -6,16 +6,19 @@ struct Note {
     excitement: f32,
     release: f32,
     delay: Vec<f32>,
-    index: usize,
+    index: f32,
+    step: f32,
     y: f32,
 }
 
 impl Note {
     fn new(freq: f32, sample_rate: u32) -> Self {
-        let size = (sample_rate as f32 / freq) as usize;
+        let size = sample_rate as f32 / freq;
+        let delay_len = size as usize;
         Self {
             release: freq / sample_rate as f32,
-            delay: (0..size).map(|_| 0.0).collect(),
+            delay: (0..delay_len).map(|_| 0.0).collect(),
+            step: delay_len as f32 / size,
             ..Default::default()
         }
     }
@@ -30,13 +33,14 @@ impl Note {
         for i in self.delay.iter_mut() {
             *i = 0.0;
         }
-        self.index = 0;
+        self.index = 0.0;
         self.y = 0.0;
     }
 
     fn advance(&mut self, lowness: f32, feedback: f32) -> f32 {
         // delay output
-        let delay_out = self.delay[(self.index + 1) % self.delay.len()];
+
+        let delay_out = self.delay[(self.index as usize + 1) % self.delay.len()];
         // lpf update and output
         self.y = lowness * self.y + (1.0 - lowness) * delay_out;
         // final output
@@ -48,9 +52,11 @@ impl Note {
             self.excitement = 0.0;
         }
         // update delay
-        self.delay[self.index] = out * feedback;
-        self.index += 1;
-        self.index %= self.delay.len();
+        self.delay[self.index as usize] = out * feedback;
+        self.index += self.step;
+        if self.index as usize >= self.delay.len() {
+            self.index -= self.delay.len() as f32;
+        }
         // return final output
         out
     }
