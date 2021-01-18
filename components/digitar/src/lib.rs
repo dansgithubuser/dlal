@@ -3,12 +3,9 @@ use dlal_component_base::{component, serde_json, CmdResult};
 #[derive(Default)]
 struct Note {
     on: bool,
-    excitement: f32,
-    release: f32,
-    delay: Vec<f32>,
+    wavetable: Vec<f32>,
     index: f32,
     step: f32,
-    y: f32,
     lowness: f32,
     feedback: f32,
     freq: f32,
@@ -16,12 +13,11 @@ struct Note {
 
 impl Note {
     fn new(freq: f32, sample_rate: u32) -> Self {
-        let size = sample_rate as f32 / freq;
-        let delay_len = size as usize;
+        let period = sample_rate as f32 / freq;
+        let size = period as usize + 1;
         Self {
-            release: freq / sample_rate as f32,
-            delay: (0..delay_len).map(|_| 0.0).collect(),
-            step: delay_len as f32 / size,
+            wavetable: vec![0.0; size],
+            step: size as f32 / period,
             freq,
             ..Default::default()
         }
@@ -29,41 +25,47 @@ impl Note {
 
     fn on(&mut self, vol: f32, lowness: f32, feedback: f32) {
         self.on = true;
-        self.excitement = vol;
+        let size = self.wavetable.len();
+        for i in 0..size {
+            self.wavetable[i] = vol * (2 * i) as f32 / size as f32;
+            if i > size / 2 {
+                self.wavetable[i] -= 2.0 * vol;
+            }
+        }
+        self.index = 0.0;
         self.lowness = lowness.powf(self.freq / 440.0); // high freq, low lowness
         self.feedback = feedback.powf(440.0 / self.freq); // high freq, high feedback
     }
 
     fn off(&mut self) {
         self.on = false;
-        for i in self.delay.iter_mut() {
-            *i = 0.0;
-        }
-        self.index = 0.0;
-        self.y = 0.0;
     }
 
     fn advance(&mut self) -> f32 {
-        // delay output
-        let delay_out = self.delay[(self.index as usize + 1) % self.delay.len()];
-        // lpf update and output
-        self.y = self.lowness * self.y + (1.0 - self.lowness) * delay_out;
-        // final output
-        let out = self.y + self.excitement;
-        // update excitement
-        if self.excitement > self.release {
-            self.excitement -= self.release;
-        } else {
-            self.excitement = 0.0;
-        }
-        // update delay
-        self.delay[self.index as usize] = out * self.feedback;
+        let index = self.index as usize;
+        let size = self.wavetable.len();
+        // sample wavetable
+        let sample = {
+            let a = self.wavetable[(index + 0) % size];
+            let b = self.wavetable[(index + 1) % size];
+            let t = self.index - index as f32;
+            (1.0 - t) * a + t * b
+        };
+        // update index and wavetable
         self.index += self.step;
-        if self.index as usize >= self.delay.len() {
-            self.index -= self.delay.len() as f32;
+        let next = self.index as usize;
+        for i in index..next {
+            let b = self.wavetable[(i + size - 1) % size];
+            let f = self.wavetable[(i + size + 1) % size];
+            let i = i % size;
+            self.wavetable[i] = (1.0 - self.lowness) * self.wavetable[i] + self.lowness * (b + f) / 2.0;
+            self.wavetable[i] *= self.feedback;
         }
-        // return final output
-        out
+        if next >= size {
+            self.index -= size as f32;
+        }
+        // return sample
+        sample
     }
 }
 

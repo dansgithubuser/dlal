@@ -45,7 +45,7 @@ class Harp(dlal.subsystem.Subsystem):
             self,
             name,
             {
-                'mgain': ('mgain', [0.3]),
+                'mgain': ('mgain', [0.15]),
                 'digitar': ('digitar', [0.3, 0.9999]),
                 'lim': ('lim', [0.25, 0.2]),
                 'buf': 'buf',
