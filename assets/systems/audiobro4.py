@@ -8,7 +8,7 @@ def sys_arg(i):
         return sys.argv[i]
 
 class Violin(dlal.subsystem.Voices):
-    def init(self, name):
+    def init(self, name, vol=0):
         dlal.subsystem.Voices.init(
             self,
             name,
@@ -20,7 +20,7 @@ class Violin(dlal.subsystem.Voices):
             self,
             None,
             {
-                'adsr': ('adsr', [3e-5, 6e-6, 0.5, 3e-5]),
+                'adsr': ('adsr', [3e-5, 1e-5, 0.5, 5e-5]),
                 'lim': ('lim', [0.25, 0.2]),
             },
         )
@@ -45,7 +45,7 @@ class Harp(dlal.subsystem.Subsystem):
             self,
             name,
             {
-                'mgain': ('mgain', [0.1]),
+                'mgain': ('mgain', [0.05]),
                 'digitar': ('digitar', [0.3, 0.998]),
                 'lim': ('lim', [0.25, 0.2]),
                 'buf': 'buf',
@@ -77,8 +77,9 @@ lpf1 = dlal.Lpf(freq=200)
 bow_buf = dlal.Buf(name='bow_buf')
 
 lpf2 = dlal.Lpf(freq=800)
-delay = dlal.Delay(10000, gain_y=0.1)
-reverb = dlal.Reverb(0.4)
+delay1 = dlal.Delay(15000, gain_y=0.4)
+delay2 = dlal.Delay(21000, gain_y=0.2)
+reverb = dlal.Reverb(0.8)
 lim = dlal.Lim(1, 0.9, 0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -105,7 +106,8 @@ dlal.connect(
     ],
     [buf,
         '<+', lpf2,
-        '<+', delay,
+        '<+', delay1,
+        '<+', delay2,
         '<+', reverb,
         '<+', lim,
     ],
