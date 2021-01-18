@@ -45,8 +45,8 @@ class Harp(dlal.subsystem.Subsystem):
             self,
             name,
             {
-                'mgain': ('mgain', [0.15]),
-                'digitar': ('digitar', [0.3, 0.9999]),
+                'mgain': ('mgain', [0.1]),
+                'digitar': ('digitar', [0.3, 0.998]),
                 'lim': ('lim', [0.25, 0.2]),
                 'buf': 'buf',
             },
@@ -58,6 +58,7 @@ class Harp(dlal.subsystem.Subsystem):
             self.digitar,
             [self.buf, '<+', self.lim],
         )
+        self.digitar.stay_on(True)
 
 #===== init =====#
 audio = dlal.Audio(driver=True)

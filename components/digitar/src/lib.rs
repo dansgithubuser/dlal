@@ -9,6 +9,7 @@ struct Note {
     lowness: f32,
     feedback: f32,
     freq: f32,
+    sum: f32,
 }
 
 impl Note {
@@ -60,8 +61,13 @@ impl Note {
             let i = i % size;
             self.wavetable[i] = (1.0 - self.lowness) * self.wavetable[i] + self.lowness * (b + f) / 2.0;
             self.wavetable[i] *= self.feedback;
+            self.sum += self.wavetable[i].abs();
         }
         if next >= size {
+            if self.sum < 0.0001 {
+                self.on = false;
+            }
+            self.sum = 0.0;
             self.index -= size as f32;
         }
         // return sample
@@ -76,11 +82,16 @@ component!(
         "sample_rate",
         "uni",
         "check_audio",
-        {"name": "field_helpers", "fields": ["lowness", "feedback"], "kinds": ["rw", "json"]},
+        {
+            "name": "field_helpers",
+            "fields": ["lowness", "feedback", "stay_on"],
+            "kinds": ["rw", "json"]
+        },
     ],
     {
         lowness: f32,
         feedback: f32,
+        stay_on: bool,
         notes: Vec<Note>,
     },
     {
@@ -146,9 +157,15 @@ impl ComponentTrait for Component {
         }
         match msg[0] & 0xf0 {
             0x80 => {
+                if self.stay_on {
+                    return;
+                }
                 self.notes[msg[1] as usize].off();
             }
             0x90 => {
+                if msg[2] == 0 && self.stay_on {
+                    return;
+                }
                 if msg[2] == 0 {
                     self.notes[msg[1] as usize].off();
                 } else {
