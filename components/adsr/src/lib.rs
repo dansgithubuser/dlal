@@ -102,7 +102,7 @@ impl ComponentTrait for Component {
                     }
                 }
             }
-            *i += self.vol;
+            *i *= self.vol;
         }
     }
 

@@ -41,6 +41,7 @@ component!(
         "stop": {},
         "run": {},
         "run_explain": {},
+        "addee_order": {},
     },
 );
 
@@ -208,5 +209,15 @@ impl Component {
         }
         self.run_addees_explain();
         Ok(None)
+    }
+
+    fn addee_order_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let mut result = Vec::<String>::new();
+        for slot in self.addees.iter().rev() {
+            for i in slot {
+                result.push(i.name());
+            }
+        }
+        Ok(Some(json!(result)))
     }
 }

@@ -53,6 +53,7 @@ component!(
         "uni",
         "check_audio",
         {"name": "field_helpers", "fields": ["bend", "phase"], "kinds": ["rw"]},
+        {"name": "field_helpers", "fields": ["stay_on"], "kinds": ["rw", "json"]},
     ],
     {
         wave_str: String,
@@ -63,6 +64,7 @@ component!(
         vol: f32,
         rpn: u16,              //registered parameter number
         pitch_bend_range: f32, //MIDI RPN 0x0000
+        stay_on: bool,
     },
     {
         "freq": {
@@ -121,9 +123,15 @@ impl ComponentTrait for Component {
         }
         match msg[0] & 0xf0 {
             0x80 => {
+                if self.stay_on {
+                    return;
+                }
                 self.vol = 0.0;
             }
             0x90 => {
+                if msg[2] == 0 && self.stay_on {
+                    return;
+                }
                 self.step =
                     440.0 * 2.0_f32.powf((msg[1] as f32 - 69.0) / 12.0) / self.sample_rate as f32;
                 self.vol = msg[2] as f32 / 127.0;
@@ -167,13 +175,13 @@ impl ComponentTrait for Component {
     }
 
     fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
+        Ok(Some(field_helper_to_json!(self, {
             "wave": self.wave.name,
         })))
     }
 
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j = body.arg::<serde_json::Value>(0)?;
+        let j = field_helper_from_json!(self, body);
         self.wave_set(&j.at::<String>("wave")?)?;
         Ok(None)
     }
