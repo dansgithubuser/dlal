@@ -279,7 +279,7 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(4200, 2, grid_w),
+            dpc.transforms.Grid(4200, 10, grid_w),
             (dpc.transforms.Default('wby'), 3),
         ),
         primitive=dpc.primitives.Line(),
