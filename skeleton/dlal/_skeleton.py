@@ -60,7 +60,7 @@ def component_class(kind):
     exec(f'from . import {class_name} as result', globals(), locals)
     return locals['result']
 
-def connect(*args):
+def connect(*args, _dis=False):
     '''\
     Terse connection function.
     This function is best described as a set of rules that can be composed to create a concise structure.
@@ -163,20 +163,38 @@ def connect(*args):
 
     def connect_agnostic(a, b):
         from ._subsystem import Subsystem
+        if not isinstance(a, _Component) and not isinstance(a, Subsystem):
+            if not _dis:
+                raise Exception(f'not sure how to connect {a}')
+            else:
+                raise Exception(f'not sure how to disconnect {a}')
+        if not isinstance(b, _Component) and not isinstance(b, Subsystem):
+            if not _dis:
+                raise Exception(f'not sure how to connect to {b}')
+            else:
+                raise Exception(f'not sure how to disconnect from {b}')
         if isinstance(a, _Component):
             if isinstance(b, _Component):
-                a.connect(b)
+                if not _dis:
+                    a.connect(b)
+                else:
+                    a.disconnect(b)
             elif isinstance(b, Subsystem):
-                b.connect_inputs(a)
-            else:
-                raise Exception(f'not sure how to connect to {b}')
+                if not _dis:
+                    b.connect_inputs(a)
+                else:
+                    b.disconnect_inputs(a)
         elif isinstance(a, Subsystem):
             if isinstance(b, _Component):
-                a.connect_outputs(b)
-            else:
-                raise Exception('not sure how to connect subsystem to {b}')
-        else:
-            raise Exception(f'not sure how to connect {a}')
+                if not _dis:
+                    a.connect_outputs(b)
+                else:
+                    a.disconnect_outputs(b)
+            elif isinstance(b, Subsystem):
+                if not _dis:
+                    connect(a.outputs, b.inputs)
+                else:
+                    connect(a.outputs, b.inputs, _dis=True)
 
     def primary(arg, x=None):
         if type(arg) == list:
@@ -243,6 +261,11 @@ def connect(*args):
         connect(args[0])
         for i, j in zip(args, args[1:]):
             connect(primary(i, 'o'), j)
+
+def disconnect(*args):
+    '''Terse disconnection function. Like `connect` but disconnects.
+    Useful for agnostic disconnection more than for disconnecting complex structures.'''
+    connect(*args, _dis=True)
 
 def typical_setup():
     import atexit

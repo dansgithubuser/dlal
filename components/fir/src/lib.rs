@@ -9,9 +9,24 @@ component!(
         ir: Vec<f32>,
         state: Vec<f32>,
         index: usize,
+        smooth: f32,
+        ir_dst: Vec<f32>,
     },
     {
-        "ir": {"args": ["ir"]},
+        "ir": {
+            "args": [
+                {
+                    "name": "ir",
+                    "type": "array",
+                    "element": "float",
+                },
+                {
+                    "name": "smooth",
+                    "default": 0,
+                    "range": "[0, 1]",
+                },
+            ],
+        },
         "bandpass": {
             "args": [
                 {
@@ -35,6 +50,20 @@ component!(
                 },
             ],
         },
+        "gain": {
+            "args": [
+                {
+                    "name": "factor",
+                    "default": 1,
+                    "range": "[0, inf)",
+                },
+                {
+                    "name": "smooth",
+                    "default": 0,
+                    "range": "[0, 1]",
+                },
+            ],
+        },
     },
 );
 
@@ -55,6 +84,11 @@ impl ComponentTrait for Component {
         if self.ir.is_empty() {
             return;
         }
+        if self.smooth != 0.0 {
+            for i in 0..self.ir.len() {
+                self.ir[i] = self.ir[i] * self.smooth + self.ir_dst[i] * (1.0 - self.smooth);
+            }
+        }
         if let Some(output) = &self.output {
             for i in output.audio(self.run_size).unwrap() {
                 self.state[self.index] = *i;
@@ -70,16 +104,33 @@ impl ComponentTrait for Component {
 }
 
 impl Component {
-    fn set_ir(&mut self, ir: Vec<f32>) {
-        self.ir = ir;
+    fn sync_state(&mut self) {
         self.state.resize(self.ir.len(), 0.0);
         if self.index > self.state.len() {
             self.index = 0;
         }
     }
 
+    fn set_ir(&mut self, ir: Vec<f32>) {
+        self.ir = ir;
+        self.sync_state();
+    }
+
+    fn set_ir_smooth(&mut self, ir: Vec<f32>, smooth: f32) {
+        self.smooth = smooth;
+        if self.smooth == 0.0  {
+            self.set_ir(ir);
+        } else {
+            self.ir_dst = ir;
+            if self.ir.len() != self.ir_dst.len() {
+                self.ir.resize(self.ir_dst.len(), 0.0);
+                self.sync_state();
+            }
+        }
+    }
+
     fn ir_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.set_ir(body.arg(0)?);
+        self.set_ir_smooth(body.arg(0)?, body.arg(1).unwrap_or(0.0));
         Ok(None)
     }
 
@@ -114,6 +165,13 @@ impl Component {
         let mut ir = vec![Complex::<f32>::new(0.0, 0.0); 2 * size];
         fft.process(&mut fr, &mut ir);
         self.set_ir(ir.iter().map(|i| i.re).collect());
+        Ok(None)
+    }
+
+    fn gain_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let factor = body.arg(0).unwrap_or(1.0);
+        let smooth = body.arg(1).unwrap_or(0.0);
+        self.set_ir_smooth(self.ir.iter().map(|i| i * factor).collect(), smooth);
         Ok(None)
     }
 }

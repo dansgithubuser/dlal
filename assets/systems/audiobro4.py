@@ -11,18 +11,18 @@ class Violin(dlal.subsystem.Voices):
     def init(self, name, vol=0):
         dlal.subsystem.Voices.init(
             self,
-            name,
             ('osc', ['saw'], {'stay_on': True}),
             vol=0.5,
             randomize_phase=lambda osc: osc.phase(random.random()),
+            name=name,
         )
         dlal.subsystem.Subsystem.init(
             self,
-            None,
             {
                 'adsr': ('adsr', [3e-5, 1e-5, 0.5, 5e-5]),
                 'lim': ('lim', [0.25, 0.2]),
             },
+            name=None,
         )
         dlal.connect(
             self.midi,
@@ -43,7 +43,6 @@ class Harp(dlal.subsystem.Subsystem):
     def init(self, name):
         dlal.subsystem.Subsystem.init(
             self,
-            name,
             {
                 'mgain': ('mgain', [0.05]),
                 'digitar': ('digitar', [0.3, 0.998]),
@@ -52,6 +51,7 @@ class Harp(dlal.subsystem.Subsystem):
             },
             ['mgain'],
             ['buf'],
+            name=name,
         )
         dlal.connect(
             self.mgain,

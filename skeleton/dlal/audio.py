@@ -1,8 +1,8 @@
 from ._component import Component
-from ._skeleton import driver_set
 
 class Audio(Component):
     def __init__(self, driver=False, **kwargs):
+        from ._skeleton import driver_set
         Component.__init__(self, 'audio', **kwargs)
         self.components = []
         self.slots = {}
@@ -10,11 +10,13 @@ class Audio(Component):
         if driver: driver_set(self)
 
     def __enter__(self):
+        from ._skeleton import driver_set
         assert self.with_components == None
         self.old_driver = driver_set(self)
         self.with_components = []
 
     def __exit__(self, *args):
+        from ._skeleton import driver_set
         driver_set(self.old_driver)
         for i in self.with_components:
             self.remove(i)
@@ -33,6 +35,9 @@ class Audio(Component):
         return float(self.command_immediate(*args))
 
     def add(self, component, slot=0):
+        from ._subsystem import Subsystem
+        if isinstance(component, Subsystem):
+            return component.add_to(self)
         result = self.command('add', component._view()+[slot])
         self.components.append(component.name)
         self.slots[component.name] = slot

@@ -28,7 +28,7 @@ dlal.driver_set(audio)
 comm = dlal.Comm()
 tone = dlal.Train(name='tone')
 noise = dlal.Osc('noise', name='noise')
-phonetizer = dlal.subsystem.Phonetizer('phonetizer', tone_pregain=10, noise_pregain=20)
+phonetizer = dlal.subsystem.Phonetizer()
 tape = dlal.Tape(size=44100*5)
 
 dlal.connect(
@@ -330,7 +330,7 @@ def say_random():
     return sentence
 
 tone.midi([0x90, 42, 0x7f])
-noise.midi([0x90, 60, 0x7f // 10])  # noise is ~100x more powerful than a 100Hz impulse train
+noise.midi([0x90, 60, 0x3f])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
