@@ -382,7 +382,8 @@ def system_load(file_path, namespace):
         for connectee in connectees:
             component.connect(namespace[connectee])
 
-def impulse_response(ci, co, driver):
+def impulse_response(ci, co, driver=None):
+    if driver == None: driver = _Component._driver
     from . import Train
     from . import Tape
     with driver:
@@ -401,7 +402,8 @@ def impulse_response(ci, co, driver):
     tape.__del__()
     return ir
 
-def frequency_response(ci, co, driver, n=64, settling_time=0.01):
+def frequency_response(ci, co, driver=None, n=64, settling_time=0.01):
+    if driver == None: driver = _Component._driver
     from . import Osc
     from . import Tape
     settling_runs = int(settling_time * driver.sample_rate() / driver.run_size())
