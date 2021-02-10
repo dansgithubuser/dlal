@@ -2,7 +2,7 @@
   "type": "continuant",
   "frames": [
     {
-      "formants": [
+      "tone_formants": [
         {
           "freq": 10.7666015625,
           "amp": 0.1347596849453397,

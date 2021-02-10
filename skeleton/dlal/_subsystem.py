@@ -101,16 +101,18 @@ class Phonetizer(Subsystem):
         Subsystem.init(self,
             {
                 'comm': 'comm',
-                'fir': 'fir',
                 'tone_buf': 'buf',
                 'noise_buf': 'buf',
-                'iir_bank': (IirBank, [5]),
+                'tone_filter': (IirBank, [5]),
+                'noise_filter': (IirBank, [5]),
             },
             name=name,
         )
-        _connect(self.tone_buf, self.iir_bank)
-        _connect(self.fir, self.noise_buf)
-        self.outputs = self.iir_bank.outputs + [self.noise_buf]
+        _connect(
+            (self.tone_buf, self.noise_buf),
+            (self.tone_filter, self.noise_filter),
+        )
+        self.outputs = self.tone_filter.outputs + self.noise_filter.outputs
         # phonetics
         self.phonetics = {}
         for path in glob.glob(os.path.join(phonetics_path, '*.phonetic.json')):
@@ -123,7 +125,7 @@ class Phonetizer(Subsystem):
         self.grace = sample_rate // 100
         # continuant_wait
         self.continuant_wait = continuant_wait
-        self.say('a', 0, 0)
+        self.say('z', 0, 0)
         self.say('0', 0, 0)
 
     def say(self, phonetic_name, continuant_wait=None, smooth=None, speed=1):
@@ -144,17 +146,20 @@ class Phonetizer(Subsystem):
         wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
         with _skeleton.UseComm(self.comm):
             for frame in phonetic['frames']:
-                if 'formants' in frame:
-                    for iir, formant in zip(self.iir_bank.iirs, frame['formants']):
+                if 'tone_formants' in frame:
+                    for iir, formant in zip(self.tone_filter.iirs, frame['tone_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
                         iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
                 else:
-                    for iir in self.iir_bank.iirs:
+                    for iir in self.tone_filter.iirs:
                         iir.command_detach('gain', [0, smooth])
-                if 'noise_fir' in frame:
-                    self.fir.command_detach('ir', [frame['noise_fir'], smooth])
+                if 'noise_formants' in frame:
+                    for iir, formant in zip(self.noise_filter.iirs, frame['noise_formants']):
+                        w = formant['freq'] / self.sample_rate * 2 * math.pi
+                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
                 else:
-                    self.fir.command_detach('gain', [0, smooth])
+                    for iir in self.noise_filter.iirs:
+                        iir.command_detach('gain', [0, smooth])
                 self.comm.wait(wait)
         self.phonetic_name = phonetic_name
         return wait * len(phonetic['frames'])
