@@ -44,6 +44,9 @@ def autocorrelation(x, shift):
     assert len(x) > shift
     return sum(i * j for i, j in zip(x[:-shift], x[shift:]))
 
+def flabs(x):
+    return float(abs(x))
+
 def stop_ranges(x):
     window_size = 512
     silence_factor = 16
@@ -101,27 +104,44 @@ def calc_n(x):
 def calc_spectrum(x, n):
     return fft(x[:n])[:n//2+1]
 
+class RunningMax:
+    def __init__(self, initial, size=None):
+        self.window = initial
+        self.size = size or len(initial)
+        self.value = max(initial)
+
+    def add(self, value):
+        self.value = max(self.value, value)
+        self.window.append(value)
+        if len(self.window) > self.size: self.pop()
+
+    def pop(self):
+        p = self.window.pop(0)
+        if self.value == p:
+            if not self.window:
+                self.value = None
+            else:
+                self.value = max(self.window)
+
 def calc_envelope(spectrum, freq_width):
     n = (len(spectrum) - 1) * 2
     width = freq_width * n // SAMPLE_RATE + 1
     envelope = []
+    l_max = RunningMax([flabs(spectrum[0])], width//2)
+    r_max = RunningMax([flabs(i) for i in spectrum[:width//2]])
     for i in range(len(spectrum)):
-        j_i = i - width // 2
-        j_f = j_i + width
-        if j_i < 0:
-            j_i = 0
-        if j_f > len(spectrum):
-            j_f = len(spectrum)
-        amp = 0
-        for j in range(j_i, j_f):
-            amp = max(amp, float(abs(spectrum[j])))
-        envelope.append(amp / math.sqrt(n))
+        envelope.append(max(flabs(spectrum[i]), min(l_max.value, r_max.value)) / math.sqrt(n))
+        l_max.add(flabs(spectrum[i]))
+        if i + width // 2 < len(spectrum):
+            r_max.add(flabs(spectrum[i + width // 2]))
+        else:
+            r_max.pop()
     return envelope
 
 def calc_tone_envelope(x):
     n = calc_n(x)
     spectrum = calc_spectrum(x, n)
-    envelope = calc_envelope(spectrum, FREQUENCY)  # span enough bins that we ignore harmonics
+    envelope = calc_envelope(spectrum, FREQUENCY * 2)  # span enough bins that we ignore harmonics
     return (n, spectrum, envelope)
 
 def parameterize(x):
@@ -205,16 +225,13 @@ def analyze(x=None):
 
 class IirBank:
     def fitting_envelope(envelope, width):
-        class Amp:
-            def __init__(self, amp):
-                self.amp = amp
-                self.visited = False
-
-        envelope = [Amp(i) for i in envelope]
+        visited = [False] * len(envelope)
         iir_bank = IirBank()
         for i in range(args.order):
-            # find center of max unvisited formant
-            unvisited = [i.amp for i in envelope if not i.visited]
+            # find center of unvisited formant with biggest delta from spectrum
+            spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
+            delta = [i - j for i, j in zip(envelope, spectrum)]
+            unvisited = [i for i, j in zip(delta, visited) if not j]
             if not unvisited:
                 iir_bank.formants.append({
                     'freq': SAMPLE_RATE / 4,
@@ -222,29 +239,30 @@ class IirBank:
                     'width': width,
                 })
                 continue
-            peak_amp = max(unvisited)
-            peak_i = [i.amp for i in envelope].index(peak_amp)
+            peak = max(unvisited)
+            peak_i = delta.index(peak)
             peak_f = peak_i
-            while peak_f+1 < len(envelope) and envelope[peak_f+1].amp == peak_amp:
+            while peak_f+1 < len(envelope) and envelope[peak_f+1] == peak:
                 peak_f += 1
             freq = (peak_i + peak_f) / 2 / ((len(envelope) - 1) * 2) * SAMPLE_RATE
+            # append formant
             iir_bank.formants.append({
                 'freq': freq,
-                'amp': peak_amp,
+                'amp': peak,
                 'width': width,
             })
             # visit right
             i = peak_i
             while i+1 < len(envelope):
-                envelope[i].visited = True
-                if envelope[i].amp < envelope[i+1].amp:
+                visited[i] = True
+                if envelope[i] < envelope[i+1]:
                     break
                 i += 1
             # visit left
             i = peak_i
             while i-1 >= 0:
-                envelope[i].visited = True
-                if envelope[i].amp < envelope[i-1].amp:
+                visited[i] = True
+                if envelope[i] < envelope[i-1]:
                     break
                 i -= 1
         iir_bank.formants = sorted(iir_bank.formants, key=lambda i: i['freq'])
@@ -264,7 +282,7 @@ class IirBank:
             w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
             for i in range(len(spectrum)):
                 spectrum[i] += h[i]
-        return [float(abs(i)) for i in spectrum]
+        return [flabs(i) for i in spectrum]
 
     def plot_spectrum(self, n, plot):
         plot.plot(self.spectrum(n))
@@ -312,7 +330,7 @@ for i, phonetic in enumerate(phonetics):
         t = plot.transform(-20, 0, 0, plot.series)
         t.update({'r': 255, 'g': 0, 'b': 255})
         plot.text(phonetic, **t)
-        plot.plot([float(abs(i)) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]])
+        plot.plot([flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]])
         plot.plot(calc_tone_envelope(x)[2])
         if 'tone_formants' in params['frames'][0]:
             IirBank(params['frames'][0]['tone_formants']).plot_spectrum(n, plot)
