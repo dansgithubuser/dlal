@@ -46,18 +46,14 @@ def autocorrelation(x, shift):
 
 def stop_ranges(x):
     window_size = 512
-    silence_factor = 4
-    # estimate envelope
-    envelope = []
-    maximum = None
-    for i in range(window_size, len(x)):
-        if maximum == None:
-            maximum = max(x[i-window_size:i+1])
-        else:
-            maximum = max(maximum, x[i])
-        envelope.append(maximum)
-        if maximum == x[i-window_size]:
-            maximum = None
+    silence_factor = 16
+    # estimate power
+    dx = [0] + [j - i for i, j in zip(x, x[1:])]  # speaker speed relates to energy; displacement does not
+    envelope = [0] * window_size
+    e = sum(i ** 2 for i in dx[:window_size])
+    for i in range(len(dx) - window_size):
+        envelope.append(e)
+        e += dx[i + window_size] ** 2 - dx[i] ** 2
     # figure threshold
     sorted_envelope = sorted(envelope)
     threshold = sorted_envelope[len(envelope) // silence_factor]
@@ -66,15 +62,18 @@ def stop_ranges(x):
     if threshold / maximum > 1 / silence_factor:
         return None
     # figure starts and stops
+    rising_threshold = maximum / 64
+    falling_threshold = maximum / 64
+    approx_stop_duration = 2048
     result = []
     silent = True
-    for i, v in enumerate(envelope):
+    for i, v in enumerate(envelope[:-approx_stop_duration]):
         if silent:
-            if v > maximum * 1/4:
+            if v > rising_threshold:
                 result.append([i])
                 silent = False
         else:
-            if v < maximum * 1/8:
+            if v <  falling_threshold:
                 result[-1].append(i + window_size)
                 silent = True
     if len(result[-1]) == 1:
@@ -84,8 +83,8 @@ def stop_ranges(x):
         plot = dpc.Plot()
         plot.plot(x)
         plot.plot(envelope)
-        plot.line(0, maximum * 1/4, len(envelope), maximum * 1/4, r=255, g=0, b=0)
-        plot.line(0, maximum * 1/8, len(envelope), maximum * 1/8, r=255, g=0, b=0)
+        plot.line(0, rising_threshold, len(envelope), rising_threshold, r=255, g=0, b=0)
+        plot.line(0, falling_threshold, len(envelope), falling_threshold, r=255, g=0, b=0)
         plot.line(0, threshold, len(envelope), threshold, r=0, g=0, b=255)
         for start, stop in result:
             plot.line(start, 0, stop, 0, r=0, g=255, b=0)
