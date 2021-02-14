@@ -102,7 +102,7 @@ def calc_n(x):
     return n
 
 def calc_spectrum(x, n):
-    return fft(x[:n])[:n//2+1]
+    return [flabs(i) for i in fft(x[:n])[:n//2+1]]
 
 class RunningMax:
     def __init__(self, initial, size=None):
@@ -172,7 +172,7 @@ def parameterize(x):
     noise_amp = math.sqrt(1 - tone)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    tone_formants = IirBank.fitting_envelope(envelope, 0.01)
+    tone_formants = IirBank.fitting_envelope(envelope, 0.005)
     tone_formants.multiply(tone_amp)
     #----- calculate noise filter -----#
     tone_spectrum = tone_formants.spectrum(n)
@@ -181,7 +181,7 @@ def parameterize(x):
         for i in range(len(envelope))
     ]
     noise_envelope = calc_envelope(noise_spectrum, 400)
-    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.04)
+    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02)
     #----- outputs -----#
     result = {}
     if tone_amp: result['tone_formants'] = tone_formants.formants
@@ -265,6 +265,16 @@ class IirBank:
                 if envelope[i] < envelope[i-1]:
                     break
                 i -= 1
+            # widening
+            e = iir_bank.error(envelope)
+            widened = copy.deepcopy(iir_bank)
+            widened.formants[-1]['width'] *= 2
+            for i in range(8):
+                e_w = widened.error(envelope)
+                if e_w >= e: break
+                e = e_w
+                iir_bank = widened
+        # sort by frequency
         iir_bank.formants = sorted(iir_bank.formants, key=lambda i: i['freq'])
         return iir_bank
 
@@ -293,6 +303,10 @@ class IirBank:
     def multiply(self, f):
         for formant in self.formants:
             formant['amp'] *= f
+
+    def error(self, envelope):
+        s = self.spectrum((len(envelope)-1) * 2)
+        return sum(abs(flabs(i) - j) for i, j in zip(s, envelope))
 
 #===== main =====#
 phonetics = [
