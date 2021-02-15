@@ -287,7 +287,7 @@ def say_random():
             's[ae]m', 'skwid',
             'tim',
             'umbrelu',
-            'vyikl',
+            'vyikl', 'vwvwzeylu',
             'w[uu]min',
             'zaylufown',
             'yeloj[ae]kit',

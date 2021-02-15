@@ -228,7 +228,7 @@ class IirBank:
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         for i in range(args.order):
-            # find center of unvisited formant with biggest delta from spectrum
+            # find unvisited formant with biggest delta from spectrum
             spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
             delta = [i - j for i, j in zip(envelope, spectrum)]
             unvisited = [i for i, j in zip(delta, visited) if not j]
@@ -241,30 +241,29 @@ class IirBank:
                 continue
             peak = max(unvisited)
             peak_i = delta.index(peak)
-            peak_f = peak_i
-            while peak_f+1 < len(envelope) and envelope[peak_f+1] == peak:
-                peak_f += 1
-            freq = (peak_i + peak_f) / 2 / ((len(envelope) - 1) * 2) * SAMPLE_RATE
+            # visit right
+            peak_r = peak_i
+            while peak_r+1 < len(envelope):
+                visited[peak_r] = True
+                if envelope[peak_r] < envelope[peak_r+1]:
+                    break
+                peak_r += 1
+            # visit left
+            peak_l = peak_i
+            while peak_l-1 >= 0:
+                visited[peak_l] = True
+                if envelope[peak_l] < envelope[peak_l-1]:
+                    break
+                peak_l -= 1
+            # find freq based on centroid
+            centroid = sum(i * envelope[i] for i in range(peak_l, peak_r)) / sum(v for v in envelope[peak_l:peak_r])
+            freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
             # append formant
             iir_bank.formants.append({
                 'freq': freq,
                 'amp': peak,
                 'width': width,
             })
-            # visit right
-            i = peak_i
-            while i+1 < len(envelope):
-                visited[i] = True
-                if envelope[i] < envelope[i+1]:
-                    break
-                i += 1
-            # visit left
-            i = peak_i
-            while i-1 >= 0:
-                visited[i] = True
-                if envelope[i] < envelope[i-1]:
-                    break
-                i -= 1
             # widening
             e = iir_bank.error(envelope)
             widened = copy.deepcopy(iir_bank)
