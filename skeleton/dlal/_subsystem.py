@@ -133,16 +133,7 @@ class Phonetizer(Subsystem):
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
         if smooth == None:
-            if speed > 1:
-                smooth = 0.5
-            elif any([
-                self.phonetic_name == '0',  # starting from silence
-                phonetic['type'] == 'stop',  # moving to stop
-                self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
-            ]):
-                smooth = 0.7
-            else:  # moving between continuants
-                smooth = 0.9
+            smooth = 0.9
         wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
         with _skeleton.UseComm(self.comm):
             for frame in phonetic['frames']:
@@ -156,7 +147,7 @@ class Phonetizer(Subsystem):
                 if 'noise_formants' in frame:
                     for iir, formant in zip(self.noise_filter.iirs, frame['noise_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
+                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], 0])
                 else:
                     for iir in self.noise_filter.iirs:
                         iir.command_detach('gain', [0, smooth])
