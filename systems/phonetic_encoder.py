@@ -185,6 +185,7 @@ def parameterize(x):
     ]
     noise_envelope = calc_envelope(noise_spectrum, 400)
     noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02)
+    noise_formants.multiply(noise_amp)
     #----- outputs -----#
     result = {}
     if tone_amp: result['tone_formants'] = tone_formants.formants
