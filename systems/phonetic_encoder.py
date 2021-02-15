@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--only', nargs='+')
 parser.add_argument('--start-from')
-parser.add_argument('--order', type=int, default=5)
+parser.add_argument('--order', type=int, default=10)
 parser.add_argument('--plot-stop-ranges', action='store_true')
 parser.add_argument('--plot-spectra', action='store_true')
 args = parser.parse_args()
@@ -258,7 +258,7 @@ class IirBank:
                     break
                 peak_l -= 1
             # find freq based on centroid
-            centroid = sum(i * envelope[i] for i in range(peak_l, peak_r)) / sum(v for v in envelope[peak_l:peak_r])
+            centroid = sum(i * envelope[i] for i in range(peak_l, peak_r+1)) / sum(v for v in envelope[peak_l:peak_r+1])
             freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
             # append formant
             iir_bank.formants.append({
