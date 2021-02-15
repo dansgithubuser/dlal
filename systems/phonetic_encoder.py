@@ -32,6 +32,7 @@ args = parser.parse_args()
 #===== consts =====#
 SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
+TONE_MARGIN = 0.15
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -146,8 +147,7 @@ def calc_tone_envelope(x):
     envelope = calc_envelope(spectrum, FREQUENCY * 2)  # span enough bins that we ignore harmonics
     return (n, spectrum, envelope)
 
-def parameterize(x):
-    #----- tone vs noise -----#
+def calc_toniness(x):
     # autocorrelation
     freq_i = 60
     freq_f = 120
@@ -165,14 +165,19 @@ def parameterize(x):
         if ac > max_ac:
             max_ac = ac
     # amplitudes
-    margin = 0.15
     energy = sum(i**2 for i in x)
-    raw_tone = min(max_ac / energy, 1)
-    if raw_tone > (1 - margin): tone = 1
-    elif raw_tone < margin: tone = 0
-    else: tone = raw_tone
+    raw_tone = max_ac / energy
+    tone = min(raw_tone, 1)
+    if tone > (1 - TONE_MARGIN): tone = 1
+    elif tone < TONE_MARGIN: tone = 0
     tone_amp = math.sqrt(tone)
     noise_amp = math.sqrt(1 - tone)
+    # return
+    return energy, raw_tone, tone_amp, noise_amp
+
+def parameterize(x):
+    #----- tone vs noise -----#
+    energy, tone, tone_amp, noise_amp = calc_toniness(x)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
     tone_formants = IirBank.fitting_envelope(envelope, 0.005)
@@ -192,7 +197,7 @@ def parameterize(x):
     if noise_amp: result['noise_formants'] = noise_formants.formants
     result['meta'] = {
         'energy': energy,
-        'tone': raw_tone,
+        'tone': tone,
         'tone_transfer': tone_formants.energy_transfer(n),
         'noise_transfer': noise_formants.energy_transfer(n),
     }
@@ -218,11 +223,16 @@ def analyze(x=None):
         }
     cuts = cut_phonetic(x)
     if len(cuts) == 1:
+        frames = [parameterize(cuts[0])]
         return {
             'type': 'continuant',
-            'frames': [parameterize(cuts[0])],
+            'frames': frames,
+            'meta': {
+                'voiced': frames[0]['meta']['tone'] > TONE_MARGIN,
+            },
         }
     else:
+        energy, tone, _, _ = calc_toniness(sum(cuts, []))
         frames = []
         for i, cut in enumerate(cuts):
             frames.append(parameterize(cut))
@@ -230,6 +240,11 @@ def analyze(x=None):
             'type': 'stop',
             'duration': sum(len(cut) for cut in cuts),
             'frames': frames,
+            'meta': {
+                'energy': energy,
+                'tone': tone,
+                'voiced': tone > TONE_MARGIN,
+            },
         }
 
 class IirBank:
