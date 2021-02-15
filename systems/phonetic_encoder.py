@@ -167,9 +167,10 @@ def parameterize(x):
     # amplitudes
     margin = 0.15
     energy = sum(i**2 for i in x)
-    tone = min(max_ac / energy, 1)
-    if tone > (1 - margin): tone = 1
-    elif tone < margin: tone = 0
+    raw_tone = min(max_ac / energy, 1)
+    if raw_tone > (1 - margin): tone = 1
+    elif raw_tone < margin: tone = 0
+    else: tone = raw_tone
     tone_amp = math.sqrt(tone)
     noise_amp = math.sqrt(1 - tone)
     #----- find formants -----#
@@ -188,6 +189,12 @@ def parameterize(x):
     result = {}
     if tone_amp: result['tone_formants'] = tone_formants.formants
     if noise_amp: result['noise_formants'] = noise_formants.formants
+    result['meta'] = {
+        'energy': energy,
+        'tone': raw_tone,
+        'tone_transfer': tone_formants.energy_transfer(n),
+        'noise_transfer': noise_formants.energy_transfer(n),
+    }
     return result
 
 def cut_stop(x):
@@ -217,7 +224,6 @@ def analyze(x=None):
     else:
         frames = []
         for i, cut in enumerate(cuts):
-            print('frame', i)
             frames.append(parameterize(cut))
         return {
             'type': 'stop',
@@ -363,7 +369,6 @@ for i, phonetic in enumerate(phonetics):
             x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
             params = analyze(x)
         params = json.dumps(params, indent=2)
-        print(params)
         with open(out_file_path, 'w') as file:
             file.write(params)
 if args.plot_spectra:
