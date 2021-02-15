@@ -330,7 +330,7 @@ def say_random():
     return sentence
 
 tone.midi([0x90, 42, 0x7f])
-noise.midi([0x90, 60, 0x3f])
+noise.midi([0x90, 60, 0x7f // 10])  # noise is ~100x more powerful than a 100Hz impulse train
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
