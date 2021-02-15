@@ -77,7 +77,9 @@ def stop_ranges(x):
                 silent = False
         else:
             if v <  falling_threshold:
-                result[-1].append(i + window_size)
+                start = result[-1][0]
+                end = i + window_size
+                result[-1].append((start + 3 * end) // 4)
                 silent = True
     if len(result[-1]) == 1:
         result[-1].append(len(x)-1)
