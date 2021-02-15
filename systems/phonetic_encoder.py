@@ -105,7 +105,7 @@ def calc_n(x):
     return n
 
 def calc_spectrum(x, n):
-    return [flabs(i) for i in fft(x[:n])[:n//2+1]]
+    return [flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]]
 
 class RunningMax:
     def __init__(self, initial, size=None):
@@ -133,7 +133,7 @@ def calc_envelope(spectrum, freq_width):
     l_max = RunningMax([flabs(spectrum[0])], width//2)
     r_max = RunningMax([flabs(i) for i in spectrum[:width//2]])
     for i in range(len(spectrum)):
-        envelope.append(max(flabs(spectrum[i]), min(l_max.value, r_max.value)) / math.sqrt(n))
+        envelope.append(max(flabs(spectrum[i]), min(l_max.value, r_max.value)))
         l_max.add(flabs(spectrum[i]))
         if i + width // 2 < len(spectrum):
             r_max.add(flabs(spectrum[i + width // 2]))
@@ -228,6 +228,8 @@ def analyze(x=None):
             'type': 'continuant',
             'frames': frames,
             'meta': {
+                'energy': frames[0]['meta']['energy'],
+                'tone': frames[0]['meta']['tone'],
                 'voiced': frames[0]['meta']['tone'] > TONE_MARGIN,
             },
         }
@@ -318,10 +320,10 @@ class IirBank:
         return [flabs(i) for i in spectrum]
 
     def plot_spectrum(self, n, plot):
-        plot.plot(self.spectrum(n))
+        plot.plot([math.log(i) for i in self.spectrum(n)])
 
     def energy_transfer(self, n):
-        return sum(i ** 2 for i in self.spectrum(n))
+        return sum(i ** 2 for i in self.spectrum(n)) / n
 
     def multiply(self, f):
         for formant in self.formants:
@@ -361,22 +363,26 @@ for i, phonetic in enumerate(phonetics):
     if args.plot_spectra:
         if phonetic == '0': continue
         x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
-        n = calc_n(x)
+        cuts = cut_phonetic(x)
+        if len(cuts) > 1:
+            cuts.insert(0, x)
         with open(out_file_path) as file:
             params = json.loads(file.read())
-        t = plot.transform(-20, 0, 0, plot.series)
-        t.update({'r': 255, 'g': 0, 'b': 255})
-        plot.text(phonetic, **t)
-        plot.plot([flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]])
-        plot.plot(calc_tone_envelope(x)[2])
-        if 'tone_formants' in params['frames'][0]:
-            IirBank(params['frames'][0]['tone_formants']).plot_spectrum(n, plot)
-        else:
-            plot.next_series()
-        if 'noise_formants' in params['frames'][0]:
-            IirBank(params['frames'][0]['noise_formants']).plot_spectrum(n, plot)
-        else:
-            plot.next_series()
+        for frame_i, frame in enumerate(params['frames']):
+            n, spectrum, envelope = calc_tone_envelope(cuts[frame_i])
+            t = plot.transform(-20, 0, 0, plot.series)
+            t.update({'r': 255, 'g': 0, 'b': 255})
+            plot.text(phonetic + str(frame_i), **t)
+            plot.plot([math.log(i) for i in spectrum])
+            plot.plot([math.log(i) for i in envelope])
+            if 'tone_formants' in frame and (len(cuts) == 1 or frame_i):
+                IirBank(frame['tone_formants']).plot_spectrum(n, plot)
+            else:
+                plot.next_series()
+            if 'noise_formants' in frame and (len(cuts) == 1 or frame_i):
+                IirBank(frame['noise_formants']).plot_spectrum(n, plot)
+            else:
+                plot.next_series()
     else:
         print(phonetic)
         if phonetic == '0':
