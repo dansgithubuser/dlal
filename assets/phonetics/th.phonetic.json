@@ -57,10 +57,10 @@
       "meta": {
         "toniness": {
           "energy": 123.07672155555338,
-          "tone": 0.019634856100132565,
+          "tone": 0.017106121186915624,
           "tone_amp": 0.0,
           "noise_amp": 1.0,
-          "chaos": 0.0673191262537578,
+          "chaos": 0.07084744883758712,
           "voiced": false
         },
         "tone_transfer": 0.0,
@@ -71,10 +71,10 @@
   "meta": {
     "toniness": {
       "energy": 123.07672155555338,
-      "tone": 0.019634856100132565,
+      "tone": 0.017106121186915624,
       "tone_amp": 0.0,
       "noise_amp": 1.0,
-      "chaos": 0.0673191262537578,
+      "chaos": 0.07084744883758712,
       "voiced": false
     },
     "tone_transfer": 0.0,

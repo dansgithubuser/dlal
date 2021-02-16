@@ -32,7 +32,6 @@ args = parser.parse_args()
 #===== consts =====#
 SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
-TONE_MARGIN = 0.1
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -147,8 +146,36 @@ def calc_tone_envelope(x):
     envelope = calc_envelope(spectrum, FREQUENCY * 2)  # span enough bins that we ignore harmonics
     return (n, spectrum, envelope)
 
+class RunningAvg:
+    def __init__(self, initial, size=None):
+        self.window = initial
+        self.size = size or len(initial)
+        self.sum = sum(initial)
+
+    def add(self, value):
+        self.window.append(value)
+        if len(self.window) > self.size:
+            self.sum -= self.window.pop(0)
+        self.sum += value
+
+    def pop(self):
+        self.sum -= self.window.pop(0)
+
+    def value(self):
+        return self.sum / len(self.window)
+
 def calc_toniness(x):
     energy = sum(i**2 for i in x)
+    # remove low frequencies
+    y = []
+    avg = RunningAvg(x[:512], 1024)
+    for i in range(len(x)):
+        y.append(x[i] - avg.value())
+        if i + avg.size // 2 < len(x):
+            avg.add(x[i + avg.size // 2])
+        else:
+            avg.pop()
+    x = y
     # autocorrelation
     min_ac_samples = 128
     freq_i = 60
@@ -170,7 +197,7 @@ def calc_toniness(x):
     # amplitudes
     raw_tone = max_ac / energy
     tone = min(raw_tone, 1)
-    if tone > (1 - TONE_MARGIN): tone = 1
+    if tone > 0.8: tone = 1
     elif chaos > 0.004: tone = 0
     tone_amp = math.sqrt(tone)
     noise_amp = math.sqrt(1 - tone)
