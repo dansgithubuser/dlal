@@ -32,7 +32,7 @@ args = parser.parse_args()
 #===== consts =====#
 SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
-TONE_MARGIN = 0.15
+TONE_MARGIN = 0.1
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -148,13 +148,14 @@ def calc_tone_envelope(x):
     return (n, spectrum, envelope)
 
 def calc_toniness(x):
+    energy = sum(i**2 for i in x)
     # autocorrelation
+    min_ac_samples = 128
     freq_i = 60
     freq_f = 120
     shift_i = int(SAMPLE_RATE / freq_f)
     shift_f = int(SAMPLE_RATE / freq_i)
-    max_ac = 0
-    min_ac_samples = 128
+    acs = []
     for shift in range(shift_i, shift_f):
         ac_samples = len(x) - shift
         if ac_samples <= min_ac_samples:
@@ -162,26 +163,34 @@ def calc_toniness(x):
         ac = abs(autocorrelation(x, shift))
         ac_power = ac / ac_samples
         ac = ac_power * len(x)  # for fair comparison w energy
-        if ac > max_ac:
-            max_ac = ac
+        acs.append(ac)
+    max_ac = max(acs)
+    min_ac = min(acs)
+    chaos = sum(((i - j) / (max_ac - min_ac)) ** 2 for i, j in zip(acs, acs[1:])) / len(acs)
     # amplitudes
-    energy = sum(i**2 for i in x)
     raw_tone = max_ac / energy
     tone = min(raw_tone, 1)
     if tone > (1 - TONE_MARGIN): tone = 1
-    elif tone < TONE_MARGIN: tone = 0
+    elif chaos > 0.004: tone = 0
     tone_amp = math.sqrt(tone)
     noise_amp = math.sqrt(1 - tone)
     # return
-    return energy, raw_tone, tone_amp, noise_amp
+    return {
+        'energy': energy,
+        'tone': raw_tone,
+        'tone_amp': tone_amp,
+        'noise_amp': noise_amp,
+        'chaos': chaos,
+        'voiced': tone != 0,
+    }
 
 def parameterize(x):
     #----- tone vs noise -----#
-    energy, tone, tone_amp, noise_amp = calc_toniness(x)
+    toniness = calc_toniness(x)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
     tone_formants = IirBank.fitting_envelope(envelope, 0.005)
-    tone_formants.multiply(tone_amp)
+    tone_formants.multiply(toniness['tone_amp'])
     #----- calculate noise filter -----#
     tone_spectrum = tone_formants.spectrum(n)
     noise_spectrum = [
@@ -190,14 +199,13 @@ def parameterize(x):
     ]
     noise_envelope = calc_envelope(noise_spectrum, 400)
     noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02)
-    noise_formants.multiply(noise_amp)
+    noise_formants.multiply(toniness['noise_amp'])
     #----- outputs -----#
     result = {}
-    if tone_amp: result['tone_formants'] = tone_formants.formants
-    if noise_amp: result['noise_formants'] = noise_formants.formants
+    if toniness['tone_amp']: result['tone_formants'] = tone_formants.formants
+    if toniness['noise_amp']: result['noise_formants'] = noise_formants.formants
     result['meta'] = {
-        'energy': energy,
-        'tone': tone,
+        'toniness': toniness,
         'tone_transfer': tone_formants.energy_transfer(n),
         'noise_transfer': noise_formants.energy_transfer(n),
     }
@@ -227,25 +235,23 @@ def analyze(x=None):
         return {
             'type': 'continuant',
             'frames': frames,
-            'meta': {
-                'energy': frames[0]['meta']['energy'],
-                'tone': frames[0]['meta']['tone'],
-                'voiced': frames[0]['meta']['tone'] > TONE_MARGIN,
-            },
+            'meta': frames[0]['meta'],
         }
     else:
-        energy, tone, _, _ = calc_toniness(sum(cuts, []))
+        toniness = calc_toniness(sum(cuts, []))
         frames = []
         for i, cut in enumerate(cuts):
             frames.append(parameterize(cut))
+        unvoiced_stop_silence = 0
+        if not toniness['voiced']:
+            frames.insert(0, {})
+            unvoiced_stop_silence = SAMPLE_RATE * 60 // 1000
         return {
             'type': 'stop',
-            'duration': sum(len(cut) for cut in cuts),
+            'duration': sum(len(cut) for cut in cuts) + unvoiced_stop_silence,
             'frames': frames,
             'meta': {
-                'energy': energy,
-                'tone': tone,
-                'voiced': tone > TONE_MARGIN,
+                'toniness': toniness,
             },
         }
 
@@ -264,8 +270,9 @@ class IirBank:
                     'amp': 0,
                     'width': width,
                 })
-                continue
+                break
             peak = max(unvisited)
+            if peak <= 0: break
             peak_i = delta.index(peak)
             # visit right
             peak_r = peak_i

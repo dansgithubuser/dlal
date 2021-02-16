@@ -53,7 +53,31 @@
           "amp": 0.04730821831956493,
           "width": 0.01
         }
-      ]
+      ],
+      "meta": {
+        "toniness": {
+          "energy": 6639.668889996596,
+          "tone": 0.9376973138357619,
+          "tone_amp": 1.0,
+          "noise_amp": 0.0,
+          "chaos": 0.001099766537086657,
+          "voiced": true
+        },
+        "tone_transfer": 0.09222310650390476,
+        "noise_transfer": 0.0
+      }
     }
-  ]
+  ],
+  "meta": {
+    "toniness": {
+      "energy": 6639.668889996596,
+      "tone": 0.9376973138357619,
+      "tone_amp": 1.0,
+      "noise_amp": 0.0,
+      "chaos": 0.001099766537086657,
+      "voiced": true
+    },
+    "tone_transfer": 0.09222310650390476,
+    "noise_transfer": 0.0
+  }
 }
