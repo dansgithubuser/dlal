@@ -271,8 +271,9 @@ def analyze(x=None):
             frames.append(parameterize(cut))
         unvoiced_stop_silence = 0
         if not toniness['voiced']:
-            frames.insert(0, {})
             unvoiced_stop_silence = SAMPLE_RATE * 60 // 1000
+            for i in range(0, unvoiced_stop_silence, len(cut)):
+                frames.insert(0, {})
         return {
             'type': 'stop',
             'duration': sum(len(cut) for cut in cuts) + unvoiced_stop_silence,
