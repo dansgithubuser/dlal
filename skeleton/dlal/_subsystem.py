@@ -133,7 +133,17 @@ class Phonetizer(Subsystem):
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
         if smooth == None:
-            smooth = 0.9
+            if speed > 1:
+                smooth = 0.5
+            elif any([
+                self.phonetic_name == '0',  # starting from silence
+                phonetic_name == '0',  # moving to silence
+                phonetic['type'] == 'stop',  # moving to stop
+                self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
+            ]):
+                smooth = 0.7
+            else:  # moving between continuants
+                smooth = 0.9
         wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
         with _skeleton.UseComm(self.comm):
             for frame in phonetic['frames']:
