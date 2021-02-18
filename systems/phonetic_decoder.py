@@ -26,12 +26,14 @@ SAMPLE_RATE = 44100
 audio = dlal.Audio()
 dlal.driver_set(audio)
 comm = dlal.Comm()
+vibrato = dlal.subsystem.Vibrato()
 tone = dlal.Train(name='tone')
 noise = dlal.Osc('noise', name='noise')
 phonetizer = dlal.subsystem.Phonetizer()
 tape = dlal.Tape(size=44100*5)
 
 dlal.connect(
+    (vibrato),
     (tone, noise),
     (phonetizer.tone_buf, phonetizer.noise_buf),
     [],

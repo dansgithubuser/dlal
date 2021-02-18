@@ -233,7 +233,7 @@ class Phonetizer(Subsystem):
             self.sample += self.say(phonetic, continuant_wait=continuant_wait, speed=speed)
 
 class Portamento(Subsystem):
-    def init(self, name, slowness=0.999):
+    def init(self, slowness=0.999, name=None):
         Subsystem.init(self,
             {
                 'rhymel': 'rhymel',
@@ -257,8 +257,26 @@ class Portamento(Subsystem):
         other.midi(midi.Msg.pitch_bend_range(64))
         Subsystem.connect_outputs(self, other)
 
+class Vibrato(Subsystem):
+    def init(self, freq=3.5, amp=0.15, name=None):
+        Subsystem.init(self,
+            {
+                'lfo': ('lfo', [freq, amp]),
+                'oracle': ('oracle', [], {
+                    'mode': 'pitch_wheel',
+                    'm': 0x1fff,
+                    'b': 0x2000,
+                    'format': ('midi', [0xe0, '%l', '%h']),
+                }),
+            },
+            [],
+            ['oracle'],
+            name=name,
+        )
+        _connect(self.lfo, self.oracle)
+
 class Voices(Subsystem):
-    def init(self, name, spec, n=3, cents=0.1, vol=0.25, randomize_phase=None):
+    def init(self, spec, n=3, cents=0.1, vol=0.25, randomize_phase=None, name=None):
         Subsystem.init(
             self,
             dict(
