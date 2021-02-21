@@ -301,7 +301,12 @@ class IirBank:
                 break
             peak = max(unvisited)
             if peak <= 0: break
+            # find index
             peak_i = delta.index(peak)
+            peak_j = peak_i
+            while peak_j < len(delta) and delta[peak_j+1] == delta[peak_i]:
+                peak_j += 1
+            peak_i = (peak_i + peak_j) // 2
             # visit right
             peak_r = peak_i
             while peak_r+1 < len(envelope):
@@ -317,7 +322,10 @@ class IirBank:
                     break
                 peak_l -= 1
             # find freq based on centroid
-            centroid = sum(i * envelope[i] for i in range(peak_l, peak_r+1)) / sum(v for v in envelope[peak_l:peak_r+1])
+            w = min(peak_r - peak_i, peak_i - peak_l)
+            l = peak_i - w
+            r = peak_i + w + 1
+            centroid = sum(i * envelope[i] for i in range(l, r)) / sum(v for v in envelope[l:r])
             freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
             # append formant
             iir_bank.formants.append({
