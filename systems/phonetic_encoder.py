@@ -411,7 +411,7 @@ for i, phonetic in enumerate(phonetics):
             cuts.insert(0, x)
         with open(out_file_path) as file:
             params = json.loads(file.read())
-        for frame_i, frame in enumerate(params['frames']):
+        for frame_i, frame in enumerate([i for i in params['frames'] if i]):
             n, spectrum, envelope = calc_tone_envelope(cuts[frame_i])
             t = plot.transform(-20, 0, 0, plot.series)
             t.update({'r': 255, 'g': 0, 'b': 255})
