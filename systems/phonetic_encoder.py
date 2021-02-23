@@ -216,7 +216,7 @@ def parameterize(x):
     toniness = calc_toniness(x)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    tone_formants = IirBank.fitting_envelope(envelope, 0.005)
+    tone_formants = IirBank.fitting_envelope(envelope, 0.001, False)
     tone_formants.multiply(toniness['tone_amp'])
     #----- calculate noise filter -----#
     tone_spectrum = tone_formants.spectrum(n)
@@ -225,7 +225,7 @@ def parameterize(x):
         for i in range(len(envelope))
     ]
     noise_envelope = calc_envelope(noise_spectrum, 400)
-    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02)
+    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02, True)
     noise_formants.multiply(toniness['noise_amp'])
     #----- outputs -----#
     result = {}
@@ -284,7 +284,7 @@ def analyze(x=None):
         }
 
 class IirBank:
-    def fitting_envelope(envelope, width):
+    def fitting_envelope(envelope, width, widen):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         for i in range(args.order):
@@ -334,14 +334,15 @@ class IirBank:
                 'width': width,
             })
             # widening
-            e = iir_bank.error(envelope)
-            widened = copy.deepcopy(iir_bank)
-            widened.formants[-1]['width'] *= 2
-            for i in range(8):
-                e_w = widened.error(envelope)
-                if e_w >= e: break
-                e = e_w
-                iir_bank = widened
+            if widen:
+                e = iir_bank.error(envelope)
+                widened = copy.deepcopy(iir_bank)
+                widened.formants[-1]['width'] *= 2
+                for i in range(8):
+                    e_w = widened.error(envelope)
+                    if e_w >= e: break
+                    e = e_w
+                    iir_bank = widened
         # sort by frequency
         iir_bank.formants = sorted(iir_bank.formants, key=lambda i: i['freq'])
         return iir_bank
