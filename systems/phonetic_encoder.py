@@ -129,21 +129,19 @@ def calc_envelope(spectrum, freq_width):
     n = (len(spectrum) - 1) * 2
     width = freq_width * n // SAMPLE_RATE + 1
     envelope = []
-    l_max = RunningMax([flabs(spectrum[0])], width//2)
-    r_max = RunningMax([flabs(i) for i in spectrum[:width//2]])
+    mx = RunningMax([flabs(i) for i in spectrum[:width//2]], width)
     for i in range(len(spectrum)):
-        envelope.append(max(flabs(spectrum[i]), min(l_max.value, r_max.value)))
-        l_max.add(flabs(spectrum[i]))
+        envelope.append(mx.value)
         if i + width // 2 < len(spectrum):
-            r_max.add(flabs(spectrum[i + width // 2]))
+            mx.add(flabs(spectrum[i + width // 2]))
         else:
-            r_max.pop()
+            mx.pop()
     return envelope
 
 def calc_tone_envelope(x):
     n = calc_n(x)
     spectrum = calc_spectrum(x, n)
-    envelope = calc_envelope(spectrum, FREQUENCY * 2)  # span enough bins that we ignore harmonics
+    envelope = calc_envelope(spectrum, FREQUENCY)  # span enough bins that we ignore harmonics
     return (n, spectrum, envelope)
 
 class RunningAvg:
