@@ -98,13 +98,28 @@ class Phonetizer(Subsystem):
         continuant_wait=44100//8,
         name=None,
     ):
+        # phonetics
+        self.phonetics = {}
+        for path in glob.glob(os.path.join(phonetics_path, '*.phonetic.json')):
+            phonetic = os.path.basename(path).split('.')[0]
+            with open(path) as file:
+                self.phonetics[phonetic] = json.loads(file.read())
+        self.phonetic_name = '0'
+        # system
+        order = max(
+            max(
+                len(i['frames'][0].get('tone_formants', [])),
+                len(i['frames'][0].get('noise_formants', [])),
+            )
+            for i in self.phonetics.values()
+        )
         Subsystem.init(self,
             {
                 'comm': 'comm',
                 'tone_buf': 'buf',
                 'noise_buf': 'buf',
-                'tone_filter': (IirBank, [5]),
-                'noise_filter': (IirBank, [5]),
+                'tone_filter': (IirBank, [order]),
+                'noise_filter': (IirBank, [order]),
             },
             name=name,
         )
@@ -113,13 +128,8 @@ class Phonetizer(Subsystem):
             (self.tone_filter, self.noise_filter),
         )
         self.outputs = self.tone_filter.outputs + self.noise_filter.outputs
-        # phonetics
-        self.phonetics = {}
-        for path in glob.glob(os.path.join(phonetics_path, '*.phonetic.json')):
-            phonetic = os.path.basename(path).split('.')[0]
-            with open(path) as file:
-                self.phonetics[phonetic] = json.loads(file.read())
-        self.phonetic_name = '0'
+        max_frames = max(len(i['frames']) for i in self.phonetics.values())
+        self.comm.resize(5 * order * max_frames)
         # sample rate
         self.sample_rate = sample_rate
         self.grace = sample_rate // 100
