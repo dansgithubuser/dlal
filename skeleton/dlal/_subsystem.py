@@ -89,15 +89,20 @@ class IirBank(Subsystem):
             self.iirs.append(self.components[f'iirs[{i}]'])
             self.bufs.append(self.components[f'bufs[{i}]'])
             self.iirs[-1].connect(self.bufs[-1])
+            self.iirs[-1].command_immediate('gain', [0])
 
 class Phonetizer(Subsystem):
     def init(
         self,
+        tone_pregain=1,
+        noise_pregain=1,
         phonetics_path='assets/phonetics',
         sample_rate=44100,
         continuant_wait=44100//8,
         name=None,
     ):
+        self.tone_pregain = tone_pregain
+        self.noise_pregain = noise_pregain
         # phonetics
         self.phonetics = {}
         for path in glob.glob(os.path.join(phonetics_path, '*.phonetic.json')):
@@ -129,14 +134,13 @@ class Phonetizer(Subsystem):
         )
         self.outputs = self.tone_filter.outputs + self.noise_filter.outputs
         max_frames = max(len(i['frames']) for i in self.phonetics.values())
-        self.comm.resize(5 * order * max_frames)
+        self.commands_per_phonetic = 5 * order * max_frames
+        self.comm.resize(self.commands_per_phonetic)
         # sample rate
         self.sample_rate = sample_rate
         self.grace = sample_rate // 100
         # continuant_wait
         self.continuant_wait = continuant_wait
-        self.say('z', 0, 0)
-        self.say('0', 0, 0)
 
     def say(self, phonetic_name, continuant_wait=None, smooth=None, speed=1):
         phonetic = self.phonetics[phonetic_name]
@@ -160,14 +164,14 @@ class Phonetizer(Subsystem):
                 if 'tone_formants' in frame:
                     for iir, formant in zip(self.tone_filter.iirs, frame['tone_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
+                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'] * self.tone_pregain, smooth])
                 else:
                     for iir in self.tone_filter.iirs:
                         iir.command_detach('gain', [0, smooth])
                 if 'noise_formants' in frame:
                     for iir, formant in zip(self.noise_filter.iirs, frame['noise_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], 0])
+                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'] * self.noise_pregain, 0])
                 else:
                     for iir in self.noise_filter.iirs:
                         iir.command_detach('gain', [0, smooth])
@@ -178,7 +182,7 @@ class Phonetizer(Subsystem):
     def prep_syllables(self, syllables, notes, advance=0, anticipation=None):
         if anticipation == None:
             anticipation = self.sample_rate // 8
-        self.comm.resize(len(syllables) * (3 + 2 * len(self.iirs)))
+        self.comm.resize(len(syllables) * self.commands_per_phonetic)
         self.sample = 0
         for syllable, note in zip(syllables.split(), notes):
             segments = [
