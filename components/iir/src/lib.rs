@@ -183,6 +183,7 @@ impl ComponentTrait for Component {
     fn init(&mut self) {
         self.a = vec![1.0];
         self.b = vec![1.0];
+        self.d = vec![0.0];
     }
 
     fn run(&mut self) {
