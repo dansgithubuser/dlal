@@ -2,9 +2,11 @@
 import dlal
 
 from numpy.fft import fft
+from scipy import signal
 
 import argparse
 import cmath
+import copy
 import json
 import math
 import os
@@ -22,7 +24,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--only', nargs='+')
 parser.add_argument('--start-from')
-parser.add_argument('--order', type=int, default=5)
+parser.add_argument('--order', type=int, default=10)
 parser.add_argument('--plot-stop-ranges', action='store_true')
 parser.add_argument('--plot-spectra', action='store_true')
 args = parser.parse_args()
@@ -42,20 +44,19 @@ def autocorrelation(x, shift):
     assert len(x) > shift
     return sum(i * j for i, j in zip(x[:-shift], x[shift:]))
 
+def flabs(x):
+    return float(abs(x))
+
 def stop_ranges(x):
     window_size = 512
-    silence_factor = 4
-    # estimate envelope
-    envelope = []
-    maximum = None
-    for i in range(window_size, len(x)):
-        if maximum == None:
-            maximum = max(x[i-window_size:i+1])
-        else:
-            maximum = max(maximum, x[i])
-        envelope.append(maximum)
-        if maximum == x[i-window_size]:
-            maximum = None
+    silence_factor = 16
+    # estimate power
+    dx = [0] + [j - i for i, j in zip(x, x[1:])]  # speaker speed relates to energy; displacement does not
+    envelope = [0] * window_size
+    e = sum(i ** 2 for i in dx[:window_size])
+    for i in range(len(dx) - window_size):
+        envelope.append(e)
+        e += dx[i + window_size] ** 2 - dx[i] ** 2
     # figure threshold
     sorted_envelope = sorted(envelope)
     threshold = sorted_envelope[len(envelope) // silence_factor]
@@ -64,16 +65,21 @@ def stop_ranges(x):
     if threshold / maximum > 1 / silence_factor:
         return None
     # figure starts and stops
+    rising_threshold = maximum / 64
+    falling_threshold = maximum / 64
+    approx_stop_duration = 2048
     result = []
     silent = True
-    for i, v in enumerate(envelope):
+    for i, v in enumerate(envelope[:-approx_stop_duration]):
         if silent:
-            if v > maximum * 1/4:
+            if v > rising_threshold:
                 result.append([i])
                 silent = False
         else:
-            if v < maximum * 1/8:
-                result[-1].append(i + window_size)
+            if v <  falling_threshold:
+                start = result[-1][0]
+                end = i + window_size
+                result[-1].append((start + 3 * end) // 4)
                 silent = True
     if len(result[-1]) == 1:
         result[-1].append(len(x)-1)
@@ -82,8 +88,8 @@ def stop_ranges(x):
         plot = dpc.Plot()
         plot.plot(x)
         plot.plot(envelope)
-        plot.line(0, maximum * 1/4, len(envelope), maximum * 1/4, r=255, g=0, b=0)
-        plot.line(0, maximum * 1/8, len(envelope), maximum * 1/8, r=255, g=0, b=0)
+        plot.line(0, rising_threshold, len(envelope), rising_threshold, r=255, g=0, b=0)
+        plot.line(0, falling_threshold, len(envelope), falling_threshold, r=255, g=0, b=0)
         plot.line(0, threshold, len(envelope), threshold, r=0, g=0, b=255)
         for start, stop in result:
             plot.line(start, 0, stop, 0, r=0, g=255, b=0)
@@ -97,120 +103,138 @@ def calc_n(x):
         n //= 2
     return n
 
-def calc_envelope(x, n):
-    spectrum = fft(x[:n])[:n//2+1]
-    width = FREQUENCY * n // SAMPLE_RATE + 1  # span enough bins that we ignore harmonics
-    avg = sum(float(abs(i)) for i in spectrum) / len(spectrum)
-    dev = math.sqrt(sum((float(abs(i)) - avg) ** 2 for i in spectrum))
-    dev_n = dev / len(spectrum)
-    threshold = 0.1
-    if dev_n < threshold:
-        # if this is a wide spectrum, make sure width is extra wide so we don't cluster formants
-        width = int(width * 0.1 / dev_n)
+def calc_spectrum(x, n):
+    return [flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]]
+
+class RunningMax:
+    def __init__(self, initial, size=None):
+        self.window = initial
+        self.size = size or len(initial)
+        self.value = max(initial)
+
+    def add(self, value):
+        self.value = max(self.value, value)
+        self.window.append(value)
+        if len(self.window) > self.size: self.pop()
+
+    def pop(self):
+        p = self.window.pop(0)
+        if self.value == p:
+            if not self.window:
+                self.value = None
+            else:
+                self.value = max(self.window)
+
+def calc_envelope(spectrum, freq_width):
+    n = (len(spectrum) - 1) * 2
+    width = freq_width * n // SAMPLE_RATE + 1
     envelope = []
+    mx = RunningMax([flabs(i) for i in spectrum[:width//2]], width)
     for i in range(len(spectrum)):
-        j_i = i - width // 2
-        j_f = j_i + width
-        if j_i < 0:
-            j_i = 0
-        if j_f > len(spectrum):
-            j_f = len(spectrum)
-        amp = 0
-        for j in range(j_i, j_f):
-            amp = max(amp, float(abs(spectrum[j])))
-        envelope.append(amp / math.sqrt(n))
+        envelope.append(mx.value)
+        if i + width // 2 < len(spectrum):
+            mx.add(flabs(spectrum[i + width // 2]))
+        else:
+            mx.pop()
     return envelope
 
-def parameterize(x=None):
-    if x:
-        #----- find formants -----#
-        # consts
-        n = calc_n(x)
-        envelope = calc_envelope(x, n)
-        # calculate frequency of formants
-        class Amp:
-            def __init__(self, amp):
-                self.amp = amp
-                self.visited = False
+def calc_tone_envelope(x):
+    n = calc_n(x)
+    spectrum = calc_spectrum(x, n)
+    envelope = calc_envelope(spectrum, FREQUENCY)  # span enough bins that we ignore harmonics
+    return (n, spectrum, envelope)
 
-        envelope = [Amp(i) for i in envelope]
-        formants = []
-        for i in range(args.order):
-            # find center of max unvisited formant
-            peak_amp = max([i.amp for i in envelope if not i.visited])
-            peak_i = [i.amp for i in envelope].index(peak_amp)
-            peak_f = peak_i
-            while peak_f+1 < len(envelope) and envelope[peak_f+1].amp == peak_amp:
-                peak_f += 1
-            freq = (peak_i + peak_f) / 2 / n * SAMPLE_RATE
-            formants.append({
-                'freq': freq,
-                'amp': peak_amp,
-                'width': 0.01,
-            })
-            # visit right
-            i = peak_i
-            while i+1 < len(envelope):
-                envelope[i].visited = True
-                if envelope[i].amp < envelope[i+1].amp:
-                    break
-                i += 1
-            # visit left
-            i = peak_i
-            while i-1 >= 0:
-                envelope[i].visited = True
-                if envelope[i].amp < envelope[i-1].amp:
-                    break
-                i -= 1
-        formants = sorted(formants, key=lambda i: i['freq'])
-        # widen formants until filter has same energy as signal
-        energy = sum(i**2 for i in x[:n])
-        while formants[0]['width'] < 0.5:
-            e = energy_transfer(formants, n)
-            if math.sqrt(2) * e >= energy:
-                break
-            for formant in formants:
-                formant['width'] *= 2
-        #----- tone vs noise -----#
-        # autocorrelation
-        freq_i = 60
-        freq_f = 120
-        shift_i = int(SAMPLE_RATE / freq_f)
-        shift_f = int(SAMPLE_RATE / freq_i)
-        max_ac = 0
-        min_ac_samples = 128
-        for shift in range(shift_i, shift_f):
-            ac_samples = len(x) - shift
-            if ac_samples <= min_ac_samples:
-                break
-            ac = abs(autocorrelation(x, shift))
-            ac_power = ac / ac_samples
-            ac = ac_power * len(x)  # for fair comparison w energy
-            if ac > max_ac:
-                max_ac = ac
-        # amplitudes
-        energy = sum(i**2 for i in x)
-        tone = min(max_ac / energy, 1)
-        tone_amp = math.sqrt(tone)
-        noise_amp = math.sqrt(1 - tone)
-        #----- outputs -----#
-        return {
-            'formants': formants,
-            'tone_amp': tone_amp,
-            'noise_amp': noise_amp,
-        }
-    else:
-        return {
-            'formants': [
-                {
-                    'freq': 0,
-                    'amp': 0,
-                }
-                for i in range(args.order)
-            ],
-            'tone_amp': 0,
-            'noise_amp': 0,
-        }
+class RunningAvg:
+    def __init__(self, initial, size=None):
+        self.window = initial
+        self.size = size or len(initial)
+        self.sum = sum(initial)
+
+    def add(self, value):
+        self.window.append(value)
+        if len(self.window) > self.size:
+            self.sum -= self.window.pop(0)
+        self.sum += value
+
+    def pop(self):
+        self.sum -= self.window.pop(0)
+
+    def value(self):
+        return self.sum / len(self.window)
+
+def calc_toniness(x):
+    energy = sum(i**2 for i in x)
+    # remove low frequencies
+    y = []
+    avg = RunningAvg(x[:512], 1024)
+    for i in range(len(x)):
+        y.append(x[i] - avg.value())
+        if i + avg.size // 2 < len(x):
+            avg.add(x[i + avg.size // 2])
+        else:
+            avg.pop()
+    x = y
+    # autocorrelation
+    min_ac_samples = 128
+    freq_i = 60
+    freq_f = 120
+    shift_i = int(SAMPLE_RATE / freq_f)
+    shift_f = int(SAMPLE_RATE / freq_i)
+    acs = []
+    for shift in range(shift_i, shift_f):
+        ac_samples = len(x) - shift
+        if ac_samples <= min_ac_samples:
+            break
+        ac = abs(autocorrelation(x, shift))
+        ac_power = ac / ac_samples
+        ac = ac_power * len(x)  # for fair comparison w energy
+        acs.append(ac)
+    max_ac = max(acs)
+    min_ac = min(acs)
+    chaos = sum(((i - j) / (max_ac - min_ac)) ** 2 for i, j in zip(acs, acs[1:])) / len(acs)
+    # amplitudes
+    raw_tone = max_ac / energy
+    tone = min(raw_tone, 1)
+    if tone > 0.8: tone = 1
+    elif chaos > 0.004: tone = 0
+    tone_amp = math.sqrt(tone)
+    noise_amp = math.sqrt(1 - tone)
+    # return
+    return {
+        'energy': energy,
+        'tone': raw_tone,
+        'tone_amp': tone_amp,
+        'noise_amp': noise_amp,
+        'chaos': chaos,
+        'voiced': tone != 0,
+    }
+
+def parameterize(x):
+    #----- tone vs noise -----#
+    toniness = calc_toniness(x)
+    #----- find formants -----#
+    n, spectrum, envelope = calc_tone_envelope(x)
+    tone_formants = IirBank.fitting_envelope(envelope, 0.001, False)
+    tone_formants.multiply(toniness['tone_amp'])
+    #----- calculate noise filter -----#
+    tone_spectrum = tone_formants.spectrum(n)
+    noise_spectrum = [
+        math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
+        for i in range(len(envelope))
+    ]
+    noise_envelope = calc_envelope(noise_spectrum, 400)
+    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02, True)
+    noise_formants.multiply(toniness['noise_amp'])
+    #----- outputs -----#
+    result = {}
+    if toniness['tone_amp']: result['tone_formants'] = tone_formants.formants
+    if toniness['noise_amp']: result['noise_formants'] = noise_formants.formants
+    result['meta'] = {
+        'toniness': toniness,
+        'tone_transfer': tone_formants.energy_transfer(n),
+        'noise_transfer': noise_formants.energy_transfer(n),
+    }
+    return result
 
 def cut_stop(x):
     step = len(x) // int(len(x) / 512)
@@ -228,44 +252,128 @@ def analyze(x=None):
     if x == None:
         return {
             'type': 'continuant',
-            'frames': [parameterize()],
+            'frames': [{}],
         }
     cuts = cut_phonetic(x)
     if len(cuts) == 1:
+        frames = [parameterize(cuts[0])]
         return {
             'type': 'continuant',
-            'frames': [parameterize(cuts[0])],
+            'frames': frames,
+            'meta': frames[0]['meta'],
         }
     else:
+        toniness = calc_toniness(sum(cuts, []))
         frames = []
         for i, cut in enumerate(cuts):
-            print('frame', i)
             frames.append(parameterize(cut))
+        unvoiced_stop_silence = 0
+        if not toniness['voiced']:
+            unvoiced_stop_silence = SAMPLE_RATE * 60 // 1000
+            for i in range(0, unvoiced_stop_silence, len(cut)):
+                frames.insert(0, {})
         return {
             'type': 'stop',
-            'duration': sum(len(cut) for cut in cuts),
+            'duration': sum(len(cut) for cut in cuts) + unvoiced_stop_silence,
             'frames': frames,
+            'meta': {
+                'toniness': toniness,
+            },
         }
 
-def get_spectrum(formants, n):
-    from scipy import signal
-    spectrum = [0]*(n // 2 + 1)
-    for formant in formants:
-        w = formant['freq'] / SAMPLE_RATE * 2*math.pi
-        p = cmath.rect(1.0 - formant['width'], w);
-        z_w = cmath.rect(1.0, w);
-        gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate()));
-        b, a = signal.zpk2tf([], [p, p.conjugate()], gain)
-        w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
-        for i in range(len(spectrum)):
-            spectrum[i] += h[i]
-    return [float(abs(i)) for i in spectrum]
+class IirBank:
+    def fitting_envelope(envelope, width, widen):
+        visited = [False] * len(envelope)
+        iir_bank = IirBank()
+        for i in range(args.order):
+            # find unvisited formant with biggest delta from spectrum
+            spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
+            delta = [i - j for i, j in zip(envelope, spectrum)]
+            unvisited = [i for i, j in zip(delta, visited) if not j]
+            if not unvisited:
+                iir_bank.formants.append({
+                    'freq': SAMPLE_RATE / 4,
+                    'amp': 0,
+                    'width': width,
+                })
+                break
+            peak = max(unvisited)
+            if peak <= 0: break
+            # find index
+            peak_i = delta.index(peak)
+            peak_j = peak_i
+            while peak_j < len(delta) and delta[peak_j+1] == delta[peak_i]:
+                peak_j += 1
+            peak_i = (peak_i + peak_j) // 2
+            # visit right
+            peak_r = peak_i
+            while peak_r+1 < len(envelope):
+                visited[peak_r] = True
+                if envelope[peak_r] < envelope[peak_r+1]:
+                    break
+                peak_r += 1
+            # visit left
+            peak_l = peak_i
+            while peak_l-1 >= 0:
+                visited[peak_l] = True
+                if envelope[peak_l] < envelope[peak_l-1]:
+                    break
+                peak_l -= 1
+            # find freq based on centroid
+            w = min(peak_r - peak_i, peak_i - peak_l)
+            l = peak_i - w
+            r = peak_i + w + 1
+            centroid = sum(i * envelope[i] for i in range(l, r)) / sum(v for v in envelope[l:r])
+            freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
+            # append formant
+            iir_bank.formants.append({
+                'freq': freq,
+                'amp': peak,
+                'width': width,
+            })
+            # widening
+            if widen:
+                e = iir_bank.error(envelope)
+                widened = copy.deepcopy(iir_bank)
+                widened.formants[-1]['width'] *= 2
+                for i in range(8):
+                    e_w = widened.error(envelope)
+                    if e_w >= e: break
+                    e = e_w
+                    iir_bank = widened
+        # sort by frequency
+        iir_bank.formants = sorted(iir_bank.formants, key=lambda i: i['freq'])
+        return iir_bank
 
-def plot_spectrum(formants, n, plot):
-    plot.plot(get_spectrum(formants, n))
+    def __init__(self, formants=[]):
+        self.formants = copy.copy(formants)
 
-def energy_transfer(formants, n):
-    return sum(i ** 2 for i in get_spectrum(formants, n))
+    def spectrum(self, n):
+        spectrum = [0]*(n // 2 + 1)
+        for iir in self.formants:
+            w = iir['freq'] / SAMPLE_RATE * 2*math.pi
+            p = cmath.rect(1.0 - iir['width'], w);
+            z_w = cmath.rect(1.0, w);
+            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate()));
+            b, a = signal.zpk2tf([], [p, p.conjugate()], gain)
+            w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
+            for i in range(len(spectrum)):
+                spectrum[i] += h[i]
+        return [flabs(i) for i in spectrum]
+
+    def plot_spectrum(self, n, plot):
+        plot.plot([math.log(i) for i in self.spectrum(n)])
+
+    def energy_transfer(self, n):
+        return sum(i ** 2 for i in self.spectrum(n)) / n
+
+    def multiply(self, f):
+        for formant in self.formants:
+            formant['amp'] *= f
+
+    def error(self, envelope):
+        s = self.spectrum((len(envelope)-1) * 2)
+        return sum(abs(flabs(i) - j) for i, j in zip(s, envelope))
 
 #===== main =====#
 phonetics = [
@@ -279,8 +387,8 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(4200, 2, grid_w),
-            (dpc.transforms.Default('wby'), 3),
+            dpc.transforms.Grid(4200, 10, grid_w),
+            (dpc.transforms.Default('bcyg'), 4),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
@@ -297,15 +405,26 @@ for i, phonetic in enumerate(phonetics):
     if args.plot_spectra:
         if phonetic == '0': continue
         x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
-        n = calc_n(x)
+        cuts = cut_phonetic(x)
+        if len(cuts) > 1:
+            cuts.insert(0, x)
         with open(out_file_path) as file:
             params = json.loads(file.read())
-        t = plot.transform(-20, 0, 0, plot.series)
-        t.update({'r': 255, 'g': 0, 'b': 255})
-        plot.text(phonetic, **t)
-        plot.plot([float(abs(i)) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]])
-        plot.plot(calc_envelope(x, n))
-        plot_spectrum(params['frames'][0]['formants'], n, plot)
+        for frame_i, frame in enumerate([i for i in params['frames'] if i]):
+            n, spectrum, envelope = calc_tone_envelope(cuts[frame_i])
+            t = plot.transform(-20, 0, 0, plot.series)
+            t.update({'r': 255, 'g': 0, 'b': 255})
+            plot.text(phonetic + str(frame_i), **t)
+            plot.plot([math.log(i) for i in spectrum])
+            plot.plot([math.log(i) for i in envelope])
+            if 'tone_formants' in frame and (len(cuts) == 1 or frame_i):
+                IirBank(frame['tone_formants']).plot_spectrum(n, plot)
+            else:
+                plot.next_series()
+            if 'noise_formants' in frame and (len(cuts) == 1 or frame_i):
+                IirBank(frame['noise_formants']).plot_spectrum(n, plot)
+            else:
+                plot.next_series()
     else:
         print(phonetic)
         if phonetic == '0':
@@ -314,7 +433,6 @@ for i, phonetic in enumerate(phonetics):
             x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
             params = analyze(x)
         params = json.dumps(params, indent=2)
-        print(params)
         with open(out_file_path, 'w') as file:
             file.write(params)
 if args.plot_spectra:

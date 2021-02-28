@@ -38,9 +38,15 @@ component!(
         "b": {"args": ["b"]},
         "pole_zero": {
             "args": ["poles", "zeros", "gain"],
-            "kwargs": ["smooth"],
+            "kwargs": [
+                {
+                    "name": "smooth",
+                    "default": 0,
+                    "range": "[0, 1]",
+                },
+            ],
         },
-        "pole_zero_get": {"args": ["b"]},
+        "pole_zero_get": {},
         "single_pole_bandpass": {
             "args": [
                 {
@@ -56,6 +62,20 @@ component!(
                     "name": "peak",
                     "default": 1,
                     "range": "[0, 1]",
+                },
+                {
+                    "name": "smooth",
+                    "default": 0,
+                    "range": "[0, 1]",
+                },
+            ],
+        },
+        "gain": {
+            "args": [
+                {
+                    "name": "factor",
+                    "default": 1,
+                    "range": "[0, inf)",
                 },
                 {
                     "name": "smooth",
@@ -163,6 +183,7 @@ impl ComponentTrait for Component {
     fn init(&mut self) {
         self.a = vec![1.0];
         self.b = vec![1.0];
+        self.d = vec![0.0];
     }
 
     fn run(&mut self) {
@@ -275,6 +296,14 @@ impl Component {
         self.smooth_pole_zero(&[p, p.conj()], &[], gain, smooth);
         Ok(None)
     }
+
+    fn gain_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let factor = body.arg(0).unwrap_or(1.0);
+        let smooth = body.arg(1).unwrap_or(0.0);
+        self.smooth_pole_zero(&self.poles.clone(), &self.zeros.clone(), self.gain * factor, smooth);
+        Ok(None)
+    }
+
     fn wash_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         let result = Ok(Some(json!(self.d)));
         for i in self.d.iter_mut() {

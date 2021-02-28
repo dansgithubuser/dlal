@@ -21,10 +21,10 @@ accordion2 = dlal.Buf('melodica', name='accordion2')
 # drum
 drum = dlal.Buf(name='drum')
 # voice
-voice_porta = dlal.subsystem.Portamento('voice_porta')
+voice_porta = dlal.subsystem.Portamento(name='voice_porta')
 voice_tone = dlal.Train(name='voice_tone')
 voice_noise = dlal.Osc('noise', name='voice_noise')
-voice_phonetizer = dlal.subsystem.Phonetizer('voice_phonetizer', tone_pregain=5, noise_pregain=1.5)
+voice_phonetizer = dlal.subsystem.Phonetizer(tone_pregain=5, noise_pregain=1.5)
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')

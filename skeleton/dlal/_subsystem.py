@@ -1,7 +1,6 @@
-from ._skeleton import component_class as _component_class
+from . import _skeleton
 from ._skeleton import connect as _connect
-from ._skeleton import driver_set as _driver_set
-from ._skeleton import UseComm as _UseComm
+from . import _utils
 
 import midi
 
@@ -13,14 +12,15 @@ import re
 
 class Subsystem:
     def __init__(self, *args, **kwargs):
-        driver = _driver_set(None)
+        driver = _skeleton.driver_set(None)
         self.init(*args, **kwargs)
         if driver:
             self.add_to(driver)
-            _driver_set(driver)
+            _skeleton.driver_set(driver)
 
-    def init(self, name, components={}, inputs=[], outputs=[]):
-        if name:
+    def init(self, components={}, inputs=[], outputs=[], name=None):
+        if not hasattr(self, 'name'):
+            if name == None: name = _utils.upper_camel_to_snake_case(self.__class__.__name__)
             self.name = name
             self.components = {}
             self.inputs = []
@@ -44,15 +44,14 @@ class Subsystem:
     def __repr__(self):
         return self.name
 
-    def __getattr__(self, attr):
-        if attr not in self.components:
-            raise AttributeError(f"'{self.name}' has attribute or component '{attr}'")
-        return self.components[attr]
-
     def add(self, name, kind=None, args=[], kwargs={}):
         if kind == None:
             kind = name
-        component = _component_class(kind)(
+        if type(kind) == str:
+            build = _skeleton.component_class(kind)
+        else:
+            build = kind
+        component = build(
             *args,
             **kwargs,
             name=self.name + '.' + kwargs.get('name', name),
@@ -65,62 +64,43 @@ class Subsystem:
             driver.add(i)
 
     def connect_inputs(self, other):
-        for i in self.inputs:
-            other.connect(i)
+        _connect(other, self.inputs)
 
     def connect_outputs(self, other):
-        for i in self.outputs:
-            i.connect(other)
+        _connect(self.outputs, other)
 
     def disconnect_inputs(self, other):
-        for i in self.inputs:
-            other.disconnect(i)
+        _skeleton.disconnect(other, self.inputs)
 
     def disconnect_outputs(self, other):
-        for i in self.outputs:
-            i.disconnect(other)
+        _skeleton.disconnect(self.outputs, other)
 
 class IirBank(Subsystem):
-    def init(self, name, order):
+    def init(self, order, name=None):
         components = {}
         for i in range(order):
             components[f'iirs[{i}]'] = 'iir'
             components[f'bufs[{i}]'] = 'buf'
         bufs = [f'bufs[{i}]' for i in range(order)]
-        Subsystem.init(self, name, components, bufs, bufs)
+        Subsystem.init(self, components, bufs, bufs, name=name)
         self.iirs = []
         self.bufs = []
         for i in range(order):
             self.iirs.append(self.components[f'iirs[{i}]'])
             self.bufs.append(self.components[f'bufs[{i}]'])
             self.iirs[-1].connect(self.bufs[-1])
+            self.iirs[-1].command_immediate('gain', [0])
 
-class Phonetizer(IirBank):
+class Phonetizer(Subsystem):
     def init(
         self,
-        name,
         tone_pregain=1,
         noise_pregain=1,
         phonetics_path='assets/phonetics',
         sample_rate=44100,
         continuant_wait=44100//8,
+        name=None,
     ):
-        Subsystem.init(self, name, {
-            'comm': 'comm',
-            'tone_gain': ('gain', [0]),
-            'tone_buf': 'buf',
-            'noise_gain': ('gain', [0]),
-            'noise_buf': 'buf',
-        })
-        IirBank.init(self, None, 5)
-        _connect(
-            (self.tone_gain, self.noise_gain),
-            (self.tone_buf, self.noise_buf),
-            self,
-        )
-        # inputs must be explicit
-        self.inputs = None
-        # pregains
         self.tone_pregain = tone_pregain
         self.noise_pregain = noise_pregain
         # phonetics
@@ -130,6 +110,32 @@ class Phonetizer(IirBank):
             with open(path) as file:
                 self.phonetics[phonetic] = json.loads(file.read())
         self.phonetic_name = '0'
+        # system
+        order = max(
+            max(
+                len(i['frames'][0].get('tone_formants', [])),
+                len(i['frames'][0].get('noise_formants', [])),
+            )
+            for i in self.phonetics.values()
+        )
+        Subsystem.init(self,
+            {
+                'comm': 'comm',
+                'tone_buf': 'buf',
+                'noise_buf': 'buf',
+                'tone_filter': (IirBank, [order]),
+                'noise_filter': (IirBank, [order]),
+            },
+            name=name,
+        )
+        _connect(
+            (self.tone_buf, self.noise_buf),
+            (self.tone_filter, self.noise_filter),
+        )
+        self.outputs = self.tone_filter.outputs + self.noise_filter.outputs
+        max_frames = max(len(i['frames']) for i in self.phonetics.values())
+        self.commands_per_phonetic = 5 * order * max_frames
+        self.comm.resize(self.commands_per_phonetic)
         # sample rate
         self.sample_rate = sample_rate
         self.grace = sample_rate // 100
@@ -145,6 +151,7 @@ class Phonetizer(IirBank):
                 smooth = 0.5
             elif any([
                 self.phonetic_name == '0',  # starting from silence
+                phonetic_name == '0',  # moving to silence
                 phonetic['type'] == 'stop',  # moving to stop
                 self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
             ]):
@@ -152,13 +159,22 @@ class Phonetizer(IirBank):
             else:  # moving between continuants
                 smooth = 0.9
         wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
-        with _UseComm(self.comm):
+        with _skeleton.UseComm(self.comm):
             for frame in phonetic['frames']:
-                self.tone_gain.command_detach('set', [frame['tone_amp'] * self.tone_pregain, smooth])
-                self.noise_gain.command_detach('set', [frame['noise_amp'] * self.noise_pregain, smooth])
-                for iir, formant in zip(self.iirs, frame['formants']):
-                    w = formant['freq'] / self.sample_rate * 2 * math.pi
-                    iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'], smooth])
+                if 'tone_formants' in frame:
+                    for iir, formant in zip(self.tone_filter.iirs, frame['tone_formants']):
+                        w = formant['freq'] / self.sample_rate * 2 * math.pi
+                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'] * self.tone_pregain, smooth])
+                else:
+                    for iir in self.tone_filter.iirs:
+                        iir.command_detach('gain', [0, smooth])
+                if 'noise_formants' in frame:
+                    for iir, formant in zip(self.noise_filter.iirs, frame['noise_formants']):
+                        w = formant['freq'] / self.sample_rate * 2 * math.pi
+                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'] * self.noise_pregain, 0])
+                else:
+                    for iir in self.noise_filter.iirs:
+                        iir.command_detach('gain', [0, smooth])
                 self.comm.wait(wait)
         self.phonetic_name = phonetic_name
         return wait * len(phonetic['frames'])
@@ -166,7 +182,7 @@ class Phonetizer(IirBank):
     def prep_syllables(self, syllables, notes, advance=0, anticipation=None):
         if anticipation == None:
             anticipation = self.sample_rate // 8
-        self.comm.resize(len(syllables) * (3 + 2 * len(self.iirs)))
+        self.comm.resize(len(syllables) * self.commands_per_phonetic)
         self.sample = 0
         for syllable, note in zip(syllables.split(), notes):
             segments = [
@@ -231,8 +247,8 @@ class Phonetizer(IirBank):
             self.sample += self.say(phonetic, continuant_wait=continuant_wait, speed=speed)
 
 class Portamento(Subsystem):
-    def init(self, name, slowness=0.999):
-        Subsystem.init(self, name,
+    def init(self, slowness=0.999, name=None):
+        Subsystem.init(self,
             {
                 'rhymel': 'rhymel',
                 'lpf': ('lpf', [slowness]),
@@ -244,6 +260,7 @@ class Portamento(Subsystem):
             },
             ['rhymel'],
             ['rhymel', 'oracle'],
+            name=name,
         )
         _connect(
             [self.rhymel, self.lpf],
@@ -254,11 +271,28 @@ class Portamento(Subsystem):
         other.midi(midi.Msg.pitch_bend_range(64))
         Subsystem.connect_outputs(self, other)
 
+class Vibrato(Subsystem):
+    def init(self, freq=3.5, amp=0.15, name=None):
+        Subsystem.init(self,
+            {
+                'lfo': ('lfo', [freq, amp]),
+                'oracle': ('oracle', [], {
+                    'mode': 'pitch_wheel',
+                    'm': 0x1fff,
+                    'b': 0x2000,
+                    'format': ('midi', [0xe0, '%l', '%h']),
+                }),
+            },
+            [],
+            ['oracle'],
+            name=name,
+        )
+        _connect(self.lfo, self.oracle)
+
 class Voices(Subsystem):
-    def init(self, name, spec, n=3, cents=0.1, vol=0.25, randomize_phase=None):
+    def init(self, spec, n=3, cents=0.1, vol=0.25, randomize_phase=None, name=None):
         Subsystem.init(
             self,
-            name,
             dict(
                 midi='midi',
                 **{f'voice{i}': spec for i in range(n)},
@@ -267,6 +301,7 @@ class Voices(Subsystem):
             ),
             ['midi'],
             ['buf'],
+            name=name,
         )
         _connect(
             self.components['midi'],

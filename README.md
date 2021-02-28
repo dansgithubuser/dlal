@@ -18,7 +18,7 @@ dlal's goal is to enable experimentation with sound. Some example uses include
 	- apply an arbitrary effect chain to a recording
 	- replay the inputs of a jam session
 
-dlal is an audio system configuration language Python module, that wrangles compiled audio processing components which abide a dead-simple C-linkage interface. This split is useful because Python is expressive, but compiled languages are fast, which we need in an audio processing environment.
+dlal is an audio system configurator Python module, that wrangles compiled audio processing components which abide a dead-simple C-linkage interface. This split is useful because Python is expressive, but compiled languages are fast. We want expressiveness for the human describing how sound should be procued, and speed for actually making the sound.
 
 dlal's GUI is web-based.
 
@@ -67,51 +67,41 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 +===========+
 | __init__  |
 +===========+
-^
+↑
++-+-------------+
+| |             |
+| +===========+ +========+
+| | subsystem | | _sound |
+| +===========+ +========+
+| ↑
++-+
 |
 +-+
 | |
-| +===========+
-| | subsystem |
-| +===========+
-| ^
-| |
-+-+
-|
-+->------------>-+-> ( _server.serve )
-|                |
-+-+              +----------------------+
-| |              |                      |
 | +===========+  +===================+  +===================+
 | | _skeleton |  | _websocket_server |  | _websocket_client |
 | +===========+  +===================+  +===================+
-| ^ ^            ^                      ^
-| | |            |                      |
-| +--------------+----------------------+
-| | |
-| | +--------------------------------------------+
-| |                                              |
-| +=========+                                    |
-| | _server |                                    |
-| +=========+                                    |
-|                                                |
+| ↑ ↑            ↑                      ↑
+| | +------------+----------------------+
+| |              |
+| |              +=========+
+| |              | _server |
+| |              +=========+
+| +----------------------------------------------+
 +------------------------+                       |
 |                        |                       |
 +=====================+  +=====================+ |
 | _default_components |  | _special_components | |
 +=====================+  +=====================+ |
-^                        ^                       |
-|                        |                       |
+↑                        ↑                       |
 +------------------------+-----------------------+
 |
 +============+
 | _component |
 +============+
 
-^
-^
-|
-|# common resources
+↑
+↑# common resources
 |
 +------------+
 |            |
@@ -170,7 +160,7 @@ Components may register a `connect` command defining how to connect to another c
 
 Components may register `to_json` and `from_json` commands to accomplish serialization.
 
-See `components/base` for more details and elaboration.
+See `components/base` for more details.
 
 On the Python side, components may implement `get_cross_state` and `set_cross_state` methods to accomplish serialization of cross-component information.
 
@@ -198,12 +188,9 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- make an intelligible vocoder
+- more intelligible speech synth
 - audiobro
 	- track 1
 		- bass slide down in B section
-	- legend of bass
-		- speech synth
-			- LPC
-			- https://www.youtube.com/watch?v=Jcymn3RGkF4
-	- haunted by bass
 	- bassindaface / funky funky bass

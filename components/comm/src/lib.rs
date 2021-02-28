@@ -92,7 +92,7 @@ impl ComponentTrait for Component {
 impl Component {
     fn queue_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let detach = body.arg(7)?;
-        if self
+        if let Err(e) = self
             .queues
             .to_audio_send
             .try_send(QueuedItem::Command {
@@ -100,9 +100,8 @@ impl Component {
                 body: Box::new(body.arg(5)?),
                 detach,
             })
-            .is_err()
         {
-            return Err(err!("try_send failed").into());
+            return Err(err!("try_send failed: {}", e).into());
         }
         if detach {
             return Ok(None);
@@ -112,13 +111,12 @@ impl Component {
     }
 
     fn wait_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if self
+        if let Err(e) = self
             .queues
             .to_audio_send
             .try_send(QueuedItem::Wait(body.arg(0)?))
-            .is_err()
         {
-            return Err(err!("try_send failed").into());
+            return Err(err!("try_send failed: {}", e).into());
         }
         Ok(None)
     }
