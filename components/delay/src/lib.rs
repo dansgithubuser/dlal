@@ -27,7 +27,7 @@ component!(
             "args": [{
                 "name": "gain_x",
                 "optional": true,
-                "desc": "input tap amount",
+                "desc": "Input tap amount. If this is 0, no sound enters the delay.",
                 "default": "1.0",
             }],
         },
@@ -35,7 +35,7 @@ component!(
             "args": [{
                 "name": "gain_y",
                 "optional": true,
-                "desc": "output tap amount (feedback)",
+                "desc": "Output tap amount (feedback). How much of the delay's output should be fed back in to the delay.",
                 "default": "0.0",
             }],
         },
@@ -43,7 +43,7 @@ component!(
             "args": [{
                 "name": "gain_i",
                 "optional": true,
-                "desc": "monitor amount",
+                "desc": "Monitor amount. How much of the original sound should remain.",
                 "default": "0.0",
             }],
         },
@@ -51,7 +51,7 @@ component!(
             "args": [{
                 "name": "gain_o",
                 "optional": true,
-                "desc": "output amount",
+                "desc": "Output amount. How much of the delay's output should be added to the original sound.",
                 "default": "1.0",
             }],
         },
