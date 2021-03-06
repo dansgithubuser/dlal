@@ -1,28 +1,21 @@
 use dlal_component_base::{component, serde_json, CmdResult};
 
-use num_complex::Complex64;
+use biquad::frequency::ToHertz;
+use biquad::Biquad;
 
 struct Band {
-    a1: f64,
-    a2: f64,
-    b0: f64,
-    b1: f64,
+    modulator_biquads: Vec<biquad::DirectForm2Transposed<f64>>,
+    carrier_biquads: Vec<biquad::DirectForm2Transposed<f64>>,
     sustain: f32,
-    d_m: Vec<f64>,
-    d_c: Vec<f64>,
     amp: f32,
 }
 
 impl Default for Band {
     fn default() -> Self {
         Self {
-            a1: 0.0,
-            a2: 0.0,
-            b0: 1.0,
-            b1: 0.0,
+            modulator_biquads: vec![],
+            carrier_biquads: vec![],
             sustain: 0.99,
-            d_m: vec![0.0; 2],
-            d_c: vec![0.0; 2],
             amp: 0.0,
         }
     }
@@ -33,23 +26,33 @@ impl Band {
         Self::default()
     }
 
-    fn narrow(mut self, w: f64) -> Self {
-        let width = 0.02;
-        let p = Complex64::from_polar(1.0 - width, w);
-        let z_w = Complex64::from_polar(1.0, w);
-        self.b0 = ((z_w - p) * (z_w - p.conj())).norm();
-        self.b1 = 0.0;
-        self.a1 = -(p + p.conj()).re;
-        self.a2 = (p * p.conj()).re;
+    fn narrow(mut self, f: f64, q: f64, sample_rate: f64) -> Self {
+        let bq = biquad::DirectForm2Transposed::<f64>::new(
+            biquad::Coefficients::<f64>::from_params(
+                biquad::Type::BandPass,
+                sample_rate.hz(),
+                f.hz(),
+                q,
+            )
+            .unwrap(),
+        );
+        self.modulator_biquads.push(bq.clone());
+        self.carrier_biquads.push(bq.clone());
         self
     }
 
-    fn high_pass(mut self, w: f64) -> Self {
-        let alpha = 1.0 / (w + 1.0);
-        self.a1 = -alpha;
-        self.a2 = 0.0;
-        self.b0 = alpha;
-        self.b1 = -alpha;
+    fn high_pass(mut self, f: f64, sample_rate: f64) -> Self {
+        let bq = biquad::DirectForm2Transposed::<f64>::new(
+            biquad::Coefficients::<f64>::from_params(
+                biquad::Type::HighPass,
+                sample_rate.hz(),
+                f.hz(),
+                biquad::Q_BUTTERWORTH_F64,
+            )
+            .unwrap(),
+        );
+        self.modulator_biquads.push(bq.clone());
+        self.carrier_biquads.push(bq.clone());
         self
     }
 
@@ -61,19 +64,19 @@ impl Band {
     }
 
     fn filter_modulator(&mut self, x: f32) -> f32 {
-        let x = x as f64;
-        let y = self.b0 * x + self.d_m[0];
-        self.d_m[0] = self.b1 * x - self.a1 * y + self.d_m[1];
-        self.d_m[1] = -self.a2 * y;
-        y as f32
+        let mut x = x as f64;
+        for biquad in &mut self.modulator_biquads {
+            x = biquad.run(x);
+        }
+        x as f32
     }
 
     fn filter_carrier(&mut self, x: f32) -> f32 {
-        let x = x as f64;
-        let y = self.b0 * x + self.d_c[0];
-        self.d_c[0] = self.b1 * x - self.a1 * y + self.d_c[1];
-        self.d_c[1] = -self.a2 * y;
-        y as f32 * self.amp
+        let mut x = x as f64;
+        for biquad in &mut self.carrier_biquads {
+            x = biquad.run(x);
+        }
+        x as f32 * self.amp
     }
 }
 
@@ -108,18 +111,21 @@ component!(
 
 impl Component {
     fn commit(&mut self) {
-        let tau = 2.0 * std::f64::consts::PI;
         let s = self.sample_rate as f64;
         let t_o = self.tone_order as f64;
         let t_c = self.tone_cutoff as f64;
         let n_c = self.noise_cutoff as f64;
         self.bands = (0..self.tone_order)
             .map(|i| {
-                let w_full = tau * (i as f64 + 1.0) / t_o;
-                Band::new().narrow(w_full * t_c / s)
+                let i = i as f64;
+                Band::new().narrow(
+                    (i + 1.0) / t_o * t_c,
+                    25.0 + i / 2.0,
+                    s,
+                )
             })
             .collect();
-        self.bands.push(Band::new().high_pass(tau * n_c / s));
+        self.bands.push(Band::new().high_pass(n_c, s));
     }
 }
 
@@ -140,7 +146,13 @@ impl ComponentTrait for Component {
             band.analyze(&self.audio);
         }
         if std::option_env!("DLAL_SNOOP_VOCODER").is_some() {
-            println!("{:?}", self.bands.iter().map(|i| (i.amp * 100.0) as i32).collect::<Vec<_>>());
+            println!(
+                "{:?}",
+                self.bands
+                    .iter()
+                    .map(|i| (i.amp * 100.0) as i32)
+                    .collect::<Vec<_>>(),
+            );
         }
         let carrier = match &mut self.output {
             Some(output) => output.audio(self.run_size).unwrap(),
