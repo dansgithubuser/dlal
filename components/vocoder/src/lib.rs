@@ -56,19 +56,13 @@ impl Band {
         self
     }
 
-    fn analyze(&mut self, x: &Vec<f32>) {
-        for i in x {
-            self.amp *= self.sustain;
-            self.amp = f32::max(self.filter_modulator(*i).abs(), self.amp);
-        }
-    }
-
-    fn filter_modulator(&mut self, x: f32) -> f32 {
+    fn filter_modulator(&mut self, x: f32) {
+        self.amp *= self.sustain;
         let mut x = x as f64;
         for biquad in &mut self.modulator_biquads {
             x = biquad.run(x);
         }
-        x as f32
+        self.amp = f32::max(x as f32, self.amp);
     }
 
     fn filter_carrier(&mut self, x: f32) -> f32 {
@@ -142,8 +136,20 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
-        for band in &mut self.bands {
-            band.analyze(&self.audio);
+        let carrier = match &mut self.output {
+            Some(output) => output.audio(self.run_size).unwrap(),
+            None => return,
+        };
+        for (i_mod, i_car) in self.audio.iter().zip(carrier.iter_mut()) {
+            let mut y = 0.0;
+            for band in &mut self.bands {
+                band.filter_modulator(*i_mod);
+                y += band.filter_carrier(*i_car);
+            }
+            *i_car = y;
+        }
+        for i in &mut self.audio {
+            *i = 0.0;
         }
         if std::option_env!("DLAL_SNOOP_VOCODER").is_some() {
             println!(
@@ -153,20 +159,6 @@ impl ComponentTrait for Component {
                     .map(|i| (i.amp * 100.0) as i32)
                     .collect::<Vec<_>>(),
             );
-        }
-        let carrier = match &mut self.output {
-            Some(output) => output.audio(self.run_size).unwrap(),
-            None => return,
-        };
-        for i in carrier {
-            let mut y = 0.0;
-            for band in &mut self.bands {
-                y += band.filter_carrier(*i);
-            }
-            *i = y;
-        }
-        for i in &mut self.audio {
-            *i = 0.0;
         }
     }
 }
