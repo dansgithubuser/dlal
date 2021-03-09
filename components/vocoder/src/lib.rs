@@ -3,6 +3,19 @@ use dlal_component_base::{component, serde_json, CmdResult};
 use biquad::frequency::ToHertz;
 use biquad::Biquad;
 
+use std::time;
+
+fn noise() -> f32 {
+    let t = time::SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
+        .unwrap();
+    let r1 = t.as_secs();
+    let r2 = t.subsec_nanos() as u64;
+    const PERIOD: u64 = 77777;
+    let rf = (r1 ^ r2) % PERIOD;
+    2.0 * rf as f32 / PERIOD as f32 - 1.0
+}
+
 struct Band {
     modulator_biquads: Vec<biquad::DirectForm2Transposed<f64>>,
     carrier_biquads: Vec<biquad::DirectForm2Transposed<f64>>,
@@ -136,21 +149,35 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
+        // get carrier samples from output
         let carrier = match &mut self.output {
             Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
+        // find band amplitudes from modulator and apply to carrier; add noise
+        let mut total_amp = 0.0;
         for (i_mod, i_car) in self.audio.iter().zip(carrier.iter_mut()) {
             let mut y = 0.0;
             for band in &mut self.bands {
                 band.filter_modulator(*i_mod);
                 y += band.filter_carrier(*i_car);
+                total_amp += band.amp;
             }
             *i_car = y;
+            // add noise based on noise band
+            *i_car += noise() * self.bands.last().unwrap().amp;
         }
+        // apply overall amplitude to carrier for silencier silences
+        total_amp /= self.run_size as f32;
+        total_amp = f32::min(1.0, total_amp);
+        for i in carrier.iter_mut() {
+            *i *= total_amp;
+        }
+        // reset audio
         for i in &mut self.audio {
             *i = 0.0;
         }
+        // snoop
         if std::option_env!("DLAL_SNOOP_VOCODER").is_some() {
             println!(
                 "{:?}",

@@ -188,7 +188,6 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- make an intelligible vocoder
 - more intelligible speech synth
 	- single_pole_bandpass -> pole_pair_bandpass
 	- why are formants asymmetrical in the plot?
