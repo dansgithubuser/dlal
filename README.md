@@ -189,9 +189,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- single_pole_bandpass -> pole_pair_bandpass
-	- why are formants asymmetrical in the plot?
-	- try pole-zero bandpasses instead of single-pole bandpasses?
 - audiobro
 	- track 1
 		- bass slide down in B section

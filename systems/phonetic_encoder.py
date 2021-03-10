@@ -214,7 +214,7 @@ def parameterize(x):
     toniness = calc_toniness(x)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    tone_formants = IirBank.fitting_envelope(envelope, 0.001, False)
+    tone_formants = IirBank.fitting_envelope(envelope, 0.01, False)
     tone_formants.multiply(toniness['tone_amp'])
     #----- calculate noise filter -----#
     tone_spectrum = tone_formants.spectrum(n)
@@ -354,8 +354,8 @@ class IirBank:
             w = iir['freq'] / SAMPLE_RATE * 2*math.pi
             p = cmath.rect(1.0 - iir['width'], w);
             z_w = cmath.rect(1.0, w);
-            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate()));
-            b, a = signal.zpk2tf([], [p, p.conjugate()], gain)
+            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** 2;
+            b, a = signal.zpk2tf([], [p, p.conjugate(), p, p.conjugate()], gain)
             w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
             for i in range(len(spectrum)):
                 spectrum[i] += h[i]

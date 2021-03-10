@@ -47,7 +47,7 @@ component!(
             ],
         },
         "pole_zero_get": {},
-        "single_pole_bandpass": {
+        "pole_pairs_bandpass": {
             "args": [
                 {
                     "name": "w",
@@ -67,6 +67,10 @@ component!(
                     "name": "smooth",
                     "default": 0,
                     "range": "[0, 1]",
+                },
+                {
+                    "name": "order",
+                    "default": 1,
                 },
             ],
         },
@@ -280,20 +284,21 @@ impl Component {
         })))
     }
 
-    fn single_pole_bandpass_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+    fn pole_pairs_bandpass_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let w = body.arg(0)?;
         let width = body.arg::<f64>(1)?;
         let peak = body.arg(2).unwrap_or(1.0);
         let smooth = body.arg(3).unwrap_or(0.0);
-        /* How would we get a peak of 1?
-        H(z) = gain / ((z - p)*(z - p.conjugate()))
-        We can control gain
-        Max response is at z_w = cmath.rect(1, w)
-        gain = abs((z_w - p)*(z_w - p.conjugate())) */
-        let p = Complex64::from_polar(1.0 - width, w);
-        let z_w = Complex64::from_polar(1.0, w);
-        let gain = peak * ((z_w - p) * (z_w - p.conj())).norm();
-        self.smooth_pole_zero(&[p, p.conj()], &[], gain, smooth);
+        let order = body.arg(4).unwrap_or(1);
+        let pole = Complex64::from_polar(1.0 - width, w);
+        let z = Complex64::from_polar(1.0, w);
+        let gain = peak * ((z - pole) * (z - pole.conj())).norm().powf(order as f64);
+        let mut poles = vec![];
+        for _ in 0..order {
+            poles.push(pole);
+            poles.push(pole.conj());
+        }
+        self.smooth_pole_zero(&poles, &[], gain, smooth);
         Ok(None)
     }
 

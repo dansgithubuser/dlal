@@ -22,7 +22,7 @@ dlal.connect(
     [audio, tape],
 )
 
-iir.single_pole_bandpass(0, 0.1)
+iir.pole_pairs_bandpass(0, 0.1)
 def sweep():
     low_freq = 440
     sweep_speed = 0.02
@@ -34,7 +34,7 @@ def sweep():
             sweep.m = 1 - sweep_speed
         elif sweep.w < low_freq:
             sweep.m = 1 + sweep_speed
-        iir.single_pole_bandpass(
+        iir.pole_pairs_bandpass(
             sweep.w / audio.sample_rate() * 2 * math.pi,
             math.sin(20*time.time())*0.1 + 0.11,
             smooth=0.9,
