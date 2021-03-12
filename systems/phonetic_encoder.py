@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--only', nargs='+')
 parser.add_argument('--start-from')
-parser.add_argument('--order', type=int, default=10)
+parser.add_argument('--order', type=int, default=6)
 parser.add_argument('--plot-stop-ranges', action='store_true')
 parser.add_argument('--plot-spectra', action='store_true')
 args = parser.parse_args()
@@ -214,7 +214,18 @@ def parameterize(x):
     toniness = calc_toniness(x)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    tone_formants = IirBank.fitting_envelope(envelope, 0.01, False)
+    tone_formants = IirBank.fitting_envelope(
+        envelope,
+        0.01,
+        False,
+        [
+            [
+                200 + (i+0) ** 2 * 5000 // args.order ** 2,
+                700 + (i+1) ** 2 * 5000 // args.order ** 2,
+            ]
+            for i in range(args.order)
+        ],
+    )
     tone_formants.multiply(toniness['tone_amp'])
     #----- calculate noise filter -----#
     tone_spectrum = tone_formants.spectrum(n)
@@ -223,7 +234,18 @@ def parameterize(x):
         for i in range(len(envelope))
     ]
     noise_envelope = calc_envelope(noise_spectrum, 400)
-    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02, True)
+    noise_formants = IirBank.fitting_envelope(
+        noise_envelope,
+        0.02,
+        True,
+        [
+            [
+                (i+0) * 20000 // (args.order - i),
+                (i+1) * 20000 // (args.order - i),
+            ]
+            for i in range(args.order)
+        ],
+    )
     noise_formants.multiply(toniness['noise_amp'])
     #----- outputs -----#
     result = {}
@@ -282,27 +304,34 @@ def analyze(x=None):
         }
 
 class IirBank:
-    def fitting_envelope(envelope, width, widen):
+    def fitting_envelope(envelope, width, widen, formant_ranges):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
+        def append_formant(freq, amp):
+            iir_bank.formants.append({
+                'freq': freq,
+                'amp': amp,
+                'width': width,
+            })
         for i in range(args.order):
             # find unvisited formant with biggest delta from spectrum
             spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
             delta = [i - j for i, j in zip(envelope, spectrum)]
+            for j in range(len(delta)):
+                if not formant_ranges[i][0] <= j / ((len(envelope) - 1) * 2) * SAMPLE_RATE <= formant_ranges[i][1]:
+                    delta[j] = 0
             unvisited = [i for i, j in zip(delta, visited) if not j]
             if not unvisited:
-                iir_bank.formants.append({
-                    'freq': SAMPLE_RATE / 4,
-                    'amp': 0,
-                    'width': width,
-                })
-                break
+                append_formant(sum(formant_ranges[i]) / 2, 0)
+                continue
             peak = max(unvisited)
-            if peak <= 0: break
+            if peak <= 0:
+                append_formant(sum(formant_ranges[i]) / 2, 0)
+                continue
             # find index
             peak_i = delta.index(peak)
             peak_j = peak_i
-            while peak_j < len(delta) and delta[peak_j+1] == delta[peak_i]:
+            while peak_j+1 < len(delta) and delta[peak_j+1] == delta[peak_i]:
                 peak_j += 1
             peak_i = (peak_i + peak_j) // 2
             # visit right
