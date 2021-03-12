@@ -164,14 +164,26 @@ class Phonetizer(Subsystem):
                 if 'tone_formants' in frame:
                     for iir, formant in zip(self.tone_filter.iirs, frame['tone_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('pole_pairs_bandpass', [w, 0.01, formant['amp'] * self.tone_pregain, smooth, 2])
+                        iir.command_detach('pole_pairs_bandpass', [
+                            w,
+                            0.01,
+                            formant['amp'] * self.tone_pregain,
+                            smooth,
+                            formant['order'] // 2,
+                        ])
                 else:
                     for iir in self.tone_filter.iirs:
                         iir.command_detach('gain', [0, smooth])
                 if 'noise_formants' in frame:
                     for iir, formant in zip(self.noise_filter.iirs, frame['noise_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('pole_pairs_bandpass', [w, 0.01, formant['amp'] * self.noise_pregain, 0, 2])
+                        iir.command_detach('pole_pairs_bandpass', [
+                            w,
+                            0.01,
+                            formant['amp'] * self.noise_pregain,
+                            0,
+                            formant['order'] // 2,
+                        ])
                 else:
                     for iir in self.noise_filter.iirs:
                         iir.command_detach('gain', [0, smooth])

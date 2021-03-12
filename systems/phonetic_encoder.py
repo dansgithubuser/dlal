@@ -245,6 +245,7 @@ def parameterize(x):
             ]
             for i in range(args.order)
         ],
+        1,
     )
     noise_formants.multiply(toniness['noise_amp'])
     #----- outputs -----#
@@ -304,7 +305,7 @@ def analyze(x=None):
         }
 
 class IirBank:
-    def fitting_envelope(envelope, width, widen, formant_ranges):
+    def fitting_envelope(envelope, width, widen, formant_ranges, pole_pairs=2):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         def append_formant(freq, amp):
@@ -312,10 +313,11 @@ class IirBank:
                 'freq': freq,
                 'amp': amp,
                 'width': width,
+                'order': 2 * pole_pairs,
             })
         for i in range(args.order):
             # find unvisited formant with biggest delta from spectrum
-            spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
+            spectrum = iir_bank.spectrum((len(envelope)-1) * 2, pole_pairs=pole_pairs)
             delta = [i - j for i, j in zip(envelope, spectrum)]
             for j in range(len(delta)):
                 if not formant_ranges[i][0] <= j / ((len(envelope) - 1) * 2) * SAMPLE_RATE <= formant_ranges[i][1]:
@@ -355,11 +357,7 @@ class IirBank:
             centroid = sum(i * envelope[i] for i in range(l, r)) / sum(v for v in envelope[l:r])
             freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
             # append formant
-            iir_bank.formants.append({
-                'freq': freq,
-                'amp': peak,
-                'width': width,
-            })
+            append_formant(freq, peak)
             # widening
             if widen:
                 e = iir_bank.error(envelope)
@@ -377,14 +375,14 @@ class IirBank:
     def __init__(self, formants=[]):
         self.formants = copy.copy(formants)
 
-    def spectrum(self, n):
+    def spectrum(self, n, pole_pairs=2):
         spectrum = [0]*(n // 2 + 1)
         for iir in self.formants:
             w = iir['freq'] / SAMPLE_RATE * 2*math.pi
             p = cmath.rect(1.0 - iir['width'], w);
             z_w = cmath.rect(1.0, w);
-            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** 2;
-            b, a = signal.zpk2tf([], [p, p.conjugate(), p, p.conjugate()], gain)
+            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** pole_pairs;
+            b, a = signal.zpk2tf([], [p, p.conjugate()] * pole_pairs, gain)
             w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
             for i in range(len(spectrum)):
                 spectrum[i] += h[i]
