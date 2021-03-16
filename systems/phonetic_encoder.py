@@ -240,8 +240,8 @@ def parameterize(x):
         True,
         [
             [
-                (i+0) * 20000 // (args.order - i),
-                (i+1) * 20000 // (args.order - i),
+                (i+0) * 20000 // args.order,
+                (i+1) * 20000 // args.order,
             ]
             for i in range(args.order)
         ],
@@ -317,7 +317,7 @@ class IirBank:
             })
         for i in range(args.order):
             # find unvisited formant with biggest delta from spectrum
-            spectrum = iir_bank.spectrum((len(envelope)-1) * 2, pole_pairs=pole_pairs)
+            spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
             delta = [i - j for i, j in zip(envelope, spectrum)]
             for j in range(len(delta)):
                 if not formant_ranges[i][0] <= j / ((len(envelope) - 1) * 2) * SAMPLE_RATE <= formant_ranges[i][1]:
@@ -362,8 +362,8 @@ class IirBank:
             if widen:
                 e = iir_bank.error(envelope)
                 widened = copy.deepcopy(iir_bank)
-                widened.formants[-1]['width'] *= 2
                 for i in range(8):
+                    widened.formants[-1]['width'] *= 2
                     e_w = widened.error(envelope)
                     if e_w >= e: break
                     e = e_w
@@ -375,14 +375,14 @@ class IirBank:
     def __init__(self, formants=[]):
         self.formants = copy.copy(formants)
 
-    def spectrum(self, n, pole_pairs=2):
+    def spectrum(self, n):
         spectrum = [0]*(n // 2 + 1)
-        for iir in self.formants:
-            w = iir['freq'] / SAMPLE_RATE * 2*math.pi
-            p = cmath.rect(1.0 - iir['width'], w);
+        for formant in self.formants:
+            w = formant['freq'] / SAMPLE_RATE * 2*math.pi
+            p = cmath.rect(1.0 - formant['width'], w);
             z_w = cmath.rect(1.0, w);
-            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** pole_pairs;
-            b, a = signal.zpk2tf([], [p, p.conjugate()] * pole_pairs, gain)
+            gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** (formant['order'] // 2);
+            b, a = signal.zpk2tf([], [p, p.conjugate()] * (formant['order'] // 2), gain)
             w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
             for i in range(len(spectrum)):
                 spectrum[i] += h[i]
