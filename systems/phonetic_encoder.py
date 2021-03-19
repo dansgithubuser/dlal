@@ -399,8 +399,15 @@ class IirBank:
             formant['amp'] *= f
 
     def error(self, envelope):
-        s = self.spectrum((len(envelope)-1) * 2)
-        return sum(abs(flabs(i) - j) for i, j in zip(s, envelope))
+        spectrum = self.spectrum((len(envelope)-1) * 2)
+        err = 0
+        for spec, env in zip(spectrum, envelope):
+            e = flabs(spec) - env
+            if e > 0:
+                err += 4 * e  # we can add but we can't remove, so going over is worse
+            else:
+                err += abs(e)
+        return err
 
 #===== main =====#
 phonetics = [
