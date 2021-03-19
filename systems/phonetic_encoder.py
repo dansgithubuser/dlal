@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--phonetics-file-path', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--only', nargs='+')
 parser.add_argument('--start-from')
-parser.add_argument('--order', type=int, default=6)
+parser.add_argument('--order', type=int, default=20)
 parser.add_argument('--plot-stop-ranges', action='store_true')
 parser.add_argument('--plot-spectra', action='store_true')
 args = parser.parse_args()
