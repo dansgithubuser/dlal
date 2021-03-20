@@ -42,7 +42,7 @@ load.phonetics = None
 
 def autocorrelation(x, shift):
     assert len(x) > shift
-    return sum(i * j for i, j in zip(x[:-shift], x[shift:]))
+    return sum(abs(i * j) for i, j in zip(x[:-shift], x[shift:]))
 
 def flabs(x):
     return float(abs(x))
@@ -185,7 +185,7 @@ def calc_toniness(x):
         ac_samples = len(x) - shift
         if ac_samples <= min_ac_samples:
             break
-        ac = abs(autocorrelation(x, shift))
+        ac = autocorrelation(x, shift)
         ac_power = ac / ac_samples
         ac = ac_power * len(x)  # for fair comparison w energy
         acs.append(ac)
@@ -196,7 +196,7 @@ def calc_toniness(x):
     raw_tone = max_ac / energy
     tone = min(raw_tone, 1)
     if tone > 0.8: tone = 1
-    elif chaos > 0.004: tone = 0
+    elif chaos > 0.001: tone = 0
     tone_amp = math.sqrt(tone)
     noise_amp = math.sqrt(1 - tone)
     # return
