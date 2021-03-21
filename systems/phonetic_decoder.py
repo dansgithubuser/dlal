@@ -275,7 +275,7 @@ def say_random():
             'elufint',
             'fery',
             'greyp',
-            'hipo',
+            'hipow',
             'iglw',
             'jelyfi[sh]',
             'key[ng]gurww',
@@ -332,7 +332,7 @@ def say_random():
     return sentence
 
 tone.midi([0x90, 42, 0x7f])
-noise.midi([0x90, 60, 0x18])  # noise is ~100x more powerful than a 100Hz impulse train + empirical fudging
+noise.midi([0x90, 60, 0x40])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()

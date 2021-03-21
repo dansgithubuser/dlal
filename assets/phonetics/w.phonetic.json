@@ -11,19 +11,19 @@
         },
         {
           "freq": 531.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 606.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 706.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
@@ -35,49 +35,49 @@
         },
         {
           "freq": 831.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 981.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1156.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1356.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1581.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1831.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 2106.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 2406.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
@@ -89,37 +89,37 @@
         },
         {
           "freq": 3081.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 3456.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 3856.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 4281.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 4731.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 5206.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         }
@@ -128,7 +128,7 @@
         "toniness": {
           "energy": 2345.109502322972,
           "tone": 0.9298917517683849,
-          "tone_amp": 1.0,
+          "tone_amp": 1,
           "noise_amp": 0.0,
           "chaos": 0.00011961057808413017,
           "voiced": true
@@ -142,7 +142,7 @@
     "toniness": {
       "energy": 2345.109502322972,
       "tone": 0.9298917517683849,
-      "tone_amp": 1.0,
+      "tone_amp": 1,
       "noise_amp": 0.0,
       "chaos": 0.00011961057808413017,
       "voiced": true

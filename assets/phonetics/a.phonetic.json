@@ -11,13 +11,13 @@
         },
         {
           "freq": 531.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 606.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
@@ -29,7 +29,7 @@
         },
         {
           "freq": 831.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
@@ -41,19 +41,19 @@
         },
         {
           "freq": 981.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1156.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1356.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
@@ -83,7 +83,7 @@
         },
         {
           "freq": 2731.0,
-          "amp": 0.0,
+          "amp": 0,
           "width": 0.01,
           "order": 4
         },
@@ -128,7 +128,7 @@
         "toniness": {
           "energy": 9492.205467059277,
           "tone": 0.9758178397757549,
-          "tone_amp": 1.0,
+          "tone_amp": 1,
           "noise_amp": 0.0,
           "chaos": 0.00017511402541777393,
           "voiced": true
@@ -142,7 +142,7 @@
     "toniness": {
       "energy": 9492.205467059277,
       "tone": 0.9758178397757549,
-      "tone_amp": 1.0,
+      "tone_amp": 1,
       "noise_amp": 0.0,
       "chaos": 0.00017511402541777393,
       "voiced": true
