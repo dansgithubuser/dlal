@@ -186,7 +186,7 @@ def tell_story(i=0):
         # 7
         '[[ae]yh[ae]vuf[ae]nsysilwet]',
         # 8
-        '[h[ae]wduz[th_v]ugreytblwk[ae]tjumpjayv[ae]nd[ae]nsefrtlesly]',
+        '[h[ae]w0duz0[th_v]u0greyt0blw0k[ae]t0jump0jayv0[ae]n0d[ae]ns0efrtlesly]',
     ][i])
 
 def say_random():
