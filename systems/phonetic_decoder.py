@@ -182,7 +182,11 @@ def tell_story(i=0):
         # 6
         '''
         A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
-        '''
+        ''',
+        # 7
+        '[[ae]yh[ae]vuf[ae]nsysilwet]',
+        # 8
+        '[h[ae]wduz[th_v]ugreytblwk[ae]tjumpjayv[ae]nd[ae]nsefrtlesly]',
     ][i])
 
 def say_random():
