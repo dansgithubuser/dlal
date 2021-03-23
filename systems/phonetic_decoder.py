@@ -184,9 +184,9 @@ def tell_story(i=0):
         A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
         ''',
         # 7
-        '[[ae]yh[ae]vuf[ae]nsysilwet]',
+        '[[ae]yh[ae]vuf[ae]nsysilwet]',  # I have a fancy silhouette
         # 8
-        '[h[ae]w0duz0[th_v]u0greyt0blw0k[ae]t0jump0jayv0[ae]n0d[ae]ns0efrtlesly]',
+        '[h[ae]w0duz0[th_v]u0greyt0blw0k[ae]t0jump0jayv0[ae]n0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
     ][i])
 
 def say_random():
