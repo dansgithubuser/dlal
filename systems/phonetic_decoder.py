@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser(description=
     'and synthesizes a sound.'
 )
 parser.add_argument('--phonetics')
+parser.add_argument('--rot13', action='store_true')
 parser.add_argument('--tell-story', type=int)
 args = parser.parse_args()
 
@@ -335,13 +336,23 @@ def say_random():
     say(sentence)
     return sentence
 
+def say_rot13(phonetics):
+    def rot13(char):
+        if not re.match('[a-z]', char): return char
+        return chr((ord(char) - ord('a') + 13) % 26 + ord('a'))
+    phonetics = ''.join([rot13(i) for i in phonetics])
+    say(phonetics)
+
 tone.midi([0x90, 42, 0x7f])
 noise.midi([0x90, 60, 0x40])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
     if args.phonetics:
-        say(args.phonetics)
+        if args.rot13:
+            say_rot13(args.phonetics)
+        else:
+            say(args.phonetics)
     if type(args.tell_story) == int:
         tell_story(args.tell_story)
     tape.to_file_i16le_stop()
