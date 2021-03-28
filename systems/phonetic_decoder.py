@@ -343,8 +343,16 @@ def say_rot13(phonetics):
     phonetics = ''.join([rot13(i) for i in phonetics])
     say(phonetics)
 
-tone.midi([0x90, 42, 0x7f])
-noise.midi([0x90, 60, 0x40])
+def say_all():
+    for phonetic in sorted(phonetizer.phonetics.keys()):
+        if phonetic == '0': continue
+        print(phonetic)
+        for i in range(4):
+            say(f'[{phonetic}]')
+            time.sleep(0.5)
+
+tone.midi([0x90, 42, 127])
+noise.midi([0x90, 60, 13])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()

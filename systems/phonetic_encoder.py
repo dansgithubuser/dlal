@@ -197,7 +197,7 @@ def calc_toniness(x):
     tone = min(raw_tone, 1)
     if tone > 0.8: tone = 1
     elif chaos > 0.001: tone = 0
-    tone_amp = 1
+    tone_amp = tone and 1
     noise_amp = math.sqrt(1 - tone)
     # return
     return {

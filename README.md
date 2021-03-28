@@ -189,7 +189,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- voiced fricatives still not toney enough
 	- analyze stop toniness completely before parameterizing pieces
 		- smaller pieces
 - audiobro
