@@ -209,9 +209,10 @@ def calc_toniness(x):
         'voiced': tone != 0,
     }
 
-def parameterize(x):
+def parameterize(x, toniness=None):
     #----- tone vs noise -----#
-    toniness = calc_toniness(x)
+    if toniness == None:
+        toniness = calc_toniness(x)
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
     tone_formants = IirBank.fitting_envelope(
@@ -260,7 +261,7 @@ def parameterize(x):
     return result
 
 def cut_stop(x):
-    step = len(x) // int(len(x) / 512)
+    step = 512
     return [x[i:i+step] for i in range(0, len(x)-step, step)]
 
 def cut_phonetic(x):
@@ -289,7 +290,7 @@ def analyze(x=None):
         toniness = calc_toniness(sum(cuts, []))
         frames = []
         for i, cut in enumerate(cuts):
-            frames.append(parameterize(cut))
+            frames.append(parameterize(cut, toniness=toniness))
         unvoiced_stop_silence = 0
         if not toniness['voiced']:
             unvoiced_stop_silence = SAMPLE_RATE * 60 // 1000
