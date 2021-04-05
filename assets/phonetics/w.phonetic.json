@@ -4,150 +4,150 @@
     {
       "tone_formants": [
         {
-          "freq": 257.979231415601,
-          "amp": 2.7919768394494104,
+          "freq": 257.9791105649993,
+          "amp": 17.774434006695063,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 531.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 606.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 706.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 758.3807211351906,
-          "amp": 0.929500767887896,
+          "freq": 758.3808022336873,
+          "amp": 5.917434610228019,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 831.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 981.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1156.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1356.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1581.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 1831.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 2106.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 2406.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 3075.9528033837846,
-          "amp": 0.008491305046451826,
+          "freq": 3075.950503814005,
+          "amp": 0.05406947626205905,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 3081.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 3456.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 3856.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 4281.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 4731.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         },
         {
           "freq": 5206.0,
-          "amp": 0,
+          "amp": 0.0,
           "width": 0.01,
           "order": 4
         }
       ],
       "meta": {
         "toniness": {
-          "energy": 2345.109502322972,
-          "tone": 0.9298917517683849,
+          "energy": 2345.10992502328,
+          "tone": 0.9298915376387228,
           "tone_amp": 1,
           "noise_amp": 0.0,
-          "chaos": 0.00011961057808413017,
+          "chaos": 0.00011961053268796617,
           "voiced": true
         },
-        "tone_transfer": 0.024673574027932972,
+        "tone_transfer": 1.0000000000000018,
         "noise_transfer": 0.0
       }
     }
   ],
   "meta": {
     "toniness": {
-      "energy": 2345.109502322972,
-      "tone": 0.9298917517683849,
+      "energy": 2345.10992502328,
+      "tone": 0.9298915376387228,
       "tone_amp": 1,
       "noise_amp": 0.0,
-      "chaos": 0.00011961057808413017,
+      "chaos": 0.00011961053268796617,
       "voiced": true
     },
-    "tone_transfer": 0.024673574027932972,
+    "tone_transfer": 1.0000000000000018,
     "noise_transfer": 0.0
   }
 }
