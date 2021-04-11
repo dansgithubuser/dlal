@@ -66,7 +66,7 @@ def stop_ranges(x):
         return None
     # figure starts and stops
     rising_threshold = maximum / 64
-    falling_threshold = maximum / 64
+    falling_threshold = maximum / 256
     approx_stop_duration = 2048
     result = []
     silent = True
@@ -79,7 +79,7 @@ def stop_ranges(x):
             if v <  falling_threshold:
                 start = result[-1][0]
                 end = i + window_size
-                result[-1].append((start + 3 * end) // 4)
+                result[-1].append((start + end) // 2)
                 silent = True
     if len(result[-1]) == 1:
         result[-1].append(len(x)-1)
