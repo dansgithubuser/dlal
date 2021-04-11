@@ -142,7 +142,10 @@ class Phonetizer(Subsystem):
         # continuant_wait
         self.continuant_wait = continuant_wait
 
-    def say(self, phonetic_name, continuant_wait=None, smooth=None, speed=1):
+    def say(self, phonetic_symbol, continuant_wait=None, smooth=None, speed=1):
+        m = re.match(r'(\w+)(?:/(\d+))?', phonetic_symbol)
+        phonetic_name = m.group(1)
+        duration_divisor = int(m.group(2) or 1)
         phonetic = self.phonetics[phonetic_name]
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
@@ -158,7 +161,10 @@ class Phonetizer(Subsystem):
                 smooth = 0.7
             else:  # moving between continuants
                 smooth = 0.9
-        wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
+        wait = phonetic.get('duration', continuant_wait) / len(phonetic['frames'])
+        wait /= speed
+        wait /= duration_divisor
+        wait = int(wait)
         with _skeleton.UseComm(self.comm):
             for frame in phonetic['frames']:
                 if 'tone_formants' in frame:
