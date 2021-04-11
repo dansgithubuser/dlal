@@ -79,7 +79,7 @@ def stop_ranges(x):
             if v <  falling_threshold:
                 start = result[-1][0]
                 end = i + window_size
-                result[-1].append((start + end) // 2)
+                result[-1].append(min(end, start + int(0.04 * SAMPLE_RATE)))
                 silent = True
     if len(result[-1]) == 1:
         result[-1].append(len(x)-1)
