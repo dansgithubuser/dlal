@@ -317,18 +317,22 @@ def get_glottal_sound(x):
         False,
         [
             [
-                200 + (i+0) ** 2 * 5000 // args.order ** 2,
-                700 + (i+1) ** 2 * 5000 // args.order ** 2,
+                200 + (i+0) ** 2 * 16000 // 40 ** 2,
+                700 + (i+1) ** 2 * 16000 // 40 ** 2,
             ]
-            for i in range(args.order)
+            for i in range(40)
         ],
+        order=40
     )
     for formant in bank.formants:
-        formant['amp'] = 1 / formant['amp'] if formant['amp'] + formant['freq'] / SAMPLE_RATE > 0.1 else 0
-    return bank.filter(x)
+        formant['amp'] = 1 / formant['amp'] if formant['amp'] else 0
+    y = bank.filter(x)
+    y_max = max(abs(i) for i in y)
+    y = [i / y_max for i in y]
+    return y
 
 class IirBank:
-    def fitting_envelope(envelope, width, widen, formant_ranges, pole_pairs=2):
+    def fitting_envelope(envelope, width, widen, formant_ranges, pole_pairs=2, order=args.order):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         def append_formant(freq, amp):
@@ -338,7 +342,7 @@ class IirBank:
                 'width': width,
                 'order': 2 * pole_pairs,
             })
-        for i in range(args.order):
+        for i in range(order):
             # find unvisited formant with biggest delta from spectrum
             spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
             delta = [i - j for i, j in zip(envelope, spectrum)]
