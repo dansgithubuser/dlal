@@ -172,7 +172,7 @@ class Phonetizer(Subsystem):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
                         iir.command_detach('pole_pairs_bandpass', [
                             w,
-                            0.01,
+                            formant['width'],
                             formant['amp'] * self.tone_pregain,
                             smooth,
                             formant['order'] // 2,
@@ -185,7 +185,7 @@ class Phonetizer(Subsystem):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
                         iir.command_detach('pole_pairs_bandpass', [
                             w,
-                            0.01,
+                            formant['width'],
                             formant['amp'] * self.noise_pregain,
                             0,
                             formant['order'] // 2,
