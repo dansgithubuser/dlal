@@ -98,7 +98,7 @@ def stop_ranges(x):
     return result
 
 def calc_n(x):
-    n = 4096
+    n = 1 << 12
     while n > len(x):
         n //= 2
     return n
@@ -309,6 +309,24 @@ def analyze(x=None):
             },
         }
 
+def get_glottal_sound(x):
+    n, spectrum, envelope = calc_tone_envelope(x)
+    bank = IirBank.fitting_envelope(
+        envelope,
+        0.01,
+        False,
+        [
+            [
+                200 + (i+0) ** 2 * 5000 // args.order ** 2,
+                700 + (i+1) ** 2 * 5000 // args.order ** 2,
+            ]
+            for i in range(args.order)
+        ],
+    )
+    for formant in bank.formants:
+        formant['amp'] = 1 / formant['amp'] if formant['amp'] + formant['freq'] / SAMPLE_RATE > 0.1 else 0
+    return bank.filter(x)
+
 class IirBank:
     def fitting_envelope(envelope, width, widen, formant_ranges, pole_pairs=2):
         visited = [False] * len(envelope)
@@ -380,14 +398,17 @@ class IirBank:
     def __init__(self, formants=[]):
         self.formants = copy.copy(formants)
 
+    def get_tf(self, formant):
+        w = formant['freq'] / SAMPLE_RATE * 2*math.pi
+        p = cmath.rect(1.0 - formant['width'], w);
+        z_w = cmath.rect(1.0, w);
+        gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** (formant['order'] // 2);
+        return signal.zpk2tf([], [p, p.conjugate()] * (formant['order'] // 2), gain)
+
     def spectrum(self, n):
         spectrum = [0]*(n // 2 + 1)
         for formant in self.formants:
-            w = formant['freq'] / SAMPLE_RATE * 2*math.pi
-            p = cmath.rect(1.0 - formant['width'], w);
-            z_w = cmath.rect(1.0, w);
-            gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** (formant['order'] // 2);
-            b, a = signal.zpk2tf([], [p, p.conjugate()] * (formant['order'] // 2), gain)
+            b, a = self.get_tf(formant)
             w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
             for i in range(len(spectrum)):
                 spectrum[i] += h[i]
@@ -413,6 +434,16 @@ class IirBank:
             else:
                 err += abs(e)
         return err
+
+    def filter(self, x):
+        y = [0] * len(x)
+        for formant in self.formants:
+            b, a = self.get_tf(formant)
+            y = [
+                float(i.real) + j
+                for i, j in zip(signal.lfilter(b, a, x), y)
+            ]
+        return y
 
 #===== main =====#
 phonetics = [
@@ -474,5 +505,10 @@ for i, phonetic in enumerate(phonetics):
         params = json.dumps(params, indent=2)
         with open(out_file_path, 'w') as file:
             file.write(params)
+        if phonetic == 'a':
+            dlal.sound.Sound(get_glottal_sound(x), SAMPLE_RATE).to_flac(os.path.join(
+                os.path.dirname(args.phonetics_file_path),
+                'glottis.flac',
+            ))
 if args.plot_spectra:
     plot.show()
