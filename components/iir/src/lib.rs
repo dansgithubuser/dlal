@@ -69,7 +69,7 @@ component!(
                     "range": "[0, 1]",
                 },
                 {
-                    "name": "order",
+                    "name": "pairs",
                     "default": 1,
                 },
             ],
@@ -289,12 +289,12 @@ impl Component {
         let width = body.arg::<f64>(1)?;
         let peak = body.arg(2).unwrap_or(1.0);
         let smooth = body.arg(3).unwrap_or(0.0);
-        let order = body.arg(4).unwrap_or(1);
+        let pairs = body.arg(4).unwrap_or(1);
         let pole = Complex64::from_polar(1.0 - width, w);
         let z = Complex64::from_polar(1.0, w);
-        let gain = peak * ((z - pole) * (z - pole.conj())).norm().powf(order as f64);
+        let gain = peak * ((z - pole) * (z - pole.conj())).norm().powf(pairs as f64);
         let mut poles = vec![];
-        for _ in 0..order {
+        for _ in 0..pairs {
             poles.push(pole);
             poles.push(pole.conj());
         }
