@@ -228,6 +228,10 @@ def parameterize(x, toniness=None):
         ],
     )
     tone_formants.multiply(toniness['tone_amp'])
+    if toniness['noise_amp']:
+        for formant in tone_formants.formants:
+            if formant['freq'] > 3000:
+                formant['amp'] = 0
     #----- calculate noise filter -----#
     tone_spectrum = tone_formants.spectrum(n)
     noise_spectrum = [
