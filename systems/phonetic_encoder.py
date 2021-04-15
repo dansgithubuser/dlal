@@ -237,7 +237,7 @@ def parameterize(x, toniness=None):
     noise_envelope = calc_envelope(noise_spectrum, 400)
     noise_formants = IirBank.fitting_envelope(
         noise_envelope,
-        0.02,
+        0.001,
         True,
         [
             [
@@ -390,11 +390,11 @@ class IirBank:
             append_formant(freq, peak)
             # widening
             if widen:
-                e = iir_bank.error(envelope)
+                e = iir_bank.formant_error(envelope, formant_ranges[i])
                 widened = copy.deepcopy(iir_bank)
-                for i in range(8):
+                for _ in range(8):
                     widened.formants[-1]['width'] *= 2
-                    e_w = widened.error(envelope)
+                    e_w = widened.formant_error(envelope, formant_ranges[i])
                     if e_w >= e: break
                     e = e_w
                     iir_bank = widened
@@ -431,15 +431,22 @@ class IirBank:
         for formant in self.formants:
             formant['amp'] *= f
 
-    def error(self, envelope):
+    def formant_error(self, envelope, formant_range):
         spectrum = self.spectrum((len(envelope)-1) * 2)
+        start, end = [i / (SAMPLE_RATE/2) * (len(spectrum)-1) for i in formant_range]
         err = 0
-        for spec, env in zip(spectrum, envelope):
+        for i, (spec, env) in enumerate(zip(spectrum, envelope)):
             e = flabs(spec) - env
-            if e > 0:
-                err += 4 * e  # we can add but we can't remove, so going over is worse
+            if i <= end:
+                # we are in existing formant range, error is bad, going over is very bad
+                if e > 0:
+                    err += 4 * e
+                else:
+                    err += abs(e)
             else:
-                err += abs(e)
+                # we are in a future formant range, error is fine, going over is very bad
+                if e > 0:
+                    err += 4 * e
         return err
 
     def filter(self, x):
