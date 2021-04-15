@@ -143,25 +143,29 @@ class Phonetizer(Subsystem):
         self.continuant_wait = continuant_wait
 
     def say(self, phonetic_symbol, continuant_wait=None, smooth=None, speed=1):
-        m = re.match(r'(\w+)(?:/(\d+))?', phonetic_symbol)
-        phonetic_name = m.group(1)
-        duration_divisor = int(m.group(2) or 1)
+        m = re.match(r'(-)?(\w+)(?:/(\d+))?', phonetic_symbol)
+        glide = m.group(1)
+        phonetic_name = m.group(2)
+        duration_divisor = int(m.group(3) or 1)
         phonetic = self.phonetics[phonetic_name]
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
         if smooth == None:
             if speed > 1:
                 smooth = 0.5
+            elif glide:
+                smooth = 0.98
             elif any([
-                self.phonetic_name == '0',  # starting from silence
-                phonetic_name == '0',  # moving to silence
+                not self.phonetics[self.phonetic_name]['voiced'],  # starting from unvoiced
+                not phonetic['voiced'],  # moving to unvoiced
+                self.phonetics[self.phonetic_name]['type'] == 'stop',  # starting from stop
                 phonetic['type'] == 'stop',  # moving to stop
-                self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
             ]):
                 smooth = 0.7
             else:  # moving between continuants
                 smooth = 0.9
         wait = phonetic.get('duration', continuant_wait) / len(phonetic['frames'])
+        if glide: wait *= 1.5
         wait /= speed
         wait /= duration_divisor
         wait = int(wait)
