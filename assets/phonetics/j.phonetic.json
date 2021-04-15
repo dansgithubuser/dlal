@@ -1,5 +1,6 @@
 {
   "type": "stop",
+  "voiced": false,
   "duration": 4182,
   "frames": [
     {},

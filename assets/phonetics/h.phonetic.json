@@ -1,5 +1,6 @@
 {
   "type": "continuant",
+  "voiced": false,
   "frames": [
     {
       "noise_formants": [

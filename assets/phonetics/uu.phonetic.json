@@ -1,5 +1,6 @@
 {
   "type": "continuant",
+  "voiced": true,
   "frames": [
     {
       "tone_formants": [

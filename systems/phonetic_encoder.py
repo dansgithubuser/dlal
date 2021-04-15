@@ -280,6 +280,7 @@ def analyze(x=None):
     if x == None:
         return {
             'type': 'continuant',
+            'voiced': False,
             'frames': [{}],
         }
     cuts = cut_phonetic(x)
@@ -287,6 +288,7 @@ def analyze(x=None):
         frames = [parameterize(cuts[0])]
         return {
             'type': 'continuant',
+            'voiced': frames[0]['meta']['toniness']['voiced'],
             'frames': frames,
             'meta': frames[0]['meta'],
         }
@@ -302,6 +304,7 @@ def analyze(x=None):
                 frames.insert(0, {})
         return {
             'type': 'stop',
+            'voiced': toniness['voiced'],
             'duration': sum(len(cut) for cut in cuts) + unvoiced_stop_silence,
             'frames': frames,
             'meta': {
