@@ -76,10 +76,10 @@ def stop_ranges(x):
                 result.append([i])
                 silent = False
         else:
-            if v <  falling_threshold:
+            if v < falling_threshold:
                 start = result[-1][0]
                 end = i + window_size
-                result[-1].append(min(end, start + int(0.04 * SAMPLE_RATE)))
+                result[-1].append(end)
                 silent = True
     if len(result[-1]) == 1:
         result[-1].append(len(x)-1)
@@ -196,7 +196,7 @@ def calc_toniness(x):
     raw_tone = max_ac / energy
     tone = min(raw_tone, 1)
     if tone > 0.8: tone = 1
-    elif chaos > 0.001: tone = 0
+    elif chaos > 0.0015: tone = 0
     tone_amp = tone and 1
     noise_amp = math.sqrt(1 - tone)
     # return
@@ -270,7 +270,7 @@ def parameterize(x, toniness=None):
 
 def cut_stop(x):
     step = 512
-    return [x[i:i+step] for i in range(0, len(x)-step, step)]
+    return [x[i:i+step] for i in range(0, len(x)-step, step)][:(SAMPLE_RATE // 15 // step)]
 
 def cut_phonetic(x):
     ranges = stop_ranges(x)
