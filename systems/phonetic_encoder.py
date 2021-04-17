@@ -475,8 +475,8 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(4200, 10, grid_w),
-            (dpc.transforms.Default('bcyg'), 4),
+            dpc.transforms.Grid(4200, 20, grid_w),
+            (dpc.transforms.Default('bcwyg'), 5),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
@@ -494,22 +494,36 @@ for i, phonetic in enumerate(phonetics):
         if phonetic == '0': continue
         x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
         cuts = cut_phonetic(x)
-        if len(cuts) > 1:
-            cuts.insert(0, x)
         with open(out_file_path) as file:
             params = json.loads(file.read())
         for frame_i, frame in enumerate([i for i in params['frames'] if i]):
-            n, spectrum, envelope = calc_tone_envelope(cuts[frame_i])
+            n, spectrum, tone_envelope = calc_tone_envelope(cuts[frame_i])
+            if frame.get('tone_formants'):
+                tone_spectrum = IirBank(frame['tone_formants']).spectrum(n)
+                noise_spectrum = [
+                    math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
+                    for i in range(len(tone_envelope))
+                ]
+            else:
+                noise_spectrum = spectrum
+            noise_envelope = calc_envelope(noise_spectrum, 400)
             t = plot.transform(-20, 0, 0, plot.series)
             t.update({'r': 255, 'g': 0, 'b': 255})
             plot.text(phonetic + str(frame_i), **t)
-            plot.plot([math.log(i) for i in spectrum])
-            plot.plot([math.log(i) for i in envelope])
-            if 'tone_formants' in frame and (len(cuts) == 1 or frame_i):
+            plot.plot([math.log(i+1e-4) for i in spectrum])
+            if 'tone_formants' in frame:
+                plot.plot([math.log(i+1e-4) for i in tone_envelope])
+            else:
+                plot.next_series()
+            if 'noise_formants' in frame:
+                plot.plot([math.log(i+1e-4) for i in noise_envelope])
+            else:
+                plot.next_series()
+            if 'tone_formants' in frame:
                 IirBank(frame['tone_formants']).plot_spectrum(n, plot)
             else:
                 plot.next_series()
-            if 'noise_formants' in frame and (len(cuts) == 1 or frame_i):
+            if 'noise_formants' in frame:
                 IirBank(frame['noise_formants']).plot_spectrum(n, plot)
             else:
                 plot.next_series()
