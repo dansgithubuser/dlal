@@ -104,7 +104,16 @@ def calc_n(x):
     return n
 
 def calc_spectrum(x, n):
-    return [flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]]
+    if n > 1024:
+        return [flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]]
+    else:
+        m = 8
+        acc = [0] * (n//2+1)
+        for k in range(m):
+            o = 8 * k
+            spectrum = [flabs(i) for i in fft(x[o:o+n])[:n//2+1]]
+            acc = [flabs(i) + j for i, j in zip(spectrum, acc)]
+        return [i / (m * math.sqrt(n)) for i in acc]
 
 class RunningMax:
     def __init__(self, initial, size=None):
@@ -196,7 +205,7 @@ def calc_toniness(x):
     raw_tone = max_ac / energy
     tone = min(raw_tone, 1)
     if tone > 0.8: tone = 1
-    elif chaos > 0.0015: tone = 0
+    elif chaos > 0.001: tone = 0
     tone_amp = tone and 1
     noise_amp = math.sqrt(1 - tone)
     # return
@@ -299,12 +308,12 @@ def analyze(x=None):
     else:
         toniness = calc_toniness(sum(cuts, []))
         frames = []
-        for i, cut in enumerate(cuts):
-            frames.append(parameterize(cut, toniness=toniness))
+        for i in range(len(cuts)-1):
+            frames.append(parameterize(sum(cuts[i:i+2], []), toniness=toniness))
         unvoiced_stop_silence = 0
         if not toniness['voiced']:
             unvoiced_stop_silence = SAMPLE_RATE * 60 // 1000
-            for i in range(0, unvoiced_stop_silence, len(cut)):
+            for i in range(0, unvoiced_stop_silence, len(cuts[0])):
                 frames.insert(0, {})
         return {
             'type': 'stop',
