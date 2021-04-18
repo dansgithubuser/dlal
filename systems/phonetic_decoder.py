@@ -369,6 +369,19 @@ def say_all():
             say(f'[{phonetic}]')
             time.sleep(0.5)
 
+def test():
+    phonetics = [i for i in phonetizer.phonetics.keys() if i != '0']
+    random.shuffle(phonetics)
+    answers = []
+    for phonetic in phonetics:
+        for i in range(4):
+            say(f'[{phonetic}]')
+            time.sleep(0.5)
+        print('what phonetic?')
+        answers.append(input())
+    for phonetic, answer in zip(phonetics, answers):
+        print(phonetic, answer, '' if phonetic == answer else 'X')
+
 tone.midi([0x90, 42, 127])
 noise.midi([0x90, 60, 13])
 dlal.typical_setup()
