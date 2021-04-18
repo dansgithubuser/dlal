@@ -262,10 +262,6 @@ def parameterize(x, toniness=None):
         1,
     )
     noise_formants.multiply(toniness['noise_amp'])
-    #----- normalize -----#
-    transfer = math.sqrt(tone_formants.energy_transfer(n) + noise_formants.energy_transfer(n))
-    for formant in tone_formants.formants + noise_formants.formants:
-        formant['amp'] /= transfer
     #----- outputs -----#
     result = {}
     if toniness['tone_amp']: result['tone_formants'] = tone_formants.formants

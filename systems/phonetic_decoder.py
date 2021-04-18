@@ -369,8 +369,8 @@ def say_all():
             say(f'[{phonetic}]')
             time.sleep(0.5)
 
-tone.midi([0x90, 42, 30])
-noise.midi([0x90, 60, 3])
+tone.midi([0x90, 42, 127])
+noise.midi([0x90, 60, 13])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
