@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser(description=
 parser.add_argument('--phonetics')
 parser.add_argument('--rot13', action='store_true')
 parser.add_argument('--tell-story', type=int)
+parser.add_argument('--create-phonetic-samples', '--cps', action='store_true')
 args = parser.parse_args()
 
 #===== consts =====#
@@ -370,8 +371,8 @@ def say_all():
             say(f'[{phonetic}]')
             time.sleep(0.5)
 
-tone.midi([0x90, 42, 60])
-noise.midi([0x90, 60, 6])
+tone.midi([0x90, 42, 30])
+noise.midi([0x90, 60, 3])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
@@ -383,3 +384,17 @@ if args.phonetics or type(args.tell_story) == int:
     if type(args.tell_story) == int:
         tell_story(args.tell_story)
     tape.to_file_i16le_stop()
+elif args.create_phonetic_samples:
+    phonetics = [
+        'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
+        'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
+        'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+    ]
+    os.makedirs('assets/local/phonetics', exist_ok=True)
+    for phonetic in phonetics:
+        say(f'[{phonetic}]'*8)
+        x = tape.read()
+        sound = dlal.sound.Sound(x, SAMPLE_RATE)
+        sound.to_flac(f'assets/local/phonetics/{phonetic}.flac')
+        time.sleep(1)
+        tape.read()

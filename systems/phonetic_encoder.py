@@ -485,7 +485,7 @@ if args.plot_spectra:
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
             dpc.transforms.Grid(4200, 20, grid_w),
-            (dpc.transforms.Default('bcwyg'), 5),
+            (dpc.transforms.Default('bcwygr'), 6),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
@@ -534,6 +534,13 @@ for i, phonetic in enumerate(phonetics):
                 plot.next_series()
             if 'noise_formants' in frame:
                 IirBank(frame['noise_formants']).plot_spectrum(n, plot)
+            else:
+                plot.next_series()
+            sample_path = f'assets/local/phonetics/{phonetic}.flac'
+            if os.path.exists(sample_path) and params['type'] == 'continuant':
+                x = dlal.sound.read(sample_path).samples
+                spectrum = calc_spectrum(x, calc_n(x))
+                plot.plot([math.log(i+1e-4) for i in spectrum])
             else:
                 plot.next_series()
     else:
