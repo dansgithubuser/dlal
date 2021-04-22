@@ -188,7 +188,7 @@ def tell_story(i=0):
         # 7
         '[[ae/2][-y]0[h/2][ae]v0u0f[ae]nsy0silwet]',  # I have a fancy silhouette
         # 8
-        '[h[ae/2][-w]0duz0[th_v]u0gr[e/2][-y]t0b[l/2]w0k[h/2][ae]t0jump0j[u/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
+        '[[h/2][ae/2][-w]0duz0[th_v]u0gr[e/2][-y]t0b[l/2][-w]0k[h/2][ae]t0jump0j[u/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
     ][i])
 
 def say_random():
@@ -279,7 +279,7 @@ def say_random():
             'brd', 'bujy', 'b[ay]yby',
             'k[ae]t', 'kunery', 'kap',
             'dag', 'daktr',
-            'elufint', '[e/2][-w]g',
+            'elufint', '[e/2][-y]g',
             'fery', 'fi[sh]',
             'greyp', 'g[o/2][-w]st',
             'hipow', 'hors',

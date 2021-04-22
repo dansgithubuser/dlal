@@ -161,7 +161,7 @@ class Phonetizer(Subsystem):
                 self.phonetics[self.phonetic_name]['type'] == 'stop',  # starting from stop
                 phonetic['type'] == 'stop',  # moving to stop
             ]):
-                smooth = 0.7
+                smooth = 0.9
             else:  # moving between continuants
                 smooth = 0.9
         wait = phonetic.get('duration', continuant_wait) / len(phonetic['frames'])
@@ -191,7 +191,7 @@ class Phonetizer(Subsystem):
                             w,
                             formant['width'],
                             formant['amp'] * self.noise_pregain,
-                            0,
+                            0.7,
                             formant['order'] // 2,
                         ])
                 else:
