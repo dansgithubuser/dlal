@@ -403,7 +403,10 @@ elif args.create_phonetic_samples:
     ]
     os.makedirs('assets/local/phonetics', exist_ok=True)
     for phonetic in phonetics:
-        say(f'[{phonetic}]'*8)
+        say_one(phonetic)
+        if phonetizer.phonetics[phonetic]['type'] == 'stop': say_one('0')
+        time.sleep(1)
+        say_one('0')
         x = tape.read()
         sound = dlal.sound.Sound(x, SAMPLE_RATE)
         sound.to_flac(f'assets/local/phonetics/{phonetic}.flac')

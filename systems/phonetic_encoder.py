@@ -33,6 +33,7 @@ args = parser.parse_args()
 SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
 NOMINAL_SAMPLE_SIZE = 4096
+CUT_STEP = 512
 GAIN = 150
 
 #===== helpers =====#
@@ -272,8 +273,10 @@ def parameterize(x, toniness=None):
     return result
 
 def cut_stop(x):
-    step = 512
-    return [x[i:i+step] for i in range(0, len(x)-step, step)][:(SAMPLE_RATE // 15 // step)]
+    return [
+        x[i:i+CUT_STEP]
+        for i in range(0, len(x)-CUT_STEP, CUT_STEP)
+    ][:(SAMPLE_RATE // 15 // CUT_STEP)]
 
 def cut_phonetic(x):
     ranges = stop_ranges(x)
@@ -550,7 +553,12 @@ for i, phonetic in enumerate(phonetics):
                 spectrum = calc_spectrum(samples, calc_n(samples))
                 plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
             else:
-                plot.next_series()
+                samples = dlal.sound.read(sample_path).samples
+                start = next(i for i, v in enumerate(samples) if v != 0)
+                samples = samples[start + frame_i * CUT_STEP:]
+                samples = samples[:CUT_STEP]
+                spectrum = calc_spectrum(samples, calc_n(samples))
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
     else:
         print(phonetic)
         if phonetic == '0':
