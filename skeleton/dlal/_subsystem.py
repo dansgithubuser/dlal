@@ -159,9 +159,12 @@ class Phonetizer(Subsystem):
                 not self.phonetics[self.phonetic_name]['voiced'],  # starting from unvoiced
                 not phonetic['voiced'],  # moving to unvoiced
                 self.phonetics[self.phonetic_name]['type'] == 'stop',  # starting from stop
-                phonetic['type'] == 'stop',  # moving to stop
             ]):
                 smooth = 0.9
+            elif any([
+                phonetic['type'] == 'stop',  # moving to (voiced) stop
+            ]):
+                smooth = 0.7
             else:  # moving between continuants
                 smooth = 0.9
         wait = phonetic.get('duration', continuant_wait) / len(phonetic['frames'])
