@@ -429,7 +429,7 @@ class IirBank:
         return [flabs(i) for i in spectrum]
 
     def plot_spectrum(self, n, plot):
-        plot.plot([2 * math.log10(i) for i in self.spectrum(n)])
+        plot.plot([2 * math.log10(i) for i in self.spectrum(NOMINAL_SAMPLE_SIZE)])
 
     def energy_transfer(self, n):
         return sum(i ** 2 for i in self.spectrum(n)) / n
@@ -478,7 +478,7 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(2100, 20, grid_w),
+            dpc.transforms.Grid(NOMINAL_SAMPLE_SIZE // 2 + 50, 20, grid_w),
             (dpc.transforms.Default('bcwygr'), 6),
         ),
         primitive=dpc.primitives.Line(),
@@ -511,21 +511,29 @@ for i, phonetic in enumerate(phonetics):
                 noise_spectrum = spectrum
             noise_envelope = calc_envelope(noise_spectrum, 400)
             t = plot.transform(0, 4, 0, plot.series)
-            t.update({'r': 255, 'g': 0, 'b': 255})
-            plot.text(phonetic + str(frame_i), **t)
+            t.update({
+                'r': 255,
+                'g': 128 if params['meta']['toniness']['noise_amp'] else 0,
+                'b': 0 if params['voiced'] else 255,
+            })
+            plot.text(phonetic + (str(frame_i) if params['type'] == 'stop' else ''), **t)
             for i in range(-16, 0):
                 plot.line(
                     t['x'], t['y']+i, t['x']+2050, t['y']+i,
                     255, 255, 255,
                     64 if i % 4 else 128
                 )
-            plot.plot([2 * math.log10(i+1e-4) for i in spectrum])
+            x = [
+                i * (NOMINAL_SAMPLE_SIZE // 2 + 1) / len(spectrum)
+                for i in range(len(spectrum))
+            ]
+            plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
             if 'tone_formants' in frame:
-                plot.plot([2 * math.log10(i+1e-4) for i in tone_envelope])
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in tone_envelope])
             else:
                 plot.next_series()
             if 'noise_formants' in frame:
-                plot.plot([2 * math.log10(i+1e-4) for i in noise_envelope])
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in noise_envelope])
             else:
                 plot.next_series()
             if 'tone_formants' in frame:
@@ -538,9 +546,9 @@ for i, phonetic in enumerate(phonetics):
                 plot.next_series()
             sample_path = f'assets/local/phonetics/{phonetic}.flac'
             if os.path.exists(sample_path) and params['type'] == 'continuant':
-                x = dlal.sound.read(sample_path).samples
-                spectrum = calc_spectrum(x, calc_n(x))
-                plot.plot([2 * math.log10(i+1e-4) for i in spectrum])
+                samples = dlal.sound.read(sample_path).samples
+                spectrum = calc_spectrum(samples, calc_n(samples))
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
             else:
                 plot.next_series()
     else:
