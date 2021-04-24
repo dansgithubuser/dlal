@@ -235,7 +235,7 @@ def parameterize(x, toniness=None):
             False,
             [
                 [
-                    200 + (i+0) ** 2 * 5000 // args.order ** 2,
+                    100 + (i+0) ** 2 * 5000 // args.order ** 2,
                     700 + (i+1) ** 2 * 5000 // args.order ** 2,
                 ]
                 for i in range(args.order)

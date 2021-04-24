@@ -22,31 +22,31 @@
           "order": 4
         },
         {
+          "freq": 725.0,
+          "amp": 0,
+          "width": 0.01,
+          "order": 4
+        },
+        {
           "freq": 768.6214684586897,
           "amp": 2.1938139681394677,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 775.0,
+          "freq": 1025.0,
           "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 1075.0,
+          "freq": 1425.0,
           "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 1475.0,
-          "amp": 0,
-          "width": 0.01,
-          "order": 4
-        },
-        {
-          "freq": 1975.0,
+          "freq": 1925.0,
           "amp": 0,
           "width": 0.01,
           "order": 4
@@ -58,19 +58,19 @@
           "order": 4
         },
         {
-          "freq": 3275.0,
+          "freq": 3225.0,
           "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 4075.0,
+          "freq": 4025.0,
           "amp": 0,
           "width": 0.01,
           "order": 4
         },
         {
-          "freq": 4975.0,
+          "freq": 4925.0,
           "amp": 0,
           "width": 0.01,
           "order": 4
