@@ -256,12 +256,12 @@ def parameterize(x, toniness=None):
         noise_envelope = calc_envelope(noise_spectrum, 400)
         noise_formants = IirBank.fitting_envelope(
             noise_envelope,
-            0.01,
+            0.02,
             4,
             [
                 [
                     (i+0) * 20000 // args.order,
-                    (i+1) * 20000 // args.order,
+                    min((i+2) * 20000 // args.order, SAMPLE_RATE/2),
                 ]
                 for i in range(args.order)
             ],
