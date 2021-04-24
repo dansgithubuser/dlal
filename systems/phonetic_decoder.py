@@ -374,9 +374,9 @@ def test():
     random.shuffle(phonetics)
     answers = []
     for phonetic in phonetics:
-        for i in range(4):
+        for i in range(3):
             say(f'[{phonetic}]')
-            time.sleep(0.5)
+            if i != 2: time.sleep(0.5)
         print('what phonetic?')
         answers.append(input())
     for phonetic, answer in zip(phonetics, answers):
