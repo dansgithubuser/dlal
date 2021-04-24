@@ -32,6 +32,8 @@ args = parser.parse_args()
 #===== consts =====#
 SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
+NOMINAL_SAMPLE_SIZE = 4096
+GAIN = 150
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -98,14 +100,14 @@ def stop_ranges(x):
     return result
 
 def calc_n(x):
-    n = 1 << 12
+    n = NOMINAL_SAMPLE_SIZE
     while n > len(x):
         n //= 2
     return n
 
 def calc_spectrum(x, n):
     if n > 1024:
-        return [flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]]
+        return [flabs(i) / n * GAIN for i in fft(x[:n])[:n//2+1]]
     else:
         m = 8
         acc = [0] * (n//2+1)
@@ -113,7 +115,7 @@ def calc_spectrum(x, n):
             o = 8 * k
             spectrum = [flabs(i) for i in fft(x[o:o+n])[:n//2+1]]
             acc = [flabs(i) + j for i, j in zip(spectrum, acc)]
-        return [i / (m * math.sqrt(n)) for i in acc]
+        return [i / (m * n) * GAIN for i in acc]
 
 class RunningMax:
     def __init__(self, initial, size=None):
@@ -219,58 +221,54 @@ def calc_toniness(x):
     }
 
 def parameterize(x, toniness=None):
+    result = {}
     #----- tone vs noise -----#
     if toniness == None:
         toniness = calc_toniness(x)
+    result['meta'] = {'toniness': toniness}
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    tone_formants = IirBank.fitting_envelope(
-        envelope,
-        0.01,
-        False,
-        [
+    if toniness['tone_amp']:
+        tone_formants = IirBank.fitting_envelope(
+            envelope,
+            0.01,
+            False,
             [
-                200 + (i+0) ** 2 * 5000 // args.order ** 2,
-                700 + (i+1) ** 2 * 5000 // args.order ** 2,
-            ]
-            for i in range(args.order)
-        ],
-    )
-    tone_formants.multiply(toniness['tone_amp'])
-    if toniness['noise_amp']:
-        for formant in tone_formants.formants:
-            if formant['freq'] > 3000:
-                formant['amp'] = 0
+                [
+                    200 + (i+0) ** 2 * 5000 // args.order ** 2,
+                    700 + (i+1) ** 2 * 5000 // args.order ** 2,
+                ]
+                for i in range(args.order)
+            ],
+        )
+        tone_spectrum = tone_formants.spectrum(n)
+        result['tone_formants'] = tone_formants.formants
+        result['meta']['tone_transfer'] = tone_formants.energy_transfer(n)
+    else:
+        tone_spectrum = [0] * len(spectrum)
     #----- calculate noise filter -----#
-    tone_spectrum = tone_formants.spectrum(n)
-    noise_spectrum = [
-        math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
-        for i in range(len(envelope))
-    ]
-    noise_envelope = calc_envelope(noise_spectrum, 400)
-    noise_formants = IirBank.fitting_envelope(
-        noise_envelope,
-        0.001,
-        True,
-        [
+    if toniness['noise_amp']:
+        noise_spectrum = [
+            math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
+            for i in range(len(envelope))
+        ]
+        noise_envelope = calc_envelope(noise_spectrum, 400)
+        noise_formants = IirBank.fitting_envelope(
+            noise_envelope,
+            0.001,
+            True,
             [
-                (i+0) * 20000 // args.order,
-                (i+1) * 20000 // args.order,
-            ]
-            for i in range(args.order)
-        ],
-        1,
-    )
-    noise_formants.multiply(toniness['noise_amp'])
-    #----- outputs -----#
-    result = {}
-    if toniness['tone_amp']: result['tone_formants'] = tone_formants.formants
-    if toniness['noise_amp']: result['noise_formants'] = noise_formants.formants
-    result['meta'] = {
-        'toniness': toniness,
-        'tone_transfer': tone_formants.energy_transfer(n),
-        'noise_transfer': noise_formants.energy_transfer(n),
-    }
+                [
+                    (i+0) * 20000 // args.order,
+                    (i+1) * 20000 // args.order,
+                ]
+                for i in range(args.order)
+            ],
+            1,
+        )
+        result['noise_formants'] = noise_formants.formants
+        result['meta']['noise_transfer'] = noise_formants.energy_transfer(n)
+    #----- return -----#
     return result
 
 def cut_stop(x):
