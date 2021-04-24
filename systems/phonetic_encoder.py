@@ -232,7 +232,7 @@ def parameterize(x, toniness=None):
         tone_formants = IirBank.fitting_envelope(
             envelope,
             0.01,
-            False,
+            1,
             [
                 [
                     100 + (i+0) ** 2 * 5000 // args.order ** 2,
@@ -255,8 +255,8 @@ def parameterize(x, toniness=None):
         noise_envelope = calc_envelope(noise_spectrum, 400)
         noise_formants = IirBank.fitting_envelope(
             noise_envelope,
-            0.001,
-            True,
+            0.01,
+            4,
             [
                 [
                     (i+0) * 20000 // args.order,
@@ -342,7 +342,7 @@ def get_glottal_sound(x):
     return y
 
 class IirBank:
-    def fitting_envelope(envelope, width, widen, formant_ranges, pole_pairs=2, order=args.order):
+    def fitting_envelope(envelope, width, widenings, formant_ranges, pole_pairs=2, order=args.order):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         def append_formant(freq, amp):
@@ -396,10 +396,10 @@ class IirBank:
             # append formant
             append_formant(freq, peak)
             # widening
-            if widen:
+            if widenings:
                 e = iir_bank.formant_error(envelope, formant_ranges[i])
                 widened = copy.deepcopy(iir_bank)
-                for _ in range(8):
+                for _ in range(widenings):
                     widened.formants[-1]['width'] *= 2
                     e_w = widened.formant_error(envelope, formant_ranges[i])
                     if e_w >= e: break
