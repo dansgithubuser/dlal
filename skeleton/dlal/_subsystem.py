@@ -173,7 +173,7 @@ class Phonetizer(Subsystem):
         wait /= duration_divisor
         wait = int(wait)
         with _skeleton.UseComm(self.comm):
-            for frame in phonetic['frames']:
+            for frame_i, frame in enumerate(phonetic['frames']):
                 if 'tone_formants' in frame:
                     for iir, formant in zip(self.tone_filter.iirs, frame['tone_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
@@ -194,7 +194,7 @@ class Phonetizer(Subsystem):
                             w,
                             formant['width'],
                             formant['amp'] * self.noise_pregain,
-                            0.7,
+                            0 if phonetic['type'] == 'stop' and frame_i == 0 else 0.7,
                             formant['order'] // 2,
                         ])
                 else:
