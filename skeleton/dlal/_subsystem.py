@@ -94,8 +94,8 @@ class IirBank(Subsystem):
 class Phonetizer(Subsystem):
     def init(
         self,
-        tone_pregain=3.5,
-        noise_pregain=3.5,
+        tone_pregain=1,
+        noise_pregain=1,
         phonetics_path='assets/phonetics',
         sample_rate=44100,
         continuant_wait=44100//8,

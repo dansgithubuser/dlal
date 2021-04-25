@@ -232,9 +232,9 @@ def parameterize(x, toniness=None):
     if toniness['tone_amp']:
         tone_formants = IirBank.fitting_envelope(
             envelope,
-            0.01,
-            1,
-            [
+            width=0.01,
+            widenings=1,
+            formant_ranges=[
                 [
                     100 + (i+0) ** 2 * 5000 // args.order ** 2,
                     700 + (i+1) ** 2 * 5000 // args.order ** 2,
@@ -256,16 +256,17 @@ def parameterize(x, toniness=None):
         noise_envelope = calc_envelope(noise_spectrum, 400)
         noise_formants = IirBank.fitting_envelope(
             noise_envelope,
-            0.02,
-            4,
-            [
+            width=0.02,
+            widenings=4,
+            formant_ranges=[
                 [
                     (i+0) * 20000 // args.order,
                     min((i+2) * 20000 // args.order, SAMPLE_RATE/2),
                 ]
                 for i in range(args.order)
             ],
-            1,
+            pole_pairs=1,
+            overpeak=3,
         )
         result['noise_formants'] = noise_formants.formants
         result['meta']['noise_transfer'] = noise_formants.energy_transfer(n)
@@ -326,9 +327,9 @@ def get_glottal_sound(x):
     n, spectrum, envelope = calc_tone_envelope(x)
     bank = IirBank.fitting_envelope(
         envelope,
-        0.01,
-        False,
-        [
+        width=0.01,
+        widenings=0,
+        formant_ranges=[
             [
                 200 + (i+0) ** 2 * 16000 // 40 ** 2,
                 700 + (i+1) ** 2 * 16000 // 40 ** 2,
@@ -345,7 +346,7 @@ def get_glottal_sound(x):
     return y
 
 class IirBank:
-    def fitting_envelope(envelope, width, widenings, formant_ranges, pole_pairs=2, order=args.order):
+    def fitting_envelope(envelope, width, widenings, formant_ranges, pole_pairs=2, overpeak=3, order=args.order):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         def append_formant(freq, amp):
@@ -397,7 +398,7 @@ class IirBank:
             centroid = sum(i * envelope[i] for i in range(l, r)) / sum(v for v in envelope[l:r])
             freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
             # append formant
-            append_formant(freq, peak)
+            append_formant(freq, peak * overpeak)
             # widening
             if widenings:
                 e = iir_bank.formant_error(envelope, formant_ranges[i])
