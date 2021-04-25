@@ -142,36 +142,61 @@ class Phonetizer(Subsystem):
         # continuant_wait
         self.continuant_wait = continuant_wait
 
-    def say(self, phonetic_name, continuant_wait=None, smooth=None, speed=1):
+    def say(self, phonetic_symbol, continuant_wait=None, smooth=None, speed=1):
+        m = re.match(r'(-)?(\w+)(?:/(\d+))?', phonetic_symbol)
+        glide = m.group(1)
+        phonetic_name = m.group(2)
+        duration_divisor = int(m.group(3) or 1)
         phonetic = self.phonetics[phonetic_name]
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
         if smooth == None:
             if speed > 1:
                 smooth = 0.5
+            elif glide:
+                smooth = 0.98
             elif any([
-                self.phonetic_name == '0',  # starting from silence
-                phonetic_name == '0',  # moving to silence
-                phonetic['type'] == 'stop',  # moving to stop
-                self.phonetics[self.phonetic_name]['type'] == 'stop',  # moving from stop
+                not self.phonetics[self.phonetic_name]['voiced'],  # starting from unvoiced
+                not phonetic['voiced'],  # moving to unvoiced
+                self.phonetics[self.phonetic_name]['type'] == 'stop',  # starting from stop
+            ]):
+                smooth = 0.9
+            elif any([
+                phonetic['type'] == 'stop',  # moving to (voiced) stop
             ]):
                 smooth = 0.7
             else:  # moving between continuants
                 smooth = 0.9
-        wait = int(phonetic.get('duration', continuant_wait) / len(phonetic['frames']) / speed)
+        wait = phonetic.get('duration', continuant_wait) / len(phonetic['frames'])
+        if glide: wait *= 1.5
+        wait /= speed
+        wait /= duration_divisor
+        wait = int(wait)
         with _skeleton.UseComm(self.comm):
-            for frame in phonetic['frames']:
+            for frame_i, frame in enumerate(phonetic['frames']):
                 if 'tone_formants' in frame:
                     for iir, formant in zip(self.tone_filter.iirs, frame['tone_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'] * self.tone_pregain, smooth])
+                        iir.command_detach('pole_pairs_bandpass', [
+                            w,
+                            formant['width'],
+                            formant['amp'] * self.tone_pregain,
+                            smooth,
+                            formant['order'] // 2,
+                        ])
                 else:
                     for iir in self.tone_filter.iirs:
                         iir.command_detach('gain', [0, smooth])
                 if 'noise_formants' in frame:
                     for iir, formant in zip(self.noise_filter.iirs, frame['noise_formants']):
                         w = formant['freq'] / self.sample_rate * 2 * math.pi
-                        iir.command_detach('single_pole_bandpass', [w, 0.01, formant['amp'] * self.noise_pregain, 0])
+                        iir.command_detach('pole_pairs_bandpass', [
+                            w,
+                            formant['width'],
+                            formant['amp'] * self.noise_pregain,
+                            0 if phonetic['type'] == 'stop' and frame_i == 0 else 0.7,
+                            formant['order'] // 2,
+                        ])
                 else:
                     for iir in self.noise_filter.iirs:
                         iir.command_detach('gain', [0, smooth])

@@ -61,7 +61,7 @@ Subsystem('sweep', {
     'gain': ('gain', [], {}),
     'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
-    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('single_pole_bandpass', '%', 0.02, 6)}),
+    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('pole_pairs_bandpass', '%', 0.02, 6)}),
     'train': ('osc', ['saw'], {}),
     'train2': ('osc', ['saw'], {'bend': 1.0081}),
     'train_adsr': ('adsr', [5e-8, 1, 1, 5e-5], {}),

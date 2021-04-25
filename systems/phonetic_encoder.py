@@ -32,6 +32,9 @@ args = parser.parse_args()
 #===== consts =====#
 SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
+NOMINAL_SAMPLE_SIZE = 4096
+CUT_STEP = 512
+GAIN = 150
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -42,7 +45,7 @@ load.phonetics = None
 
 def autocorrelation(x, shift):
     assert len(x) > shift
-    return sum(i * j for i, j in zip(x[:-shift], x[shift:]))
+    return sum(abs(i * j) for i, j in zip(x[:-shift], x[shift:]))
 
 def flabs(x):
     return float(abs(x))
@@ -66,7 +69,7 @@ def stop_ranges(x):
         return None
     # figure starts and stops
     rising_threshold = maximum / 64
-    falling_threshold = maximum / 64
+    falling_threshold = maximum / 256
     approx_stop_duration = 2048
     result = []
     silent = True
@@ -76,10 +79,10 @@ def stop_ranges(x):
                 result.append([i])
                 silent = False
         else:
-            if v <  falling_threshold:
+            if v < falling_threshold:
                 start = result[-1][0]
                 end = i + window_size
-                result[-1].append((start + 3 * end) // 4)
+                result[-1].append(end)
                 silent = True
     if len(result[-1]) == 1:
         result[-1].append(len(x)-1)
@@ -98,13 +101,22 @@ def stop_ranges(x):
     return result
 
 def calc_n(x):
-    n = 4096
+    n = NOMINAL_SAMPLE_SIZE
     while n > len(x):
         n //= 2
     return n
 
 def calc_spectrum(x, n):
-    return [flabs(i) / math.sqrt(n) for i in fft(x[:n])[:n//2+1]]
+    if n > 1024:
+        return [flabs(i) / n * GAIN for i in fft(x[:n])[:n//2+1]]
+    else:
+        m = 8
+        acc = [0] * (n//2+1)
+        for k in range(m):
+            o = 8 * k
+            spectrum = [flabs(i) for i in fft(x[o:o+n])[:n//2+1]]
+            acc = [flabs(i) + j for i, j in zip(spectrum, acc)]
+        return [i / (m * n) * GAIN for i in acc]
 
 class RunningMax:
     def __init__(self, initial, size=None):
@@ -185,7 +197,7 @@ def calc_toniness(x):
         ac_samples = len(x) - shift
         if ac_samples <= min_ac_samples:
             break
-        ac = abs(autocorrelation(x, shift))
+        ac = autocorrelation(x, shift)
         ac_power = ac / ac_samples
         ac = ac_power * len(x)  # for fair comparison w energy
         acs.append(ac)
@@ -196,8 +208,8 @@ def calc_toniness(x):
     raw_tone = max_ac / energy
     tone = min(raw_tone, 1)
     if tone > 0.8: tone = 1
-    elif chaos > 0.004: tone = 0
-    tone_amp = math.sqrt(tone)
+    elif chaos > 0.001: tone = 0
+    tone_amp = tone and 1
     noise_amp = math.sqrt(1 - tone)
     # return
     return {
@@ -209,36 +221,63 @@ def calc_toniness(x):
         'voiced': tone != 0,
     }
 
-def parameterize(x):
+def parameterize(x, toniness=None):
+    result = {}
     #----- tone vs noise -----#
-    toniness = calc_toniness(x)
+    if toniness == None:
+        toniness = calc_toniness(x)
+    result['meta'] = {'toniness': toniness}
     #----- find formants -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    tone_formants = IirBank.fitting_envelope(envelope, 0.001, False)
-    tone_formants.multiply(toniness['tone_amp'])
+    if toniness['tone_amp']:
+        tone_formants = IirBank.fitting_envelope(
+            envelope,
+            width=0.01,
+            widenings=1,
+            formant_ranges=[
+                [
+                    100 + (i+0) ** 2 * 5000 // args.order ** 2,
+                    700 + (i+1) ** 2 * 5000 // args.order ** 2,
+                ]
+                for i in range(args.order)
+            ],
+        )
+        tone_spectrum = tone_formants.spectrum(n)
+        result['tone_formants'] = tone_formants.formants
+        result['meta']['tone_transfer'] = tone_formants.energy_transfer(n)
+    else:
+        tone_spectrum = [0] * len(spectrum)
     #----- calculate noise filter -----#
-    tone_spectrum = tone_formants.spectrum(n)
-    noise_spectrum = [
-        math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
-        for i in range(len(envelope))
-    ]
-    noise_envelope = calc_envelope(noise_spectrum, 400)
-    noise_formants = IirBank.fitting_envelope(noise_envelope, 0.02, True)
-    noise_formants.multiply(toniness['noise_amp'])
-    #----- outputs -----#
-    result = {}
-    if toniness['tone_amp']: result['tone_formants'] = tone_formants.formants
-    if toniness['noise_amp']: result['noise_formants'] = noise_formants.formants
-    result['meta'] = {
-        'toniness': toniness,
-        'tone_transfer': tone_formants.energy_transfer(n),
-        'noise_transfer': noise_formants.energy_transfer(n),
-    }
+    if toniness['noise_amp']:
+        noise_spectrum = [
+            math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
+            for i in range(len(envelope))
+        ]
+        noise_envelope = calc_envelope(noise_spectrum, 400)
+        noise_formants = IirBank.fitting_envelope(
+            noise_envelope,
+            width=0.02,
+            widenings=4,
+            formant_ranges=[
+                [
+                    (i+0) * 20000 // args.order,
+                    min((i+2) * 20000 // args.order, SAMPLE_RATE/2),
+                ]
+                for i in range(args.order)
+            ],
+            pole_pairs=1,
+            overpeak=3,
+        )
+        result['noise_formants'] = noise_formants.formants
+        result['meta']['noise_transfer'] = noise_formants.energy_transfer(n)
+    #----- return -----#
     return result
 
 def cut_stop(x):
-    step = len(x) // int(len(x) / 512)
-    return [x[i:i+step] for i in range(0, len(x)-step, step)]
+    return [
+        x[i:i+CUT_STEP]
+        for i in range(0, len(x)-CUT_STEP, CUT_STEP)
+    ][:(SAMPLE_RATE // 15 // CUT_STEP)]
 
 def cut_phonetic(x):
     ranges = stop_ranges(x)
@@ -252,6 +291,7 @@ def analyze(x=None):
     if x == None:
         return {
             'type': 'continuant',
+            'voiced': False,
             'frames': [{}],
         }
     cuts = cut_phonetic(x)
@@ -259,21 +299,23 @@ def analyze(x=None):
         frames = [parameterize(cuts[0])]
         return {
             'type': 'continuant',
+            'voiced': frames[0]['meta']['toniness']['voiced'],
             'frames': frames,
             'meta': frames[0]['meta'],
         }
     else:
         toniness = calc_toniness(sum(cuts, []))
         frames = []
-        for i, cut in enumerate(cuts):
-            frames.append(parameterize(cut))
+        for i in range(len(cuts)-1):
+            frames.append(parameterize(sum(cuts[i:i+2], []), toniness=toniness))
         unvoiced_stop_silence = 0
         if not toniness['voiced']:
             unvoiced_stop_silence = SAMPLE_RATE * 60 // 1000
-            for i in range(0, unvoiced_stop_silence, len(cut)):
+            for i in range(0, unvoiced_stop_silence, len(cuts[0])):
                 frames.insert(0, {})
         return {
             'type': 'stop',
+            'voiced': toniness['voiced'],
             'duration': sum(len(cut) for cut in cuts) + unvoiced_stop_silence,
             'frames': frames,
             'meta': {
@@ -281,28 +323,58 @@ def analyze(x=None):
             },
         }
 
+def get_glottal_sound(x):
+    n, spectrum, envelope = calc_tone_envelope(x)
+    bank = IirBank.fitting_envelope(
+        envelope,
+        width=0.01,
+        widenings=0,
+        formant_ranges=[
+            [
+                200 + (i+0) ** 2 * 16000 // 40 ** 2,
+                700 + (i+1) ** 2 * 16000 // 40 ** 2,
+            ]
+            for i in range(40)
+        ],
+        order=40
+    )
+    for formant in bank.formants:
+        formant['amp'] = 1 / formant['amp'] if formant['amp'] else 0
+    y = bank.filter(x)
+    y_max = max(abs(i) for i in y)
+    y = [i / y_max for i in y]
+    return y
+
 class IirBank:
-    def fitting_envelope(envelope, width, widen):
+    def fitting_envelope(envelope, width, widenings, formant_ranges, pole_pairs=2, overpeak=3, order=args.order):
         visited = [False] * len(envelope)
         iir_bank = IirBank()
-        for i in range(args.order):
+        def append_formant(freq, amp):
+            iir_bank.formants.append({
+                'freq': freq,
+                'amp': amp,
+                'width': width,
+                'order': 2 * pole_pairs,
+            })
+        for i in range(order):
             # find unvisited formant with biggest delta from spectrum
             spectrum = iir_bank.spectrum((len(envelope)-1) * 2)
             delta = [i - j for i, j in zip(envelope, spectrum)]
+            for j in range(len(delta)):
+                if not formant_ranges[i][0] <= j / ((len(envelope) - 1) * 2) * SAMPLE_RATE <= formant_ranges[i][1]:
+                    delta[j] = 0
             unvisited = [i for i, j in zip(delta, visited) if not j]
             if not unvisited:
-                iir_bank.formants.append({
-                    'freq': SAMPLE_RATE / 4,
-                    'amp': 0,
-                    'width': width,
-                })
-                break
+                append_formant(sum(formant_ranges[i]) / 2, 0)
+                continue
             peak = max(unvisited)
-            if peak <= 0: break
+            if peak <= 0:
+                append_formant(sum(formant_ranges[i]) / 2, 0)
+                continue
             # find index
             peak_i = delta.index(peak)
             peak_j = peak_i
-            while peak_j < len(delta) and delta[peak_j+1] == delta[peak_i]:
+            while peak_j+1 < len(delta) and delta[peak_j+1] == delta[peak_i]:
                 peak_j += 1
             peak_i = (peak_i + peak_j) // 2
             # visit right
@@ -326,18 +398,14 @@ class IirBank:
             centroid = sum(i * envelope[i] for i in range(l, r)) / sum(v for v in envelope[l:r])
             freq = centroid / ((len(envelope) - 1) * 2) * SAMPLE_RATE
             # append formant
-            iir_bank.formants.append({
-                'freq': freq,
-                'amp': peak,
-                'width': width,
-            })
+            append_formant(freq, peak * overpeak)
             # widening
-            if widen:
-                e = iir_bank.error(envelope)
+            if widenings:
+                e = iir_bank.formant_error(envelope, formant_ranges[i])
                 widened = copy.deepcopy(iir_bank)
-                widened.formants[-1]['width'] *= 2
-                for i in range(8):
-                    e_w = widened.error(envelope)
+                for _ in range(widenings):
+                    widened.formants[-1]['width'] *= 2
+                    e_w = widened.formant_error(envelope, formant_ranges[i])
                     if e_w >= e: break
                     e = e_w
                     iir_bank = widened
@@ -348,21 +416,24 @@ class IirBank:
     def __init__(self, formants=[]):
         self.formants = copy.copy(formants)
 
+    def get_tf(self, formant):
+        w = formant['freq'] / SAMPLE_RATE * 2*math.pi
+        p = cmath.rect(1.0 - formant['width'], w);
+        z_w = cmath.rect(1.0, w);
+        gain = formant['amp'] * abs((z_w - p) * (z_w - p.conjugate())) ** (formant['order'] // 2);
+        return signal.zpk2tf([], [p, p.conjugate()] * (formant['order'] // 2), gain)
+
     def spectrum(self, n):
         spectrum = [0]*(n // 2 + 1)
-        for iir in self.formants:
-            w = iir['freq'] / SAMPLE_RATE * 2*math.pi
-            p = cmath.rect(1.0 - iir['width'], w);
-            z_w = cmath.rect(1.0, w);
-            gain = iir['amp'] * abs((z_w - p) * (z_w - p.conjugate()));
-            b, a = signal.zpk2tf([], [p, p.conjugate()], gain)
+        for formant in self.formants:
+            b, a = self.get_tf(formant)
             w, h = signal.freqz(b, a, n // 2 + 1, include_nyquist=True)
             for i in range(len(spectrum)):
                 spectrum[i] += h[i]
         return [flabs(i) for i in spectrum]
 
     def plot_spectrum(self, n, plot):
-        plot.plot([math.log(i) for i in self.spectrum(n)])
+        plot.plot([2 * math.log10(i) for i in self.spectrum(NOMINAL_SAMPLE_SIZE)])
 
     def energy_transfer(self, n):
         return sum(i ** 2 for i in self.spectrum(n)) / n
@@ -371,9 +442,33 @@ class IirBank:
         for formant in self.formants:
             formant['amp'] *= f
 
-    def error(self, envelope):
-        s = self.spectrum((len(envelope)-1) * 2)
-        return sum(abs(flabs(i) - j) for i, j in zip(s, envelope))
+    def formant_error(self, envelope, formant_range):
+        spectrum = self.spectrum((len(envelope)-1) * 2)
+        start, end = [i / (SAMPLE_RATE/2) * (len(spectrum)-1) for i in formant_range]
+        err = 0
+        for i, (spec, env) in enumerate(zip(spectrum, envelope)):
+            e = flabs(spec) - env
+            if i <= end:
+                # we are in existing formant range, error is bad, going over is very bad
+                if e > 0:
+                    err += 4 * e
+                else:
+                    err += abs(e)
+            else:
+                # we are in a future formant range, error is fine, going over is very bad
+                if e > 0:
+                    err += 4 * e
+        return err
+
+    def filter(self, x):
+        y = [0] * len(x)
+        for formant in self.formants:
+            b, a = self.get_tf(formant)
+            y = [
+                float(i.real) + j
+                for i, j in zip(signal.lfilter(b, a, x), y)
+            ]
+        return y
 
 #===== main =====#
 phonetics = [
@@ -387,8 +482,8 @@ if args.plot_spectra:
         grid_w = 1
     plot = dpc.Plot(
         transform=dpc.transforms.Compound(
-            dpc.transforms.Grid(4200, 10, grid_w),
-            (dpc.transforms.Default('bcyg'), 4),
+            dpc.transforms.Grid(NOMINAL_SAMPLE_SIZE // 2 + 50, 20, grid_w),
+            (dpc.transforms.Default('bcwygr'), 6),
         ),
         primitive=dpc.primitives.Line(),
         hide_axes=True,
@@ -406,25 +501,65 @@ for i, phonetic in enumerate(phonetics):
         if phonetic == '0': continue
         x = load(args.phonetics_file_path, (i * 10 + 4) * SAMPLE_RATE, 4 * SAMPLE_RATE)
         cuts = cut_phonetic(x)
-        if len(cuts) > 1:
-            cuts.insert(0, x)
         with open(out_file_path) as file:
             params = json.loads(file.read())
         for frame_i, frame in enumerate([i for i in params['frames'] if i]):
-            n, spectrum, envelope = calc_tone_envelope(cuts[frame_i])
-            t = plot.transform(-20, 0, 0, plot.series)
-            t.update({'r': 255, 'g': 0, 'b': 255})
-            plot.text(phonetic + str(frame_i), **t)
-            plot.plot([math.log(i) for i in spectrum])
-            plot.plot([math.log(i) for i in envelope])
-            if 'tone_formants' in frame and (len(cuts) == 1 or frame_i):
+            n, spectrum, tone_envelope = calc_tone_envelope(cuts[frame_i])
+            if frame.get('tone_formants'):
+                tone_spectrum = IirBank(frame['tone_formants']).spectrum(n)
+                noise_spectrum = [
+                    math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
+                    for i in range(len(tone_envelope))
+                ]
+            else:
+                noise_spectrum = spectrum
+            noise_envelope = calc_envelope(noise_spectrum, 400)
+            t = plot.transform(0, 4, 0, plot.series)
+            t.update({
+                'r': 255,
+                'g': 128 if params['meta']['toniness']['noise_amp'] else 0,
+                'b': 0 if params['voiced'] else 255,
+            })
+            plot.text(phonetic + (str(frame_i) if params['type'] == 'stop' else ''), **t)
+            for i in range(-16, 0):
+                plot.line(
+                    t['x'], t['y']+i, t['x']+2050, t['y']+i,
+                    255, 255, 255,
+                    64 if i % 4 else 128
+                )
+            x = [
+                i * (NOMINAL_SAMPLE_SIZE // 2 + 1) / len(spectrum)
+                for i in range(len(spectrum))
+            ]
+            plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
+            if 'tone_formants' in frame:
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in tone_envelope])
+            else:
+                plot.next_series()
+            if 'noise_formants' in frame:
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in noise_envelope])
+            else:
+                plot.next_series()
+            if 'tone_formants' in frame:
                 IirBank(frame['tone_formants']).plot_spectrum(n, plot)
             else:
                 plot.next_series()
-            if 'noise_formants' in frame and (len(cuts) == 1 or frame_i):
+            if 'noise_formants' in frame:
                 IirBank(frame['noise_formants']).plot_spectrum(n, plot)
             else:
                 plot.next_series()
+            sample_path = f'assets/local/phonetics/{phonetic}.flac'
+            if os.path.exists(sample_path) and params['type'] == 'continuant':
+                samples = dlal.sound.read(sample_path).samples
+                spectrum = calc_spectrum(samples, calc_n(samples))
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
+            else:
+                samples = dlal.sound.read(sample_path).samples
+                start = next(i for i, v in enumerate(samples) if v != 0)
+                samples = samples[start + frame_i * CUT_STEP:]
+                samples = samples[:CUT_STEP]
+                spectrum = calc_spectrum(samples, calc_n(samples))
+                plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
     else:
         print(phonetic)
         if phonetic == '0':
@@ -435,5 +570,10 @@ for i, phonetic in enumerate(phonetics):
         params = json.dumps(params, indent=2)
         with open(out_file_path, 'w') as file:
             file.write(params)
+        if phonetic == 'a':
+            dlal.sound.Sound(get_glottal_sound(x), SAMPLE_RATE).to_flac(os.path.join(
+                os.path.dirname(args.phonetics_file_path),
+                'glottis.flac',
+            ))
 if args.plot_spectra:
     plot.show()
