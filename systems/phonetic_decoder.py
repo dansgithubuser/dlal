@@ -19,27 +19,29 @@ parser.add_argument('--phonetics')
 parser.add_argument('--rot13', action='store_true')
 parser.add_argument('--tell-story', type=int)
 parser.add_argument('--create-phonetic-samples', '--cps', action='store_true')
+parser.add_argument('--phonetics-path', default='assets/phonetics')
 args = parser.parse_args()
 
 #===== consts =====#
 SAMPLE_RATE = 44100
 
+PHONETICS = {}
+for path in glob.glob(os.path.join(args.phonetics_path, '*.phonetic.json')):
+    phonetic = os.path.basename(path).split('.')[0]
+    with open(path) as file:
+        PHONETICS[phonetic] = json.loads(file.read())
+
 #===== system =====#
 audio = dlal.Audio()
 dlal.driver_set(audio)
 comm = dlal.Comm()
-vibrato = dlal.subsystem.Vibrato()
-tone = dlal.Train(name='tone')
-noise = dlal.Osc('noise', name='noise')
-phonetizer = dlal.subsystem.Phonetizer()
+tone = dlal.Sinbank()
+buf = dlal.Buf()
 tape = dlal.Tape(size=44100*5)
 
 dlal.connect(
-    (vibrato),
-    (tone, noise),
-    (phonetizer.tone_buf, phonetizer.noise_buf),
-    [],
-    phonetizer,
+    tone,
+    buf,
     [audio, tape],
 )
 
@@ -47,7 +49,9 @@ dlal.connect(
 def say_one(phonetic):
     if phonetic == ' ':
         phonetic = '0'
-    time.sleep(phonetizer.say(phonetic) / 44100)
+    tone_spectrum = PHONETICS[phonetic]['frames'][0].get('tone_spectrum')
+    if tone_spectrum: tone.spectrum(tone_spectrum)
+    time.sleep(1/8)
 
 def say(phonetics):
     phonetics += ' '
@@ -383,7 +387,6 @@ def test():
         print(phonetic, answer, '' if phonetic == answer else 'X')
 
 tone.midi([0x90, 42, 127])
-noise.midi([0x90, 60, 13])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
@@ -402,13 +405,16 @@ elif args.create_phonetic_samples:
         'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
     ]
     os.makedirs('assets/local/phonetics', exist_ok=True)
+    say_one('0')
+    time.sleep(1)
+    tape.read()
     for phonetic in phonetics:
         say_one(phonetic)
-        if phonetizer.phonetics[phonetic]['type'] == 'stop': say_one('0')
-        time.sleep(1)
         say_one('0')
+        time.sleep(1)
         x = tape.read()
         sound = dlal.sound.Sound(x, SAMPLE_RATE)
         sound.to_flac(f'assets/local/phonetics/{phonetic}.flac')
+        print(phonetic)
         time.sleep(1)
         tape.read()

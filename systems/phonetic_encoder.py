@@ -34,7 +34,7 @@ SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
 NOMINAL_SAMPLE_SIZE = 4096
 CUT_STEP = 512
-GAIN = 150
+GAIN = 1
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -227,49 +227,15 @@ def parameterize(x, toniness=None):
     if toniness == None:
         toniness = calc_toniness(x)
     result['meta'] = {'toniness': toniness}
-    #----- find formants -----#
+    #----- find tone spectrum -----#
     n, spectrum, envelope = calc_tone_envelope(x)
-    if toniness['tone_amp']:
-        tone_formants = IirBank.fitting_envelope(
-            envelope,
-            width=0.01,
-            widenings=1,
-            formant_ranges=[
-                [
-                    100 + (i+0) ** 2 * 5000 // args.order ** 2,
-                    700 + (i+1) ** 2 * 5000 // args.order ** 2,
-                ]
-                for i in range(args.order)
-            ],
-        )
-        tone_spectrum = tone_formants.spectrum(n)
-        result['tone_formants'] = tone_formants.formants
-        result['meta']['tone_transfer'] = tone_formants.energy_transfer(n)
-    else:
-        tone_spectrum = [0] * len(spectrum)
-    #----- calculate noise filter -----#
-    if toniness['noise_amp']:
-        noise_spectrum = [
-            math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
-            for i in range(len(envelope))
-        ]
-        noise_envelope = calc_envelope(noise_spectrum, 400)
-        noise_formants = IirBank.fitting_envelope(
-            noise_envelope,
-            width=0.02,
-            widenings=4,
-            formant_ranges=[
-                [
-                    (i+0) * 20000 // args.order,
-                    min((i+2) * 20000 // args.order, SAMPLE_RATE/2),
-                ]
-                for i in range(args.order)
-            ],
-            pole_pairs=1,
-            overpeak=3,
-        )
-        result['noise_formants'] = noise_formants.formants
-        result['meta']['noise_transfer'] = noise_formants.energy_transfer(n)
+    bins_per_harmonic = FREQUENCY / (SAMPLE_RATE / 2 / (n // 2 + 1))
+    result['tone_spectrum'] = []
+    for i in range(6000 // FREQUENCY + 1):
+        j = max(math.floor((i - 0.5) * bins_per_harmonic), 0)
+        k = min(math.floor((i + 0.5) * bins_per_harmonic), len(envelope)-1)
+        bins = envelope[j:k]
+        result['tone_spectrum'].append(sum(bins) / len(bins))
     #----- return -----#
     return result
 
@@ -292,7 +258,9 @@ def analyze(x=None):
         return {
             'type': 'continuant',
             'voiced': False,
-            'frames': [{}],
+            'frames': [{
+                'tone_spectrum': [],
+            }],
         }
     cuts = cut_phonetic(x)
     if len(cuts) == 1:
@@ -549,17 +517,18 @@ for i, phonetic in enumerate(phonetics):
             else:
                 plot.next_series()
             sample_path = f'assets/local/phonetics/{phonetic}.flac'
-            if os.path.exists(sample_path) and params['type'] == 'continuant':
-                samples = dlal.sound.read(sample_path).samples
-                spectrum = calc_spectrum(samples, calc_n(samples))
-                plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
-            else:
-                samples = dlal.sound.read(sample_path).samples
-                start = next(i for i, v in enumerate(samples) if v != 0)
-                samples = samples[start + frame_i * CUT_STEP:]
-                samples = samples[:CUT_STEP]
-                spectrum = calc_spectrum(samples, calc_n(samples))
-                plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
+            if os.path.exists(sample_path):
+                if params['type'] == 'continuant':
+                    samples = dlal.sound.read(sample_path).samples
+                    spectrum = calc_spectrum(samples, calc_n(samples))
+                    plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
+                else:
+                    samples = dlal.sound.read(sample_path).samples
+                    start = next(i for i, v in enumerate(samples) if v != 0)
+                    samples = samples[start + frame_i * CUT_STEP:]
+                    samples = samples[:CUT_STEP]
+                    spectrum = calc_spectrum(samples, calc_n(samples))
+                    plot.plot(x, [2 * math.log10(i+1e-4) for i in spectrum])
     else:
         print(phonetic)
         if phonetic == '0':
