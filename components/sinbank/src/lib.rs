@@ -6,7 +6,7 @@ use std::f32::consts::PI;
 const BIN_SIZE: f32 = 100.0;
 
 component!(
-    {"in": ["midi"], "out": ["audio"]},
+    {"in": ["midi", "cmd"], "out": ["audio"]},
     [
         "run_size",
         "sample_rate",
