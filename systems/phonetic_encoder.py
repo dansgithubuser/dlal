@@ -235,7 +235,15 @@ def parameterize(x, toniness=None):
         j = max(math.floor((i - 0.5) * bins_per_harmonic), 0)
         k = min(math.floor((i + 0.5) * bins_per_harmonic), len(envelope)-1)
         bins = envelope[j:k]
-        result['tone_spectrum'].append(sum(bins) / len(bins))
+        result['tone_spectrum'].append(sum(bins) / len(bins) * toniness['tone_amp'])
+    #----- find noise spectrum -----#
+    noise_envelope = calc_envelope(spectrum, 400)
+    result['noise_spectrum'] = []
+    for i in range(64):
+        j = math.floor((i + 0) / 64 * (n // 2 + 1))
+        k = math.floor((i + 1) / 64 * (n // 2 + 1))
+        bins = noise_envelope[j:k]
+        result['noise_spectrum'].append(sum(bins) / len(bins) * toniness['noise_amp'])
     #----- return -----#
     return result
 
@@ -258,9 +266,7 @@ def analyze(x=None):
         return {
             'type': 'continuant',
             'voiced': False,
-            'frames': [{
-                'tone_spectrum': [],
-            }],
+            'frames': [{}],
         }
     cuts = cut_phonetic(x)
     if len(cuts) == 1:

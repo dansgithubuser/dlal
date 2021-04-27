@@ -35,23 +35,35 @@ for path in glob.glob(os.path.join(args.phonetics_path, '*.phonetic.json')):
 audio = dlal.Audio()
 dlal.driver_set(audio)
 comm = dlal.Comm()
+noise = dlal.Noisebank()
+noise_gain = dlal.Gain(0.1)
 tone = dlal.Sinbank()
 buf = dlal.Buf()
 tape = dlal.Tape(size=44100*5)
 
 dlal.connect(
-    tone,
+    [tone, noise, noise_gain],
     buf,
     [audio, tape],
 )
 
 #===== main =====#
-def say_one(phonetic):
-    if phonetic == ' ':
-        phonetic = '0'
-    tone_spectrum = PHONETICS[phonetic]['frames'][0].get('tone_spectrum')
-    if tone_spectrum: tone.spectrum(tone_spectrum)
-    time.sleep(1/8)
+def say_one(phonetic_name):
+    if phonetic_name == ' ':
+        phonetic_name = '0'
+    phonetic = PHONETICS[phonetic_name]
+    wait = int(phonetic.get('duration', SAMPLE_RATE / 8) / len(phonetic['frames']))
+    for frame_i, frame in enumerate(phonetic['frames']):
+        if 'tone_spectrum' in frame:
+            tone.command_detach('spectrum', [frame['tone_spectrum']])
+        else:
+            tone.command_detach('spectrum', [[]])
+        if 'noise_spectrum' in frame:
+            noise.command_detach('spectrum', [frame['noise_spectrum']])
+        else:
+            noise.command_detach('spectrum', [[0] * 64])
+        comm.wait(wait)
+    time.sleep(wait * len(phonetic['frames']) / SAMPLE_RATE)
 
 def say(phonetics):
     phonetics += ' '
@@ -386,6 +398,7 @@ def test():
     for phonetic, answer in zip(phonetics, answers):
         print(phonetic, answer, '' if phonetic == answer else 'X')
 
+tone.spectrum([])
 tone.midi([0x90, 42, 127])
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
