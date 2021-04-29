@@ -34,7 +34,7 @@ SAMPLE_RATE = 44100
 FREQUENCY = 100  # of voice in args.phonetics_file_path
 NOMINAL_SAMPLE_SIZE = 4096
 CUT_STEP = 512
-GAIN = 1
+FILTER_GAIN = 150
 
 #===== helpers =====#
 def load(phonetics_file_path, start, duration):
@@ -108,7 +108,7 @@ def calc_n(x):
 
 def calc_spectrum(x, n):
     if n > 1024:
-        return [flabs(i) / n * GAIN for i in fft(x[:n])[:n//2+1]]
+        return [flabs(i) / n for i in fft(x[:n])[:n//2+1]]
     else:
         m = 8
         acc = [0] * (n//2+1)
@@ -116,7 +116,7 @@ def calc_spectrum(x, n):
             o = 8 * k
             spectrum = [flabs(i) for i in fft(x[o:o+n])[:n//2+1]]
             acc = [flabs(i) + j for i, j in zip(spectrum, acc)]
-        return [i / (m * n) * GAIN for i in acc]
+        return [i / (m * n) for i in acc]
 
 class RunningMax:
     def __init__(self, initial, size=None):
@@ -234,6 +234,7 @@ def parameterize(x, toniness=None):
     for i in range(6000 // FREQUENCY + 1):
         j = max(math.floor((i - 0.5) * bins_per_harmonic), 0)
         k = min(math.floor((i + 0.5) * bins_per_harmonic), len(envelope)-1)
+        if k == j: k = j + 1
         bins = envelope[j:k]
         result['tone_spectrum'].append(sum(bins) / len(bins) * toniness['tone_amp'])
     #----- find noise spectrum -----#
@@ -244,6 +245,48 @@ def parameterize(x, toniness=None):
         k = math.floor((i + 1) / 64 * (n // 2 + 1))
         bins = noise_envelope[j:k]
         result['noise_spectrum'].append(sum(bins) / len(bins) * toniness['noise_amp'])
+    #----- find tone formants -----#
+    if toniness['tone_amp']:
+        tone_formants = IirBank.fitting_envelope(
+            envelope,
+            width=0.01,
+            widenings=1,
+            formant_ranges=[
+                [
+                    100 + (i+0) ** 2 * 5000 // args.order ** 2,
+                    700 + (i+1) ** 2 * 5000 // args.order ** 2,
+                ]
+                for i in range(args.order)
+            ],
+        )
+        tone_spectrum = tone_formants.spectrum(n)
+        result['tone_formants'] = tone_formants.formants
+        result['meta']['tone_transfer'] = tone_formants.energy_transfer(n)
+    else:
+        tone_spectrum = [0] * len(spectrum)
+    #----- find noise formants -----#
+    if toniness['noise_amp']:
+        noise_spectrum = [
+            math.sqrt(max(0, spectrum[i] ** 2 - tone_spectrum[i] ** 2))
+            for i in range(len(envelope))
+        ]
+        noise_envelope = calc_envelope(noise_spectrum, 400)
+        noise_formants = IirBank.fitting_envelope(
+            noise_envelope,
+            width=0.02,
+            widenings=4,
+            formant_ranges=[
+                [
+                    (i+0) * 20000 // args.order,
+                    min((i+2) * 20000 // args.order, SAMPLE_RATE/2),
+                ]
+                for i in range(args.order)
+            ],
+            pole_pairs=1,
+            overpeak=3,
+        )
+        result['noise_formants'] = noise_formants.formants
+        result['meta']['noise_transfer'] = noise_formants.energy_transfer(n)
     #----- return -----#
     return result
 
@@ -321,6 +364,7 @@ def get_glottal_sound(x):
 
 class IirBank:
     def fitting_envelope(envelope, width, widenings, formant_ranges, pole_pairs=2, overpeak=3, order=args.order):
+        envelope = [FILTER_GAIN * i for i in envelope]
         visited = [False] * len(envelope)
         iir_bank = IirBank()
         def append_formant(freq, amp):
