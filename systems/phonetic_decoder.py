@@ -25,12 +25,6 @@ args = parser.parse_args()
 #===== consts =====#
 SAMPLE_RATE = 44100
 
-PHONETICS = {}
-for path in glob.glob(os.path.join(args.phonetics_path, '*.phonetic.json')):
-    phonetic = os.path.basename(path).split('.')[0]
-    with open(path) as file:
-        PHONETICS[phonetic] = json.loads(file.read())
-
 #===== system =====#
 audio = dlal.Audio()
 dlal.driver_set(audio)
@@ -48,12 +42,13 @@ dlal.connect(
 )
 
 #===== main =====#
-def say_one(phonetic_name):
-    if phonetic_name == ' ':
-        phonetic_name = '0'
-    phonetic = PHONETICS[phonetic_name]
-    wait = int(phonetic.get('duration', SAMPLE_RATE / 8) / len(phonetic['frames']))
-    for frame_i, frame in enumerate(phonetic['frames']):
+phonetizer = dlal.subsystem.Phonetizer()
+phonetizer.init(custom_subsystem=True)
+
+def say_one(phonetic_symbol):
+    if phonetic_symbol == ' ':
+        phonetic_symbol = '0'
+    def say_custom(frame, wait, **kwargs):
         if 'tone_spectrum' in frame:
             tone.command_detach('spectrum', [frame['tone_spectrum']])
         else:
@@ -63,7 +58,7 @@ def say_one(phonetic_name):
         else:
             noise.command_detach('spectrum', [[0] * 64])
         comm.wait(wait)
-    time.sleep(wait * len(phonetic['frames']) / SAMPLE_RATE)
+    time.sleep(phonetizer.say(phonetic_symbol, say_custom=say_custom) / SAMPLE_RATE)
 
 def say(phonetics):
     phonetics += ' '
@@ -204,7 +199,7 @@ def tell_story(i=0):
         # 7
         '[[ae/2][-y]0[h/2][ae]v0u0f[ae]nsy0silwet]',  # I have a fancy silhouette
         # 8
-        '[[h/2][ae/2][-w]0duz0[th_v]u0gr[e/2][-y]t0b[l/2][-w]0k[h/2][ae]t0jump0j[u/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
+        '[[h/2][ae/2][-w]0duz0[th_v]u0gr[e/2][-y]t0b[l/2][-w]0k[h/2][ae]t0jump0j[ae/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
     ][i])
 
 def say_random():
