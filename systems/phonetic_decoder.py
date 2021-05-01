@@ -199,7 +199,7 @@ def tell_story(i=0):
         # 7
         '[[ae/2][-y]0[h/2][ae]v0u0f[ae]nsy0silwet]',  # I have a fancy silhouette
         # 8
-        '[[h/2][ae/2][-w]0duz0[th_v]u0gr[e/2][-y]t0b[l/2][-w]0k[h/2][ae]t0jump0j[ae/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
+        '[[h/2][ae/2][-w]0duz0[th_v/4]u0gr[e/2][-y]t0b[l/2][uu][-w]0k[h/2][ae]t0jump0j[ae/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
     ][i])
 
 def say_random():

@@ -108,13 +108,12 @@ impl ComponentTrait for Component {
 
 impl Component {
     fn spectrum_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(spectrum) = body.arg::<Vec<f32>>(0) {
-            if spectrum.len() != BINS {
-                return Err(err!("spectrum must be length 64").into());
-            }
-            for i in 0..BINS {
-                self.bins[i].vol = spectrum[i];
-            }
+        let spectrum = body.arg::<Vec<f32>>(0)?;
+        if spectrum.len() != BINS {
+            return Err(err!("spectrum must be length 64").into());
+        }
+        for i in 0..BINS {
+            self.bins[i].vol = spectrum[i];
         }
         Ok(None)
     }

@@ -106,9 +106,7 @@ impl ComponentTrait for Component {
 
 impl Component {
     fn spectrum_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        if let Ok(v) = body.arg(0) {
-            self.spectrum = v;
-        }
+        self.spectrum = body.arg(0)?;
         Ok(None)
     }
 }
