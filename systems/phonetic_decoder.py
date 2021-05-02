@@ -20,6 +20,7 @@ parser.add_argument('--rot13', action='store_true')
 parser.add_argument('--tell-story', type=int)
 parser.add_argument('--create-phonetic-samples', '--cps', action='store_true')
 parser.add_argument('--phonetics-path', default='assets/phonetics')
+parser.add_argument('--approach', choices=['sub', 'add'], default='sub')
 args = parser.parse_args()
 
 #===== consts =====#
@@ -29,36 +30,54 @@ SAMPLE_RATE = 44100
 audio = dlal.Audio()
 dlal.driver_set(audio)
 comm = dlal.Comm()
-noise = dlal.Noisebank()
-noise_gain = dlal.Gain(0.1)
-tone = dlal.Sinbank()
-buf = dlal.Buf()
-tape = dlal.Tape(size=44100*5)
 
-dlal.connect(
-    [tone, noise, noise_gain],
-    buf,
-    [audio, tape],
-)
+if args.approach == 'sub':
+    tone = dlal.Train(name='tone')
+    noise = dlal.Osc('noise', name='noise')
+    phonetizer = dlal.subsystem.Phonetizer()
+    tape = dlal.Tape(size=44100*5)
+
+    dlal.connect(
+        (tone, noise),
+        (phonetizer.tone_buf, phonetizer.noise_buf),
+        [],
+        phonetizer,
+        [audio, tape],
+    )
+elif args.approach == 'add':
+    noise = dlal.Noisebank()
+    noise_gain = dlal.Gain(0.1)
+    tone = dlal.Sinbank()
+    buf = dlal.Buf()
+    tape = dlal.Tape(size=44100*5)
+
+    dlal.connect(
+        [tone, noise, noise_gain],
+        buf,
+        [audio, tape],
+    )
+
+    phonetizer = dlal.subsystem.Phonetizer()
+    phonetizer.init(custom_subsystem=True)
 
 #===== main =====#
-phonetizer = dlal.subsystem.Phonetizer()
-phonetizer.init(custom_subsystem=True)
-
 def say_one(phonetic_symbol):
     if phonetic_symbol == ' ':
         phonetic_symbol = '0'
-    def say_custom(frame, wait, **kwargs):
-        if 'tone_spectrum' in frame:
-            tone.command_detach('spectrum', [frame['tone_spectrum']])
-        else:
-            tone.command_detach('spectrum', [[]])
-        if 'noise_spectrum' in frame:
-            noise.command_detach('spectrum', [frame['noise_spectrum']])
-        else:
-            noise.command_detach('spectrum', [[0] * 64])
-        comm.wait(wait)
-    time.sleep(phonetizer.say(phonetic_symbol, say_custom=say_custom) / SAMPLE_RATE)
+    if args.approach == 'sub':
+        time.sleep(phonetizer.say(phonetic_symbol) / 44100)
+    else:
+        def say_custom(frame, wait, **kwargs):
+            if 'tone_spectrum' in frame:
+                tone.command_detach('spectrum', [frame['tone_spectrum']])
+            else:
+                tone.command_detach('spectrum', [[]])
+            if 'noise_spectrum' in frame:
+                noise.command_detach('spectrum', [frame['noise_spectrum']])
+            else:
+                noise.command_detach('spectrum', [[0] * 64])
+            comm.wait(wait)
+        time.sleep(phonetizer.say(phonetic_symbol, say_custom=say_custom) / SAMPLE_RATE)
 
 def say(phonetics):
     phonetics += ' '
@@ -393,8 +412,13 @@ def test():
     for phonetic, answer in zip(phonetics, answers):
         print(phonetic, answer, '' if phonetic == answer else 'X')
 
-tone.spectrum([])
-tone.midi([0x90, 42, 127])
+if args.approach == 'sub':
+    tone.midi([0x90, 42, 127])
+    noise.midi([0x90, 60, 13])
+else:
+    tone.spectrum([])
+    tone.midi([0x90, 42, 127])
+
 dlal.typical_setup()
 if args.phonetics or type(args.tell_story) == int:
     tape.to_file_i16le_start()
