@@ -7,6 +7,10 @@ REPO_DIR = os.path.dirname(os.path.dirname(DIR))
 ASSETS_DIR = os.path.join(REPO_DIR, 'assets')
 DEPS_DIR = os.path.join(REPO_DIR, 'deps')
 
+class NoContext:
+    def __enter__(*args, **kwargs): pass
+    def __exit__(*args, **kwargs): pass
+
 def snake_to_upper_camel_case(s):
     return ''.join(i.capitalize() for i in s.split('_'))
 

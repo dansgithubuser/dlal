@@ -42,6 +42,7 @@ see `do.py --component-matrix` for coloring guidance
   background-image: linear-gradient(to top, #8f8, #fff);
 }
 
+.component-sinbank,
 .component-sonic,
 .component-train,
 .component-osc
@@ -171,6 +172,9 @@ async function componentContext(name) {
       await contextOptionPage('webboard', 'webboard.html');
       break;
     case 'osc':
+      await contextOptionPage('webboard', 'webboard.html');
+      break;
+    case 'sinbank':
       await contextOptionPage('webboard', 'webboard.html');
       break;
     case 'sonic':
