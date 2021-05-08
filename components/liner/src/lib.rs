@@ -214,8 +214,8 @@ component!(
     [
         "run_size",
         "sample_rate",
-        {"name": "connect_info", "value": {"args": "view", "flavor": "multi"}},
-        {"name": "disconnect_info", "value": {"args": "view", "flavor": "multi"}},
+        {"name": "connect_info", "args": "view", "flavor": "multi"},
+        {"name": "disconnect_info", "args": "view", "flavor": "multi"},
     ],
     {
         queue: Queue,

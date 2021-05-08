@@ -46,7 +46,7 @@ if args.approach == 'sub':
     )
 elif args.approach == 'add':
     noise = dlal.Noisebank()
-    noise_gain = dlal.Gain(0.1)
+    noise_gain = dlal.Gain(8)
     tone = dlal.Sinbank()
     buf = dlal.Buf()
     tape = dlal.Tape(size=44100*5)
@@ -439,7 +439,7 @@ elif args.create_phonetic_samples:
     os.makedirs('assets/local/phonetics', exist_ok=True)
     say_one('0')
     time.sleep(1)
-    tape.read()
+    tape.clear()
     for phonetic in phonetics:
         say_one(phonetic)
         say_one('0')

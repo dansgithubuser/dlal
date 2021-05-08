@@ -194,3 +194,4 @@ The `audio` component is the driver component for interactive audio.
 		- bass slide down in B section
 	- bassindaface / funky funky bass
 - be able to open audio callback in more situations for demonstrating on skype
+- change verbiage to connector/connectee instead of input/output

@@ -34,7 +34,7 @@ def component_kinds(special=None):
 class Component:
     _libs = {}
     _components = {}
-    _connections = collections.defaultdict(list)
+    _connections = collections.defaultdict(dict)
     _driver = None
     _comm = None
 
@@ -136,24 +136,24 @@ class Component:
             })
         return py_only + result
 
-    def connect(self, other, toggle=False):
+    def connect(self, other, *, toggle=False, **extra):
         if os.environ.get('DLAL_SNOOP_CONNECT'):
             print(f'connect {self.name} {other.name}')
         else:
             log('debug', f'connect {self.name} {other.name}')
-        if toggle and other.name in Component._connections.get(self.name, []):
+        if toggle and other.name in Component._connections.get(self.name, {}):
             result = self.command('disconnect', other._view())
-            Component._connections[self.name].remove(other.name)
+            del Component._connections[self.name][other.name]
         else:
-            result = self.command('connect', other._view())
-            Component._connections[self.name].append(other.name)
+            result = self.command('connect', other._view(), extra)
+            Component._connections[self.name][other.name] = extra
         return result
 
     def disconnect(self, other):
         log('debug', f'disconnect {self.name} {other.name}')
         result = self.command('disconnect', other._view())
         connections = Component._connections[self.name]
-        if other.name in connections: connections.remove(other.name)
+        if other.name in connections: del connections[other.name]
         return result
 
     def midi(self, msg):
@@ -178,10 +178,10 @@ class Component:
     def _view(self):
         return [
             str(self._raw),
-            str(ctypes.cast(self._lib.command , ctypes.c_void_p).value),
-            str(ctypes.cast(self._lib.midi    , ctypes.c_void_p).value),
-            str(ctypes.cast(self._lib.audio   , ctypes.c_void_p).value),
-            str(ctypes.cast(self._lib.run, ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.command, ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.midi   , ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.audio  , ctypes.c_void_p).value),
+            str(ctypes.cast(self._lib.run    , ctypes.c_void_p).value),
         ]
 
 def comm_set(comm):

@@ -402,8 +402,8 @@ def system_load(file_path, namespace):
         if jc: component.set_cross_state(jc)
     for name, connectees in j['connections'].items():
         component = namespace[name]
-        for connectee in connectees:
-            component.connect(namespace[connectee])
+        for connectee, extra in connectees.items():
+            component.connect(namespace[connectee], **extra)
 
 def impulse_response(ci, co, driver=None):
     if driver == None: driver = _Component._driver

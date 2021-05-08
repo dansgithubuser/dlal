@@ -1,9 +1,7 @@
-use dlal_component_base::{component, serde_json, Body, CmdResult};
+use dlal_component_base::{component, json_to_ptr, serde_json, Body, CmdResult};
 
 use std::f32;
 use std::f32::consts::PI;
-
-const BIN_SIZE: f32 = 100.0;
 
 component!(
     {"in": ["midi", "cmd"], "out": ["audio"]},
@@ -12,10 +10,13 @@ component!(
         "sample_rate",
         "uni",
         "check_audio",
-        {"name": "field_helpers", "fields": ["bend", "phase"], "kinds": ["rw"]},
+        {"name": "field_helpers", "fields": ["spectrum", "bend", "phase"], "kinds": ["rw"]},
+        {"name": "field_helpers", "fields": ["bin_size"], "kinds": ["json", "rw"]},
     ],
     {
+        harmonics: u32,
         spectrum: Vec<f32>,
+        bin_size: f32,
         bend: f32,
         step: f32,
         phase: f32,
@@ -24,12 +25,10 @@ component!(
         pitch_bend_range: f32, //MIDI RPN 0x0000
     },
     {
-        "spectrum": {
+        "stft": {
             "args": [{
-                "name": "spectrum",
-                "type": "array",
-                "element": "float",
-                "desc": "An array of amplitudes of 100 Hz bins.",
+                "name": "stft",
+                "kind": "norm",
             }],
         },
     },
@@ -37,7 +36,9 @@ component!(
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.spectrum = vec![0.01;   60];
+        self.harmonics = 60;
+        self.spectrum = vec![0.01; 64];
+        self.bin_size = 100.0;
         self.bend = 1.0;
         self.pitch_bend_range = 2.0;
     }
@@ -50,9 +51,9 @@ impl ComponentTrait for Component {
         let freq = self.step / (2.0 * PI) * self.sample_rate as f32;
         for i in output.audio(self.run_size).unwrap() {
             *i += self.vol
-                * (1..std::cmp::min(((self.spectrum.len() as f32 - 0.5) * BIN_SIZE / freq) as usize, 64))
+                * (1..std::cmp::min(((self.spectrum.len() as f32 - 0.5) * self.bin_size / freq) as u32, self.harmonics))
                     .map(|j| {
-                        self.spectrum[(j as f32 * freq / BIN_SIZE + 0.5) as usize]
+                        self.spectrum[(j as f32 * freq / self.bin_size + 0.5) as usize]
                             * (self.phase * j as f32).sin()
                     })
                     .sum::<f32>();
@@ -105,8 +106,12 @@ impl ComponentTrait for Component {
 }
 
 impl Component {
-    fn spectrum_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.spectrum = body.arg(0)?;
+    fn stft_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let data = json_to_ptr!(body.arg::<serde_json::Value>(0)?, *const f32);
+        let len = body.arg(1)?;
+        let stft = unsafe { std::slice::from_raw_parts(data, len) };
+        self.spectrum.resize(len, 0.0);
+        self.spectrum.copy_from_slice(stft);
         Ok(None)
     }
 }

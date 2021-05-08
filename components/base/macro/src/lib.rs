@@ -29,11 +29,11 @@ fn get_features(input: TokenStream) -> serde_json::Value {
                 result[name] = json!(true);
             }
             serde_json::Value::Object(mut feature) => {
-                let name = feature["name"].as_str().expect("a");
-                match name {
+                let name = String::from(feature["name"].as_str().expect("bad feature name"));
+                match name.as_str() {
                     "join_info" | "connect_info" | "disconnect_info" => {
                         feature.remove("name");
-                        result["join_info"] = json!(json!(feature).to_string());
+                        result[name] = json!(json!(feature).to_string());
                     }
                     "field_helpers" => {
                         let fields = feature["fields"].as_array().expect("fields isn't an array");

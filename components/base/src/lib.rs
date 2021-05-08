@@ -207,18 +207,21 @@ pub struct View {
     pub run_view: EvaluateView,
 }
 
+#[macro_export]
 macro_rules! json_to_ptr {
     ($value:expr, $type:ty) => {{
         let u = match $value.as_str() {
             Some(s) => s.parse::<usize>()?,
-            None => return Err(err!("pointer isn't a string").into()),
+            None => return Err($crate::err!("pointer isn't a string").into()),
         };
-        unsafe { transmute::<*const c_void, $type>(u as *const c_void) }
+        #[allow(clippy::useless_transmute)]
+        unsafe {
+            $crate::transmute::<*const $crate::c_void, $type>(u as *const $crate::c_void)
+        }
     }};
 }
 
 impl View {
-    #[allow(clippy::useless_transmute)]
     pub fn new(args: &serde_json::Value) -> Result<Self, Box<dyn StdError>> {
         Ok(Self {
             raw: json_to_ptr!(&args[0], *const c_void),
