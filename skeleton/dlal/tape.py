@@ -29,7 +29,9 @@ class Tape(Component):
             file.write(struct.pack('<h', i))
 
     def to_file_i16le_start(self, file_path='out.i16le', size=64):
+        self.clear()
         tape = weakref.proxy(self)
+
         class File:
             def __init__(self, file_path):
                 self.file = open(file_path, 'wb')
@@ -40,9 +42,11 @@ class Tape(Component):
                         tape.to_file_i16le(weak_self.file, size)
                 self.thread = threading.Thread(target=main)
                 self.thread.start()
+
             def stop(self):
                 self.quit = True
                 self.thread.join()
+
         self._file = File(file_path)
 
     def to_file_i16le_stop(self):

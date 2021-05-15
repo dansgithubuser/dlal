@@ -1,4 +1,4 @@
-use dlal_component_base::{component, err, serde_json, Body, CmdResult};
+use dlal_component_base::{component, err, json_to_ptr, serde_json, Body, CmdResult};
 
 use rand::random;
 use rustfft::{num_complex::Complex, FftPlanner};
@@ -32,7 +32,7 @@ impl NoiseBin {
             let freq = i as f32 * sample_rate as f32 / size as f32;
             if freq_i <= freq && freq < freq_f {
                 buffer.push(Complex::from_polar(
-                    1.0 as f32,
+                    (freq_f - freq_i) / size as f32,
                     2.0 * PI * random::<f32>(),
                 ));
             } else {
@@ -74,6 +74,12 @@ component!(
                 "element": "float",
             }],
         },
+        "stft": {
+            "args": [{
+                "name": "stft",
+                "kind": "norm",
+             }],
+        },
     },
 );
 
@@ -114,6 +120,16 @@ impl Component {
         }
         for i in 0..BINS {
             self.bins[i].vol = spectrum[i];
+        }
+        Ok(None)
+    }
+
+    fn stft_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let data = json_to_ptr!(body.arg::<serde_json::Value>(0)?, *const f32);
+        let len = body.arg(1)?;
+        let stft = unsafe { std::slice::from_raw_parts(data, len) };
+        for i in 0..self.bins.len() {
+            self.bins[i].vol = stft[i * (len / 2 + 1) / self.bins.len()];
         }
         Ok(None)
     }

@@ -1,4 +1,4 @@
-'A vocoder built around vocoder component.'
+'A vocoder built around stft, sinbank, and noisebank.'
 
 import dlal
 
@@ -6,21 +6,33 @@ import time
 
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
-midi = dlal.Midi()
-osc = dlal.Osc('saw')
 audio.add(audio)
-vocoder = dlal.Vocoder()
+
+hpf = dlal.Hpf()
+peak = dlal.Peak()
+oracle = dlal.Oracle(m=100, format=('set', '%'))
+
+stft = dlal.Stft(512)
+noisebank = dlal.Noisebank()
+gain_noise = dlal.Gain()
+sinbank = dlal.Sinbank(44100 / 512)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
 
 dlal.connect(
-    midi,
-    osc,
-    [buf, '<+', vocoder, audio],
+    audio,
+    [peak, '<+', hpf],
+    oracle,
+    gain_noise,
+    [],
+    audio,
+    stft,
+    [sinbank, noisebank],
+    [buf, '<+', gain_noise],
     [audio, tape],
 )
 
-midi.midi([0x90, 41, 0x40])
+sinbank.midi([0x90, 41, 0x40])
 
 dlal.typical_setup()
 

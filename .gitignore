@@ -3,3 +3,4 @@ target/
 matrix.html
 assets/local
 Cargo.lock
+out.i16le
