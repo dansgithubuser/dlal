@@ -48,11 +48,12 @@ elif args.approach == 'add':
     noise = dlal.Noisebank(0.7)
     noise_gain = dlal.Gain(8)
     tone = dlal.Sinbank(smooth=0.9)
+    gain = dlal.Gain(8)
     buf = dlal.Buf()
     tape = dlal.Tape(size=44100*5)
 
     dlal.connect(
-        [tone, noise, noise_gain],
+        [tone, noise, noise_gain, gain],
         buf,
         [audio, tape],
     )
