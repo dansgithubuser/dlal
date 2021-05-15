@@ -5,6 +5,10 @@ use rustfft::{num_complex::Complex, FftPlanner};
 
 use std::f32::consts::PI;
 
+fn smooth(x: &mut f32, xf: f32, smooth: f32) {
+    *x = *x * smooth + (xf - *x) * (1.0 - smooth);
+}
+
 const BINS: usize = 64;
 
 struct NoiseBin {
@@ -62,9 +66,13 @@ component!(
         "sample_rate",
         "uni",
         "check_audio",
+        {"name": "field_helpers", "fields": ["smooth"], "kinds": ["rw", "json"]},
     ],
     {
         bins: Vec<NoiseBin>,
+        spectrum_e: Vec<f32>,
+        spectrum_f: Vec<f32>,
+        smooth: f32,
     },
     {
         "spectrum": {
@@ -86,6 +94,8 @@ component!(
 impl ComponentTrait for Component {
     fn init(&mut self) {
         self.bins = (0..BINS).map(|_| NoiseBin::new()).collect();
+        self.spectrum_e = vec![0.0; BINS];
+        self.spectrum_f = vec![0.0; BINS];
     }
 
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
@@ -101,6 +111,12 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
+        if self.smooth != 0.0 {
+            for i in 0..BINS {
+                smooth(&mut self.spectrum_e[i], self.spectrum_f[i], self.smooth);
+                smooth(&mut self.bins[i].vol, self.spectrum_e[i], self.smooth);
+            }
+        }
         let output = match self.output.as_ref() {
             Some(v) => v,
             None => return,
@@ -118,8 +134,13 @@ impl Component {
         if spectrum.len() != BINS {
             return Err(err!("spectrum must be length 64").into());
         }
-        for i in 0..BINS {
-            self.bins[i].vol = spectrum[i];
+        if self.smooth != 0.0 {
+            self.spectrum_f = spectrum;
+            self.spectrum_e.resize(BINS, 0.0);
+        } else {
+            for i in 0..BINS {
+                self.bins[i].vol = spectrum[i];
+            }
         }
         Ok(None)
     }

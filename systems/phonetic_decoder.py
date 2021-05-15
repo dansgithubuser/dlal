@@ -45,7 +45,7 @@ if args.approach == 'sub':
         [audio, tape],
     )
 elif args.approach == 'add':
-    noise = dlal.Noisebank()
+    noise = dlal.Noisebank(0.7)
     noise_gain = dlal.Gain(8)
     tone = dlal.Sinbank(smooth=0.9)
     buf = dlal.Buf()
