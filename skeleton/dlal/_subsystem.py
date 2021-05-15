@@ -215,7 +215,7 @@ class Phonetizer(Subsystem):
                 iir.command_detach('gain', [0, smooth])
         self.comm.wait(wait)
 
-    def prep_syllables(self, syllables, notes, advance=0, anticipation=0):
+    def prep_syllables(self, syllables, notes, advance=0):
         if not self.say_custom:
             self.comm.resize(len(syllables) * self.commands_per_phonetic)
         self.sample = 0
@@ -237,11 +237,9 @@ class Phonetizer(Subsystem):
                 raise Exception(f'invalid syllable {syllable}')
             start = note['on'] - advance
             if start < 0: continue
-            if start - anticipation <= self.sample:  # not silence before this syllable
-                start -= anticipation
             normal_durations = [self.phonetics_duration(i) for i in [onset, nucleus, coda]]
             normal_duration = sum(normal_durations)
-            end = note['off'] - anticipation - advance
+            end = note['off'] - advance
             if normal_duration < end - start:
                 # enough time to say nucleus normally or extended
                 coda_start = end - normal_durations[2]
