@@ -183,17 +183,17 @@ def say_sentence(sentence):
 
 def tell_story(i=0):
     if i == 9:
-        d = 7350
+        d = 6400
         phonetizer.prep_syllables(
-            '.[ae].[sh] i.z0f al0 [th]r.w [th_v].u m.y n.y.[ng]',
+            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v].u m.y n.y.[ng]',
             [
-                { 'on':  0 * d, 'off':  2 * d},
                 { 'on':  2 * d, 'off':  4 * d},
-                { 'on':  4 * d, 'off':  6 * d },
-                { 'on':  6 * d, 'off':  7 * d },
-                { 'on':  7 * d, 'off':  8 * d },
-                { 'on':  8 * d, 'off': 10 * d },
+                { 'on':  4 * d, 'off':  6 * d},
+                { 'on':  6 * d, 'off':  8 * d },
+                { 'on':  8 * d, 'off':  9 * d },
+                { 'on':  9 * d, 'off': 10 * d },
                 { 'on': 10 * d, 'off': 12 * d },
+                { 'on': 12 * d, 'off': 14 * d },
             ],
         )
     else:

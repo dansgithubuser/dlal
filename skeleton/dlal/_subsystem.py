@@ -218,23 +218,37 @@ class Phonetizer(Subsystem):
     def prep_syllables(self, syllables, notes, advance=0):
         if not self.say_custom:
             self.comm.resize(len(syllables) * self.commands_per_phonetic)
+        # translate into onset, nucleus, coda
+        syllables = [syllable.split('.') for syllable in syllables.split()]
+        for i in range(len(syllables)):
+            syllable = syllables[i]
+            if len(syllable) == 1:
+                onset, nucleus, coda = '', syllable[0], ''
+            elif len(syllable) == 2:
+                onset, nucleus, coda = syllable[0], syllable[1], ''
+            elif len(syllable) == 3:
+                onset, nucleus, coda = syllable
+            else:
+                raise Exception(f'invalid syllable {syllable}')
+            syllables[i] = [onset, nucleus, coda]
+        # move onsets into codas
+        if len(syllables) and syllables[0][0]:
+            syllables.insert(0, ['', '0', syllables[0][0]])
+            syllables[0][0] = ''
+        for i in range(1, len(syllables)):
+            if not syllables[i][0]: continue
+            syllables[i-1][2] += syllables[i][0]
+            syllables[i][0] = ''
+        # prep
         self.sample = 0
-        for syllable, note in zip(syllables.split(), notes):
-            segments = [
+        for syllable, note in zip(syllables, notes):
+            onset, nucleus, coda = [
                 [
                     i.translate({ord('['): None, ord(']'): None})
                     for i in re.findall(r'\w|\[\w+\]', segment)
                 ]
-                for segment in syllable.split('.')
+                for segment in syllable
             ]
-            if len(segments) == 1:
-                onset, nucleus, coda = [], segments[0], []
-            elif len(segments) == 2:
-                onset, nucleus, coda = segments[0], segments[1], []
-            elif len(segments) == 3:
-                onset, nucleus, coda = segments 
-            else:
-                raise Exception(f'invalid syllable {syllable}')
             start = note['on'] - advance
             if start < 0: continue
             normal_durations = [self.phonetics_duration(i) for i in [onset, nucleus, coda]]
