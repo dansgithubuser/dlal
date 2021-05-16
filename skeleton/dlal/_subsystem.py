@@ -100,7 +100,7 @@ class Phonetizer(Subsystem):
         sample_rate=44100,
         continuant_wait=44100//8,
         name=None,
-        custom_subsystem=None,
+        say_custom=None,
     ):
         self.tone_pregain = tone_pregain
         self.noise_pregain = noise_pregain
@@ -121,8 +121,8 @@ class Phonetizer(Subsystem):
         )
         max_frames = max(len(i['frames']) for i in self.phonetics.values())
         self.commands_per_phonetic = 5 * order * max_frames
-        self.custom_subsystem = custom_subsystem
-        if not custom_subsystem:
+        self.say_custom = say_custom
+        if not say_custom:
             Subsystem.init(self,
                 {
                     'comm': 'comm',
@@ -139,13 +139,15 @@ class Phonetizer(Subsystem):
             )
             self.outputs = self.tone_filter.outputs + self.noise_filter.outputs
             self.comm.resize(self.commands_per_phonetic)
+        else:
+            self.components = {}
         # sample rate
         self.sample_rate = sample_rate
         self.grace = sample_rate // 100
         # continuant_wait
         self.continuant_wait = continuant_wait
 
-    def say(self, phonetic_symbol, continuant_wait=None, smooth=None, speed=1, say_custom=None):
+    def say(self, phonetic_symbol, continuant_wait=None, smooth=None, speed=1):
         m = re.match(r'(-)?(\w+)(?:/(\d+))?', phonetic_symbol)
         glide = m.group(1)
         phonetic_name = m.group(2)
@@ -175,12 +177,12 @@ class Phonetizer(Subsystem):
         wait /= speed
         wait /= duration_divisor
         wait = int(wait)
-        with _skeleton.UseComm(self.comm) if not self.custom_subsystem else _utils.NoContext():
+        with _skeleton.UseComm(self.comm) if not self.say_custom else _utils.NoContext():
             for frame_i, frame in enumerate(phonetic['frames']):
-                if not self.custom_subsystem:
+                if not self.say_custom:
                     self.send_commands(phonetic, frame, frame_i, smooth, wait)
                 else:
-                    say_custom(phonetic=phonetic, frame=frame, wait=wait, smooth=smooth)
+                    self.say_custom(phonetic=phonetic, frame=frame, wait=wait, smooth=smooth)
         self.phonetic_name = phonetic_name
         return wait * len(phonetic['frames'])
 
@@ -213,34 +215,45 @@ class Phonetizer(Subsystem):
                 iir.command_detach('gain', [0, smooth])
         self.comm.wait(wait)
 
-    def prep_syllables(self, syllables, notes, advance=0, anticipation=None):
-        if anticipation == None:
-            anticipation = self.sample_rate // 8
-        self.comm.resize(len(syllables) * self.commands_per_phonetic)
+    def prep_syllables(self, syllables, notes, advance=0):
+        if not self.say_custom:
+            self.comm.resize(len(syllables) * self.commands_per_phonetic)
+        # translate into onset, nucleus, coda
+        syllables = [syllable.split('.') for syllable in syllables.split()]
+        for i in range(len(syllables)):
+            syllable = syllables[i]
+            if len(syllable) == 1:
+                onset, nucleus, coda = '', syllable[0], ''
+            elif len(syllable) == 2:
+                onset, nucleus, coda = syllable[0], syllable[1], ''
+            elif len(syllable) == 3:
+                onset, nucleus, coda = syllable
+            else:
+                raise Exception(f'invalid syllable {syllable}')
+            syllables[i] = [onset, nucleus, coda]
+        # move onsets into codas
+        if len(syllables) and syllables[0][0]:
+            syllables.insert(0, ['', '0', syllables[0][0]])
+            syllables[0][0] = ''
+        for i in range(1, len(syllables)):
+            if not syllables[i][0]: continue
+            syllables[i-1][2] += syllables[i][0]
+            syllables[i][0] = ''
+        # prep
         self.sample = 0
-        for syllable, note in zip(syllables.split(), notes):
-            segments = [
+        for syllable, note in zip(syllables, notes):
+            onset, nucleus, coda = [
                 [
                     i.translate({ord('['): None, ord(']'): None})
                     for i in re.findall(r'\w|\[\w+\]', segment)
                 ]
-                for segment in syllable.split('.')
+                for segment in syllable
             ]
-            if len(segments) == 1:
-                onset, nucleus, coda = [], segments[0], []
-            elif len(segments) == 2:
-                onset, nucleus, coda = segments[0], segments[1], []
-            elif len(segments) == 3:
-                onset, nucleus, coda = segments 
-            else:
-                raise Exception(f'invalid syllable {syllable}')
             start = note['on'] - advance
             if start < 0: continue
-            if start - anticipation <= self.sample:  # not silence before this syllable
-                start -= anticipation
             normal_durations = [self.phonetics_duration(i) for i in [onset, nucleus, coda]]
             normal_duration = sum(normal_durations)
-            end = note['off'] - anticipation - advance
+            end = note['off'] - advance
             if normal_duration < end - start:
                 # enough time to say nucleus normally or extended
                 coda_start = end - normal_durations[2]
@@ -253,6 +266,7 @@ class Phonetizer(Subsystem):
                 self.prep_phonetics(onset, start, speed=speed)
                 self.prep_phonetics(nucleus, speed=speed)
                 self.prep_phonetics(coda, speed=speed)
+        self.prep_phonetics('0', start)
 
     def phonetics_duration(self, phonetics, continuant_wait=None):
         if continuant_wait == None:
@@ -275,7 +289,11 @@ class Phonetizer(Subsystem):
             continuant_wait = None
         if start - self.sample > self.grace:
             self.say('0', continuant_wait=0)
-            self.comm.wait(start - self.sample)
+            wait = start - self.sample
+            if not self.say_custom:
+                self.comm.wait(wait)
+            else:
+                self.say_custom(None, wait)
             self.sample = start
         for phonetic in phonetics:
             self.sample += self.say(phonetic, continuant_wait=continuant_wait, speed=speed)

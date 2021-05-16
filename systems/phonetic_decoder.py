@@ -45,29 +45,21 @@ if args.approach == 'sub':
         [audio, tape],
     )
 elif args.approach == 'add':
-    noise = dlal.Noisebank()
+    noise = dlal.Noisebank(0.7)
     noise_gain = dlal.Gain(8)
-    tone = dlal.Sinbank()
+    tone = dlal.Sinbank(smooth=0.9)
+    gain = dlal.Gain(8)
     buf = dlal.Buf()
     tape = dlal.Tape(size=44100*5)
 
     dlal.connect(
-        [tone, noise, noise_gain],
+        [tone, noise, noise_gain, gain],
         buf,
         [audio, tape],
     )
 
-    phonetizer = dlal.subsystem.Phonetizer()
-    phonetizer.init(custom_subsystem=True)
-
-#===== main =====#
-def say_one(phonetic_symbol):
-    if phonetic_symbol == ' ':
-        phonetic_symbol = '0'
-    if args.approach == 'sub':
-        time.sleep(phonetizer.say(phonetic_symbol) / 44100)
-    else:
-        def say_custom(frame, wait, **kwargs):
+    def say_custom(frame, wait, **kwargs):
+        if frame != None:
             if 'tone_spectrum' in frame:
                 tone.command_detach('spectrum', [frame['tone_spectrum']])
             else:
@@ -76,8 +68,15 @@ def say_one(phonetic_symbol):
                 noise.command_detach('spectrum', [frame['noise_spectrum']])
             else:
                 noise.command_detach('spectrum', [[0] * 64])
-            comm.wait(wait)
-        time.sleep(phonetizer.say(phonetic_symbol, say_custom=say_custom) / SAMPLE_RATE)
+        comm.wait(wait)
+
+    phonetizer = dlal.subsystem.Phonetizer(say_custom=say_custom)
+
+#===== main =====#
+def say_one(phonetic_symbol):
+    if phonetic_symbol == ' ':
+        phonetic_symbol = '0'
+    time.sleep(phonetizer.say(phonetic_symbol) / SAMPLE_RATE)
 
 def say(phonetics):
     phonetics += ' '
@@ -183,43 +182,58 @@ def say_sentence(sentence):
         say(word)
 
 def tell_story(i=0):
-    say_sentence([
-        # 0
-        '''
-        [wuns] [upan] a time,
-        there was a man,
-        a [b[ay]ys] man
-        ''',
-        # 1
-        '''
-        A big [kunery] [duznt] get [[th_v]u] [wurm].
-        ''',
-        # 2
-        '''
-        [[th_v]u] [wrd] [l[ay]ydy] [iz] a [trm] [uv] [respekt] [for] a [grl] [or] [w[uu]min],
-        [[th_v]u] [ekwivulent] [uv] [jentlmin].
-        ''',
-        # 3
-        '''
-        [twi[ng]kl] [twi[ng]kl] [litl] [star]
-        ''',
-        # 4
-        '''
-        [d[ay]yzy] [d[ay]yzy] [giv] [my] [yor] [[ae]nsr] [dw]
-        ''',
-        # 5
-        '''
-        [[th]in] [herz] [pruper] [for] [[th_v]u] [ok[ay]y[sh_v]in]
-        ''',
-        # 6
-        '''
-        A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
-        ''',
-        # 7
-        '[[ae/2][-y]0[h/2][ae]v0u0f[ae]nsy0silwet]',  # I have a fancy silhouette
-        # 8
-        '[[h/2][ae/2][-w]0duz0[th_v/4]u0gr[e/2][-y]t0b[l/2][uu][-w]0k[h/2][ae]t0jump0j[ae/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
-    ][i])
+    if i == 9:
+        d = 6400
+        phonetizer.prep_syllables(
+            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v].u m.y n.y.[ng]',
+            [
+                { 'on':  2 * d, 'off':  4 * d},
+                { 'on':  4 * d, 'off':  6 * d},
+                { 'on':  6 * d, 'off':  8 * d },
+                { 'on':  8 * d, 'off':  9 * d },
+                { 'on':  9 * d, 'off': 10 * d },
+                { 'on': 10 * d, 'off': 12 * d },
+                { 'on': 12 * d, 'off': 14 * d },
+            ],
+        )
+    else:
+        say_sentence([
+            # 0
+            '''
+            [wuns] [upan] a time,
+            there was a man,
+            a [b[ay]ys] man
+            ''',
+            # 1
+            '''
+            A big [kunery] [duznt] get [[th_v]u] [wurm].
+            ''',
+            # 2
+            '''
+            [[th_v]u] [wrd] [l[ay]ydy] [iz] a [trm] [uv] [respekt] [for] a [grl] [or] [w[uu]min],
+            [[th_v]u] [ekwivulent] [uv] [jentlmin].
+            ''',
+            # 3
+            '''
+            [twi[ng]kl] [twi[ng]kl] [litl] [star]
+            ''',
+            # 4
+            '''
+            [d[ay]yzy] [d[ay]yzy] [giv] [my] [yor] [[ae]nsr] [dw]
+            ''',
+            # 5
+            '''
+            [[th]in] [herz] [pruper] [for] [[th_v]u] [ok[ay]y[sh_v]in]
+            ''',
+            # 6
+            '''
+            A [[ch]yry] [jelyfi[sh]] [p[ay]ynts] too [mu[ch]].
+            ''',
+            # 7
+            '[[ae/2][-y]0[h/2][ae]v0u0f[ae]nsy0silwet]',  # I have a fancy silhouette
+            # 8
+            '[[h/2][ae/2][-w]0duz0[th_v/4]u0gr[e/2][-y]t0b[l/2][uu][-w]0k[h/2][ae]t0jump0j[ae/2][-y]v0[ae]nd0d[ae]ns0efrtlesly]',  # How does the great blue cat jump jive and dance effortlessly
+        ][i])
 
 def say_random():
     decompositions = {
