@@ -34,6 +34,7 @@ comm = dlal.Comm()
 if args.approach == 'sub':
     tone = dlal.Train(name='tone')
     noise = dlal.Osc('noise', name='noise')
+    mul = dlal.Mul(1)
     phonetizer = dlal.subsystem.Phonetizer()
     tape = dlal.Tape(size=44100*5)
 
@@ -41,20 +42,31 @@ if args.approach == 'sub':
         (tone, noise),
         (phonetizer.tone_buf, phonetizer.noise_buf),
         [],
+        mul,
+        [phonetizer.tone_buf, phonetizer.noise_buf],
+        [],
         phonetizer,
         [audio, tape],
     )
 elif args.approach == 'add':
-    noise = dlal.Noisebank(smooth=0.9)
-    noise_gain = dlal.Gain(8)
     tone = dlal.Sinbank(smooth=0.95)
-    gain = dlal.Gain(8)
-    buf = dlal.Buf()
+    tone_gain = dlal.Gain(8, name='tone_gain')
+    noise = dlal.Noisebank(smooth=0.9)
+    noise_gain = dlal.Gain(64, name='noise_gain')
+    mul = dlal.Mul(1)
+    tone_buf = dlal.Buf(name='tone_buf')
+    noise_buf = dlal.Buf(name='noise_buf')
     tape = dlal.Tape(size=44100*5)
 
     dlal.connect(
-        [tone, noise, noise_gain, gain],
-        buf,
+        [tone, tone_gain],
+        tone_buf,
+        [],
+        [noise, noise_gain],
+        noise_buf,
+        [],
+        mul,
+        [tone_buf, noise_buf],
         [audio, tape],
     )
 
