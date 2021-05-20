@@ -45,9 +45,9 @@ if args.approach == 'sub':
         [audio, tape],
     )
 elif args.approach == 'add':
-    noise = dlal.Noisebank(0.7)
+    noise = dlal.Noisebank(smooth=0.9)
     noise_gain = dlal.Gain(8)
-    tone = dlal.Sinbank(smooth=0.9)
+    tone = dlal.Sinbank(smooth=0.95)
     gain = dlal.Gain(8)
     buf = dlal.Buf()
     tape = dlal.Tape(size=44100*5)
@@ -185,13 +185,12 @@ def tell_story(i=0):
     if i == 9:
         d = 6400
         phonetizer.prep_syllables(
-            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v].u m.y n.y.[ng]',
+            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v]m.y n.y.[ng]',
             [
                 { 'on':  2 * d, 'off':  4 * d},
                 { 'on':  4 * d, 'off':  6 * d},
                 { 'on':  6 * d, 'off':  8 * d },
-                { 'on':  8 * d, 'off':  9 * d },
-                { 'on':  9 * d, 'off': 10 * d },
+                { 'on':  8 * d, 'off': 10 * d },
                 { 'on': 10 * d, 'off': 12 * d },
                 { 'on': 12 * d, 'off': 14 * d },
             ],
