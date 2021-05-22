@@ -189,6 +189,26 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
+	- use a continuous markov model to interpolate between phonetics
+		- phonetic markov encoder
+			- takes audio + optional labels
+			- model can be updated with more audio
+				- phonetic recorder creates labeled output
+				- unlabeled monolog with every diphone to flesh out model
+			- path from phonetic a to phonetic b will not be obvious, so precompute it
+			- model has 128 dimensions, sparsely populated
+				- normalize to help densify but leave volume as a feature
+			- steps
+				- improve vocoder2 (always voices)
+				- encode phonetics.flac
+				- decode phonetic sample
+					- ensure individual phonetic fidelity
+				- find way to visualize result
+				- interactive visualize+decode
+				- find a way to reduce number of points
+				- add unlabeled data to model
+				- decode based on list of (time, phonetic)
+					- time of phonetic after stop is ignored
 - audiobro
 	- track 1
 		- bass slide down in B section
