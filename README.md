@@ -199,7 +199,6 @@ The `audio` component is the driver component for interactive audio.
 			- model has 128 dimensions, sparsely populated
 				- normalize to help densify but leave volume as a feature
 			- steps
-				- improve vocoder2 (always voices)
 				- encode phonetics.flac
 				- decode phonetic sample
 					- ensure individual phonetic fidelity
