@@ -32,6 +32,7 @@ component!(
     },
     {
         "window_size": {"args": ["size"]},
+        "spectrum": {"args": []},
     },
 );
 
@@ -138,5 +139,15 @@ impl Component {
     fn window_size_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         self.set_window_size(body.arg(0)?);
         Ok(None)
+    }
+
+    fn spectrum_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let window_size = self.input.len();
+        Ok(Some(json!(
+            self.buffer[..window_size / 2 + 1]
+                .iter()
+                .map(|i| i.norm() / window_size as f32)
+                .collect::<Vec<_>>()
+        )))
     }
 }
