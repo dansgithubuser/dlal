@@ -37,6 +37,7 @@ class Component:
     _connections = collections.defaultdict(dict)
     _driver = None
     _comm = None
+    _detach = False
 
     def __init__(self, kind, name=None, slot=0):
         # tracking
@@ -82,7 +83,7 @@ class Component:
     def command(self, name, args=[], kwargs={}, timeout_ms=20):
         if Component._comm:
             log('debug', f'{self.name} queue {name} {args} {kwargs}')
-            return Component._comm.queue(self, name, args, kwargs, timeout_ms=timeout_ms)
+            return Component._comm.queue(self, name, args, kwargs, timeout_ms=timeout_ms, detach=self._detach)
         else:
             return self.command_immediate(name, args, kwargs)
 
