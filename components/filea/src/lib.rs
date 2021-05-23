@@ -1,4 +1,4 @@
-use dlal_component_base::{component, err, serde_json, Body, CmdResult};
+use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 
 component!(
     {"in": [""], "out": ["audio"]},
@@ -17,6 +17,10 @@ component!(
     {
         "open": {
             "args": ["file path"],
+        },
+        "duration": {
+            "args": [],
+            "return": "number of samples",
         },
     },
 );
@@ -58,5 +62,17 @@ impl Component {
             Err(e) => return Err(err!("{:?}", e).into()),
         };
         Ok(None)
+    }
+
+    fn duration_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let reader = match &self.reader {
+            Some(v) => v,
+            None => return Err(err!("No file opened.").into()),
+        };
+        let samples = match reader.streaminfo().samples {
+            Some(v) => v,
+            None => return Err(err!("No samples.").into()),
+        };
+        Ok(Some(json!(samples)))
     }
 }
