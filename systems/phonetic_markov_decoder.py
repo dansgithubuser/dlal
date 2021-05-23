@@ -1,6 +1,7 @@
 import dlal
 
 import json
+import time
 
 # components
 audio = dlal.Audio(driver=True)
@@ -42,6 +43,12 @@ def say(phonetic):
         noisebank.spectrum([i['mean'] for i in phonetic['spectrum_noise']])
         gain_tone.set(phonetic['amp_tone']['mean'])
         gain_noise.set(phonetic['amp_noise']['mean'])
+
+def say_all():
+    for phonetic in model.keys():
+        print(phonetic)
+        say(phonetic)
+        time.sleep(1)
 
 # command
 sinbank.midi([0x90, 41, 0x40])
