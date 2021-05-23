@@ -41,9 +41,27 @@ def stats(l):
 class Model:
     def __init__(self):
         self.samples = {}
+        self.new = True
 
-    def add(self, spectrum, tone, noise, phonetic):
-        self.samples.setdefault(phonetic, []).append({
+    def add(self, spectrum, tone, noise, phonetic, stop, remaining):
+        if stop:
+            if self.new and remaining < 0.2:
+                return
+            s = sum(spectrum[:len(spectrum) // 2])
+            if self.new:
+                if s < 0.2:
+                    return
+            else:
+                if s < 0.01:
+                    self.new = True
+                    return
+            if sum(spectrum[:len(spectrum) // 2]) < 0.1:
+                self.new = True
+                return
+        if self.new:
+            self.samples.setdefault(phonetic, []).append([])
+            self.new = False
+        self.samples[phonetic][-1].append({
             'spectrum_tone': spectrum[0:80],
             'spectrum_noise': [spectrum[i * len(spectrum) // 64] for i in range(64)],
             'amp_tone': tone,
@@ -51,17 +69,8 @@ class Model:
         })
 
     def save(self):
-        phonetics = {
-            k: {
-                'spectrum_tone' : [stats([i['spectrum_tone' ][j] for i in v]) for j in range(80)],
-                'spectrum_noise': [stats([i['spectrum_noise'][j] for i in v]) for j in range(64)],
-                'amp_tone'      :  stats([i['amp_tone'      ]    for i in v]),
-                'amp_noise'     :  stats([i['amp_noise'     ]    for i in v]),
-            }
-            for k, v in self.samples.items()
-        }
         with open('assets/phonetics/markov.json', 'w') as f:
-            f.write(json.dumps(phonetics, indent=2))
+            f.write(json.dumps(self.samples, indent=2))
 
 # consts
 SAMPLE_RATE = 44100
@@ -69,6 +78,9 @@ RUN_SIZE = 64
 PHONETICS = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
+STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
 
@@ -80,22 +92,27 @@ class Runner:
 
     def run(self, seconds, callback=None):
         self.seconds += seconds
-        while self.sample / SAMPLE_RATE < self.seconds:
+        elapsed = 0
+        while elapsed < self.seconds:
             audio.run()
             self.sample += RUN_SIZE
-            if callback: callback()
+            elapsed = self.sample / SAMPLE_RATE
+            if callback: callback(self.seconds - elapsed)
 
 # run
 model = Model()
 runner = Runner()
 for phonetic in PHONETICS:
     print(phonetic)
-    runner.run(4)
-    runner.run(4, lambda: model.add(
+    runner.run(3)
+    model.new = True
+    runner.run(6, lambda remaining: model.add(
         stft.spectrum(),
         peak_lo.value() * 20,
         peak_hi.value() * 2e4,
         phonetic,
+        phonetic in STOPS,
+        remaining,
     ))
-    runner.run(2)
+    runner.run(1)
 model.save()

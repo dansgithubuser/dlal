@@ -37,12 +37,13 @@ with open('assets/phonetics/markov.json') as f:
     model = json.loads(f.read())
 
 def say(phonetic):
-    phonetic = model[phonetic]
     with dlal.Detach():
-        sinbank.spectrum([i['mean'] for i in phonetic['spectrum_tone']])
-        noisebank.spectrum([i['mean'] for i in phonetic['spectrum_noise']])
-        gain_tone.set(phonetic['amp_tone']['mean'])
-        gain_noise.set(phonetic['amp_noise']['mean'])
+        for i in model[phonetic][0]:
+            sinbank.spectrum(i['spectrum_tone'])
+            noisebank.spectrum(i['spectrum_noise'])
+            gain_tone.set(i['amp_tone'])
+            gain_noise.set(i['amp_noise'])
+            time.sleep(64 / 44100)
 
 def say_all():
     for phonetic in model.keys():
