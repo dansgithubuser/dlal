@@ -199,9 +199,7 @@ The `audio` component is the driver component for interactive audio.
 			- model has 128 dimensions, sparsely populated
 				- normalize to help densify but leave volume as a feature
 			- steps
-				- find way to visualize result
-				- interactive visualize+decode
-				- find a way to reduce number of points
+				- stops
 				- add unlabeled data to model
 				- decode based on list of (time, phonetic)
 					- time of phonetic after stop is ignored

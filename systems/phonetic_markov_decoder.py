@@ -31,13 +31,13 @@ dlal.connect(
 with open('assets/phonetics/markov.json') as f:
     model = json.loads(f.read())
 
-def say(index):
-    phonetic = model[index]
+def say(phonetic):
+    phonetic = model[phonetic]
     with dlal.Detach():
-        sinbank.spectrum(phonetic['spectrum_tone'])
-        noisebank.spectrum(phonetic['spectrum_noise'])
-        gain_tone.set(phonetic['amp_tone'])
-        gain_noise.set(phonetic['amp_noise'])
+        sinbank.spectrum([i['mean'] for i in phonetic['spectrum_tone']])
+        noisebank.spectrum([i['mean'] for i in phonetic['spectrum_noise']])
+        gain_tone.set(phonetic['amp_tone']['mean'])
+        gain_noise.set(phonetic['amp_noise']['mean'])
 
 # command
 sinbank.midi([0x90, 41, 0x40])
@@ -45,7 +45,3 @@ gain_tone.set(0)
 gain_noise.set(0)
 
 dlal.typical_setup()
-
-for i in range(0, len(model), 2757):
-    i = (i // 1000 + 1) * 1000
-    print(i, model[i]['phonetic'])

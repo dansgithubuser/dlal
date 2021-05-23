@@ -1,6 +1,7 @@
 import dlal
 
 import json
+import math
 
 # components
 audio = dlal.Audio(driver=True)
@@ -29,22 +30,38 @@ dlal.connect(
 )
 
 # model
+def stats(l):
+    mean = sum(l) / len(l)
+    dev = math.sqrt(sum((i - mean) ** 2 for i in l))
+    return {
+        'mean': mean,
+        'dev': dev,
+    }
+
 class Model:
     def __init__(self):
-        self.samples = []
+        self.samples = {}
 
     def add(self, spectrum, tone, noise, phonetic):
-        self.samples.append({
+        self.samples.setdefault(phonetic, []).append({
             'spectrum_tone': spectrum[0:80],
             'spectrum_noise': [spectrum[i * len(spectrum) // 64] for i in range(64)],
             'amp_tone': tone,
             'amp_noise': noise,
-            'phonetic': phonetic,
         })
 
     def save(self):
+        phonetics = {
+            k: {
+                'spectrum_tone' : [stats([i['spectrum_tone' ][j] for i in v]) for j in range(80)],
+                'spectrum_noise': [stats([i['spectrum_noise'][j] for i in v]) for j in range(64)],
+                'amp_tone'      :  stats([i['amp_tone'      ]    for i in v]),
+                'amp_noise'     :  stats([i['amp_noise'     ]    for i in v]),
+            }
+            for k, v in self.samples.items()
+        }
         with open('assets/phonetics/markov.json', 'w') as f:
-            f.write(json.dumps(self.samples, indent=2))
+            f.write(json.dumps(phonetics, indent=2))
 
 # consts
 SAMPLE_RATE = 44100
