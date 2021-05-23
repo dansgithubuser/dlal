@@ -20,6 +20,9 @@ component!(
 
 impl ComponentTrait for Component {
     fn run(&mut self) {
+        if self.outputs.is_empty() {
+            return;
+        }
         for i in 0..(self.outputs.len() - 1) {
             let x = self.outputs[i + 0].audio(self.run_size).unwrap();
             let y = self.outputs[i + 1].audio(self.run_size).unwrap();

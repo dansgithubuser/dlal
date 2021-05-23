@@ -6,12 +6,13 @@ import json
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
 
-noisebank = dlal.Noisebank()
-gain_noise = dlal.Gain(name='gain_noise')
-buf_noise = dlal.Buf(name='buf_noise')
 sinbank = dlal.Sinbank(44100 / 512)
+noisebank = dlal.Noisebank()
 gain_tone = dlal.Gain(name='gain_tone')
+gain_noise = dlal.Gain(name='gain_noise')
+mul = dlal.Mul(1)
 buf_tone = dlal.Buf(name='buf_tone')
+buf_noise = dlal.Buf(name='buf_noise')
 
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -20,6 +21,9 @@ tape = dlal.Tape(1 << 17)
 dlal.connect(
     (gain_tone, gain_noise),
     (buf_tone, buf_noise),
+    [],
+    mul,
+    [buf_tone, buf_noise],
     [],
     (sinbank, noisebank),
     (buf_tone, buf_noise),
