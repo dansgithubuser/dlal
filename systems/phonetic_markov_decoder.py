@@ -36,19 +36,60 @@ dlal.connect(
 with open('assets/phonetics/markov.json') as f:
     model = json.loads(f.read())
 
-def say(phonetic):
-    params = model[phonetic]
+def say_one(params):
     with dlal.Detach():
-        sinbank.spectrum([i['mean'] for i in params['spectrum_tone']])
-        noisebank.spectrum([i['mean'] for i in params['spectrum_noise']])
-        gain_tone.set(params['amp_tone']['mean'])
-        gain_noise.set(params['amp_noise']['mean'])
+        sinbank.spectrum(params['spectrum_tone'])
+        noisebank.spectrum(params['spectrum_noise'])
+        gain_tone.set(params['amp_tone'])
+        gain_noise.set(params['amp_noise'])
 
 def say_all():
-    for phonetic in model.keys():
+    for phonetic, label in model['labels'].items():
         print(phonetic)
-        say(phonetic)
+        say_one(model['params'][label])
         time.sleep(1)
+
+def find_path(a, b):
+    queue = [[model['labels'][a]]]
+    dst = model['labels'][b]
+    visited = set([a])
+    while queue:
+        i = queue.pop(0)
+        for j in model['params'][i[-1]]['next']:
+            if j in visited: continue
+            if j == dst:
+                return i + [j]
+            visited.add(j)
+            queue.append(i + [j])
+    raise Exception(f'No path from [{a}] to [{b}].')
+
+def say_with_transient(phonetic):
+    if say_with_transient.current != None:
+        path = find_path(say_with_transient.current, phonetic)
+        for i in path:
+            say_one(model['params'][i])
+            time.sleep(0.001)
+    else:
+        label = model['labels'][phonetic]
+        say_one(model['params'][label])
+    say_with_transient.current = phonetic
+say_with_transient.current = '0'
+
+def say(phonetics):
+    phonetics += '0'
+    i = 0
+    while i < len(phonetics):
+        if phonetics[i] == '[':
+            i += 1
+            phonetic = ''
+            while phonetics[i] != ']':
+                phonetic += phonetics[i]
+                i += 1
+        else:
+            phonetic = phonetics[i]
+        i += 1
+        say_with_transient(phonetic)
+        time.sleep(0.25)
 
 # command
 sinbank.midi([0x90, 41, 0x40])

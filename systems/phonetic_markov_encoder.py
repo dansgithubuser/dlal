@@ -12,6 +12,7 @@ except:
 parser = argparse.ArgumentParser()
 parser.add_argument('flac_path', nargs='?', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--unlabeled', '-u', action='store_true')
+parser.add_argument('--inspect', '-i', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -57,21 +58,7 @@ GAIN_LO = 20
 GAIN_HI = 2e4
 
 # model
-def stats(l):
-    mean = sum(l) / len(l)
-    dev = math.sqrt(sum((i - mean) ** 2 for i in l))
-    return {
-        'mean': mean,
-        'dev': dev,
-    }
-
-def stats_seq(seq):
-    return {
-        'spectrum_tone' : [stats([i['spectrum_tone' ][j] for i in seq]) for j in range(BINS_TONE)],
-        'spectrum_noise': [stats([i['spectrum_noise'][j] for i in seq]) for j in range(BINS_NOISE)],
-        'amp_tone'      :  stats([i['amp_tone'      ]    for i in seq]),
-        'amp_noise'     :  stats([i['amp_noise'     ]    for i in seq]),
-    }
+def mean(l): return sum(l) / len(l)
 
 def split_spectrum(spectrum):
     return (
@@ -79,61 +66,37 @@ def split_spectrum(spectrum):
         [spectrum[i * len(spectrum) // BINS_NOISE] for i in range(BINS_NOISE)],
     )
 
-def distance_params(params, spectrum_tone, spectrum_noise, amp_tone, amp_noise, plot=False):
-    a = (
-        params['spectrum_tone'],
-        params['spectrum_noise'],
-        params['amp_tone'],
-        params['amp_noise'],
-    )
-    ssta = sum(i['mean'] for i in a[0])
-    ssna = sum(i['mean'] for i in a[1])
-    saa = a[2]['mean'] + a[3]['mean']
-    sstb = sum(spectrum_tone)
-    ssnb = sum(spectrum_noise)
-    sab = amp_tone + amp_noise
-    b = (
-        [i / sstb * ssta for i in spectrum_tone],
-        [i / ssnb * ssna for i in spectrum_noise],
-        amp_tone / sab * saa,
-        amp_noise / sab * saa,
-    )
-    components = [
-        *[abs(i['mean'] - j) / i['dev'] for i, j in zip(a[0], b[0])],
-        *[abs(i['mean'] - j) / i['dev'] for i, j in zip(a[1], b[1])],
-        abs(a[2]['mean'] - b[2]) / a[2]['dev'],
-        abs(a[3]['mean'] - b[3]) / a[3]['dev'],
-    ]
-    if plot:
-        model.plot(params=[
-            params_means(params),
-            {
-                'spectrum_tone': b[0],
-                'spectrum_noise': b[1],
-                'amp_tone': b[2],
-                'amp_noise': b[3],
-            },
-        ])
-    return math.sqrt(sum(i ** 2 for i in components))
-
-def params_means(params):
-    return {
-        'spectrum_tone' : [i['mean'] for i in params['spectrum_tone' ]],
-        'spectrum_noise': [i['mean'] for i in params['spectrum_noise']],
-        'amp_tone'      : params['amp_tone' ]['mean'],
-        'amp_noise'     : params['amp_noise']['mean'],
+def distance_params(a, b, plot=False):
+    ssta = sum(a['spectrum_tone'])
+    ssna = sum(a['spectrum_noise'])
+    saa = a['amp_tone'] + a['amp_noise']
+    sstb = sum(b['spectrum_tone'])
+    ssnb = sum(b['spectrum_noise'])
+    sab = b['amp_tone'] + b['amp_noise']
+    b_norm = {
+        'spectrum_tone': [i / sstb * ssta for i in b['spectrum_tone']],
+        'spectrum_noise': [i / ssnb * ssna for i in b['spectrum_noise']],
+        'amp_tone': b['amp_tone'] / sab * saa,
+        'amp_noise': b['amp_noise'] / sab * saa,
     }
+    components = [
+        *[abs(i - j) for i, j in zip(a['spectrum_tone'], b_norm['spectrum_tone'])],
+        *[abs(i - j) for i, j in zip(a['spectrum_noise'], b_norm['spectrum_noise'])],
+        abs(a['amp_tone'] - b_norm['amp_tone']),
+        abs(a['amp_noise'] - b_norm['amp_noise']),
+    ]
+    if plot: model.plot(params=[a, b])
+    return math.sqrt(sum(i ** 2 for i in components))
 
 class Model:
     path = 'assets/phonetics/markov.json'
 
     def __init__(self):
-        self.seqs = {}
         self.new = True
-        if args.unlabeled:
-            with open(Model.path) as f:
-                self.phonetics = json.loads(f.read())
-        self.updates = []
+        self.samples = []
+        self.label = None
+        self.params = []
+        self.labels = {}
 
     def sample_system(self):
         return (
@@ -158,56 +121,81 @@ class Model:
             if sum(spectrum[:len(spectrum) // 2]) < 0.1:
                 self.new = True
                 return
-        if self.new:
-            self.seqs.setdefault(phonetic, []).append([])
-            self.new = False
+        if self.new and self.samples:
+            self.params.append({
+                'spectrum_tone' : [mean([i['spectrum_tone' ][j] for i in self.samples]) for j in range(BINS_TONE)],
+                'spectrum_noise': [mean([i['spectrum_noise'][j] for i in self.samples]) for j in range(BINS_NOISE)],
+                'amp_tone'      :  mean([i['amp_tone'      ]    for i in self.samples]),
+                'amp_noise'     :  mean([i['amp_noise'     ]    for i in self.samples]),
+            })
+            self.labels[self.label] = len(self.params) - 1
+            self.samples.clear()
         spectrum_tone, spectrum_noise = split_spectrum(spectrum)
-        self.seqs[phonetic][-1].append({
+        self.samples.append({
             'spectrum_tone': spectrum_tone,
             'spectrum_noise': spectrum_noise,
             'amp_tone': amp_tone,
             'amp_noise': amp_noise,
         })
+        self.label = phonetic
+        self.new = False
+
+    def add_0(self):
+        self.params.append({
+            'spectrum_tone': [0 for i in range(BINS_TONE)],
+            'spectrum_noise': [0 for i in range(BINS_NOISE)],
+            'amp_tone': 0,
+            'amp_noise': 0,
+        })
+        self.labels['0'] = len(self.params) - 1
 
     def update(self, remaining):
         spectrum, amp_tone, amp_noise = self.sample_system()
         spectrum_tone, spectrum_noise = split_spectrum(spectrum)
+        self.params.append({
+            'spectrum_tone': spectrum_tone,
+            'spectrum_noise': spectrum_noise,
+            'amp_tone': amp_tone,
+            'amp_noise': amp_noise,
+        })
         distances = []
-        for phonetic, params in self.phonetics.items():
-            if phonetic in STOPS: continue
-            d = distance_params(params, spectrum_tone, spectrum_noise, amp_tone, amp_noise)
-            distances.append((d, phonetic))
-        self.updates.append((
-            remaining,
-            [i[1] for i in sorted(distances)[:5]],
-        ))
+        for label in self.labels.values():
+            d = distance_params(self.params[label], self.params[-1])
+            distances.append((d, label))
+        for _, label in [i for i in sorted(distances)[:5]]:
+            self.link(len(self.params) - 1, label)
+            self.link(label, len(self.params) - 1)
+        self.new = False
+
+    def link(self, label_a, label_b):
+        self.params[label_a].setdefault('next', []).append(label_b)
 
     def save(self):
-        if not args.unlabeled:
-            self.phonetics = {}
-            for phonetic, seq in self.seqs.items():
-                if phonetic in STOPS: continue
-                self.phonetics[phonetic] = stats_seq(seq[0])
         with open(Model.path, 'w') as f:
-            f.write(json.dumps(self.phonetics, indent=2))
+            f.write(json.dumps(
+                {
+                    'params': self.params,
+                    'labels': self.labels,
+                },
+                indent=2,
+            ))
 
-    def plot(self, phonetics=[], params=[]):
+    def load(self):
+        with open(Model.path) as f:
+            model = json.loads(f.read())
+            self.params = model['params']
+            self.labels = model['labels']
+
+    def plot(self, params=[]):
         plot = dpc.Plot()
-        dx = len(phonetics) + len(params) + 1
-
-        def plot_params(params, j):
-            for i, v in enumerate(params['spectrum_tone']):
-                plot.rect(i*dx+j, 0, i*dx+j+1, +v, g=0.0, b=0.0)
-            for i, v in enumerate(params['spectrum_noise']):
-                plot.rect(i*dx+j, 0, i*dx+j+1, -v)
-            plot.rect(-2*dx+j, 0, -2*dx+j+1, +params['amp_tone'], g=0.0, b=0.0)
-            plot.rect(-2*dx+j, 0, -2*dx+j+1, -params['amp_noise'])
-
-        for i, phonetic in enumerate(phonetics):
-            plot_params(params_means(self.phonetics[phonetic]), i)
+        dx = len(params) + 1
         for i, params in enumerate(params):
-            plot_params(params, i + len(phonetics))
-
+            for j, v in enumerate(params['spectrum_tone']):
+                plot.rect(j*dx+i, 0, j*dx+i+1, +v, g=0.0, b=0.0)
+            for j, v in enumerate(params['spectrum_noise']):
+                plot.rect(j*dx+i, 0, j*dx+i+1, -v)
+            plot.rect(-2*dx+i, 0, -2*dx+i+1, +params['amp_tone'], g=0.0, b=0.0)
+            plot.rect(-2*dx+i, 0, -2*dx+i+1, -params['amp_noise'])
         plot.show()
 
 # helpers
@@ -229,15 +217,18 @@ class Runner:
 # run
 model = Model()
 runner = Runner()
-
-if not args.unlabeled:
+if args.inspect:
+    model.load()
+elif args.unlabeled:
+    model.load()
+    runner.run(callback=lambda remaining: model.update(remaining))
+    model.save()
+else:
     for phonetic in PHONETICS:
         print(phonetic)
         runner.run(3)
         model.new = True
         runner.run(6, lambda remaining: model.add(phonetic, remaining))
         runner.run(1)
-else:
-    runner.run(callback=lambda remaining: model.update(remaining))
-
-model.save()
+    model.add_0()
+    model.save()

@@ -200,7 +200,7 @@ The `audio` component is the driver component for interactive audio.
 				- normalize to help densify but leave volume as a feature
 			- steps
 				- add unlabeled data to model
-					- label stops
+					- handle stops
 				- decode based on list of (time, phonetic)
 					- time of phonetic after stop is ignored
 - audiobro
