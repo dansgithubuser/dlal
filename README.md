@@ -191,18 +191,14 @@ The `audio` component is the driver component for interactive audio.
 - more intelligible speech synth
 	- use a continuous markov model to interpolate between phonetics
 		- phonetic markov encoder
-			- takes audio + optional labels
-			- model can be updated with more audio
-				- phonetic recorder creates labeled output
-				- unlabeled monolog with every diphone to flesh out model
-			- path from phonetic a to phonetic b will not be obvious, so precompute it
-			- model has 128 dimensions, sparsely populated
-				- normalize to help densify but leave volume as a feature
-			- steps
-				- add unlabeled data to model
-					- handle stops
-				- decode based on list of (time, phonetic)
-					- time of phonetic after stop is ignored
+			- distance between params is too big
+				- need to reduce dimensions
+				- what parameter set does espeak use?
+					- complicated
+				- reduced params idea
+					- formant1, formant2, nasal formant
+					- voice amount
+					- noise-low (sh), noise-flat (th), noise-med (s)
 - audiobro
 	- track 1
 		- bass slide down in B section
