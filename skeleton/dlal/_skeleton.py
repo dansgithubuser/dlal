@@ -37,6 +37,14 @@ class Immediate:
     def __exit__(self, *args):
         _Component._comm = self.comm
 
+class Detach:
+    def __enter__(self):
+        self.prev = _Component._detach
+        _Component._detach = True
+
+    def __exit__(self, *args):
+        _Component._detach = self.prev
+
 class UseComm:
     def __init__(self, comm):
         self.comm = comm

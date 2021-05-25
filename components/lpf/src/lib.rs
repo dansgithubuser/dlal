@@ -15,6 +15,7 @@ component!(
                 "name": "lowness",
                 "optional": true,
                 "range": "[0, 1]",
+                "default": 0.95,
             }],
         },
         "freq": {
