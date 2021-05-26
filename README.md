@@ -189,10 +189,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- parametric synth
-		- formant1, formant2, nasal formant
-		- voice amount
-		- noise-low (sh), noise-flat (th), noise-med (s)
 - audiobro
 	- track 1
 		- bass slide down in B section
