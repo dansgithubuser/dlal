@@ -40,10 +40,15 @@ impl Default for Queues {
 
 component!(
     {"in": ["cmd"], "out": ["cmd"]},
-    ["run_size", "uni"],
+    [
+        "run_size",
+        "uni",
+        {"name": "field_helpers", "fields": ["last_error"], "kinds": ["r"]},
+    ],
     {
         queues: Queues,
         wait: usize,
+        last_error: String,
     },
     {
         "queue": {"args": ["component", "command", "audio", "midi", "run", "body", "timeout_ms", "detach"]},
@@ -72,6 +77,10 @@ impl ComponentTrait for Component {
                                 .fro_audio_send
                                 .try_send(Box::new(result))
                                 .expect("try_send failed");
+                        } else if let Some(result) = result {
+                            if let Some(error) = result.get("error") {
+                                self.last_error = error.as_str().unwrap_or(&error.to_string()).into();
+                            }
                         }
                     }
                 }

@@ -68,11 +68,11 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | __init__  |
 +===========+
 ↑
-+-+-------------+
-| |             |
-| +===========+ +========+
-| | subsystem | | _sound |
-| +===========+ +========+
++-+-------------+----------+
+| |             |          |
+| +===========+ +========+ +=========+
+| | subsystem | | _sound | | _speech |
+| +===========+ +========+ +=========+
 | ↑
 +-+
 |
@@ -189,12 +189,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- continuous formants seems to be the thing
-		- phonetic_simple_encoder.py with stops
-		- phonetizer split into
-			- speech synth
-			- separate prep_syllables function in new speech module
-		- decoder: 4 iir for tone, noisebank for noise
 	- fix up stops
 		- for voiced stops, record whispered
 - audiobro
