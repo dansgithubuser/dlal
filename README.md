@@ -190,9 +190,11 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - more intelligible speech synth
 	- continuous formants seems to be the thing
-		- add morph cmd to sinbank
-			- specify formants along with spectrum
-			- when interpolating, treat formants as places to split spectrum, scale stuff between them
+		- phonetic_simple_encoder.py with stops
+		- phonetizer split into
+			- speech synth
+			- separate prep_syllables function in new speech module
+		- decoder: 4 iir for tone, noisebank for noise
 	- fix up stops
 		- for voiced stops, record whispered
 - audiobro
