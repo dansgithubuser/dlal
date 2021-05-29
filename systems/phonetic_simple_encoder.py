@@ -34,8 +34,8 @@ GAIN_HI = 2e4
 
 F0_BIN_RANGE = [math.floor(i * C) for i in [0, 200]]
 F1_BIN_RANGE = [math.floor(i * C) for i in [200, 1000]]
-F2_BIN_RANGE = [math.floor(i * C) for i in [1000, 2000]]
-F3_BIN_RANGE = [math.floor(i * C) for i in [2000, 3000]]
+F2_BIN_RANGE = [math.floor(i * C) for i in [1000, 2300]]
+F3_BIN_RANGE = [math.floor(i * C) for i in [2300, 3000]]
 
 NOISE_L_BIN_RANGE = [math.floor(i * C) for i in [2000, 4000]]
 NOISE_M_BIN_RANGE = [math.floor(i * C) for i in [4000, 8000]]

@@ -189,6 +189,12 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
+	- continuous formants seems to be the thing
+		- add morph cmd to sinbank
+			- specify formants along with spectrum
+			- when interpolating, treat formants as places to split spectrum, scale stuff between them
+	- fix up stops
+		- for voiced stops, record whispered
 - audiobro
 	- track 1
 		- bass slide down in B section
