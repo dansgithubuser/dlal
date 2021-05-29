@@ -197,7 +197,7 @@ def tell_story(i=0):
     if i == 9:
         d = 6400
         phonetizer.prep_syllables(
-            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v]m.y n.y.[ng]',
+            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v][uu]m.y n.y.[ng]',
             [
                 { 'on':  2 * d, 'off':  4 * d},
                 { 'on':  4 * d, 'off':  6 * d},
