@@ -122,12 +122,20 @@ class SpeechSynth(Subsystem):
         )
         self.outputs = [self.buf_tone, self.buf_noise]
 
-    def synthesize(self, info, frame_i, wait, smooth):
+    def synthesize(self, info, frame_i, wait, smooth, warp_formants):
         frame = info['frames'][frame_i]
         with _skeleton.Detach():
             with self.comm:
                 if info['voiced']:
                     for i, formant in enumerate(frame['formants']):
+                        if warp_formants:
+                            self.tone_filter.iirs[i].pole_pairs_bandpass(
+                                formant['freq'][0] / self.sample_rate * 2 * math.pi,
+                                0.01,
+                                0,
+                                0,
+                                2,
+                            )
                         self.tone_filter.iirs[i].pole_pairs_bandpass(
                             formant['freq'][0] / self.sample_rate * 2 * math.pi,
                             0.01,
@@ -138,7 +146,7 @@ class SpeechSynth(Subsystem):
                 else:
                     for iir in self.tone_filter.iirs:
                         iir.gain(0, smooth)
-                self.noise.spectrum([i[0] for i in frame['noise_spectrum']])
+                self.noise.spectrum([i[0] for i in frame['noise_spectrum']], smooth)
             self.comm.wait(wait)
 
 class Portamento(Subsystem):

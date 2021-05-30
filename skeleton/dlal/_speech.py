@@ -39,23 +39,11 @@ class Phonetizer:
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
         info = self.model[code.phonetic]
-        # smooth
-        if speed > 1:
-            smooth = 0.5
-        elif code.glide:
-            smooth = 0.98
-        elif any([
-            not self.model[self.phonetic]['voiced'],  # starting from unvoiced
-            not info['voiced'],  # moving to unvoiced
-            self.model[self.phonetic]['type'] == 'stop',  # starting from stop
-        ]):
+        was_unvoiced = not self.model[self.phonetic]['voiced']
+        if code.glide:
             smooth = 0.9
-        elif any([
-            info['type'] == 'stop',  # moving to (voiced) stop
-        ]):
-            smooth = 0.7
-        else:  # moving between continuants
-            smooth = 0.9
+        else:
+            smooth = 0.8
         # say
         total_wait = 0
         for i in range(len(info['frames'])):
@@ -66,7 +54,7 @@ class Phonetizer:
             wait /= speed
             wait = int(wait)
             total_wait += wait
-            self.synthesize(info=info, frame_i=i, wait=wait, smooth=smooth)
+            self.synthesize(info=info, frame_i=i, wait=wait, smooth=smooth, warp_formants=was_unvoiced)
         self.phonetic = code.phonetic
         return total_wait
 
