@@ -1,7 +1,7 @@
 from ._component import Component
 
 class Noisebank(Component):
-    def __init__(self, smooth=0, **kwargs):
+    def __init__(self, smooth=None, **kwargs):
         Component.__init__(self, 'noisebank', **kwargs)
         from ._skeleton import Immediate
         with Immediate():

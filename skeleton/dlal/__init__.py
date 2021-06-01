@@ -14,4 +14,5 @@ if _os.environ.get('DLAL_LOG_LEVEL'):
     set_logger_level('dlal', _os.environ['DLAL_LOG_LEVEL'])
 
 from . import _sound as sound
+from . import _speech as speech
 from . import _subsystem as subsystem

@@ -14,7 +14,12 @@ fn hysteresis_vec(a: &mut Vec<Complex64>, b: &[Complex64], smooth: f64) {
         if i >= b.len() {
             break;
         }
-        a[i] = a[i] * smooth + b[i] * (1.0 - smooth);
+        let (a_r, a_t) = a[i].to_polar();
+        let (b_r, b_t) = b[i].to_polar();
+        a[i] = Complex64::from_polar(
+            a_r * smooth + b_r * (1.0 - smooth),
+            a_t * smooth + b_t * (1.0 - smooth),
+        );
     }
 }
 
@@ -29,9 +34,12 @@ component!(
         zeros: Vec<Complex64>,
         gain: f64,
         smooth: f64,
-        poles_dst: Vec<Complex64>,
-        zeros_dst: Vec<Complex64>,
-        gain_dst: f64,
+        poles_e: Vec<Complex64>,
+        zeros_e: Vec<Complex64>,
+        gain_e: f64,
+        poles_f: Vec<Complex64>,
+        zeros_f: Vec<Complex64>,
+        gain_f: f64,
     },
     {
         "a": {"args": ["a"]},
@@ -159,9 +167,9 @@ impl Component {
     fn smooth_pole_zero(&mut self, poles: &[Complex64], zeros: &[Complex64], gain: f64, smooth: f64) {
         self.smooth = smooth;
         if smooth != 0.0 {
-            self.poles_dst = poles.to_vec();
-            self.zeros_dst = zeros.to_vec();
-            self.gain_dst = gain;
+            self.poles_f = poles.to_vec();
+            self.zeros_f = zeros.to_vec();
+            self.gain_f = gain;
             let mut do_pole_zero = false;
             if self.poles.len() != poles.len() {
                 self.poles = poles.to_vec();
@@ -174,6 +182,9 @@ impl Component {
             if do_pole_zero {
                 self.pole_zero();
             }
+            self.poles_e = self.poles.clone();
+            self.zeros_e = self.zeros.clone();
+            self.gain_e = self.gain;
         } else {
             self.poles = poles.to_vec();
             self.zeros = zeros.to_vec();
@@ -192,9 +203,12 @@ impl ComponentTrait for Component {
 
     fn run(&mut self) {
         if self.smooth != 0.0 {
-            hysteresis_vec(&mut self.poles, &self.poles_dst, self.smooth);
-            hysteresis_vec(&mut self.zeros, &self.zeros_dst, self.smooth);
-            hysteresis(&mut self.gain, self.gain_dst, self.smooth);
+            hysteresis_vec(&mut self.poles_e, &self.poles_f, self.smooth);
+            hysteresis_vec(&mut self.zeros_e, &self.zeros_f, self.smooth);
+            hysteresis(&mut self.gain_e, self.gain_f, self.smooth);
+            hysteresis_vec(&mut self.poles, &self.poles_e, self.smooth);
+            hysteresis_vec(&mut self.zeros, &self.zeros_e, self.smooth);
+            hysteresis(&mut self.gain, self.gain_e, self.smooth);
             self.pole_zero();
         }
         let output = match &self.output {

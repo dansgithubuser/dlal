@@ -68,11 +68,11 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | __init__  |
 +===========+
 ↑
-+-+-------------+
-| |             |
-| +===========+ +========+
-| | subsystem | | _sound |
-| +===========+ +========+
++-+-------------+----------+
+| |             |          |
+| +===========+ +========+ +=========+
+| | subsystem | | _sound | | _speech |
+| +===========+ +========+ +=========+
 | ↑
 +-+
 |
@@ -189,16 +189,8 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- use a continuous markov model to interpolate between phonetics
-		- phonetic markov encoder
-			- distance between params is too big
-				- need to reduce dimensions
-				- what parameter set does espeak use?
-					- complicated
-				- reduced params idea
-					- formant1, formant2, nasal formant
-					- voice amount
-					- noise-low (sh), noise-flat (th), noise-med (s)
+	- fix up stops
+		- for voiced stops, record whispered
 - audiobro
 	- track 1
 		- bass slide down in B section

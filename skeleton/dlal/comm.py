@@ -7,6 +7,13 @@ class Comm(Component):
         with Immediate():
             if size != None: self.resize(size)
 
+    def __enter__(self):
+        self.component_comm = Component._comm
+        Component._comm = self
+
+    def __exit__(self, *args):
+        Component._comm = self.component_comm
+
     def queue(self, component, name, args, kwargs, timeout_ms=20, detach=False):
         return self.command_immediate(
             'queue',

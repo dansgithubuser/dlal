@@ -45,17 +45,6 @@ class Detach:
     def __exit__(self, *args):
         _Component._detach = self.prev
 
-class UseComm:
-    def __init__(self, comm):
-        self.comm = comm
-
-    def __enter__(self):
-        self.old_comm = _Component._comm
-        _Component._comm = self.comm
-
-    def __exit__(self, *args):
-        _Component._comm = self.old_comm
-
 def component(name, default=_Default):
     if default == _Default:
         return _Component._components[name]
