@@ -79,9 +79,6 @@ class Phonetizer:
                 raise Exception(f'invalid syllable {syllable}')
             syllables[i] = [onset, nucleus, coda]
         # move onsets into codas
-        if len(syllables) and syllables[0][0]:
-            syllables.insert(0, ['', '0', syllables[0][0]])
-            syllables[0][0] = ''
         for i in range(1, len(syllables)):
             if not syllables[i][0]: continue
             syllables[i-1][2] += syllables[i][0]

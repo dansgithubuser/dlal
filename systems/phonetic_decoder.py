@@ -44,8 +44,9 @@ def say_all():
             say_code('0')
             time.sleep(0.5)
 
-def say_sentence(i):
-    if i == 0 or 'ashes':
+def say_sentence(i=None):
+    if i == None: i = random.randint(0, 1)
+    if i in [0, 'ashes']:
         d = 6400
         phonetizer.say_syllables(
             '.[ae].[sh] .i.z f.a.l [th]r.w [th_v][uu]m.y n.y.[ng]',
@@ -56,6 +57,21 @@ def say_sentence(i):
                 { 'on':  8 * d, 'off': 10 * d },
                 { 'on': 10 * d, 'off': 12 * d },
                 { 'on': 12 * d, 'off': 14 * d },
+            ],
+        )
+    elif i in [1, 'fusion']:
+        d = 7000
+        phonetizer.say_syllables(
+            'fy.w [sh_v].u.n hy.w m.r .i.z so.w m.e s.y',
+            [
+                { 'on':  2 * d, 'off':  4 * d},
+                { 'on':  4 * d, 'off':  6 * d},
+                { 'on':  6 * d, 'off':  8 * d },
+                { 'on':  8 * d, 'off': 10 * d },
+                { 'on': 10 * d, 'off': 12 * d },
+                { 'on': 12 * d, 'off': 14 * d },
+                { 'on': 14 * d, 'off': 16 * d },
+                { 'on': 16 * d, 'off': 18 * d },
             ],
         )
 
