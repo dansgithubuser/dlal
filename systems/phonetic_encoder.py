@@ -17,11 +17,10 @@ args = parser.parse_args()
 SAMPLE_RATE = 44100
 RUN_SIZE = 64
 BINS_STFT = 512
-BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
 GAIN_LO = 200
-GAIN_HI = 1e5
+GAIN_HI = 1e4
 
 FORMANT_BIN_RANGES = [
     [math.floor(i * C) for i in [0, 200]],
@@ -39,6 +38,9 @@ VOICED = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh_v', 'v', 'th_v', 'z', 'm', 'n', 'ng', 'r', 'l',
     'b', 'd', 'g', 'j',
+]
+FRICATIVES = [
+    'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z',
 ]
 STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
@@ -74,7 +76,12 @@ dlal.connect(
 def mean(l):
     return sum(l) / len(l)
 
-def stats(l):
+def descend(x, ks):
+    for k in ks: x = x[k]
+    return x
+
+def stats(l, ks):
+    l = [descend(i, ks) for i in l]
     m = mean(l)
     return (
         m,
@@ -87,6 +94,25 @@ def find_formant(spectrum, bin_i, bin_f, pregain):
     return {
         'freq': (spectrum.index(amp) + bin_i) / C,
         'amp': amp * pregain,
+    }
+
+def find_noise(spectrum, amp_noise):
+    thresh = max(spectrum) / 8
+    for i, v in enumerate(spectrum):
+        if v > thresh:
+            lo = i
+            break
+    for i, v in reversed(list(enumerate(spectrum))):
+        if v > thresh:
+            hi = i
+            break
+    amp_peak = max(spectrum[lo:hi+1])
+    peak = spectrum.index(amp_peak)
+    return {
+        'freq_lo': lo / C,
+        'freq_peak': peak / C,
+        'amp_peak': amp_peak * amp_noise,
+        'freq_hi': hi / C,
     }
 
 class Model:
@@ -124,15 +150,21 @@ class Model:
                     return
         if self.new:
             self.samples.append([])
+        if phonetic in FRICATIVES:
+            noise = find_noise(spectrum, amp_noise)
+        else:
+            noise = {
+                'freq_lo': 0,
+                'freq_peak': 6000,
+                'amp_peak': 0,
+                'freq_hi': 22050,
+            }
         self.samples[-1].append({
             'formants': [
                 find_formant(spectrum, *i, amp_tone)
                 for i in FORMANT_BIN_RANGES
             ],
-            'noise_spectrum': [
-                spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
-                for i in range(BINS_NOISE)
-            ],
+            'noise': noise,
         })
         self.new = False
 
@@ -145,24 +177,17 @@ class Model:
                     {
                         'formants': [
                             {
-                                'freq': stats([
-                                    j['formants'][i]['freq']
-                                    for j in self.samples[-1]
-                                ]),
-                                'amp': stats([
-                                    j['formants'][i]['amp']
-                                    for j in self.samples[-1]
-                                ]),
+                                'freq': stats(self.samples[-1], ['formants', i, 'freq']),
+                                'amp': stats(self.samples[-1], ['formants', i, 'amp']),
                             }
                             for i in range(len(FORMANT_BIN_RANGES))
                         ],
-                        'noise_spectrum': [
-                            stats([
-                                j['noise_spectrum'][i]
-                                for j in self.samples[-1]
-                            ])
-                            for i in range(BINS_NOISE)
-                        ],
+                        'noise': {
+                            'freq_lo': stats(self.samples[-1], ['noise', 'freq_lo']),
+                            'freq_peak': stats(self.samples[-1], ['noise', 'freq_peak']),
+                            'amp_peak': stats(self.samples[-1], ['noise', 'amp_peak']),
+                            'freq_hi': stats(self.samples[-1], ['noise', 'freq_hi']),
+                        },
                     },
                 ],
             }
@@ -179,10 +204,12 @@ class Model:
                             }
                             for i in range(len(FORMANT_BIN_RANGES))
                         ],
-                        'noise_spectrum': [
-                            (k['noise_spectrum'][i], 0)
-                            for i in range(BINS_NOISE)
-                        ],
+                        'noise': {
+                            'freq_lo': (k['noise']['freq_lo'], 0),
+                            'freq_peak': (k['noise']['freq_peak'], 0),
+                            'amp_peak': (k['noise']['amp_peak'], 0),
+                            'freq_hi': (k['noise']['freq_hi'], 0),
+                        },
                         'duration': RUN_SIZE,
                     }
                     for k in self.samples[0]  # just take the first recital of the stop
@@ -203,7 +230,12 @@ class Model:
                         }
                         for i in FORMANT_BIN_RANGES
                     ],
-                    'noise_spectrum': [(0, 0)] * BINS_NOISE,
+                    'noise': {
+                        'freq_lo': (0, 0),
+                        'freq_peak': (6000, 0),
+                        'amp_peak': (0, 0),
+                        'freq_hi': (22050, 0),
+                    },
                 },
             ],
         }
