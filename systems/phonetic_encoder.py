@@ -143,11 +143,20 @@ def frames_from_params(params, stop=False):
         ]
 
 def find_formant(spectrum, bin_i, bin_f, pregain):
-    spectrum = spectrum[bin_i:bin_f]
-    amp = max(spectrum)
+    window = spectrum[bin_i:bin_f]
+    amp_peak = max(window)
+    bin_peak = window.index(amp_peak) + bin_i
+    if bin_peak > 0 and bin_peak < len(spectrum) - 1:
+        bins = [
+            (i, spectrum[i])
+            for i in range(bin_peak - 1, bin_peak + 2)
+        ]
+        bin_formant = sum(i * v for i, v in bins) / sum(v for i, v in bins)
+    else:
+        bin_formant = bin_peak
     return {
-        'freq': (spectrum.index(amp) + bin_i) / C,
-        'amp': amp * pregain,
+        'freq': bin_formant / C,
+        'amp': amp_peak * pregain,
     }
 
 def find_noise(spectrum, amp_noise):

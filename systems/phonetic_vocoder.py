@@ -15,7 +15,7 @@ import phonetic_decoder as pd
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
 samples = 0
-file = open('phonetic_vocoder.16le', 'wb')
+file = open('phonetic_vocoder.i16le', 'wb')
 
 while samples < duration:
     pe.audio.run()

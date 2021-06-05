@@ -190,8 +190,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
-		- improve formant intelligibility
-			- figure formant frequency better (weighted average of bins near peak)
 	- fix up stops
 		- for voiced stops, record whispered
 - audiobro
