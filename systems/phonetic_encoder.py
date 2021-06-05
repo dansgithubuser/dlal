@@ -34,6 +34,7 @@ else:
 SAMPLE_RATE = 44100
 RUN_SIZE = 64
 BINS_STFT = 512
+BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
 GAIN_LO = 200
@@ -116,12 +117,10 @@ def frames_from_params(params, stop=False):
                     }
                     for i in range(len(FORMANT_BIN_RANGES))
                 ],
-                'noise': {
-                    'freq_lo': stats(params, ['noise', 'freq_lo']),
-                    'freq_peak': stats(params, ['noise', 'freq_peak']),
-                    'amp_peak': stats(params, ['noise', 'amp_peak']),
-                    'freq_hi': stats(params, ['noise', 'freq_hi']),
-                },
+                'noise': [
+                    stats(params, ['noise', i])
+                    for i in range(BINS_NOISE)
+                ]
             },
         ]
     else:
@@ -134,17 +133,14 @@ def frames_from_params(params, stop=False):
                     }
                     for i in range(len(FORMANT_BIN_RANGES))
                 ],
-                'noise': {
-                    'freq_lo': stats([k], ['noise', 'freq_lo']),
-                    'freq_peak': stats([k], ['noise', 'freq_peak']),
-                    'amp_peak': stats([k], ['noise', 'amp_peak']),
-                    'freq_hi': stats([k], ['noise', 'freq_hi']),
-                },
+                'noise': [
+                    stats([k], ['noise', i])
+                    for i in range(BINS_NOISE)
+                ],
                 'duration': RUN_SIZE,
             }
             for k in params
         ]
-    
 
 def find_formant(spectrum, bin_i, bin_f, pregain):
     spectrum = spectrum[bin_i:bin_f]
@@ -155,23 +151,10 @@ def find_formant(spectrum, bin_i, bin_f, pregain):
     }
 
 def find_noise(spectrum, amp_noise):
-    thresh = sorted(spectrum)[len(spectrum) * 3 // 4]
-    for i, v in enumerate(spectrum):
-        if v >= thresh:
-            lo = i
-            break
-    for i, v in reversed(list(enumerate(spectrum))):
-        if v >= thresh:
-            hi = i
-            break
-    amp_peak = max(spectrum[lo:hi+1])
-    peak = spectrum.index(amp_peak)
-    return {
-        'freq_lo': lo / C,
-        'freq_peak': peak / C,
-        'amp_peak': amp_peak * amp_noise,
-        'freq_hi': hi / C,
-    }
+    return [
+        spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
+        for i in range(BINS_NOISE)
+    ]
 
 def sample_system():
     return (
@@ -190,12 +173,7 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
     if not phonetic or phonetic in FRICATIVES:
         noise = find_noise(spectrum, amp_noise)
     else:
-        noise = {
-            'freq_lo': 0,
-            'freq_peak': 6000,
-            'amp_peak': 0,
-            'freq_hi': 22050,
-        }
+        noise = [0] * BINS_NOISE
     return {
         'formants': formants,
         'noise': noise,
@@ -254,12 +232,7 @@ class Model:
                         }
                         for i in FORMANT_BIN_RANGES
                     ],
-                    'noise': {
-                        'freq_lo': 0,
-                        'freq_peak': 6000,
-                        'amp_peak': 0,
-                        'freq_hi': 22050,
-                    },
+                    'noise': [0] * BINS_NOISE,
                 },
             ]),
         }
