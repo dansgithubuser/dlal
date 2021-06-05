@@ -1,8 +1,16 @@
+'''
+`phonetic` - symbol representing a sound
+`params` - set of low-level instructions for how to synthesize a sound
+`frame` - params with mean and deviation
+`info` - frames and prior information for a `phonetic`
+'''
+
 import dlal
 
 import argparse
 import json
 import math
+import os
 
 try:
     import dansplotcore as dpc
@@ -11,7 +19,16 @@ except:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
-args = parser.parse_args()
+if __name__ == '__main__':
+    args = parser.parse_args()
+else:
+    class EnvArgs:
+        def __init__(self):
+            self.recording_path = os.environ.get(
+                'PHONETIC_ENCODER_RECORDING_PATH',
+                'assets/phonetics/phonetics.flac',
+            )
+    args = EnvArgs()
 
 # consts
 SAMPLE_RATE = 44100
@@ -72,7 +89,7 @@ dlal.connect(
     peak_hi,
 )
 
-# model
+# functions
 def mean(l):
     return sum(l) / len(l)
 
@@ -88,6 +105,47 @@ def stats(l, ks):
         math.sqrt(mean([(i - m) ** 2 for i in l])),
     )
 
+def frames_from_params(params, stop=False):
+    if not stop:
+        return [
+            {
+                'formants': [
+                    {
+                        'freq': stats(params, ['formants', i, 'freq']),
+                        'amp': stats(params, ['formants', i, 'amp']),
+                    }
+                    for i in range(len(FORMANT_BIN_RANGES))
+                ],
+                'noise': {
+                    'freq_lo': stats(params, ['noise', 'freq_lo']),
+                    'freq_peak': stats(params, ['noise', 'freq_peak']),
+                    'amp_peak': stats(params, ['noise', 'amp_peak']),
+                    'freq_hi': stats(params, ['noise', 'freq_hi']),
+                },
+            },
+        ]
+    else:
+        return [
+            {
+                'formants': [
+                    {
+                        'freq': stats([k], ['formants', i, 'freq']),
+                        'amp': stats([k], ['formants', i, 'amp']),
+                    }
+                    for i in range(len(FORMANT_BIN_RANGES))
+                ],
+                'noise': {
+                    'freq_lo': stats([k], ['noise', 'freq_lo']),
+                    'freq_peak': stats([k], ['noise', 'freq_peak']),
+                    'amp_peak': stats([k], ['noise', 'amp_peak']),
+                    'freq_hi': stats([k], ['noise', 'freq_hi']),
+                },
+                'duration': RUN_SIZE,
+            }
+            for k in params
+        ]
+    
+
 def find_formant(spectrum, bin_i, bin_f, pregain):
     spectrum = spectrum[bin_i:bin_f]
     amp = max(spectrum)
@@ -97,13 +155,13 @@ def find_formant(spectrum, bin_i, bin_f, pregain):
     }
 
 def find_noise(spectrum, amp_noise):
-    thresh = max(spectrum) / 8
+    thresh = sorted(spectrum)[len(spectrum) * 3 // 4]
     for i, v in enumerate(spectrum):
-        if v > thresh:
+        if v >= thresh:
             lo = i
             break
     for i, v in reversed(list(enumerate(spectrum))):
-        if v > thresh:
+        if v >= thresh:
             hi = i
             break
     amp_peak = max(spectrum[lo:hi+1])
@@ -115,28 +173,48 @@ def find_noise(spectrum, amp_noise):
         'freq_hi': hi / C,
     }
 
+def sample_system():
+    return (
+        stft.spectrum(),
+        peak_lo.value() * GAIN_LO,
+        peak_hi.value() * GAIN_HI,
+    )
+
+def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
+    if phonetic and phonetic not in VOICED:
+        amp_tone = 0
+    formants = [
+        find_formant(spectrum, *i, amp_tone)
+        for i in FORMANT_BIN_RANGES
+    ]
+    if not phonetic or phonetic in FRICATIVES:
+        noise = find_noise(spectrum, amp_noise)
+    else:
+        noise = {
+            'freq_lo': 0,
+            'freq_peak': 6000,
+            'amp_peak': 0,
+            'freq_hi': 22050,
+        }
+    return {
+        'formants': formants,
+        'noise': noise,
+    }
+
+# model
 class Model:
     path = 'assets/phonetics/model.json'
 
     def __init__(self):
         self.new = True
-        self.samples = []
-        self.params = {}
-
-    def sample_system(self):
-        return (
-            stft.spectrum(),
-            peak_lo.value() * GAIN_LO,
-            peak_hi.value() * GAIN_HI,
-        )
+        self.params = []
+        self.info = {}
 
     def add_pre(self):
         self.new = True
 
     def add(self, phonetic, remaining):
-        spectrum, amp_tone, amp_noise = self.sample_system()
-        if phonetic not in VOICED:
-            amp_tone = 0
+        spectrum, amp_tone, amp_noise = sample_system()
         if phonetic in STOPS:
             if self.new and remaining < 0.2:
                 return
@@ -149,101 +227,47 @@ class Model:
                     self.new = True
                     return
         if self.new:
-            self.samples.append([])
-        if phonetic in FRICATIVES:
-            noise = find_noise(spectrum, amp_noise)
-        else:
-            noise = {
-                'freq_lo': 0,
-                'freq_peak': 6000,
-                'amp_peak': 0,
-                'freq_hi': 22050,
-            }
-        self.samples[-1].append({
-            'formants': [
-                find_formant(spectrum, *i, amp_tone)
-                for i in FORMANT_BIN_RANGES
-            ],
-            'noise': noise,
-        })
+            self.params.append([])
+        params = parameterize(spectrum, amp_tone, amp_noise, phonetic)
+        self.params[-1].append(params)
         self.new = False
 
     def add_post(self, phonetic):
-        if phonetic not in STOPS:
-            self.params[phonetic] = {
-                'type': 'continuant',
-                'voiced': phonetic in VOICED,
-                'frames': [
-                    {
-                        'formants': [
-                            {
-                                'freq': stats(self.samples[-1], ['formants', i, 'freq']),
-                                'amp': stats(self.samples[-1], ['formants', i, 'amp']),
-                            }
-                            for i in range(len(FORMANT_BIN_RANGES))
-                        ],
-                        'noise': {
-                            'freq_lo': stats(self.samples[-1], ['noise', 'freq_lo']),
-                            'freq_peak': stats(self.samples[-1], ['noise', 'freq_peak']),
-                            'amp_peak': stats(self.samples[-1], ['noise', 'amp_peak']),
-                            'freq_hi': stats(self.samples[-1], ['noise', 'freq_hi']),
-                        },
-                    },
-                ],
-            }
-        else:
-            self.params[phonetic] = {
-                'type': 'stop',
-                'voiced': phonetic in VOICED,
-                'frames': [
-                    {
-                        'formants': [
-                            {
-                                'freq': (k['formants'][i]['freq'], 0),
-                                'amp': (k['formants'][i]['amp'], 0),
-                            }
-                            for i in range(len(FORMANT_BIN_RANGES))
-                        ],
-                        'noise': {
-                            'freq_lo': (k['noise']['freq_lo'], 0),
-                            'freq_peak': (k['noise']['freq_peak'], 0),
-                            'amp_peak': (k['noise']['amp_peak'], 0),
-                            'freq_hi': (k['noise']['freq_hi'], 0),
-                        },
-                        'duration': RUN_SIZE,
-                    }
-                    for k in self.samples[0]  # just take the first recital of the stop
-                ],
-            }
-        self.samples.clear()
+        stop = phonetic in STOPS
+        self.info[phonetic] = {
+            'type': 'stop' if stop else 'continuant',
+            'voiced': phonetic in VOICED,
+            'frames': frames_from_params(self.params[0], stop)  # for stops, just take the first recital
+        }
+        self.params.clear()
 
     def add_0(self):
-        self.params['0'] = {
+        self.info['0'] = {
             'type': 'continuant',
             'voiced': False,
-            'frames': [
+            'frames': frames_from_params([
                 {
                     'formants': [
                         {
-                            'freq': ((i[0] + i[1]) / 2, 0),
-                            'amp': (0, 0),
+                            'freq': (i[0] + i[1]) / 2,
+                            'amp': 0,
                         }
                         for i in FORMANT_BIN_RANGES
                     ],
                     'noise': {
-                        'freq_lo': (0, 0),
-                        'freq_peak': (6000, 0),
-                        'amp_peak': (0, 0),
-                        'freq_hi': (22050, 0),
+                        'freq_lo': 0,
+                        'freq_peak': 6000,
+                        'amp_peak': 0,
+                        'freq_hi': 22050,
                     },
                 },
-            ],
+            ]),
         }
 
     def save(self):
         with open(Model.path, 'w') as f:
             f.write(json.dumps(
-                self.params,
+                self.info,
                 indent=2,
             ))
 
@@ -264,14 +288,15 @@ class Runner:
             if callback: callback(self.seconds - elapsed)
 
 # run
-model = Model()
-runner = Runner()
-for phonetic in PHONETICS:
-    print(phonetic)
-    runner.run(3)
-    model.add_pre()
-    runner.run(6, lambda remaining: model.add(phonetic, remaining))
-    model.add_post(phonetic)
-    runner.run(1)
-model.add_0()
-model.save()
+if __name__ == '__main__':
+    model = Model()
+    runner = Runner()
+    for phonetic in PHONETICS:
+        print(phonetic)
+        runner.run(3)
+        model.add_pre()
+        runner.run(6, lambda remaining: model.add(phonetic, remaining))
+        model.add_post(phonetic)
+        runner.run(1)
+    model.add_0()
+    model.save()

@@ -1,18 +1,9 @@
 #===== imports =====#
 import dlal
 
-import argparse
 import random
 import re
 import time
-
-#===== args =====#
-parser = argparse.ArgumentParser(description=
-    'Takes phonetic parameters as produced by phonetic_encoder.py, '
-    'and synthesizes a sound.'
-)
-parser.add_argument('--phonetics-path', default='assets/phonetics')
-args = parser.parse_args()
 
 #===== system =====#
 audio = dlal.Audio(driver=True)
@@ -93,5 +84,6 @@ def test():
 
 synth.tone.midi([0x90, 42, 127])
 
-dlal.typical_setup()
-phonetizer.say_code('0')
+if __name__ == '__main__':
+    dlal.typical_setup()
+    phonetizer.say_code('0')

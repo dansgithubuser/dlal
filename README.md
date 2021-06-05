@@ -189,7 +189,8 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- reduce noise state space and make a vocoder -- intelligible?
+	- improve reduced-state vocoder intelligibility
+		- try with noise spectrum to see if it's noise or formants that are off
 	- fix up stops
 		- for voiced stops, record whispered
 - audiobro

@@ -22,6 +22,7 @@ class Phonetizer:
             - frame_i (frame number to synthesize)
             - wait (number of samples to synthesize for)
             - smooth (how smoothly to interpolate from previous parameters)
+            - warp_formants (`True` to ignore smoothing for formants, default is `False`)
         and synthesizes the corresponding sound.
 
         `grace` is how much time is allowed between notes without synthesizing a silence
@@ -33,6 +34,13 @@ class Phonetizer:
             self.model = _json.loads(file.read())
         self.sample_rate = sample_rate
         self.phonetic = '0'
+
+    def say_frame(self, frame):
+        info = {
+            'voiced': True,
+            'frames': [frame],
+        }
+        self.synthesize(info, 0, 0, 0.7, False)
 
     def say_code(self, code, continuant_wait=None, speed=1):
         if type(code) == str: code = _Code(code)
