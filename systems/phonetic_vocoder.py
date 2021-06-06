@@ -15,12 +15,20 @@ import phonetic_decoder as pd
 try:
     import dansplotcore as dpc
 
-    def params_to_xy(params):
-        features = [
-            params['tone']['formants'][1]['freq'] / 2000,
-            params['tone']['formants'][2]['freq'] / 2000,
-            params['noise']['freq_peak'] / 44100 * params['noise']['amp_peak'] * 100,
-        ]
+    def get_param(params, ks):
+        x = params
+        for k in ks: x = x[k]
+        if type(x) == list: x = x[0]
+        return x
+
+    def get_features(params):
+        return (
+            get_param(params, ['tone', 'formants', 1, 'freq']) / 2000,
+            (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 2000,
+            get_param(params, ['noise', 'freq_peak']) / 44100 * get_param(params, ['noise', 'amp_peak']) * 100,
+        )
+
+    def features_to_xy(features):
         bases = []
         for i in range(len(features)):
             t = i / len(features) * math.pi
@@ -29,10 +37,10 @@ try:
         y = sum(i * j[1] for i, j in zip(features, bases))
         return x, y
 
-    def params_to_rgb(params):
-        r = 0.25 + params['tone']['formants'][1]['freq'] / 2000
-        g = 0.25 + (params['tone']['formants'][2]['freq'] - 1000) / 2000
-        b = 0.25 + min(params['noise']['freq_peak'] / 44100 * params['noise']['amp_peak'] * 100, 0.75)
+    def features_to_rgb(features):
+        r = 0.25 + features[0]
+        g = 0.25 + features[1]
+        b = 0.25 + min(features[2], 0.75)
         return r, g, b
 
     class Plotter:
@@ -41,15 +49,25 @@ try:
             self.params_prev = None
 
         def add(self, params):
-            x, y = params_to_xy(params)
+            features = get_features(params)
+            x, y = features_to_xy(features)
             r = 0.002
             self.plot.rect(
                 x - r, y - r,
                 x + r, y + r,
-                *params_to_rgb(params),
+                *features_to_rgb(features),
                 a=0.5,
             )
             self.params_prev = params
+
+        def plot_model(self, model):
+            for phonetic, info in model.items():
+                features = get_features(info['frames'][0])
+                self.plot.text(
+                    phonetic,
+                    *features_to_xy(features),
+                    *features_to_rgb(features),
+                )
 
         def show(self):
             self.plot.show()
@@ -75,4 +93,5 @@ while samples < duration:
     pd.tape.to_file_i16le(file)
     samples += run_size
 
+plotter.plot_model(pd.phonetizer.model)
 plotter.show()
