@@ -1,6 +1,5 @@
 import argparse
 import os
-import pprint
 
 parser = argparse.ArgumentParser()
 parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
@@ -22,7 +21,6 @@ while samples < duration:
     sample = pe.sample_system()
     params = pe.parameterize(*sample)
     frame = pe.frames_from_params([params])[0]
-    pprint.pprint(frame)
     pd.phonetizer.say_frame(frame)
     pd.audio.run()
     pd.tape.to_file_i16le(file)

@@ -34,6 +34,7 @@ else:
 SAMPLE_RATE = 44100
 RUN_SIZE = 64
 BINS_STFT = 512
+BINS_TONE = 64
 BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
@@ -110,60 +111,124 @@ def frames_from_params(params, stop=False):
     if not stop:
         return [
             {
-                'formants': [
-                    {
-                        'freq': stats(params, ['formants', i, 'freq']),
-                        'amp': stats(params, ['formants', i, 'amp']),
-                    }
-                    for i in range(len(FORMANT_BIN_RANGES))
-                ],
-                'noise': [
-                    stats(params, ['noise', i])
-                    for i in range(BINS_NOISE)
-                ]
+                'tone': {
+                    'formants': [
+                        {
+                            'freq': stats(params, ['tone', 'formants', i, 'freq']),
+                            'amp': stats(params, ['tone', 'formants', i, 'amp']),
+                        }
+                        for i in range(len(FORMANT_BIN_RANGES))
+                    ],
+                    'spectrum': [
+                        stats(params, ['tone', 'spectrum', i])
+                        for i in range(BINS_TONE)
+                    ],
+                },
+                'noise': {
+                    'freq_lo': stats(params, ['noise', 'freq_lo']),
+                    'freq_peak': stats(params, ['noise', 'freq_peak']),
+                    'amp_peak': stats(params, ['noise', 'amp_peak']),
+                    'freq_hi': stats(params, ['noise', 'freq_hi']),
+                    'spectrum': [
+                        stats(params, ['noise', 'spectrum', i])
+                        for i in range(BINS_NOISE)
+                    ],
+                },
             },
         ]
     else:
         return [
             {
-                'formants': [
-                    {
-                        'freq': stats([k], ['formants', i, 'freq']),
-                        'amp': stats([k], ['formants', i, 'amp']),
-                    }
-                    for i in range(len(FORMANT_BIN_RANGES))
-                ],
-                'noise': [
-                    stats([k], ['noise', i])
-                    for i in range(BINS_NOISE)
-                ],
+                'tone': {
+                    'formants': [
+                        {
+                            'freq': stats([k], ['tone', 'formants', i, 'freq']),
+                            'amp': stats([k], ['tone', 'formants', i, 'amp']),
+                        }
+                        for i in range(len(FORMANT_BIN_RANGES))
+                    ],
+                    'spectrum': [
+                        stats([k], ['tone', 'spectrum', i])
+                        for i in range(BINS_TONE)
+                    ],
+                },
+                'noise': {
+                    'freq_lo': stats([k], ['noise', 'freq_lo']),
+                    'freq_peak': stats([k], ['noise', 'freq_peak']),
+                    'amp_peak': stats([k], ['noise', 'amp_peak']),
+                    'freq_hi': stats([k], ['noise', 'freq_hi']),
+                    'spectrum': [
+                        stats([k], ['noise', 'spectrum', i])
+                        for i in range(BINS_NOISE)
+                    ],
+                },
                 'duration': RUN_SIZE,
             }
             for k in params
         ]
 
-def find_formant(spectrum, bin_i, bin_f, pregain):
+def find_formant(spectrum, bin_i, bin_f, amp_tone):
     window = spectrum[bin_i:bin_f]
     amp_peak = max(window)
     bin_peak = window.index(amp_peak) + bin_i
+    bin_formant = bin_peak
     if bin_peak > 0 and bin_peak < len(spectrum) - 1:
         bins = [
             (i, spectrum[i])
             for i in range(bin_peak - 1, bin_peak + 2)
         ]
-        bin_formant = sum(i * v for i, v in bins) / sum(v for i, v in bins)
-    else:
-        bin_formant = bin_peak
+        s = sum(v for i, v in bins)
+        if s != 0:
+            bin_formant = sum(i * v for i, v in bins) / s
     return {
         'freq': bin_formant / C,
-        'amp': amp_peak * pregain,
+        'amp': amp_peak * amp_tone,
     }
 
-def find_noise(spectrum, amp_noise):
-    return [
+def find_tone(spectrum, amp_tone, phonetic=None):
+    formants = [
+        find_formant(spectrum, *i, amp_tone)
+        for i in FORMANT_BIN_RANGES
+    ]
+    if phonetic and phonetic not in VOICED:
+        amp_tone = 0
+    spectrum = [i * amp_tone for i in spectrum[:BINS_TONE]]
+    return {
+        'formants': formants,
+        'spectrum': spectrum,
+    }
+
+def find_noise(spectrum, amp_noise, phonetic=None):
+    thresh = sorted(spectrum)[len(spectrum) * 3 // 4]
+    for i, v in enumerate(spectrum):
+        if v >= thresh:
+            lo = i
+            break
+    for i, v in reversed(list(enumerate(spectrum))):
+        if v >= thresh:
+            hi = i
+            break
+    amp_peak = max(spectrum[lo:hi+1])
+    peak = spectrum.index(amp_peak)
+    if phonetic and phonetic not in FRICATIVES:
+        amp_noise = 0
+    spectrum = [
         spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
         for i in range(BINS_NOISE)
     ]
+    return {
+        'freq_lo': lo / C,
+        'freq_peak': peak / C,
+        'amp_peak': amp_peak * amp_noise,
+        'freq_hi': hi / C,
+        'spectrum': spectrum,
+    }
+
+def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
+    return {
+        'tone': find_tone(spectrum, amp_tone, phonetic),
+        'noise': find_noise(spectrum, amp_noise),
+    }
 
 def sample_system():
     return (
@@ -171,22 +236,6 @@ def sample_system():
         peak_lo.value() * GAIN_LO,
         peak_hi.value() * GAIN_HI,
     )
-
-def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
-    if phonetic and phonetic not in VOICED:
-        amp_tone = 0
-    formants = [
-        find_formant(spectrum, *i, amp_tone)
-        for i in FORMANT_BIN_RANGES
-    ]
-    if not phonetic or phonetic in FRICATIVES:
-        noise = find_noise(spectrum, amp_noise)
-    else:
-        noise = [0] * BINS_NOISE
-    return {
-        'formants': formants,
-        'noise': noise,
-    }
 
 # model
 class Model:
@@ -232,18 +281,10 @@ class Model:
         self.info['0'] = {
             'type': 'continuant',
             'voiced': False,
-            'frames': frames_from_params([
-                {
-                    'formants': [
-                        {
-                            'freq': (i[0] + i[1]) / 2,
-                            'amp': 0,
-                        }
-                        for i in FORMANT_BIN_RANGES
-                    ],
-                    'noise': [0] * BINS_NOISE,
-                },
-            ]),
+            'frames': frames_from_params([{
+                'tone': find_tone([0] * BINS_STFT, 0),
+                'noise': find_noise([0] * BINS_STFT, 0),
+            }]),
         }
 
     def save(self):
