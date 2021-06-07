@@ -23,8 +23,8 @@ try:
 
     def get_features(params):
         return (
-            get_param(params, ['tone', 'formants', 1, 'freq']) / 2000,
-            (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 2000,
+            get_param(params, ['tone', 'formants', 1, 'freq']) / 2000 * get_param(params, ['tone', 'formants', 1, 'amp']) * 10,
+            (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 2000 * get_param(params, ['tone', 'formants', 2, 'amp']) * 10,
             get_param(params, ['noise', 'freq_peak']) / 44100 * get_param(params, ['noise', 'amp_peak']) * 100,
         )
 
@@ -46,19 +46,24 @@ try:
     class Plotter:
         def __init__(self):
             self.plot = dpc.Plot()
-            self.params_prev = None
+            self.xy_prev = None
 
         def add(self, params):
             features = get_features(params)
             x, y = features_to_xy(features)
-            r = 0.002
+            r, g, b = features_to_rgb(features)
+            s = 0.002
             self.plot.rect(
-                x - r, y - r,
-                x + r, y + r,
-                *features_to_rgb(features),
-                a=0.5,
+                x - s, y - s,
+                x + s, y + s,
+                r, g, b, 0.5,
             )
-            self.params_prev = params
+            if self.xy_prev: self.plot.line(
+                *self.xy_prev,
+                x, y,
+                r, g, b, 0.5,
+            )
+            self.xy_prev = x, y
 
         def plot_model(self, model):
             for phonetic, info in model.items():

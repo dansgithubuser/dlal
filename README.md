@@ -190,7 +190,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
-		- vocoder: plot reduced state
 		- unlabeled data intake
 		- full state synthesis
 	- fix up stops
