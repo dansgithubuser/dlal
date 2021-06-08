@@ -1,9 +1,11 @@
 import argparse
+import json
 import math
 import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
+parser.add_argument('--save-params-to')
 args = parser.parse_args()
 
 os.environ['PHONETIC_ENCODER_RECORDING_PATH'] = args.recording_path
@@ -86,17 +88,23 @@ duration = pe.filea.duration()
 samples = 0
 file = open('phonetic_vocoder.i16le', 'wb')
 plotter = Plotter()
+paramses = []
 
 while samples < duration:
     pe.audio.run()
     sample = pe.sample_system()
     params = pe.parameterize(*sample)
+    paramses.append(params)
     plotter.add(params)
     frame = pe.frames_from_params([params])[0]
     pd.phonetizer.say_frame(frame)
     pd.audio.run()
     pd.tape.to_file_i16le(file)
     samples += run_size
+
+if args.save_params_to:
+    with open(args.save_params_to, 'w') as f:
+        f.write(json.dumps(paramses))
 
 plotter.plot_model(pd.phonetizer.model)
 plotter.show()
