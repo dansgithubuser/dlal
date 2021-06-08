@@ -112,6 +112,7 @@ def frames_from_params(params, stop=False):
         return [
             {
                 'tone': {
+                    'amp': stats(params, ['tone', 'amp']),
                     'formants': [
                         {
                             'freq': stats(params, ['tone', 'formants', i, 'freq']),
@@ -125,6 +126,7 @@ def frames_from_params(params, stop=False):
                     ],
                 },
                 'noise': {
+                    'amp': stats(params, ['noise', 'amp']),
                     'freq_lo': stats(params, ['noise', 'freq_lo']),
                     'freq_peak': stats(params, ['noise', 'freq_peak']),
                     'amp_peak': stats(params, ['noise', 'amp_peak']),
@@ -140,6 +142,7 @@ def frames_from_params(params, stop=False):
         return [
             {
                 'tone': {
+                    'amp': stats([k], ['tone', 'amp']),
                     'formants': [
                         {
                             'freq': stats([k], ['tone', 'formants', i, 'freq']),
@@ -153,6 +156,7 @@ def frames_from_params(params, stop=False):
                     ],
                 },
                 'noise': {
+                    'amp': stats([k], ['noise', 'amp']),
                     'freq_lo': stats([k], ['noise', 'freq_lo']),
                     'freq_peak': stats([k], ['noise', 'freq_peak']),
                     'amp_peak': stats([k], ['noise', 'amp_peak']),
@@ -191,10 +195,12 @@ def find_tone(spectrum, amp_tone, phonetic=None):
         find_formant(spectrum, *i, amp_tone)
         for i in FORMANT_BIN_RANGES
     ]
-    if phonetic and phonetic not in VOICED:
-        amp_tone = 0
-    spectrum = [i * amp_tone for i in spectrum[:BINS_TONE]]
+    if phonetic in VOICED:
+        spectrum = [i * amp_tone for i in spectrum[:BINS_TONE]]
+    else:
+        spectrum = [0] * BINS_TONE
     return {
+        'amp': amp_tone,
         'formants': formants,
         'spectrum': spectrum,
     }
@@ -211,13 +217,15 @@ def find_noise(spectrum, amp_noise, phonetic=None):
             break
     amp_peak = max(spectrum[lo:hi+1])
     peak = spectrum.index(amp_peak)
-    if phonetic and phonetic not in FRICATIVES:
-        amp_noise = 0
-    spectrum = [
-        spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
-        for i in range(BINS_NOISE)
-    ]
+    if phonetic in FRICATIVES:
+        spectrum = [
+            spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
+            for i in range(BINS_NOISE)
+        ]
+    else:
+        spectrum = [0] * BINS_NOISE
     return {
+        'amp': amp_noise,
         'freq_lo': lo / C,
         'freq_peak': peak / C,
         'amp_peak': amp_peak * amp_noise,
