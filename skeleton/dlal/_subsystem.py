@@ -97,10 +97,7 @@ class SpeechSynth(Subsystem):
         Subsystem.init(self,
             {
                 'comm': ('comm', [1 << 12]),
-                'tone': 'train',
-                'tone_gain': ('gain', [100]),
-                'tone_buf': 'buf',
-                'tone_filter': (IirBank, [4]),
+                'tone': 'sinbank',
                 'noise': 'noisebank',
                 'mul': ('mul', [1]),
                 'buf_tone': 'buf',
@@ -109,13 +106,8 @@ class SpeechSynth(Subsystem):
             name=name,
         )
         _connect(
-            self.tone,
-            [self.tone_buf, '<+', self.tone_gain],
-            self.tone_filter,
-            self.buf_tone,
-            [],
-            self.noise,
-            self.buf_noise,
+            (self.tone, self.noise),
+            (self.buf_tone, self.buf_noise),
             [],
             self.mul,
             [self.buf_tone, self.buf_noise],
@@ -127,25 +119,21 @@ class SpeechSynth(Subsystem):
         with _skeleton.Detach():
             with self.comm:
                 if info['voiced']:
-                    for i, formant in enumerate(frame['tone']['formants']):
-                        if warp_formants:
-                            self.tone_filter.iirs[i].pole_pairs_bandpass(
-                                formant['freq'][0] / self.sample_rate * 2 * math.pi,
-                                0.01,
-                                0,
-                                0,
-                                2,
-                            )
-                        self.tone_filter.iirs[i].pole_pairs_bandpass(
-                            formant['freq'][0] / self.sample_rate * 2 * math.pi,
-                            0.01,
-                            formant['amp'][0],
-                            smooth,
-                            2,
-                        )
+                    if warp_formants:
+                        tone_smooth = 0
+                    else:
+                        tone_smooth = smooth
+                    spectrum = []
+                    for i in range(64):
+                        amp = 0
+                        for formant in frame['tone']['formants']:
+                            freq = 100 * i
+                            d = (formant['freq'][0] - freq) / 100
+                            amp += formant['amp'][0] / (1 + d ** 2)
+                        spectrum.append(amp)
+                    self.tone.spectrum(spectrum, tone_smooth)
                 else:
-                    for iir in self.tone_filter.iirs:
-                        iir.gain(0, smooth)
+                    self.tone.spectrum([0] * 64, smooth)
                 spectrum = []
                 c = 64 / (self.sample_rate / 2)
                 lo = frame['noise']['freq_lo'][0] * c

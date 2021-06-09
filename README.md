@@ -191,10 +191,9 @@ The `audio` component is the driver component for interactive audio.
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
 		- prove that reduced parameters are good by transcoding intelligibly
-			- switch speech synth to sinbank
 			- option to say frame w full params
 			- improve distance metric?
-		- figure how to interpolate reduced params
+		- figure how to interpolate reduced params (ie synthesize intelligibly)
 		- find way to quickly figure full params from reduced params
 	- fix up stops
 		- for voiced stops, record whispered

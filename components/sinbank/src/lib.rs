@@ -39,7 +39,7 @@ component!(
                 "name": "spectrum",
                 "type": "array",
                 "element": "float",
-                "desc": "An array of bin amplitudes.",
+                "desc": "An array of bin amplitudes. Bins are 100 Hz by default.",
             }],
         },
         "stft": {
