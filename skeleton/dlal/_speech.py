@@ -38,6 +38,7 @@ class Phonetizer:
     def say_frame(self, frame):
         info = {
             'voiced': True,
+            'fricative': True,
             'frames': [frame],
         }
         self.synthesize(info, 0, 0, 0.7, False)

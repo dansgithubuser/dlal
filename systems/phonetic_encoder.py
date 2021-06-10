@@ -38,7 +38,7 @@ BINS_TONE = 64
 BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
-GAIN_LO = 200
+GAIN_LO = 20
 GAIN_HI = 1e4
 
 FORMANT_BIN_RANGES = [
@@ -236,7 +236,7 @@ def find_noise(spectrum, amp_noise, phonetic=None):
 def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
     return {
         'tone': find_tone(spectrum, amp_tone, phonetic),
-        'noise': find_noise(spectrum, amp_noise),
+        'noise': find_noise(spectrum, amp_noise, phonetic),
     }
 
 def sample_system():
@@ -282,6 +282,7 @@ class Model:
         self.info[phonetic] = {
             'type': 'stop' if stop else 'continuant',
             'voiced': phonetic in VOICED,
+            'fricative': phonetic in FRICATIVES,
             'frames': frames_from_params(self.params[0], stop)  # for stops, just take the first recital
         }
         self.params.clear()
@@ -290,6 +291,7 @@ class Model:
         self.info['0'] = {
             'type': 'continuant',
             'voiced': False,
+            'fricative': False,
             'frames': frames_from_params([{
                 'tone': find_tone([0] * BINS_STFT, 0),
                 'noise': find_noise([0] * BINS_STFT, 0),
