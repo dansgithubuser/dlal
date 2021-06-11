@@ -118,18 +118,14 @@ class SpeechSynth(Subsystem):
         frame = info['frames'][frame_i]
         with _skeleton.Detach():
             with self.comm:
+                self.tone.smooth(0 if warp_formants else smooth)
                 if info['voiced']:
-                    self.tone.spectrum(
-                        [i[0] for i in frame['tone']['spectrum']],
-                        0 if warp_formants else smooth,
-                    )
+                    self.tone.spectrum([i[0] for i in frame['tone']['spectrum']])
                 else:
                     self.tone.spectrum([0] * 64, smooth)
+                self.noise.smooth(smooth)
                 if info['fricative']:
-                    self.noise.spectrum(
-                        [i[0] for i in frame['noise']['spectrum']],
-                        smooth,
-                    )
+                    self.noise.spectrum([i[0] for i in frame['noise']['spectrum']])
                 else:
                     self.noise.spectrum([0] * 64, smooth)
             self.comm.wait(wait)

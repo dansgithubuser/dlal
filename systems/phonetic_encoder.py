@@ -195,7 +195,7 @@ def find_tone(spectrum, amp_tone, phonetic=None):
         find_formant(spectrum, *i, amp_tone)
         for i in FORMANT_BIN_RANGES
     ]
-    if phonetic in VOICED:
+    if not phonetic or phonetic in VOICED:
         spectrum = [i * amp_tone for i in spectrum[:BINS_TONE]]
     else:
         spectrum = [0] * BINS_TONE
@@ -217,7 +217,7 @@ def find_noise(spectrum, amp_noise, phonetic=None):
             break
     amp_peak = max(spectrum[lo:hi+1])
     peak = spectrum.index(amp_peak)
-    if phonetic in FRICATIVES:
+    if not phonetic or phonetic in FRICATIVES:
         spectrum = [
             spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
             for i in range(BINS_NOISE)

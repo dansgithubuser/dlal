@@ -26,9 +26,9 @@ try:
 
     def get_features(params):
         return (
-            get_param(params, ['tone', 'formants', 1, 'freq']) / 2000 * get_param(params, ['tone', 'formants', 1, 'amp']) * 10,
-            (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 2000 * get_param(params, ['tone', 'formants', 2, 'amp']) * 10,
-            get_param(params, ['noise', 'freq_peak']) / 44100 * get_param(params, ['noise', 'amp_peak']) * 100,
+            get_param(params, ['tone', 'formants', 1, 'freq']) / 1000,
+            (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 1000,
+            get_param(params, ['noise', 'freq_peak']) / 10000,
         )
 
     def features_to_xy(features):
@@ -91,19 +91,18 @@ def params_distance(a, b):
     a_toniness = a_tone_amp / (a_tone_amp + a_noise_amp)
     a_f1 = get_param(a, ['tone', 'formants', 1, 'freq']) / 1000
     a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    a_fn = get_param(a, ['noise', 'freq_peak']) / 20000
+    a_fn = get_param(a, ['noise', 'freq_peak']) / 10000
     # b
     b_tone_amp = get_param(b, ['tone', 'amp'])
     b_noise_amp = get_param(b, ['noise', 'amp'])
     b_toniness = b_tone_amp / (b_tone_amp + b_noise_amp)
     b_f1 = get_param(b, ['tone', 'formants', 1, 'freq']) / 1000
     b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    b_fn = get_param(b, ['noise', 'freq_peak']) / 20000
+    b_fn = get_param(b, ['noise', 'freq_peak']) / 10000
     # d
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2
     d_noise = (a_fn - b_fn) ** 2
-    toniness = (a_toniness + b_toniness) / 2
-    d = (a_toniness - b_toniness) ** 2 + d_tone * toniness + d_noise * (1 - toniness)
+    d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
     return d
 
 run_size = pe.audio.run_size()
@@ -122,15 +121,17 @@ while samples < duration:
     pe.audio.run()
     sample = pe.sample_system()
     params = pe.parameterize(*sample)
-    paramses.append(params)
     if transamses:
         d_min = math.inf
+        transams_min = None
         for transams in transamses:
             d = params_distance(params, transams)
             if d < d_min:
-                params = transams
+                transams_min = transams
                 d_min = d
+        params = transams_min
     plotter.add(params)
+    paramses.append(params)
     frame = pe.frames_from_params([params])[0]
     pd.phonetizer.say_frame(frame)
     pd.audio.run()

@@ -41,7 +41,7 @@ class Phonetizer:
             'fricative': True,
             'frames': [frame],
         }
-        self.synthesize(info, 0, 0, 0.7, False)
+        self.synthesize(info, 0, 0, 0.8, False)
 
     def say_code(self, code, continuant_wait=None, speed=1):
         if type(code) == str: code = _Code(code)
