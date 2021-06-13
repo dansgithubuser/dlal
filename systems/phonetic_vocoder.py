@@ -116,6 +116,7 @@ paramses = []
 if args.transcode_params_from:
     with open(args.transcode_params_from) as f:
         transamses = json.loads(f.read())
+    transam_ds = []
 else:
     transamses = None
 
@@ -132,6 +133,7 @@ while samples < duration:
                 transams_min = transams
                 d_min = d
         params = transams_min
+        transam_ds.append(d_min)
     if args.normalize:
         e = sum([
             sum(i ** 2 for i in params['tone']['spectrum']),

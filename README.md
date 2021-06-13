@@ -191,8 +191,6 @@ The `audio` component is the driver component for interactive audio.
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
 		- prove that reduced parameters are good by transcoding intelligibly
-			- need to be able to train more
-				- need to be able to summarize params from long recording (like phonetics, but unlabeled?)
 		- figure how to interpolate reduced params (ie synthesize intelligibly)
 		- find way to quickly figure full params from reduced params (ie do in realtime)
 	- fix up stops
