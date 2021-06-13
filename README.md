@@ -192,8 +192,17 @@ The `audio` component is the driver component for interactive audio.
 	- improve reduced-state vocoder intelligibility
 		- prove that reduced parameters are good by transcoding intelligibly
 			- improve distance metric?
+				- need to also take into account distance from current frame to next
+					- even if we had perfect information on phonetics, we need to encode which actual params are near each other
+						- params that are temporal neighbors have 0 distance
+						- params that are full-near each other are neighbors with distance based on full-distance
+				- or is amplitude just not represented in distance metric?
+					- it isn't
+					- can we normalize amplitude?
+						- try normalizing vocoder
 		- figure how to interpolate reduced params (ie synthesize intelligibly)
-		- find way to quickly figure full params from reduced params
+			- need to be able to summarize params from long recording (like phonetics, but unlabeled)
+		- find way to quickly figure full params from reduced params (ie do in realtime)
 	- fix up stops
 		- for voiced stops, record whispered
 - audiobro

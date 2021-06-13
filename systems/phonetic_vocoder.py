@@ -84,7 +84,7 @@ except:
         def add(self, params): pass
         def show(self): pass
 
-def params_distance(a, b):
+def params_distance(a, b, a_prev):
     # a
     a_tone_amp = get_param(a, ['tone', 'amp'])
     a_noise_amp = get_param(a, ['noise', 'amp'])
@@ -103,7 +103,16 @@ def params_distance(a, b):
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2
     d_noise = (a_fn - b_fn) ** 2
     d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
-    return d
+    # a_prev to b
+    if a_prev != None:
+        e = sum([
+            sum((i - j) ** 2 for i, j in zip(a_prev['tone']['spectrum'], b['tone']['spectrum'])),
+            sum((i - j) ** 2 for i, j in zip(a_prev['noise']['spectrum'], b['noise']['spectrum'])),
+        ])
+    else:
+        e = 0
+    #
+    return d + e / 20
 
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
@@ -125,7 +134,7 @@ while samples < duration:
         d_min = math.inf
         transams_min = None
         for transams in transamses:
-            d = params_distance(params, transams)
+            d = params_distance(params, transams, paramses[-1] if paramses else None)
             if d < d_min:
                 transams_min = transams
                 d_min = d
