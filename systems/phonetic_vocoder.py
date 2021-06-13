@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--save-params-to')
 parser.add_argument('--transcode-params-from')
+parser.add_argument('--normalize', action='store_true')
 args = parser.parse_args()
 
 os.environ['PHONETIC_ENCODER_RECORDING_PATH'] = args.recording_path
@@ -84,7 +85,7 @@ except:
         def add(self, params): pass
         def show(self): pass
 
-def params_distance(a, b, a_prev):
+def params_distance(a, b):
     # a
     a_tone_amp = get_param(a, ['tone', 'amp'])
     a_noise_amp = get_param(a, ['noise', 'amp'])
@@ -103,16 +104,8 @@ def params_distance(a, b, a_prev):
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2
     d_noise = (a_fn - b_fn) ** 2
     d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
-    # a_prev to b
-    if a_prev != None:
-        e = sum([
-            sum((i - j) ** 2 for i, j in zip(a_prev['tone']['spectrum'], b['tone']['spectrum'])),
-            sum((i - j) ** 2 for i, j in zip(a_prev['noise']['spectrum'], b['noise']['spectrum'])),
-        ])
-    else:
-        e = 0
     #
-    return d + e / 20
+    return d
 
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
@@ -134,11 +127,18 @@ while samples < duration:
         d_min = math.inf
         transams_min = None
         for transams in transamses:
-            d = params_distance(params, transams, paramses[-1] if paramses else None)
+            d = params_distance(params, transams)
             if d < d_min:
                 transams_min = transams
                 d_min = d
         params = transams_min
+    if args.normalize:
+        e = sum([
+            sum(i ** 2 for i in params['tone']['spectrum']),
+            sum(i ** 2 for i in params['noise']['spectrum']),
+        ])
+        params['tone']['spectrum'] = [i/math.sqrt(e) for i in params['tone']['spectrum']]
+        params['noise']['spectrum'] = [i/math.sqrt(e) for i in params['noise']['spectrum']]
     plotter.add(params)
     paramses.append(params)
     frame = pe.frames_from_params([params])[0]
