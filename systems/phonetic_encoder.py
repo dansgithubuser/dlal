@@ -38,7 +38,7 @@ BINS_TONE = 64
 BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
-GAIN_LO = 20
+GAIN_LO = 2e3
 GAIN_HI = 1e4
 
 FORMANT_BIN_RANGES = [
@@ -240,10 +240,13 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
     }
 
 def sample_system():
+    spectrum = stft.spectrum()
+    lo = math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
+    hi = math.sqrt(sum(i ** 2 for i in spectrum[6:]))
     return (
-        stft.spectrum(),
-        peak_lo.value() * GAIN_LO,
-        peak_hi.value() * GAIN_HI,
+        spectrum,
+        lo * GAIN_LO,
+        hi * GAIN_HI,
     )
 
 # model
