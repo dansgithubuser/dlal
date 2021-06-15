@@ -148,7 +148,14 @@ while samples < duration:
     pd.audio.run()
     pd.tape.to_file_i16le(file)
     samples += run_size
-    print(f'{samples / duration * 100:.2f} %')
+    t = samples / 44100
+    f1 = get_param(params, ['tone', 'formants', 1, 'freq'])
+    f2 = get_param(params, ['tone', 'formants', 2, 'freq'])
+    fn = get_param(params, ['noise', 'freq_peak'])
+    tone_amp = get_param(params, ['tone', 'amp'])
+    noise_amp = get_param(params, ['noise', 'amp'])
+    toniness = tone_amp / (tone_amp + noise_amp)
+    print(f'''t: {t:.3f} s, f1: {f1:.0f} Hz, f2: {f2:.0f} Hz, fn: {fn:.0f} Hz, toniness: {toniness:.3f}''')
 
 if args.save_params_to:
     with open(args.save_params_to, 'w') as f:
