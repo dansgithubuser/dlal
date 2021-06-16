@@ -127,10 +127,8 @@ def frames_from_params(params, stop=False):
                 },
                 'noise': {
                     'amp': stats(params, ['noise', 'amp']),
-                    'freq_lo': stats(params, ['noise', 'freq_lo']),
-                    'freq_peak': stats(params, ['noise', 'freq_peak']),
-                    'amp_peak': stats(params, ['noise', 'amp_peak']),
-                    'freq_hi': stats(params, ['noise', 'freq_hi']),
+                    'freq_c': stats(params, ['noise', 'freq_c']),
+                    'hi': stats(params, ['noise', 'hi']),
                     'spectrum': [
                         stats(params, ['noise', 'spectrum', i])
                         for i in range(BINS_NOISE)
@@ -157,10 +155,8 @@ def frames_from_params(params, stop=False):
                 },
                 'noise': {
                     'amp': stats([k], ['noise', 'amp']),
-                    'freq_lo': stats([k], ['noise', 'freq_lo']),
-                    'freq_peak': stats([k], ['noise', 'freq_peak']),
-                    'amp_peak': stats([k], ['noise', 'amp_peak']),
-                    'freq_hi': stats([k], ['noise', 'freq_hi']),
+                    'freq_c': stats([k], ['noise', 'freq_c']),
+                    'hi': stats([k], ['noise', 'hi']),
                     'spectrum': [
                         stats([k], ['noise', 'spectrum', i])
                         for i in range(BINS_NOISE)
@@ -206,17 +202,15 @@ def find_tone(spectrum, amp_tone, phonetic=None):
     }
 
 def find_noise(spectrum, amp_noise, phonetic=None):
-    thresh = sorted(spectrum)[len(spectrum) * 3 // 4]
+    f = 0
+    s = 0
+    hi = 0
     for i, v in enumerate(spectrum):
-        if v >= thresh:
-            lo = i
-            break
-    for i, v in reversed(list(enumerate(spectrum))):
-        if v >= thresh:
-            hi = i
-            break
-    amp_peak = max(spectrum[lo:hi+1])
-    peak = spectrum.index(amp_peak)
+        freq = i / C
+        if freq < 2000: continue
+        f += freq * v
+        s += v
+        if freq > 12000: hi += v ** 2
     if not phonetic or phonetic in FRICATIVES:
         spectrum = [
             spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
@@ -226,10 +220,8 @@ def find_noise(spectrum, amp_noise, phonetic=None):
         spectrum = [0] * BINS_NOISE
     return {
         'amp': amp_noise,
-        'freq_lo': lo / C,
-        'freq_peak': peak / C,
-        'amp_peak': amp_peak * amp_noise,
-        'freq_hi': hi / C,
+        'freq_c': f / s if s else 0,
+        'hi': hi,
         'spectrum': spectrum,
     }
 

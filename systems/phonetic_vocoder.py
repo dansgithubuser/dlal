@@ -29,7 +29,8 @@ try:
         return (
             get_param(params, ['tone', 'formants', 1, 'freq']) / 1000,
             (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 1000,
-            get_param(params, ['noise', 'freq_peak']) / 10000,
+            get_param(params, ['noise', 'freq_c']) / 10000,
+            get_param(params, ['noise', 'hi']) * 5000,
         )
 
     def features_to_xy(features):
@@ -42,7 +43,7 @@ try:
         return x, y
 
     def features_to_rgb(features):
-        r = 0.25 + features[0]
+        r = 0.05 + features[0] / 2 + features[3] / 2
         g = 0.25 + features[1]
         b = 0.25 + min(features[2], 0.75)
         return r, g, b
@@ -92,17 +93,19 @@ def params_distance(a, b):
     a_toniness = a_tone_amp / (a_tone_amp + a_noise_amp)
     a_f1 = get_param(a, ['tone', 'formants', 1, 'freq']) / 1000
     a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    a_fn = get_param(a, ['noise', 'freq_peak']) / 10000
+    a_fn = get_param(a, ['noise', 'freq_c']) / 10000
+    a_hi = get_param(a, ['noise', 'hi']) * 5000
     # b
     b_tone_amp = get_param(b, ['tone', 'amp'])
     b_noise_amp = get_param(b, ['noise', 'amp'])
     b_toniness = b_tone_amp / (b_tone_amp + b_noise_amp)
     b_f1 = get_param(b, ['tone', 'formants', 1, 'freq']) / 1000
     b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    b_fn = get_param(b, ['noise', 'freq_peak']) / 10000
+    b_fn = get_param(b, ['noise', 'freq_c']) / 10000
+    b_hi = get_param(b, ['noise', 'hi']) * 5000
     # d
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2
-    d_noise = (a_fn - b_fn) ** 2
+    d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
     d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
     #
     return d
@@ -151,11 +154,12 @@ while samples < duration:
     t = samples / 44100
     f1 = get_param(params, ['tone', 'formants', 1, 'freq'])
     f2 = get_param(params, ['tone', 'formants', 2, 'freq'])
-    fn = get_param(params, ['noise', 'freq_peak'])
+    fc = get_param(params, ['noise', 'freq_c'])
+    hi = get_param(params, ['noise', 'hi'])
     tone_amp = get_param(params, ['tone', 'amp'])
     noise_amp = get_param(params, ['noise', 'amp'])
     toniness = tone_amp / (tone_amp + noise_amp)
-    print(f'''t: {t:.3f} s, f1: {f1:.0f} Hz, f2: {f2:.0f} Hz, fn: {fn:.0f} Hz, toniness: {toniness:.3f}''')
+    print(f'''t: {t:.3f} s, f1: {f1:.0f} Hz, f2: {f2:.0f} Hz, fc: {fc:.0f} Hz, hi: {hi:.2}, toniness: {toniness:.3f}''')
 
 if args.save_params_to:
     with open(args.save_params_to, 'w') as f:
