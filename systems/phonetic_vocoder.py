@@ -93,6 +93,7 @@ def params_distance(a, b):
     a_toniness = a_tone_amp / (a_tone_amp + a_noise_amp)
     a_f1 = get_param(a, ['tone', 'formants', 1, 'freq']) / 1000
     a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
+    a_f2_amp = get_param(a, ['tone', 'formants', 2, 'amp']) / get_param(a, ['tone', 'formants', 0, 'amp'])
     a_fn = get_param(a, ['noise', 'freq_c']) / 10000
     a_hi = get_param(a, ['noise', 'hi']) * 5000
     # b
@@ -101,10 +102,11 @@ def params_distance(a, b):
     b_toniness = b_tone_amp / (b_tone_amp + b_noise_amp)
     b_f1 = get_param(b, ['tone', 'formants', 1, 'freq']) / 1000
     b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
+    b_f2_amp = get_param(b, ['tone', 'formants', 2, 'amp']) / get_param(b, ['tone', 'formants', 0, 'amp'])
     b_fn = get_param(b, ['noise', 'freq_c']) / 10000
     b_hi = get_param(b, ['noise', 'hi']) * 5000
     # d
-    d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2
+    d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2
     d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
     d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
     #
