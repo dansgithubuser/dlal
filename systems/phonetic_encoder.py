@@ -170,8 +170,8 @@ def frames_from_params(params, stop=False):
 def find_formant(spectrum, bin_i, bin_f, amp_tone):
     spread = 2
     window = spectrum[bin_i:bin_f]
-    amp_peak = max(window)
-    bin_peak = window.index(amp_peak) + bin_i
+    e_window = sum(i ** 2 for i in window)
+    bin_peak = window.index(max(window)) + bin_i
     bin_formant = bin_peak
     if bin_peak >= spread and bin_peak < len(spectrum) - spread:
         bins = [
@@ -183,7 +183,7 @@ def find_formant(spectrum, bin_i, bin_f, amp_tone):
             bin_formant = sum(i * v ** 2 for i, v in bins) / s
     return {
         'freq': bin_formant / C,
-        'amp': amp_peak * amp_tone,
+        'amp': math.sqrt(e_window) * amp_tone,
     }
 
 def find_tone(spectrum, amp_tone, phonetic=None):
