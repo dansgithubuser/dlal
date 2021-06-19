@@ -129,6 +129,7 @@ while samples < duration:
     pe.audio.run()
     sample = pe.sample_system()
     params = pe.parameterize(*sample)
+    extra_info = ''
     if transamses:
         d_min = math.inf
         transams_min = None
@@ -139,6 +140,7 @@ while samples < duration:
                 d_min = d
         params = transams_min
         transam_ds.append(d_min)
+        extra_info += f'd: {d_min:9>.3}'
     if args.normalize:
         e = sum([
             sum(i ** 2 for i in params['tone']['spectrum']),
@@ -161,7 +163,15 @@ while samples < duration:
     tone_amp = get_param(params, ['tone', 'amp'])
     noise_amp = get_param(params, ['noise', 'amp'])
     toniness = tone_amp / (tone_amp + noise_amp)
-    print(f'''t: {t:.3f} s, f1: {f1:.0f} Hz, f2: {f2:.0f} Hz, fc: {fc:.0f} Hz, hi: {hi:.2}, toniness: {toniness:.3f}''')
+    print(
+        f't: {t:>6.3f} s, '
+        f'f1: {f1:>4.0f} Hz, '
+        f'f2: {f2:>4.0f} Hz, '
+        f'fc: {fc:>5.0f} Hz, '
+        f'hi: {hi:>8.2}, '
+        f'toniness: {toniness:>5.3f}, '
+        f'{extra_info}'
+    )
 
 if args.save_params_to:
     with open(args.save_params_to, 'w') as f:
