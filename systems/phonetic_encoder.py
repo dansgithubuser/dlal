@@ -38,8 +38,8 @@ BINS_TONE = 64
 BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
-GAIN_LO = 2e3
-GAIN_HI = 1e4
+GAIN_LO = 1e2
+GAIN_HI = 5e2
 
 FORMANT_BIN_RANGES = [
     [math.floor(i * C) for i in [0, 200]],
