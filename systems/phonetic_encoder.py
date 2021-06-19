@@ -205,12 +205,14 @@ def find_noise(spectrum, amp_noise, phonetic=None):
     f = 0
     s = 0
     hi = 0
+    s2 = 0
     for i, v in enumerate(spectrum):
         freq = i / C
         if freq < 2000: continue
         f += freq * v
         s += v
         if freq > 12000: hi += v ** 2
+        s2 += v ** 2
     if not phonetic or phonetic in FRICATIVES:
         spectrum = [
             spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
@@ -221,7 +223,7 @@ def find_noise(spectrum, amp_noise, phonetic=None):
     return {
         'amp': amp_noise,
         'freq_c': f / s if s else 0,
-        'hi': hi,
+        'hi': hi / s2 if s2 else 0,
         'spectrum': spectrum,
     }
 

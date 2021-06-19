@@ -30,7 +30,7 @@ try:
             get_param(params, ['tone', 'formants', 1, 'freq']) / 1000,
             (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 1000,
             get_param(params, ['noise', 'freq_c']) / 10000,
-            get_param(params, ['noise', 'hi']) * 5000,
+            get_param(params, ['noise', 'hi']),
         )
 
     def features_to_xy(features):
@@ -95,7 +95,7 @@ def params_distance(a, b):
     a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
     a_f2_amp = get_param(a, ['tone', 'formants', 2, 'amp']) / get_param(a, ['tone', 'formants', 0, 'amp'])
     a_fn = get_param(a, ['noise', 'freq_c']) / 10000
-    a_hi = get_param(a, ['noise', 'hi']) * 5000
+    a_hi = get_param(a, ['noise', 'hi'])
     # b
     b_tone_amp = get_param(b, ['tone', 'amp'])
     b_noise_amp = get_param(b, ['noise', 'amp'])
@@ -104,7 +104,7 @@ def params_distance(a, b):
     b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
     b_f2_amp = get_param(b, ['tone', 'formants', 2, 'amp']) / get_param(b, ['tone', 'formants', 0, 'amp'])
     b_fn = get_param(b, ['noise', 'freq_c']) / 10000
-    b_hi = get_param(b, ['noise', 'hi']) * 5000
+    b_hi = get_param(b, ['noise', 'hi'])
     # d
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2
     d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
@@ -164,11 +164,11 @@ while samples < duration:
     noise_amp = get_param(params, ['noise', 'amp'])
     toniness = tone_amp / (tone_amp + noise_amp)
     print(
-        f't: {t:>6.3f} s, '
-        f'f1: {f1:>4.0f} Hz, '
-        f'f2: {f2:>4.0f} Hz, '
+        f't: {t:>5.3f} s, '
+        f'f1: {f1:>5.0f} Hz, '
+        f'f2: {f2:>5.0f} Hz, '
         f'fc: {fc:>5.0f} Hz, '
-        f'hi: {hi:>8.2}, '
+        f'hi: {hi:>5.3f}, '
         f'toniness: {toniness:>5.3f}, '
         f'{extra_info}'
     )
