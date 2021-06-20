@@ -7,7 +7,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
 parser.add_argument('--save-params-to')
 parser.add_argument('--transcode-params-from')
-parser.add_argument('--normalize', action='store_true')
 args = parser.parse_args()
 
 os.environ['PHONETIC_ENCODER_RECORDING_PATH'] = args.recording_path
@@ -143,13 +142,6 @@ while samples < duration:
         params = transams_min
         transam_ds.append(d_min)
         extra_info += f'd: {d_min:9>.3}'
-    if args.normalize:
-        e = sum([
-            sum(i ** 2 for i in params['tone']['spectrum']),
-            sum(i ** 2 for i in params['noise']['spectrum']),
-        ])
-        params['tone']['spectrum'] = [i/math.sqrt(e) for i in params['tone']['spectrum']]
-        params['noise']['spectrum'] = [i/math.sqrt(e) for i in params['noise']['spectrum']]
     plotter.add(params)
     paramses.append(params)
     frame = pe.frames_from_params([params])[0]

@@ -38,9 +38,6 @@ BINS_TONE = 64
 BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
 
-GAIN_LO = 1e2
-GAIN_HI = 5e2
-
 FORMANT_BIN_RANGES = [
     [math.floor(i * C) for i in [0, 200]],
     [math.floor(i * C) for i in [200, 1000]],
@@ -213,35 +210,37 @@ def find_noise(spectrum, amp_noise, phonetic=None):
         s += v
         if freq > 12000: hi += v ** 2
         s2 += v ** 2
+    spectrum_noise = [0] * BINS_NOISE
     if not phonetic or phonetic in FRICATIVES:
-        spectrum = [
-            spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
-            for i in range(BINS_NOISE)
-        ]
-    else:
-        spectrum = [0] * BINS_NOISE
+        for i, amp in enumerate(spectrum):
+            spectrum_noise[math.floor(i / len(spectrum) * BINS_NOISE)] += amp * amp_noise
     return {
         'amp': amp_noise,
         'freq_c': f / s if s else 0,
         'hi': hi / s2 if s2 else 0,
-        'spectrum': spectrum,
+        'spectrum': spectrum_noise,
     }
 
 def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
+    tone = find_tone(spectrum, amp_tone, phonetic)
+    noise = find_noise(spectrum, amp_noise, phonetic)
+    f = math.sqrt(sum([
+        sum(i ** 2 for i in tone['spectrum']),
+        sum(i ** 2 for i in noise['spectrum']),
+    ]))
+    if f:
+        tone['spectrum'] = [i/f for i in tone['spectrum']]
+        noise['spectrum'] = [i/f for i in noise['spectrum']]
     return {
-        'tone': find_tone(spectrum, amp_tone, phonetic),
-        'noise': find_noise(spectrum, amp_noise, phonetic),
+        'tone': tone,
+        'noise': noise,
     }
 
 def sample_system():
     spectrum = stft.spectrum()
-    lo = math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
-    hi = math.sqrt(sum(i ** 2 for i in spectrum[6:]))
-    return (
-        spectrum,
-        lo * GAIN_LO,
-        hi * GAIN_HI,
-    )
+    amp_tone = 1e2 * math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
+    amp_noise = 1e2 * math.sqrt(sum(i ** 2 for i in spectrum[6:]))
+    return (spectrum, amp_tone, amp_noise)
 
 # model
 class Model:
