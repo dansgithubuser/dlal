@@ -108,8 +108,8 @@ def frames_from_params(params, stop=False):
     if not stop:
         return [
             {
+                'toniness': stats(params, ['toniness']),
                 'tone': {
-                    'amp': stats(params, ['tone', 'amp']),
                     'formants': [
                         {
                             'freq': stats(params, ['tone', 'formants', i, 'freq']),
@@ -123,7 +123,6 @@ def frames_from_params(params, stop=False):
                     ],
                 },
                 'noise': {
-                    'amp': stats(params, ['noise', 'amp']),
                     'freq_c': stats(params, ['noise', 'freq_c']),
                     'hi': stats(params, ['noise', 'hi']),
                     'spectrum': [
@@ -136,8 +135,8 @@ def frames_from_params(params, stop=False):
     else:
         return [
             {
+                'toniness': stats([k], ['toniness']),
                 'tone': {
-                    'amp': stats([k], ['tone', 'amp']),
                     'formants': [
                         {
                             'freq': stats([k], ['tone', 'formants', i, 'freq']),
@@ -151,7 +150,6 @@ def frames_from_params(params, stop=False):
                     ],
                 },
                 'noise': {
-                    'amp': stats([k], ['noise', 'amp']),
                     'freq_c': stats([k], ['noise', 'freq_c']),
                     'hi': stats([k], ['noise', 'hi']),
                     'spectrum': [
@@ -188,12 +186,15 @@ def find_tone(spectrum, amp_tone, phonetic=None):
         find_formant(spectrum, *i, amp_tone)
         for i in FORMANT_BIN_RANGES
     ]
+    f = max(i['amp'] for i in formants)
+    if f:
+        for i in formants:
+            i['amp'] /= f
     if not phonetic or phonetic in VOICED:
         spectrum = [i * amp_tone for i in spectrum[:BINS_TONE]]
     else:
         spectrum = [0] * BINS_TONE
     return {
-        'amp': amp_tone,
         'formants': formants,
         'spectrum': spectrum,
     }
@@ -215,7 +216,6 @@ def find_noise(spectrum, amp_noise, phonetic=None):
         for i, amp in enumerate(spectrum):
             spectrum_noise[math.floor(i / len(spectrum) * BINS_NOISE)] += amp * amp_noise
     return {
-        'amp': amp_noise,
         'freq_c': f / s if s else 0,
         'hi': hi / s2 if s2 else 0,
         'spectrum': spectrum_noise,
@@ -232,6 +232,7 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
         tone['spectrum'] = [i/f for i in tone['spectrum']]
         noise['spectrum'] = [i/f for i in noise['spectrum']]
     return {
+        'toniness': amp_tone / (amp_tone + amp_noise),
         'tone': tone,
         'noise': noise,
     }
@@ -289,6 +290,7 @@ class Model:
             'voiced': False,
             'fricative': False,
             'frames': frames_from_params([{
+                'toniness': 0,
                 'tone': find_tone([0] * BINS_STFT, 0),
                 'noise': find_noise([0] * BINS_STFT, 0),
             }]),

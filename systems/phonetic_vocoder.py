@@ -87,23 +87,19 @@ except:
 
 def params_distance(a, b):
     # a
-    a_tone_amp = get_param(a, ['tone', 'amp'])
-    a_noise_amp = get_param(a, ['noise', 'amp'])
-    a_toniness = a_tone_amp / (a_tone_amp + a_noise_amp)
+    a_toniness = get_param(a, ['toniness'])
     a_f1 = get_param(a, ['tone', 'formants', 1, 'freq']) / 1000
     a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    a_f2_amp = get_param(a, ['tone', 'formants', 2, 'amp']) / get_param(a, ['tone', 'formants', 0, 'amp'])
-    a_f3_amp = get_param(a, ['tone', 'formants', 3, 'amp']) / get_param(a, ['tone', 'formants', 0, 'amp'])
+    a_f2_amp = get_param(a, ['tone', 'formants', 2, 'amp'])
+    a_f3_amp = get_param(a, ['tone', 'formants', 3, 'amp'])
     a_fn = get_param(a, ['noise', 'freq_c']) / 10000
     a_hi = get_param(a, ['noise', 'hi']) * 20
     # b
-    b_tone_amp = get_param(b, ['tone', 'amp'])
-    b_noise_amp = get_param(b, ['noise', 'amp'])
-    b_toniness = b_tone_amp / (b_tone_amp + b_noise_amp)
+    b_toniness = get_param(b, ['toniness'])
     b_f1 = get_param(b, ['tone', 'formants', 1, 'freq']) / 1000
     b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    b_f2_amp = get_param(b, ['tone', 'formants', 2, 'amp']) / get_param(b, ['tone', 'formants', 0, 'amp'])
-    b_f3_amp = get_param(b, ['tone', 'formants', 3, 'amp']) / get_param(b, ['tone', 'formants', 0, 'amp'])
+    b_f2_amp = get_param(b, ['tone', 'formants', 2, 'amp'])
+    b_f3_amp = get_param(b, ['tone', 'formants', 3, 'amp'])
     b_fn = get_param(b, ['noise', 'freq_c']) / 10000
     b_hi = get_param(b, ['noise', 'hi']) * 20
     # d
@@ -155,9 +151,7 @@ while samples < duration:
     f3 = get_param(params, ['tone', 'formants', 3, 'freq'])
     fc = get_param(params, ['noise', 'freq_c'])
     hi = get_param(params, ['noise', 'hi'])
-    tone_amp = get_param(params, ['tone', 'amp'])
-    noise_amp = get_param(params, ['noise', 'amp'])
-    toniness = tone_amp / (tone_amp + noise_amp)
+    toniness = get_param(params, ['toniness'])
     print(
         f't: {t:>5.3f} s, '
         f'f1: {f1:>5.0f} Hz, '
