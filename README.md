@@ -190,8 +190,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
-		- prove that reduced parameters are good by transcoding intelligibly
-			- stft hanning window
 		- figure how to interpolate reduced params (ie synthesize intelligibly)
 		- find way to quickly figure full params from reduced params (ie do in realtime)
 	- fix up stops

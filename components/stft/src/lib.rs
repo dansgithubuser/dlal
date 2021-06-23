@@ -2,6 +2,7 @@ use dlal_component_base::{component, err, json, serde_json, Body, CmdResult, Vie
 
 use rustfft::{num_complex::Complex, Fft, FftPlanner};
 
+use std::f32::consts::PI;
 use std::sync::Arc;
 
 component!(
@@ -64,8 +65,9 @@ impl ComponentTrait for Component {
             self.input[window_size - self.run_size + i] = self.audio[i];
         }
         for i in 0..window_size {
+            let w = 0.5 - 0.5 * (2.0 * PI * i as f32 / (window_size as f32 - 1.0)).cos();
             self.buffer[i] = Complex {
-                re: self.input[i],
+                re: self.input[i] * w,
                 im: 0.0,
             };
         }
