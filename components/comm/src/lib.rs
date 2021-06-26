@@ -44,21 +44,27 @@ component!(
         "run_size",
         "uni",
         {"name": "field_helpers", "fields": ["last_error"], "kinds": ["r"]},
+        {"name": "field_helpers", "fields": ["pause"], "kinds": ["rw"]},
     ],
     {
         queues: Queues,
         wait: usize,
+        pause: bool,
         last_error: String,
     },
     {
         "queue": {"args": ["component", "command", "audio", "midi", "run", "body", "timeout_ms", "detach"]},
         "wait": {"args": ["samples"]},
+        "pause": {"args": ["enable"]},
         "resize": {"args": ["size"]},
     },
 );
 
 impl ComponentTrait for Component {
     fn run(&mut self) {
+        if self.pause {
+            return;
+        }
         'outer: loop {
             if self.wait > self.run_size {
                 self.wait -= self.run_size;

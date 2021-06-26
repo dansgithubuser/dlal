@@ -68,11 +68,11 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | __init__  |
 +===========+
 ↑
-+-+-------------+----------+
-| |             |          |
-| +===========+ +========+ +=========+
-| | subsystem | | _sound | | _speech |
-| +===========+ +========+ +=========+
++-+
+| |
+| +===========+
+| | subsystem |
+| +===========+
 | ↑
 +-+
 |
@@ -102,6 +102,12 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 
 ↑
 ↑# common resources
+|
++-+----------+
+| |          |
+| +========+ +=========+
+| | _sound | | _speech |
+| +========+ +=========+
 |
 +------------+
 |            |

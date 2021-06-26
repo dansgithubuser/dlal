@@ -18,18 +18,12 @@ import phonetic_decoder as pd
 try:
     import dansplotcore as dpc
 
-    def get_param(params, ks):
-        x = params
-        for k in ks: x = x[k]
-        if type(x) == list: x = x[0]
-        return x
-
     def get_features(params):
         return (
-            get_param(params, ['tone', 'formants', 1, 'freq']) / 1000,
-            (get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 1000,
-            get_param(params, ['noise', 'freq_c']) / 10000,
-            get_param(params, ['noise', 'hi']),
+            dlal.speech.get_param(params, ['tone', 'formants', 1, 'freq']) / 1000,
+            (dlal.speech.get_param(params, ['tone', 'formants', 2, 'freq']) - 1000) / 1000,
+            dlal.speech.get_param(params, ['noise', 'freq_c']) / 10000,
+            dlal.speech.get_param(params, ['noise', 'hi']),
         )
 
     def features_to_xy(features):
@@ -85,30 +79,6 @@ except:
         def add(self, params): pass
         def show(self): pass
 
-def params_distance(a, b):
-    # a
-    a_toniness = get_param(a, ['toniness'])
-    a_f1 = get_param(a, ['tone', 'formants', 1, 'freq']) / 1000
-    a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    a_f2_amp = get_param(a, ['tone', 'formants', 2, 'amp'])
-    a_f3_amp = get_param(a, ['tone', 'formants', 3, 'amp'])
-    a_fn = get_param(a, ['noise', 'freq_c']) / 10000
-    a_hi = get_param(a, ['noise', 'hi']) * 20
-    # b
-    b_toniness = get_param(b, ['toniness'])
-    b_f1 = get_param(b, ['tone', 'formants', 1, 'freq']) / 1000
-    b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
-    b_f2_amp = get_param(b, ['tone', 'formants', 2, 'amp'])
-    b_f3_amp = get_param(b, ['tone', 'formants', 3, 'amp'])
-    b_fn = get_param(b, ['noise', 'freq_c']) / 10000
-    b_hi = get_param(b, ['noise', 'hi']) * 20
-    # d
-    d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2 + (a_f3_amp - b_f3_amp) ** 2
-    d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
-    d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
-    #
-    return d
-
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
 samples = 0
@@ -131,7 +101,7 @@ while samples < duration:
         d_min = math.inf
         transams_min = None
         for transams in transamses:
-            d = params_distance(params, transams)
+            d = dlal.speech.params_distance(params, transams)
             if d < d_min:
                 transams_min = transams
                 d_min = d
@@ -141,17 +111,21 @@ while samples < duration:
     plotter.add(params)
     paramses.append(params)
     frame = pe.frames_from_params([params])[0]
-    pd.phonetizer.say_frame(frame)
+    pd.synth.synthesize(
+        [i[0] for i in frame['tone']['spectrum']],
+        [i[0] for i in frame['noise']['spectrum']],
+        0,
+    )
     pd.audio.run()
     pd.tape.to_file_i16le(file)
     samples += run_size
     t = samples / 44100
-    f1 = get_param(params, ['tone', 'formants', 1, 'freq'])
-    f2 = get_param(params, ['tone', 'formants', 2, 'freq'])
-    f3 = get_param(params, ['tone', 'formants', 3, 'freq'])
-    fc = get_param(params, ['noise', 'freq_c'])
-    hi = get_param(params, ['noise', 'hi'])
-    toniness = get_param(params, ['toniness'])
+    f1 = dlal.speech.get_param(params, ['tone', 'formants', 1, 'freq'])
+    f2 = dlal.speech.get_param(params, ['tone', 'formants', 2, 'freq'])
+    f3 = dlal.speech.get_param(params, ['tone', 'formants', 3, 'freq'])
+    fc = dlal.speech.get_param(params, ['noise', 'freq_c'])
+    hi = dlal.speech.get_param(params, ['noise', 'hi'])
+    toniness = dlal.speech.get_param(params, ['toniness'])
     print(
         f't: {t:>5.3f} s, '
         f'f1: {f1:>5.0f} Hz, '

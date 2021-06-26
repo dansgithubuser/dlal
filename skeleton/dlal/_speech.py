@@ -1,4 +1,5 @@
 import json as _json
+import math as _math
 import re as _re
 
 class _Code:
@@ -14,15 +15,14 @@ class Phonetizer:
         continuant_wait=44100//8,
         grace = 44100//100,
         model_path='assets/phonetics/model.json',
+        transamses_path='assets/phonetics/transamses.json',
         sample_rate=44100,
     ):
         '''
         `synthesize` is a function that takes:
-            - info (full phonetic information)
-            - frame_i (frame number to synthesize)
+            - tone_spectrum (64 bins from 0 to 5512.5)
+            - noise_spectrum (64 bins from 0 to 22050)
             - wait (number of samples to synthesize for)
-            - smooth (how smoothly to interpolate from previous parameters)
-            - warp_formants (`True` to ignore smoothing for formants, default is `False`)
         and synthesizes the corresponding sound.
 
         `grace` is how much time is allowed between notes without synthesizing a silence
@@ -34,21 +34,31 @@ class Phonetizer:
             self.model = _json.loads(file.read())
         self.sample_rate = sample_rate
         self.phonetic = '0'
+        with open(transamses_path) as f:
+            self.transamses = _json.loads(f.read())
+        self._smoother = Smoother()
 
-    def say_frame(self, frame):
-        info = {
-            'voiced': True,
-            'fricative': True,
-            'frames': [frame],
-        }
-        self.synthesize(info, 0, 0, 0.8, False)
+    def say_params(self, info, frame_i, wait, smooth):
+        for i in range(0, wait, 64):
+            params = self._smoother.smooth(info['frames'][frame_i], smooth)
+            d_min = _math.inf
+            transams_min = None
+            for transams in self.transamses:
+                d = params_distance(params, transams)
+                if d < d_min:
+                    transams_min = transams
+                    d_min = d
+            self.synthesize(
+                transams_min['tone']['spectrum'],
+                transams_min['noise']['spectrum'],
+                64,
+            )
 
     def say_code(self, code, continuant_wait=None, speed=1):
         if type(code) == str: code = _Code(code)
         if continuant_wait == None:
             continuant_wait = self.continuant_wait
         info = self.model[code.phonetic]
-        was_unvoiced = not self.model[self.phonetic]['voiced']
         if code.glide:
             smooth = 0.9
         else:
@@ -63,7 +73,7 @@ class Phonetizer:
             wait /= speed
             wait = int(wait)
             total_wait += wait
-            self.synthesize(info=info, frame_i=i, wait=wait, smooth=smooth, warp_formants=was_unvoiced)
+            self.say_params(info, i, wait, smooth)
         self.phonetic = code.phonetic
         return total_wait
 
@@ -160,3 +170,92 @@ class Phonetizer:
             _Code(i.translate({ord('['): None, ord(']'): None}))
             for i in _re.findall(f'{not_brackets}|\[{not_brackets}+\]', code_string)
         ]
+
+def get_param(params, ks):
+    x = params
+    for k in ks: x = x[k]
+    if type(x) == list: x = x[0]
+    return x
+
+def params_distance(a, b):
+    # a
+    a_toniness = get_param(a, ['toniness'])
+    a_f1 = get_param(a, ['tone', 'formants', 1, 'freq']) / 1000
+    a_f2 = (get_param(a, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
+    a_f2_amp = get_param(a, ['tone', 'formants', 2, 'amp'])
+    a_f3_amp = get_param(a, ['tone', 'formants', 3, 'amp'])
+    a_fn = get_param(a, ['noise', 'freq_c']) / 10000
+    a_hi = get_param(a, ['noise', 'hi']) * 20
+    # b
+    b_toniness = get_param(b, ['toniness'])
+    b_f1 = get_param(b, ['tone', 'formants', 1, 'freq']) / 1000
+    b_f2 = (get_param(b, ['tone', 'formants', 2, 'freq']) - 1000) / 1000
+    b_f2_amp = get_param(b, ['tone', 'formants', 2, 'amp'])
+    b_f3_amp = get_param(b, ['tone', 'formants', 3, 'amp'])
+    b_fn = get_param(b, ['noise', 'freq_c']) / 10000
+    b_hi = get_param(b, ['noise', 'hi']) * 20
+    # d
+    d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2 + (a_f3_amp - b_f3_amp) ** 2
+    d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
+    d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
+    #
+    return d
+
+class Smoother:
+    def __init__(self):
+        self.fresh = True
+
+    def smooth(self, frame, value):
+        if self.fresh:
+            self.fresh = False
+            self.toniness = get_param(frame, ['toniness'])
+            self.f1_freq = get_param(frame, ['tone', 'formants', 1, 'freq'])
+            self.f2_freq = get_param(frame, ['tone', 'formants', 2, 'freq'])
+            self.f2_amp = get_param(frame, ['tone', 'formants', 2, 'amp'])
+            self.f3_amp = get_param(frame, ['tone', 'formants', 3, 'amp'])
+            self.fn = get_param(frame, ['noise', 'freq_c'])
+            self.hi = get_param(frame, ['noise', 'hi'])
+            self.e_toniness = self.toniness
+            self.e_f1_freq = self.f1_freq
+            self.e_f2_freq = self.f2_freq
+            self.e_f2_amp = self.f2_amp
+            self.e_f3_amp = self.f3_amp
+            self.e_fn = self.fn
+            self.e_hi = self.hi
+        else:
+            self.e_toniness = value * self.e_toniness + (1 - value) * get_param(frame, ['toniness'])
+            self.e_f1_freq = value * self.e_f1_freq + (1 - value) * get_param(frame, ['tone', 'formants', 1, 'freq'])
+            self.e_f2_freq = value * self.e_f2_freq + (1 - value) * get_param(frame, ['tone', 'formants', 2, 'freq'])
+            self.e_f2_amp = value * self.e_f2_amp + (1 - value) * get_param(frame, ['tone', 'formants', 2, 'amp'])
+            self.e_f3_amp = value * self.e_f3_amp + (1 - value) * get_param(frame, ['tone', 'formants', 3, 'amp'])
+            self.e_fn = value * self.e_fn + (1 - value) * get_param(frame, ['noise', 'freq_c'])
+            self.e_hi = value * self.e_hi + (1 - value) * get_param(frame, ['noise', 'hi'])
+            self.toniness = value * self.toniness + (1 - value) * self.e_toniness
+            self.f1_freq = value * self.f1_freq + (1 - value) * self.e_f1_freq
+            self.f2_freq = value * self.f2_freq + (1 - value) * self.e_f2_freq
+            self.f2_amp = value * self.f2_amp + (1 - value) * self.e_f2_amp
+            self.f3_amp = value * self.f3_amp + (1 - value) * self.e_f3_amp
+            self.fn = value * self.fn + (1 - value) * self.e_fn
+            self.hi = value * self.hi + (1 - value) * self.e_hi
+        return {
+            'toniness': self.toniness,
+            'tone': {
+                'formants': [
+                    None,
+                    {
+                        'freq': self.f1_freq,
+                    },
+                    {
+                        'freq': self.f2_freq,
+                        'amp': self.f2_amp,
+                    },
+                    {
+                        'amp': self.f3_amp,
+                    },
+                ],
+            },
+            'noise': {
+                'freq_c': self.fn,
+                'hi': self.hi,
+            },
+        }
