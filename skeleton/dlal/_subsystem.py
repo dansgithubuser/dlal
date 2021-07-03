@@ -97,7 +97,7 @@ class SpeechSynth(Subsystem):
         Subsystem.init(self,
             {
                 'comm': ('comm', [1 << 12]),
-                'tone': 'sinbank',
+                'tone': ('sinbank', [sample_rate / (8 * 64)]),
                 'noise': 'noisebank',
                 'mul': ('mul', [1]),
                 'buf_tone': 'buf',
