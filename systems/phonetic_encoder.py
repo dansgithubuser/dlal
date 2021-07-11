@@ -57,6 +57,7 @@ VOICED = [
 ]
 FRICATIVES = [
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
 STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',

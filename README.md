@@ -197,9 +197,13 @@ The `audio` component is the driver component for interactive audio.
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
 		- figure how to interpolate reduced params (ie synthesize intelligibly)
+			- train incrementally
+			- fills in space between what phonetic encoder finds
+			- need a way to merge reduced/full mappings
+			- what's the full space of reduced params
 		- find way to quickly figure full params from reduced params (ie do in realtime)
-	- fix up stops
-		- for voiced stops, record whispered
+	- move from systems into skeleton
+		- another pass to tigthen terminology
 - audiobro
 	- track 1
 		- bass slide down in B section
