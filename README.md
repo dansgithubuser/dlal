@@ -200,7 +200,6 @@ The `audio` component is the driver component for interactive audio.
 			- train incrementally
 			- fills in space between what phonetic encoder finds
 			- need a way to merge reduced/full mappings
-			- what's the full space of reduced params
 		- find way to quickly figure full params from reduced params (ie do in realtime)
 	- move from systems into skeleton
 		- another pass to tigthen terminology

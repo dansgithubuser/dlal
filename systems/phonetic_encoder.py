@@ -232,8 +232,13 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
     if f:
         tone['spectrum'] = [i/f for i in tone['spectrum']]
         noise['spectrum'] = [i/f for i in noise['spectrum']]
+    amp = amp_tone + amp_noise
+    if amp:
+        toniness = amp_tone / amp
+    else:
+        toniness = 0
     return {
-        'toniness': amp_tone / (amp_tone + amp_noise),
+        'toniness': toniness,
         'tone': tone,
         'noise': noise,
     }
