@@ -27,6 +27,11 @@ samples = 0
 if args.plot:
     plot = dpc.Plot()
 
+#===== helpers =====#
+def bucketize(features):
+    return ''.join(['{:02x}'.format(math.floor((i + 128) * 10)) for i in features])
+
+#===== actions =====#
 def analyze_model():
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
@@ -59,7 +64,10 @@ def train():
         sample = pe.sample_system()
         params = pe.parameterize(*sample)
         features = dlal.speech.get_features(params)
-        bucket = ''.join(['{:02x}'.format(math.floor((i + 128) * 10)) for i in features])
+        if features[0] < 0.3:
+            bucket = bucketize(features[1:5])
+        else:
+            bucket = bucketize(features[6:])
         if bucket not in mmodel:
             mmodel[bucket] = params
         if args.plot:
@@ -68,6 +76,6 @@ def train():
     with open(args.markov_model_path, 'w') as f:
         f.write(json.dumps(mmodel))
 
+#===== main =====#
 eval(args.action)()
-
 if args.plot: plot.show()
