@@ -197,7 +197,6 @@ The `audio` component is the driver component for interactive audio.
 - more intelligible speech synth
 	- improve reduced-state vocoder intelligibility
 		- figure how to interpolate reduced params (ie synthesize intelligibly)
-			- prove that bucketing doesn't break intelligibility
 			- markovitize buckets
 	- move from systems into skeleton
 		- another pass to tigthen terminology

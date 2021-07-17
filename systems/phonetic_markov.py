@@ -30,7 +30,7 @@ if args.plot:
 
 #===== helpers =====#
 def serialize_features(features):
-    return ''.join(['{:02x}'.format(math.floor(i * 128)) for i in features])
+    return ''.join(['{:02x}'.format(math.floor(i * 256)) for i in features])
 
 def bucketize(features):
     if features[0] < 0.3:
