@@ -9,7 +9,7 @@ except:
     pass
 
 parser = argparse.ArgumentParser()
-parser.add_argument('action', choices=['analyze_model', 'train'], default='train')
+parser.add_argument('action', choices=['analyze_model', 'train', 'transcode'], default='train')
 parser.add_argument('--normalize', action='store_true')
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac')
 parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.json')
@@ -19,6 +19,8 @@ args = parser.parse_args()
 os.environ['PHONETIC_ENCODER_RECORDING_PATH'] = args.recording_path
 import dlal
 import phonetic_encoder as pe
+dlal.comm_set(None)
+import phonetic_decoder as pd
 
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
@@ -28,8 +30,14 @@ if args.plot:
     plot = dpc.Plot()
 
 #===== helpers =====#
-def bucketize(features):
+def serialize_features(features):
     return ''.join(['{:02x}'.format(math.floor((i + 128) * 10)) for i in features])
+
+def bucketize(features):
+    if features[0] < 0.3:
+        return serialize_features(features[1:5])
+    else:
+        return serialize_features(features[6:])
 
 #===== actions =====#
 def analyze_model():
@@ -64,10 +72,7 @@ def train():
         sample = pe.sample_system()
         params = pe.parameterize(*sample)
         features = dlal.speech.get_features(params)
-        if features[0] < 0.3:
-            bucket = bucketize(features[1:5])
-        else:
-            bucket = bucketize(features[6:])
+        bucket = bucketize(features)
         if bucket not in mmodel:
             mmodel[bucket] = params
         if args.plot:
@@ -75,6 +80,30 @@ def train():
         samples += run_size
     with open(args.markov_model_path, 'w') as f:
         f.write(json.dumps(mmodel))
+
+def transcode():
+    global samples
+    file = open('phonetic_markov.i16le', 'wb')
+    with open(args.markov_model_path) as f:
+        mmodel = json.loads(f.read())
+    while samples < duration:
+        print(f'{samples / duration * 100:.1f} %')
+        pe.audio.run()
+        sample = pe.sample_system()
+        params = pe.parameterize(*sample)
+        features = dlal.speech.get_features(params)
+        bucket = bucketize(features)
+        if bucket in mmodel:
+            transams = mmodel[bucket]
+            frame = pe.frames_from_params([transams])[0]
+            pd.synth.synthesize(
+                [i[0] for i in frame['tone']['spectrum']],
+                [i[0] for i in frame['noise']['spectrum']],
+                0,
+            )
+        pd.audio.run()
+        pd.tape.to_file_i16le(file)
+        samples += run_size
 
 #===== main =====#
 eval(args.action)()
