@@ -191,7 +191,7 @@ def get_features(params, normalized=True):
         return (
             features[0],
             features[1] / 1000,
-            (features[2] - 1000) / 1000,
+            (features[2] - 900) / 1200,
             features[3],
             features[4],
             features[5] / 10000,

@@ -30,7 +30,7 @@ if args.plot:
 
 #===== helpers =====#
 def serialize_features(features):
-    return ''.join(['{:02x}'.format(math.floor(i * 100 + 128)) for i in features])
+    return ''.join(['{:02x}'.format(math.floor(i * 128)) for i in features])
 
 def bucketize(features):
     if features[0] < 0.3:
@@ -95,14 +95,20 @@ def transcode():
         bucket = bucketize(features)
         if bucket in mmodel:
             transams = mmodel[bucket]
-            frame = pe.frames_from_params([transams])[0]
-            pd.synth.synthesize(
-                [i[0] for i in frame['tone']['spectrum']],
-                [i[0] for i in frame['noise']['spectrum']],
-                0,
-            )
         else:
             print(f'missing bucket {bucket}')
+            d_min = math.inf
+            for k, v in mmodel.items():
+                d = dlal.speech.params_distance(params, v)
+                if d < d_min:
+                    transams = v
+                    d_min = d
+        frame = pe.frames_from_params([transams])[0]
+        pd.synth.synthesize(
+            [i[0] for i in frame['tone']['spectrum']],
+            [i[0] for i in frame['noise']['spectrum']],
+            0,
+        )
         pd.audio.run()
         pd.tape.to_file_i16le(file)
         samples += run_size
