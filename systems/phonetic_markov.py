@@ -10,7 +10,6 @@ except:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('action', choices=['analyze_model', 'train', 'transcode'], default='train')
-parser.add_argument('--normalize', action='store_true')
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac')
 parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.json')
 parser.add_argument('--plot', action='store_true')
@@ -31,13 +30,13 @@ if args.plot:
 
 #===== helpers =====#
 def serialize_features(features):
-    return ''.join(['{:02x}'.format(math.floor((i + 128) * 10)) for i in features])
+    return ''.join(['{:02x}'.format(math.floor(i * 100 + 128)) for i in features])
 
 def bucketize(features):
     if features[0] < 0.3:
         return serialize_features(features[1:5])
     else:
-        return serialize_features(features[6:])
+        return serialize_features(features[5:])
 
 #===== actions =====#
 def analyze_model():
@@ -51,7 +50,7 @@ def analyze_model():
                 [+math.inf for i in range(7)],
                 [-math.inf for i in range(7)],
             ])
-            features = dlal.speech.get_features(frame, normalized=args.normalize)
+            features = dlal.speech.get_features(frame)
             ranges[group][0] = [min(i, j) for i, j in zip(features, ranges[group][0])]
             ranges[group][1] = [max(i, j) for i, j in zip(features, ranges[group][1])]
     for group, group_ranges in sorted(ranges.items()):
@@ -74,6 +73,7 @@ def train():
         features = dlal.speech.get_features(params)
         bucket = bucketize(features)
         if bucket not in mmodel:
+            print(f'create bucket {bucket}')
             mmodel[bucket] = params
         if args.plot:
             plot.point(samples, len(mmodel))
@@ -101,6 +101,8 @@ def transcode():
                 [i[0] for i in frame['noise']['spectrum']],
                 0,
             )
+        else:
+            print(f'missing bucket {bucket}')
         pd.audio.run()
         pd.tape.to_file_i16le(file)
         samples += run_size
