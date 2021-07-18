@@ -65,6 +65,7 @@ def train():
             mmodel = json.loads(f.read())
     else:
         mmodel = {}
+    bucket_prev = None
     while samples < duration:
         print(f'{samples / duration * 100:.1f} %')
         pe.audio.run()
@@ -74,9 +75,17 @@ def train():
         bucket = bucketize(features)
         if bucket not in mmodel:
             print(f'create bucket {bucket}')
-            mmodel[bucket] = params
+            mmodel[bucket] = {
+                'params': params,
+                'nexts': {},
+            }
+        if bucket_prev:
+            nexts_prev = mmodel[bucket_prev]['nexts']
+            nexts_prev.setdefault(bucket, 0)
+            nexts_prev[bucket] += 1
         if args.plot:
             plot.point(samples, len(mmodel))
+        bucket_prev = bucket
         samples += run_size
     with open(args.markov_model_path, 'w') as f:
         f.write(json.dumps(mmodel))
