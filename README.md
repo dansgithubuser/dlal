@@ -198,7 +198,6 @@ The `audio` component is the driver component for interactive audio.
 	- improve reduced-state vocoder intelligibility
 		- figure how to interpolate reduced params (ie synthesize intelligibly)
 			- train on labeled data
-				- handle continuants
 				- handle stops
 			- calculate nexts for each phonetic at each labeled bucket
 			- generate with markovitized buckets

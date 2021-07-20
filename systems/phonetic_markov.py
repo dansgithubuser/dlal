@@ -11,6 +11,7 @@ except:
 parser = argparse.ArgumentParser()
 parser.add_argument('action', choices=['analyze_model', 'train', 'transcode'], default='train')
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac')
+parser.add_argument('--labeled', action='store_true')
 parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.json')
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
@@ -20,6 +21,12 @@ import dlal
 import phonetic_encoder as pe
 dlal.comm_set(None)
 import phonetic_decoder as pd
+
+PHONETICS = [
+    'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
+    'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
 
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
@@ -78,7 +85,15 @@ def train():
             mmodel[bucket] = {
                 'params': params,
                 'nexts': {},
+                'phonetics': [],
             }
+        if args.labeled:
+            seconds = int(samples / 44100)
+            if 3 <= seconds % 10 < 9:
+                phonetic = PHONETICS[seconds // 10]
+                phonetics = mmodel[bucket]['phonetics']
+                if phonetic not in phonetics:
+                    phonetics.append(phonetic)
         if bucket_prev:
             nexts_prev = mmodel[bucket_prev]['nexts']
             nexts_prev.setdefault(bucket, 0)
