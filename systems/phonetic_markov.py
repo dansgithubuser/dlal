@@ -27,6 +27,9 @@ PHONETICS = [
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
+STOPS = [
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
 
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
@@ -89,11 +92,30 @@ def train():
             }
         if args.labeled:
             seconds = int(samples / 44100)
-            if 3 <= seconds % 10 < 9:
+            deciseconds = int(samples / 4410)
+            if seconds % 10 < 3:
+                new = True
+            elif 3 <= seconds % 10 < 9:
                 phonetic = PHONETICS[seconds // 10]
-                phonetics = mmodel[bucket]['phonetics']
-                if phonetic not in phonetics:
-                    phonetics.append(phonetic)
+                skip = False
+                if phonetic in STOPS:
+                    spectrum = sample[0]
+                    if new and 90 - deciseconds % 100 < 2:
+                        skip = True
+                    else:
+                        s = sum(spectrum[:len(spectrum) // 2])
+                        if new:
+                            if s < 0.2:
+                                skip = True
+                        else:
+                            if s < 0.01:
+                                new = True
+                                skip = True
+                if not skip:
+                    phonetics = mmodel[bucket]['phonetics']
+                    if phonetic not in phonetics:
+                        phonetics.append(phonetic)
+                    new = False
         if bucket_prev:
             nexts_prev = mmodel[bucket_prev]['nexts']
             nexts_prev.setdefault(bucket, 0)
