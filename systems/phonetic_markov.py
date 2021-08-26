@@ -8,10 +8,28 @@ try:
 except:
     pass
 
-parser = argparse.ArgumentParser()
-parser.add_argument('action', choices=['analyze_model', 'train', 'transcode'], default='train')
-parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac')
-parser.add_argument('--labeled', action='store_true')
+parser = argparse.ArgumentParser(
+    description='''
+        A phonetic model. It is built atop phonetic_encoder and phonetic_decoder, but works with an independent set of files.
+
+        Whereas a phonetic_encoder model deals with full params, a phonetic_markov model deals with reduced params, or features.
+
+        The following actions can be performed:
+        - analyze_model: print out the feature ranges for each phonetic group of a phonetic_encoder model
+        - train: create a phonetic_markov model
+        - transcode: transcode a recording with a phonetic Markov model
+
+        Example flow:
+        `rm assets/phonetics/markov-model.json`
+        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled'`
+        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/sample1.flac'`
+        `./do.py -r 'systems/phonetic_markov.py transcode --recording-path something-you-recorded.flac'`
+    ''',
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+parser.add_argument('action', choices=['analyze_model', 'train', 'transcode'])
+parser.add_argument('--recording-path', help='input')
+parser.add_argument('--labeled', action='store_true', help='whether the recording was created by phonetic_recorder or not')
 parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.json')
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
@@ -140,14 +158,14 @@ def transcode():
         features = dlal.speech.get_features(params)
         bucket = bucketize(features)
         if bucket in mmodel:
-            transams = mmodel[bucket]
+            transams = mmodel[bucket]['params']
         else:
             print(f'missing bucket {bucket}')
             d_min = math.inf
             for k, v in mmodel.items():
-                d = dlal.speech.params_distance(params, v)
+                d = dlal.speech.params_distance(params, v['params'])
                 if d < d_min:
-                    transams = v
+                    transams = v['params']
                     d_min = d
         frame = pe.frames_from_params([transams])[0]
         pd.synth.synthesize(

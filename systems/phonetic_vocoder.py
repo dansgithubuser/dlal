@@ -4,7 +4,7 @@ import math
 import os
 
 parser = argparse.ArgumentParser()
-parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
+parser.add_argument('recording_path')
 parser.add_argument('--save-params-to')
 parser.add_argument('--transcode-params-from')
 args = parser.parse_args()
