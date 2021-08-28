@@ -1,4 +1,5 @@
 import argparse
+import collections
 import json
 import math
 import os
@@ -16,19 +17,29 @@ parser = argparse.ArgumentParser(
 
         The following actions can be performed:
         - analyze_model: print out the feature ranges for each phonetic group of a phonetic_encoder model
-        - train: create a phonetic_markov model
-        - transcode: transcode a recording with a phonetic Markov model
+        - train: start or update a phonetic_markov model
+        - transcode: transcode a recording with a phonetic_markov model
+        - markovize: take an unmarkovized phonetic_markov model, calculate paths to different phonetics from each bucket, yielding a proper phonetic_markov model
 
         Example flow:
         `rm assets/phonetics/markov-model.json`
         `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled'`
         `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/sample1.flac'`
         `./do.py -r 'systems/phonetic_markov.py transcode --recording-path something-you-recorded.flac'`
+        `./do.py -r 'systems/phonetic_markov.py markovize'`
     ''',
     formatter_class=argparse.RawTextHelpFormatter,
 )
-parser.add_argument('action', choices=['analyze_model', 'train', 'transcode'])
-parser.add_argument('--recording-path', help='input')
+parser.add_argument(
+    'action',
+    choices=[
+        'analyze_model',
+        'train',
+        'transcode',
+        'markovize',
+    ],
+)
+parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
 parser.add_argument('--labeled', action='store_true', help='whether the recording was created by phonetic_recorder or not')
 parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.json')
 parser.add_argument('--plot', action='store_true')
@@ -143,7 +154,7 @@ def train():
         bucket_prev = bucket
         samples += run_size
     with open(args.markov_model_path, 'w') as f:
-        f.write(json.dumps(mmodel))
+        f.write(json.dumps(mmodel, indent=2))
 
 def transcode():
     global samples
@@ -176,6 +187,32 @@ def transcode():
         pd.audio.run()
         pd.tape.to_file_i16le(file)
         samples += run_size
+
+def markovize():
+    with open(args.markov_model_path) as f:
+        mmodel = json.loads(f.read())
+    for v in mmodel.values():
+        v['next_by_phonetic'] = {}
+    prevs = collections.defaultdict(list)
+    for k, v in mmodel.items():
+        for n in v['nexts']:
+            prevs[n].append(k)
+    for phonetic in PHONETICS:
+        print(phonetic)
+        queue = [k for k, v in mmodel.items() if phonetic in v['phonetics']]
+        visited = set(queue)
+        for k in queue: mmodel[k]['next_by_phonetic'][phonetic] = k
+        while queue:
+            k = queue[0]
+            queue = queue[1:]
+            ps = prevs[k]
+            for p in ps:
+                if p in visited: continue
+                mmodel[p]['next_by_phonetic'][phonetic] = k
+                queue.append(p)
+                visited.add(p)
+    with open(args.markov_model_path, 'w') as f:
+        f.write(json.dumps(mmodel, indent=2))
 
 #===== main =====#
 eval(args.action)()

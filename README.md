@@ -196,7 +196,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - more intelligible speech synth
 	- phonetic_markov generate
-		- calculate nexts for each phonetic at each bucket
 		- generate with markovitized buckets
 	- move from systems into skeleton
 		- another pass to tighten terminology
