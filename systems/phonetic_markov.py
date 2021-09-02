@@ -27,6 +27,7 @@ parser = argparse.ArgumentParser(
         `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/sample1.flac'`
         `./do.py -r 'systems/phonetic_markov.py transcode --recording-path something-you-recorded.flac'`
         `./do.py -r 'systems/phonetic_markov.py markovize'`
+        `./do.py -r 'systems/phonetic_markov.py generate'`
     ''',
     formatter_class=argparse.RawTextHelpFormatter,
 )
@@ -37,6 +38,8 @@ parser.add_argument(
         'train',
         'transcode',
         'markovize',
+        'generate',
+        'inspect',
     ],
 )
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
@@ -193,11 +196,13 @@ def markovize():
         mmodel = json.loads(f.read())
     for v in mmodel.values():
         v['next_by_phonetic'] = {}
+        if sum(v['params']['tone']['spectrum']) + sum(v['params']['noise']['spectrum']) < 1.5:
+            v['phonetics'].append('0')
     prevs = collections.defaultdict(list)
     for k, v in mmodel.items():
         for n in v['nexts']:
             prevs[n].append(k)
-    for phonetic in PHONETICS:
+    for phonetic in PHONETICS + ['0']:
         print(phonetic)
         queue = [k for k, v in mmodel.items() if phonetic in v['phonetics']]
         visited = set(queue)
@@ -213,6 +218,48 @@ def markovize():
                 visited.add(p)
     with open(args.markov_model_path, 'w') as f:
         f.write(json.dumps(mmodel, indent=2))
+
+def generate():
+    phonetics = [
+        'ae', 'sh', 'i', 'z', '0',
+        'f', 'a', 'l', '0',
+        'th', 'r', 'w', '0',
+        'th_v', 'u', '0',
+        'm', 'y', 'n', 'y', 'ng', '0',
+    ]
+    #phonetics = [
+    #    'sh', 'y', '0',
+    #    'i', 'z', '0',
+    #    'n', 'a', 't', '0',
+    #    'm', 'ae', 'y', '0',
+    #    's', 'i', 's', 't', 'r', '0',
+    #]
+    with open(args.markov_model_path) as f:
+        mmodel = json.loads(f.read())
+    for k, v in mmodel.items():
+        if '0' in v['phonetics']:
+            break
+    file = open('phonetic_markov.i16le', 'wb')
+    for phonetic in phonetics:
+        print(phonetic)
+        keep_going = 200
+        while keep_going:
+            params = mmodel[k]['params']
+            pd.synth.synthesize(
+                params['tone']['spectrum'],
+                params['noise']['spectrum'],
+                0,
+            )
+            pd.audio.run()
+            pd.tape.to_file_i16le(file)
+            k = mmodel[k]['next_by_phonetic'][phonetic]
+            if phonetic in mmodel[k]['phonetics']:
+                keep_going -= 1
+
+def inspect():
+    global mmodel
+    with open(args.markov_model_path) as f:
+        mmodel = json.loads(f.read())
 
 #===== main =====#
 eval(args.action)()
