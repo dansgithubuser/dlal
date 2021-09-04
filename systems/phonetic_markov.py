@@ -121,16 +121,20 @@ def train():
             mmodel[bucket] = {
                 'params': params,
                 'nexts': {},
-                'phonetics': [],
+                'phonetics': {},
             }
         if args.labeled:
             seconds = int(samples / 44100)
             deciseconds = int(samples / 4410)
+            skip = False
             if seconds % 10 < 3:
                 new = True
+                if sum(params['tone']['spectrum']) + sum(params['noise']['spectrum']) < 1.5:
+                    phonetic = '0'
+                else:
+                    skip = True
             elif 3 <= seconds % 10 < 9:
                 phonetic = PHONETICS[seconds // 10]
-                skip = False
                 if phonetic in STOPS:
                     spectrum = sample[0]
                     if new and 90 - deciseconds % 100 < 2:
@@ -144,11 +148,11 @@ def train():
                             if s < 0.01:
                                 new = True
                                 skip = True
-                if not skip:
-                    phonetics = mmodel[bucket]['phonetics']
-                    if phonetic not in phonetics:
-                        phonetics.append(phonetic)
-                    new = False
+            if not skip:
+                phonetics = mmodel[bucket]['phonetics']
+                phonetics.setdefault(phonetic, 0)
+                phonetics[phonetic] += 1
+                new = False
         if bucket_prev:
             nexts_prev = mmodel[bucket_prev]['nexts']
             nexts_prev.setdefault(bucket, 0)
@@ -197,8 +201,6 @@ def markovize():
         mmodel = json.loads(f.read())
     for v in mmodel.values():
         v['next_by_phonetic'] = {}
-        if sum(v['params']['tone']['spectrum']) + sum(v['params']['noise']['spectrum']) < 1.5:
-            v['phonetics'].append('0')
     prevs = collections.defaultdict(list)
     for k, v in mmodel.items():
         for n in v['nexts']:
@@ -211,9 +213,10 @@ def markovize():
         for k in buckets:
             v = mmodel[k]
             next_by_phonetic = v['next_by_phonetic'][phonetic] = {}
-            for n, freq in v['nexts'].items():
-                if phonetic in mmodel[n]['phonetics']:
-                    next_by_phonetic[n] = freq
+            for n, freq_t in v['nexts'].items():
+                freq_s = mmodel[n]['phonetics'].get(phonetic, 0)
+                if freq_s:
+                    next_by_phonetic[n] = freq_t
                     visited.add(k)
         # transient transitions
         queue = buckets
@@ -264,7 +267,7 @@ def generate():
             pd.audio.run()
             pd.tape.to_file_i16le(file)
             nexts = mmodel[k]['next_by_phonetic'][phonetic]
-            k = random.sample(nexts.keys(), 1, counts=nexts.values())[0]
+            k = random.sample(list(nexts.keys()), 1, counts=list(nexts.values()))[0]
 
 def inspect():
     global mmodel
