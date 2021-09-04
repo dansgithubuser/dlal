@@ -3,6 +3,7 @@ import collections
 import json
 import math
 import os
+import random
 
 try:
     import dansplotcore as dpc
@@ -204,16 +205,25 @@ def markovize():
             prevs[n].append(k)
     for phonetic in PHONETICS + ['0']:
         print(phonetic)
-        queue = [k for k, v in mmodel.items() if phonetic in v['phonetics']]
-        visited = set(queue)
-        for k in queue: mmodel[k]['next_by_phonetic'][phonetic] = k
+        visited = set()
+        buckets = [k for k, v in mmodel.items() if phonetic in v['phonetics']]
+        # steady-state transitions
+        for k in buckets:
+            v = mmodel[k]
+            next_by_phonetic = v['next_by_phonetic'][phonetic] = {}
+            for n, freq in v['nexts'].items():
+                if phonetic in mmodel[n]['phonetics']:
+                    next_by_phonetic[n] = freq
+                    visited.add(k)
+        # transient transitions
+        queue = buckets
         while queue:
             k = queue[0]
             queue = queue[1:]
             ps = prevs[k]
             for p in ps:
                 if p in visited: continue
-                mmodel[p]['next_by_phonetic'][phonetic] = k
+                mmodel[p]['next_by_phonetic'][phonetic] = {k: 1}
                 queue.append(p)
                 visited.add(p)
     with open(args.markov_model_path, 'w') as f:
@@ -242,9 +252,10 @@ def generate():
     file = open('phonetic_markov.i16le', 'wb')
     for phonetic in phonetics:
         print(phonetic)
-        keep_going = 200
-        while keep_going:
-            params = mmodel[k]['params']
+        for i in range(200):
+            v = mmodel[k]
+            print(k, v['phonetics'])
+            params = v['params']
             pd.synth.synthesize(
                 params['tone']['spectrum'],
                 params['noise']['spectrum'],
@@ -252,9 +263,8 @@ def generate():
             )
             pd.audio.run()
             pd.tape.to_file_i16le(file)
-            k = mmodel[k]['next_by_phonetic'][phonetic]
-            if phonetic in mmodel[k]['phonetics']:
-                keep_going -= 1
+            nexts = mmodel[k]['next_by_phonetic'][phonetic]
+            k = random.sample(nexts.keys(), 1, counts=nexts.values())[0]
 
 def inspect():
     global mmodel
