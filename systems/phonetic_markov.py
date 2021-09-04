@@ -208,7 +208,8 @@ def markovize():
     for phonetic in PHONETICS + ['0']:
         print(phonetic)
         visited = set()
-        buckets = [k for k, v in mmodel.items() if phonetic in v['phonetics']]
+        buckets = sorted(mmodel.items(), key=lambda i: -i[1]['phonetics'].get(phonetic, 0))
+        buckets = [k for k, v in buckets[:10]]
         # steady-state transitions
         for k in buckets:
             v = mmodel[k]
