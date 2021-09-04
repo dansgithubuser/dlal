@@ -9,6 +9,7 @@ import os
 import pprint
 import re
 import shutil
+import signal
 import socketserver
 import subprocess
 import sys
@@ -352,9 +353,12 @@ if args.run:
     if args.debug:
         os.environ['DLAL_LOG_LEVEL'] = 'debug'
     if args.run != True:
-        invoke('python', '-i', *args.run.split())
+        popen_args = ['python', '-i', *args.run.split()]
     else:
-        invoke('python', '-i', '-c', 'import dlal')
+        popen_args = ['python', '-i', '-c', 'import dlal']
+    p = subprocess.Popen(popen_args)
+    signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
+    p.wait()
 
 # ===== web ===== #
 if args.web:
