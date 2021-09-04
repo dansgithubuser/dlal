@@ -81,6 +81,18 @@ def bucketize(features):
     else:
         return serialize_features(features[5:])
 
+def render(vs):
+    with open('phonetic_markov.i16le', 'wb') as file:
+        for v in vs:
+            params = v['params']
+            pd.synth.synthesize(
+                params['tone']['spectrum'],
+                params['noise']['spectrum'],
+                0,
+            )
+            pd.audio.run()
+            pd.tape.to_file_i16le(file)
+
 #===== actions =====#
 def analyze_model():
     with open('assets/phonetics/model.json') as f:
