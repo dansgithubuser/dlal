@@ -201,8 +201,11 @@ def get_features(params, normalized=True):
         return features
 
 def params_distance(a, b):
-    a_toniness, a_f1, a_f2, a_f2_amp, a_f3_amp, a_fn, a_hi = get_features(a)
-    b_toniness, b_f1, b_f2, b_f2_amp, b_f3_amp, b_fn, b_hi = get_features(b)
+    return features_distance(get_features(a), get_features(b))
+
+def features_distance(a, b):
+    a_toniness, a_f1, a_f2, a_f2_amp, a_f3_amp, a_fn, a_hi = a
+    b_toniness, b_f1, b_f2, b_f2_amp, b_f3_amp, b_fn, b_hi = b
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2 + (a_f3_amp - b_f3_amp) ** 2
     d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
     d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))

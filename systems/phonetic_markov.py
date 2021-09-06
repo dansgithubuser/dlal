@@ -38,6 +38,7 @@ parser.add_argument(
         'analyze_model',
         'train',
         'transcode',
+        'generate_naive',
         'markovize',
         'generate',
         'inspect',
@@ -62,6 +63,21 @@ PHONETICS = [
 ]
 STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
+
+phonetics_ashes = [
+    'ae', 'sh', 'i', 'z', '0',
+    'f', 'a', 'l', '0',
+    'th', 'r', 'w', '0',
+    'th_v', 'u', '0',
+    'm', 'y', 'n', 'y', 'ng', '0',
+]
+phonetics_sister = [
+    'sh', 'y', '0',
+    'i', 'z', '0',
+    'n', 'a', 't', '0',
+    'm', 'ae', 'y', '0',
+    's', 'i', 's', 't', 'r', '0',
 ]
 
 run_size = pe.audio.run_size()
@@ -92,6 +108,20 @@ def render(vs):
             )
             pd.audio.run()
             pd.tape.to_file_i16le(file)
+
+def features_to_frame(features, mmodel):
+    bucket = bucketize(features)
+    if bucket in mmodel:
+        transams = mmodel[bucket]['params']
+    else:
+        print(f'missing bucket {bucket}')
+        d_min = math.inf
+        for k, v in mmodel.items():
+            d = dlal.speech.features_distance(features, dlal.speech.get_features(v['params']))
+            if d < d_min:
+                transams = v['params']
+                d_min = d
+    return pe.frames_from_params([transams])[0]
 
 #===== actions =====#
 def analyze_model():
@@ -187,18 +217,7 @@ def transcode():
         sample = pe.sample_system()
         params = pe.parameterize(*sample)
         features = dlal.speech.get_features(params)
-        bucket = bucketize(features)
-        if bucket in mmodel:
-            transams = mmodel[bucket]['params']
-        else:
-            print(f'missing bucket {bucket}')
-            d_min = math.inf
-            for k, v in mmodel.items():
-                d = dlal.speech.params_distance(params, v['params'])
-                if d < d_min:
-                    transams = v['params']
-                    d_min = d
-        frame = pe.frames_from_params([transams])[0]
+        frame = features_to_frame(features, mmodel)
         pd.synth.synthesize(
             [i[0] for i in frame['tone']['spectrum']],
             [i[0] for i in frame['noise']['spectrum']],
@@ -207,6 +226,29 @@ def transcode():
         pd.audio.run()
         pd.tape.to_file_i16le(file)
         samples += run_size
+
+def generate_naive(phonetics=phonetics_ashes):
+    file = open('phonetic_markov.i16le', 'wb')
+    with open('assets/phonetics/model.json') as f:
+        model = json.loads(f.read())
+    with open(args.markov_model_path) as f:
+        mmodel = json.loads(f.read())
+    smoother = dlal.speech.Smoother()
+    for phonetic in phonetics:
+        print(phonetic)
+        frame = model[phonetic]['frames'][0]
+        for _ in range(200):
+            smoothed_frame = smoother.smooth(frame, 0.99)
+            features = dlal.speech.get_features(smoothed_frame)
+            transframe = features_to_frame(features, mmodel)
+            pd.synth.synthesize(
+                [i[0] for i in transframe['tone']['spectrum']],
+                [i[0] for i in transframe['noise']['spectrum']],
+                0,
+            )
+            pd.audio.run()
+            pd.tape.to_file_i16le(file)
+    file.close()
 
 def markovize():
     with open(args.markov_model_path) as f:
@@ -245,21 +287,7 @@ def markovize():
     with open(args.markov_model_path, 'w') as f:
         f.write(json.dumps(mmodel, indent=2))
 
-def generate():
-    phonetics = [
-        'ae', 'sh', 'i', 'z', '0',
-        'f', 'a', 'l', '0',
-        'th', 'r', 'w', '0',
-        'th_v', 'u', '0',
-        'm', 'y', 'n', 'y', 'ng', '0',
-    ]
-    #phonetics = [
-    #    'sh', 'y', '0',
-    #    'i', 'z', '0',
-    #    'n', 'a', 't', '0',
-    #    'm', 'ae', 'y', '0',
-    #    's', 'i', 's', 't', 'r', '0',
-    #]
+def generate(phonetics=phonetics_ashes):
     with open(args.markov_model_path) as f:
         mmodel = json.loads(f.read())
     for k, v in mmodel.items():

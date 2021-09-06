@@ -195,6 +195,7 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
+	- switch from json to sqlite
 	- phonetic_markov generate
 		- seems like phonetics are colliding... so many phonetics have the params of ae
 			- why isn't this a problem when transcoding?
