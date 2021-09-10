@@ -208,7 +208,9 @@ def features_distance(a, b):
     b_toniness, b_f1, b_f2, b_f2_amp, b_f3_amp, b_fn, b_hi = b
     d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2 + (a_f3_amp - b_f3_amp) ** 2
     d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
-    d = d_tone * max(a_toniness, b_toniness) + d_noise * (1 - min(a_toniness, b_toniness))
+    toniness = max(a_toniness, b_toniness)
+    noisiness = (1 - min(a_toniness, b_toniness))
+    d = d_tone * toniness + d_noise * noisiness + (a_toniness - b_toniness) ** 2
     return d
 
 class Smoother:
