@@ -195,11 +195,8 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- phonetic_markov generate
-		- seems like phonetics are colliding... so many phonetics have the params of ae
-			- buckets are too big
-	- move from systems into skeleton
-		- another pass to tighten terminology
+- move from systems into skeleton
+	- another pass to tighten terminology
 - audiobro
 	- track 1
 		- bass slide down in B section
