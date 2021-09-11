@@ -265,7 +265,7 @@ class Mmodel:
             return self.params_for_features(features)
 
     def params_for_features(self, features):
-        e = 1000 / self.bucket_count()
+        e = 1e4 / self.bucket_count()
         while True:
             toniness = features[0]
             noisiness = 1 - features[0]
@@ -281,8 +281,8 @@ class Mmodel:
                     AND abs(f7 - {features[6]}) * {noisiness} < {e}
             '''
             rows = self.conn.execute(statement).fetchall()
-            if len(rows) > 100: break
-            e *= 10
+            if len(rows) > 10: break
+            e *= 2
         d_min = math.inf
         for row in rows:
             params = json.loads(row[0])
