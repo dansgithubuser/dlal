@@ -239,6 +239,9 @@ class Mmodel:
                 VALUES ('{bucket_i}', '{bucket_f}', {freq})
             ''')
 
+    def clear_nexts_by_phonetic(self):
+        self.conn.execute('DELETE FROM nexts_by_phonetic')
+
     def set_next_by_phonetic(self, bucket_i, bucket_f, phonetic, freq):
         self.conn.execute(f'''
             INSERT INTO nexts_by_phonetic (bucket_i, bucket_f, phonetic, freq)
@@ -450,6 +453,7 @@ def generate_naive(phonetics=phonetics_ashes):
 
 def markovize():
     mmodel = Mmodel()
+    mmodel.clear_nexts_by_phonetic()
     for phonetic in PHONETICS + ['0']:
         print(phonetic)
         visited = set()
