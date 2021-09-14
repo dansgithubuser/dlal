@@ -42,6 +42,7 @@ parser.add_argument(
         'generate_naive',
         'markovize',
         'generate',
+        'interact',
     ],
 )
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
@@ -97,10 +98,10 @@ def bucketize(features):
     else:
         return serialize_features(features[5:])
 
-def render(vs):
+def render(mmodel, buckets):
     with open('phonetic_markov.i16le', 'wb') as file:
-        for v in vs:
-            params = v['params']
+        for bucket in buckets:
+            params = mmodel.params_for_bucket(bucket)
             pd.synth.synthesize(
                 params['tone']['spectrum'],
                 params['noise']['spectrum'],
@@ -339,6 +340,18 @@ class Mmodel:
         '''
         return self.conn.execute(statement).fetchall()
 
+    def query(self, statement):
+        return self.conn.execute(statement).fetchall()
+
+    def query_1r(self, statement):
+        return self.query(statement)[0]
+
+    def query_1c(self, statement):
+        return [i[0] for i in self.query(statement)]
+
+    def query_1r1c(self, statement):
+        return self.query_1c(statement)[0]
+
 #===== actions =====#
 def analyze_model():
     with open('assets/phonetics/model.json') as f:
@@ -495,6 +508,10 @@ def generate(phonetics=phonetics_ashes):
             pd.tape.to_file_i16le(file)
             nexts = mmodel.freqs_for_next_by_phonetic(k, phonetic)
             k = random.sample([i[0] for i in nexts], 1, counts=[i[1] for i in nexts])[0]
+
+def interact():
+    global mmodel
+    mmodel = Mmodel()
 
 #===== main =====#
 eval(args.action)()
