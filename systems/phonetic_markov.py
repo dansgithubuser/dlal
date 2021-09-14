@@ -387,29 +387,38 @@ def train():
         if args.labeled:
             seconds = int(samples / 44100)
             deciseconds = int(samples / 4410)
-            skip = False
-            if seconds % 10 < 3:
+            phonetic = None
+            new = True
+            # figure out what phonetic we're in, if any
+            if seconds % 10 < 2:
+                # before a phonetic
                 new = True
                 if sum(params['tone']['spectrum']) + sum(params['noise']['spectrum']) < 1.5:
+                    # use as silence phonetic
                     phonetic = '0'
-                else:
-                    skip = True
-            elif 3 <= seconds % 10 < 9:
+            elif 4 <= seconds % 10 < 9:
+                # in a phonetic
                 phonetic = PHONETICS[seconds // 10]
                 if phonetic in STOPS:
+                    # special (incomplete and incorrect) handling for stops
                     spectrum = sample[0]
-                    if new and 90 - deciseconds % 100 < 2:
-                        skip = True
+                    if new and deciseconds % 100 > 88:
+                        # if not much time left (<2 deciseconds), don't start a new stop
+                        phonetic = None
                     else:
+                        # we're continuing a stop or have enough time to start one
                         s = sum(spectrum[:len(spectrum) // 2])
                         if new:
+                            # don't start until high energy
                             if s < 0.2:
-                                skip = True
+                                phonetic = None
                         else:
+                            # don't end until low energy
                             if s < 0.01:
                                 new = True
-                                skip = True
-            if not skip:
+                                phonetic = None
+            # label accordingly
+            if phonetic:
                 mmodel.label_bucket(bucket, phonetic)
                 new = False
         if bucket_prev:
