@@ -165,7 +165,8 @@ class Mmodel:
                     bucket_i VARCHAR(12),
                     bucket_f VARCHAR(12),
                     phonetic VARCHAR(4),
-                    freq INTEGER
+                    freq INTEGER,
+                    distance INTEGER
                 );
                 CREATE INDEX i_nexts_by_phonetic_bucket_i ON nexts_by_phonetic (bucket_i);
                 CREATE INDEX i_nexts_by_phonetic_phonetic ON nexts_by_phonetic (phonetic);
@@ -243,10 +244,10 @@ class Mmodel:
     def clear_nexts_by_phonetic(self):
         self.conn.execute('DELETE FROM nexts_by_phonetic')
 
-    def set_next_by_phonetic(self, bucket_i, bucket_f, phonetic, freq):
+    def set_next_by_phonetic(self, bucket_i, bucket_f, phonetic, freq, distance):
         self.conn.execute(f'''
-            INSERT INTO nexts_by_phonetic (bucket_i, bucket_f, phonetic, freq)
-            VALUES ('{bucket_i}', '{bucket_f}', '{phonetic}', {freq})
+            INSERT INTO nexts_by_phonetic (bucket_i, bucket_f, phonetic, freq, distance)
+            VALUES ('{bucket_i}', '{bucket_f}', '{phonetic}', {freq}, {distance})
         ''')
 
     def commit(self):
@@ -485,18 +486,18 @@ def markovize():
             for n, freq_t in mmodel.nexts_for_bucket(k):
                 freq_s = mmodel.phonetic_freq_for_bucket(n, phonetic)
                 if freq_s:
-                    mmodel.set_next_by_phonetic(k, n, phonetic, freq_t)
+                    mmodel.set_next_by_phonetic(k, n, phonetic, freq_t, 0)
                     visited.add(k)
         # transient transitions
-        queue = buckets
+        queue = [(k, 1) for k in buckets]
         while queue:
-            k = queue[0]
+            k, distance = queue[0]
             queue = queue[1:]
             ps = mmodel.prevs_for_bucket(k)
             for p in ps:
                 if p in visited: continue
-                mmodel.set_next_by_phonetic(p, k, phonetic, 1)
-                queue.append(p)
+                mmodel.set_next_by_phonetic(p, k, phonetic, 1, distance)
+                queue.append((p, distance + 1))
                 visited.add(p)
     mmodel.commit()
 
