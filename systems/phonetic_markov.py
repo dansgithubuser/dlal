@@ -90,7 +90,8 @@ if args.plot:
 
 #===== helpers =====#
 def serialize_features(features):
-    return ''.join(['{:03x}'.format(math.floor(i * 2048)) for i in features])
+    parts = ['{:03x}'.format(2 * math.floor(i * 2048)) for i in features]
+    return ''.join([''.join(i) for i in zip(*parts)])
 
 def bucketize(features):
     if features[0] < 0.3:
@@ -172,11 +173,11 @@ class Mmodel:
                 CREATE INDEX i_nexts_by_phonetic_phonetic ON nexts_by_phonetic (phonetic);
             '''
             for statement in statements.split(';'):
-                self.conn.execute(statement)
+                self.query(statement)
 
     #----- write -----#
     def ensure_bucket(self, bucket, features, params):
-        self.conn.execute(f'''
+        self.query(f'''
             INSERT OR IGNORE INTO states
             VALUES (
                 '{bucket}',
@@ -198,20 +199,20 @@ class Mmodel:
             WHERE bucket = '{bucket}'
                 AND phonetic = '{phonetic}'
         '''
-        row = self.conn.execute(statement).fetchone()
+        row = self.query_1r(statement)
         if row:
             id, freq = row
         else:
             id, freq = None, 0
         freq += 1
         if id:
-            self.conn.execute(f'''
+            self.query(f'''
                 UPDATE phonetics
                 SET freq = {freq}
                 WHERE id = {id}
             ''')
         else:
-            self.conn.execute(f'''
+            self.query(f'''
                 INSERT INTO phonetics (bucket, phonetic, freq)
                 VALUES ('{bucket}', '{phonetic}', {freq})
             ''')
@@ -223,29 +224,29 @@ class Mmodel:
             WHERE bucket_i = '{bucket_i}'
                 AND bucket_f = '{bucket_f}'
         '''
-        row = self.conn.execute(statement).fetchone()
+        row = self.query_1r(statement)
         if row:
             id, freq = row
         else:
             id, freq = None, 0
         freq += 1
         if id:
-            self.conn.execute(f'''
+            self.query(f'''
                 UPDATE nexts
                 SET freq = {freq}
                 WHERE id = {id}
             ''')
         else:
-            self.conn.execute(f'''
+            self.query(f'''
                 INSERT INTO nexts (bucket_i, bucket_f, freq)
                 VALUES ('{bucket_i}', '{bucket_f}', {freq})
             ''')
 
     def clear_nexts_by_phonetic(self):
-        self.conn.execute('DELETE FROM nexts_by_phonetic')
+        self.query('DELETE FROM nexts_by_phonetic')
 
     def set_next_by_phonetic(self, bucket_i, bucket_f, phonetic, freq, distance):
-        self.conn.execute(f'''
+        self.query(f'''
             INSERT INTO nexts_by_phonetic (bucket_i, bucket_f, phonetic, freq, distance)
             VALUES ('{bucket_i}', '{bucket_f}', '{phonetic}', {freq}, {distance})
         ''')
@@ -255,7 +256,7 @@ class Mmodel:
 
     #----- read -----#
     def bucket_count(self):
-        return self.conn.execute('SELECT COUNT(*) FROM states').fetchone()[0]
+        return self.query_1r1c('SELECT COUNT(*) FROM states')
 
     def params_for_bucket(self, bucket, features=None):
         statement = f'''
@@ -263,7 +264,7 @@ class Mmodel:
             FROM states
             WHERE bucket = '{bucket}'
         '''
-        row = self.conn.execute(statement).fetchone()
+        row = self.query_1r(statement)
         if row:
             return json.loads(row[0])
         if features:
@@ -285,7 +286,7 @@ class Mmodel:
                     AND abs(f6 - {features[5]}) * {noisiness} < {e}
                     AND abs(f7 - {features[6]}) * {noisiness} < {e}
             '''
-            rows = self.conn.execute(statement).fetchall()
+            rows = self.query(statement)
             if len(rows) > 10: break
             e *= 2
         d_min = math.inf
@@ -297,6 +298,14 @@ class Mmodel:
                 d_min = d
         return result
 
+    def bucket_count_for_phonetic(self, phonetic):
+        statement = f'''
+            SELECT COUNT(*)
+            FROM phonetics
+            WHERE phonetic = '{phonetic}'
+        '''
+        return self.query_1r1c(statement)
+
     def buckets_for_phonetic(self, phonetic, limit):
         statement = f'''
             SELECT bucket
@@ -305,7 +314,7 @@ class Mmodel:
             ORDER BY freq DESC
             LIMIT {limit}
         '''
-        return [i[0] for i in self.conn.execute(statement).fetchall()]
+        return self.query_1c(statement)
 
     def nexts_for_bucket(self, bucket):
         statement = f'''
@@ -313,7 +322,7 @@ class Mmodel:
             FROM nexts
             WHERE bucket_i = '{bucket}'
         '''
-        return self.conn.execute(statement).fetchall()
+        return self.query(statement)
 
     def prevs_for_bucket(self, bucket):
         statement = f'''
@@ -321,7 +330,7 @@ class Mmodel:
             FROM nexts
             WHERE bucket_f = '{bucket}'
         '''
-        return [i[0] for i in self.conn.execute(statement).fetchall()]
+        return self.query_1c(statement)
 
     def phonetic_freq_for_bucket(self, bucket, phonetic):
         statement = f'''
@@ -329,7 +338,7 @@ class Mmodel:
             FROM phonetics
             WHERE bucket = '{bucket}'
         '''
-        row = self.conn.execute(statement).fetchone()
+        row = self.query_1r(statement)
         return row and row[0] or 0
 
     def freqs_for_next_by_phonetic(self, bucket, phonetic):
@@ -339,19 +348,20 @@ class Mmodel:
             WHERE bucket_i = '{bucket}'
                 AND phonetic = '{phonetic}'
         '''
-        return self.conn.execute(statement).fetchall()
+        return self.query(statement)
 
     def query(self, statement):
         return self.conn.execute(statement).fetchall()
 
     def query_1r(self, statement):
-        return self.query(statement)[0]
+        return self.conn.execute(statement).fetchone()
 
     def query_1c(self, statement):
         return [i[0] for i in self.query(statement)]
 
     def query_1r1c(self, statement):
-        return self.query_1c(statement)[0]
+        row = self.query_1r(statement)
+        return row and row[0]
 
 #===== actions =====#
 def analyze_model():
@@ -480,7 +490,8 @@ def markovize():
     for phonetic in PHONETICS + ['0']:
         print(phonetic)
         visited = set()
-        buckets = mmodel.buckets_for_phonetic(phonetic, 10)
+        bucket_count = mmodel.bucket_count_for_phonetic(phonetic)
+        buckets = mmodel.buckets_for_phonetic(phonetic, max(bucket_count // 100, 10))
         # steady-state transitions
         for k in buckets:
             for n, freq_t in mmodel.nexts_for_bucket(k):
