@@ -350,6 +350,23 @@ class Mmodel:
         '''
         return self.query(statement)
 
+    #----- analyze -----#
+    def max_intraphonetic_distance(self, phonetic):
+        statement = f'''
+            SELECT max(n.distance)
+            FROM phonetics p
+                JOIN nexts_by_phonetic n ON n.bucket_i = p.bucket
+            WHERE p.phonetic = '{phonetic}'
+                AND n.phonetic = '{phonetic}'
+        '''
+        return self.query_1r1c(statement)
+
+    def max_intraphonetic_distances(self):
+        for p in PHONETICS:
+            d = self.max_intraphonetic_distance(p)
+            print(f'{p:4} {d}')
+
+    #----- generic -----#
     def query(self, statement):
         return self.conn.execute(statement).fetchall()
 
