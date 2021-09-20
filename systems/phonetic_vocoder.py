@@ -6,8 +6,8 @@ import os
 parser = argparse.ArgumentParser(
     description='''
         Example flow:
-        `./do.py -r 'systems/phonetic_markov.py donor_recording.flac --save-params-to params.json`
-        `./do.py -r 'systems/phonetic_markov.py performer_recording.flac --transcode-params-from params.json`
+        `./do.py -r 'systems/phonetic_vocoder.py donor_recording.flac --save-params-to params.json'`
+        `./do.py -r 'systems/phonetic_vocoder.py performer_recording.flac --transcode-params-from params.json'`
     ''',
     formatter_class=argparse.RawTextHelpFormatter,
 )
