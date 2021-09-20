@@ -124,13 +124,13 @@ class Mmodel:
             statements = '''
                 CREATE TABLE states (
                     bucket VARCHAR(12) PRIMARY KEY,
-                    f1 REAL,
-                    f2 REAL,
-                    f3 REAL,
-                    f4 REAL,
-                    f5 REAL,
-                    f6 REAL,
-                    f7 REAL,
+                    f1 REAL, -- toniness
+                    f2 REAL, -- formant 1 freq
+                    f3 REAL, -- formant 2 freq
+                    f4 REAL, -- formant 2 freq
+                    f5 REAL, -- formant 3 amp
+                    f6 REAL, -- noise freq
+                    f7 REAL, -- hi-freq noise amp
                     params JSONB
                 );
                 CREATE INDEX i_states_bucket ON states (bucket);
@@ -362,9 +362,28 @@ class Mmodel:
         return self.query_1r1c(statement)
 
     def max_intraphonetic_distances(self):
-        for p in PHONETICS:
-            d = self.max_intraphonetic_distance(p)
-            print(f'{p:4} {d}')
+        for phonetic in PHONETICS:
+            d = self.max_intraphonetic_distance(phonetic)
+            print(f'{phonetic:4} {d}')
+
+    def analyze_phonetics(self):
+        ranges = []
+        for phonetic in PHONETICS:
+            ranges.append([])
+            for i in range(7):
+                ranges[-1].append([])
+                for extreme in ['min', 'max']:
+                    statement = f'''
+                        SELECT {extreme}(f{i+1})
+                        FROM phonetics p
+                            JOIN states s ON s.bucket = p.bucket
+                        WHERE p.phonetic = '{phonetic}'
+                    '''
+                    ranges[-1][-1].append(self.query_1r1c(statement))
+        for phonetic, phonetic_ranges in zip(PHONETICS, ranges):
+            print(phonetic)
+            for i, name in enumerate(['toniness', 'f1', 'f2', 'f2_amp', 'f3_amp', 'fn', 'hi']):
+                print(f'\t{name:>8} {phonetic_ranges[i][0]:>8.3f} {phonetic_ranges[i][1]:>8.3f}')
 
     #----- generic -----#
     def query(self, statement):
