@@ -198,7 +198,6 @@ The `audio` component is the driver component for interactive audio.
 	- why is phonetic_markov generate so broken
 		- need more connectivity inside phonetics
 			- particularly unvoiced fricatives
-		- phonetic_markov transcode still much less intelligible than phonetic_vocoder
 	- still a lot of noise when transcoding with phonetic_markov compared to phonetic_vocoder
 - move from systems into skeleton
 	- another pass to tighten terminology

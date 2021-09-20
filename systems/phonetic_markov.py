@@ -95,9 +95,9 @@ def serialize_features(features):
 
 def bucketize(features):
     if features[0] < 0.3:
-        return serialize_features(features[1:5])
+        return serialize_features(features[:5])
     else:
-        return serialize_features(features[5:])
+        return serialize_features((features[0],) + features[5:])
 
 def render(mmodel, buckets):
     with open('phonetic_markov.i16le', 'wb') as file:
