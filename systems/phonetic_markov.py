@@ -90,7 +90,7 @@ if args.plot:
 
 #===== helpers =====#
 def serialize_features(features):
-    parts = ['{:03x}'.format(2 * math.floor(i * 2047)) for i in features]
+    parts = ['{:02x}'.format(math.floor(i * 255)) for i in features]
     return ''.join([''.join(i) for i in zip(*parts)])
 
 def bucketize(features):

@@ -188,14 +188,17 @@ def get_features(params, normalized=True):
         get_param(params, ['noise', 'hi']),
     )
     if normalized:
+        def clamp(x):
+            assert 0 <= x <= 1
+            return x
         return (
-            features[0],
-            features[1] / 1000,
-            (features[2] - 750) / 1750,
-            features[3],
-            features[4],
-            features[5] / 12500,
-            features[6] * 1.5,
+            clamp(features[0]),
+            clamp(features[1] / 1250),
+            clamp((features[2] - 750) / 1750),
+            clamp(features[3]),
+            clamp(features[4]),
+            clamp(features[5] / 22050),
+            clamp(features[6]),
         )
     else:
         return features
