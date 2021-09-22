@@ -311,7 +311,7 @@ class Mmodel:
             SELECT bucket
             FROM phonetics
             WHERE phonetic = '{phonetic}'
-            ORDER BY freq DESC
+            ORDER BY freq DESC, RANDOM()
             LIMIT {limit}
         '''
         return self.query_1c(statement)
