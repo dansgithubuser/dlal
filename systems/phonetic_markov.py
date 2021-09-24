@@ -25,7 +25,7 @@ parser = argparse.ArgumentParser(
 
         Example flow:
         `rm assets/phonetics/markov-model.sqlite3`
-        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled'`
+        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled --fuzz'`
         `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/sample1.flac'`
         `./do.py -r 'systems/phonetic_markov.py transcode --recording-path something-you-recorded.flac'`
         `./do.py -r 'systems/phonetic_markov.py markovize'`
@@ -47,6 +47,7 @@ parser.add_argument(
 )
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
 parser.add_argument('--labeled', action='store_true', help='whether the recording was created by phonetic_recorder or not')
+parser.add_argument('--fuzz', action='store_true', help='fuzz when training on labeled data')
 parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.sqlite3')
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
@@ -474,6 +475,17 @@ def train():
             plot.point(samples, mmodel.bucket_count())
         bucket_prev = bucket
         samples += run_size
+    if args.fuzz:
+        for phonetic in PHONETICS:
+            statement = f'''
+                SELECT sum(freq)
+                FROM phonetics
+                WHERE freq > 1 AND phonetic = '{phonetic}'
+            '''
+            if (mmodel.query_1r1c(statement) or 0) > 100: continue
+            buckets = mmodel.buckets_for_phonetic(phonetic, 100)
+            for bucket_i, bucket_f in zip(buckets, buckets[1:]):
+                mmodel.add_next(bucket_i, bucket_f)
     print()
     mmodel.commit()
 
