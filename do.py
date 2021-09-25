@@ -33,7 +33,7 @@ parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
 parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
-parser.add_argument('--run', '-r', nargs='?', const=True, help=(
+parser.add_argument('--run', '-r', nargs='*', help=(
     'run interactive Python with dlal imported, '
     'or run specified system, optionally with args'
 ))
@@ -344,7 +344,7 @@ if args.build is not None:
         )
 
 # ===== run ===== #
-if args.run:
+if args.run != None:
     os.chdir(os.path.join(DIR))
     if 'PYTHONPATH' in os.environ:
         os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'skeleton')
@@ -352,8 +352,8 @@ if args.run:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
     if args.debug:
         os.environ['DLAL_LOG_LEVEL'] = 'debug'
-    if args.run != True:
-        popen_args = ['python', '-i', *args.run.split()]
+    if args.run:
+        popen_args = ['python', '-i', *args.run]
     else:
         popen_args = ['python', '-i', '-c', 'import dlal']
     p = subprocess.Popen(popen_args)
