@@ -2,6 +2,16 @@ import json as _json
 import math as _math
 import re as _re
 
+FEATURES = [
+    'toniness',
+    'f1_freq',
+    'f2_freq',
+    'f2_amp',
+    'f3_amp',
+    'freq_c',
+    'hi',
+]
+
 class _Code:
     def __init__(self, code):
         m = _re.match(r'(-)?(\w+)', code)
