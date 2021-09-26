@@ -73,12 +73,12 @@ phonetics_ashes = [
     'th_v', 'u', '0',
     'm', 'y', 'n', 'y', 'ng', '0',
 ]
-phonetics_sister = [
-    'sh', 'y', '0',
+phonetics_fusion = [
+    'f', 'y', 'w', 'sh_v', 'u', 'n', '0',
+    'h', 'y', 'w', 'm', 'r', '0',
     'i', 'z', '0',
-    'n', 'a', 't', '0',
-    'm', 'ae', 'y', '0',
-    's', 'i', 's', 't', 'r', '0',
+    's', 'o', 'w', '0',
+    'm', 'e', 's', 'y', '0',
 ]
 
 run_size = pe.audio.run_size()
@@ -508,46 +508,45 @@ def train():
 
 def transcode():
     global samples
-    file = open('phonetic_markov.i16le', 'wb')
-    mmodel = Mmodel()
-    while samples < duration:
-        print(f'\r{samples / duration * 100:.1f} %', end='')
-        pe.audio.run()
-        sample = pe.sample_system()
-        params = pe.parameterize(*sample)
-        features = dlal.speech.get_features(params)
-        frame = features_to_frame(features, mmodel)
-        pd.synth.synthesize(
-            [i[0] for i in frame['tone']['spectrum']],
-            [i[0] for i in frame['noise']['spectrum']],
-            0,
-        )
-        pd.audio.run()
-        pd.tape.to_file_i16le(file)
-        samples += run_size
-    print()
-
-def generate_naive(phonetics=phonetics_ashes):
-    file = open('phonetic_markov.i16le', 'wb')
-    with open('assets/phonetics/model.json') as f:
-        model = json.loads(f.read())
-    mmodel = Mmodel()
-    smoother = dlal.speech.Smoother()
-    for phonetic in phonetics:
-        print(phonetic)
-        frame = model[phonetic]['frames'][0]
-        for _ in range(200):
-            smoothed_frame = smoother.smooth(frame, 0.99)
-            features = dlal.speech.get_features(smoothed_frame)
-            transframe = features_to_frame(features, mmodel)
+    with open('phonetic_markov.i16le', 'wb') as file:
+        mmodel = Mmodel()
+        while samples < duration:
+            print(f'\r{samples / duration * 100:.1f} %', end='')
+            pe.audio.run()
+            sample = pe.sample_system()
+            params = pe.parameterize(*sample)
+            features = dlal.speech.get_features(params)
+            frame = features_to_frame(features, mmodel)
             pd.synth.synthesize(
-                [i[0] for i in transframe['tone']['spectrum']],
-                [i[0] for i in transframe['noise']['spectrum']],
+                [i[0] for i in frame['tone']['spectrum']],
+                [i[0] for i in frame['noise']['spectrum']],
                 0,
             )
             pd.audio.run()
             pd.tape.to_file_i16le(file)
-    file.close()
+            samples += run_size
+    print()
+
+def generate_naive(phonetics=phonetics_ashes):
+    with open('assets/phonetics/model.json') as f:
+        model = json.loads(f.read())
+    mmodel = Mmodel()
+    smoother = dlal.speech.Smoother()
+    with open('phonetic_markov.i16le', 'wb') as file:
+        for phonetic in phonetics:
+            print(phonetic)
+            frame = model[phonetic]['frames'][0]
+            for _ in range(200):
+                smoothed_frame = smoother.smooth(frame, 0.99)
+                features = dlal.speech.get_features(smoothed_frame)
+                transframe = features_to_frame(features, mmodel)
+                pd.synth.synthesize(
+                    [i[0] for i in transframe['tone']['spectrum']],
+                    [i[0] for i in transframe['noise']['spectrum']],
+                    0,
+                )
+                pd.audio.run()
+                pd.tape.to_file_i16le(file)
 
 def markovize():
     mmodel = Mmodel()
@@ -578,35 +577,35 @@ def markovize():
     mmodel.commit()
 
 def generate(phonetics=phonetics_ashes):
-    file = open('phonetic_markov.i16le', 'wb')
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
     mmodel = Mmodel()
     smoother = dlal.speech.Smoother()
     amp = 1e-3
     was_silent = True
-    for phonetic in phonetics:
-        print(phonetic)
-        frame = model[phonetic]['frames'][0]
-        for i in range(200):
-            if phonetic != '0':
-                smoothed_frame = smoother.smooth(frame, 0 if was_silent else 0.95)
-                features = dlal.speech.get_features(smoothed_frame)
-                params = mmodel.params_for_features(features, knn=True)
-                amp *= 1.1
-                if amp > 1: amp = 1
-                was_silent = False
-            else:
-                if amp > 1e-3:
-                    amp /= 1.1
-                was_silent = True
-            pd.synth.synthesize(
-                [amp * i[0] for i in params['tone']['spectrum']],
-                [amp * i[0] for i in params['noise']['spectrum']],
-                0,
-            )
-            pd.audio.run()
-            pd.tape.to_file_i16le(file)
+    with open('phonetic_markov.i16le', 'wb') as file:
+        for phonetic in phonetics:
+            print(phonetic)
+            frame = model[phonetic]['frames'][0]
+            for i in range(200):
+                if phonetic != '0':
+                    smoothed_frame = smoother.smooth(frame, 0 if was_silent else 0.95)
+                    features = dlal.speech.get_features(smoothed_frame)
+                    params = mmodel.params_for_features(features, knn=True)
+                    amp *= 1.1
+                    if amp > 1: amp = 1
+                    was_silent = False
+                else:
+                    if amp > 1e-3:
+                        amp /= 1.1
+                    was_silent = True
+                pd.synth.synthesize(
+                    [amp * i[0] for i in params['tone']['spectrum']],
+                    [amp * i[0] for i in params['noise']['spectrum']],
+                    0,
+                )
+                pd.audio.run()
+                pd.tape.to_file_i16le(file)
 
 def interact():
     global mmodel
