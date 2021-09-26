@@ -74,13 +74,21 @@ phonetics_ashes = [
     'm', 'y', 'n', 'y', 'ng', '0',
 ]
 phonetics_fusion = [
-    'f', 'y', 'w', 'sh_v', 'u', 'n', '0',
+    'f', 'y', 'w', 'sh_v', 'n', '0',
     'h', 'y', 'w', 'm', 'r', '0',
     'i', 'z', '0',
     's', 'o', 'w', '0',
     'm', 'e', 's', 'y', '0',
 ]
+durations_fusion = [
+    0.07, 0.05, 0.07, 0.11, 0.12, 0.03,
+    0.10, 0.04, 0.07, 0.05, 0.08, 0.01,
+    0.05, 0.05, 0.03,
+    0.12, 0.05, 0.05, 0.03,
+    0.07, 0.10, 0.15, 0.12, 0.03,
+]
 
+sample_rate = pe.audio.sample_rate()
 run_size = pe.audio.run_size()
 duration = pe.filea.duration()
 samples = 0
@@ -576,7 +584,7 @@ def markovize():
                 visited.add(p)
     mmodel.commit()
 
-def generate(phonetics=phonetics_ashes):
+def generate(phonetics=phonetics_ashes, durations=None):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
     mmodel = Mmodel()
@@ -584,10 +592,10 @@ def generate(phonetics=phonetics_ashes):
     amp = 1e-3
     was_silent = True
     with open('phonetic_markov.i16le', 'wb') as file:
-        for phonetic in phonetics:
+        for phonetic, duration in zip(phonetics, durations or [1/4] * len(phonetics)):
             print(phonetic)
             frame = model[phonetic]['frames'][0]
-            for i in range(200):
+            for i in range(int(duration * sample_rate / run_size)):
                 if phonetic != '0':
                     smoothed_frame = smoother.smooth(frame, 0 if was_silent else 0.95)
                     features = dlal.speech.get_features(smoothed_frame)
