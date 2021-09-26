@@ -25,10 +25,9 @@ parser = argparse.ArgumentParser(
 
         Example flow:
         `rm assets/phonetics/markov-model.sqlite3`
-        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled --fuzz'`
+        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled'`
         `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/sample1.flac'`
         `./do.py -r 'systems/phonetic_markov.py transcode --recording-path something-you-recorded.flac'`
-        `./do.py -r 'systems/phonetic_markov.py markovize'`
         `./do.py -r 'systems/phonetic_markov.py generate'`
     ''',
     formatter_class=argparse.RawTextHelpFormatter,
@@ -271,8 +270,11 @@ class Mmodel:
         if features:
             return self.params_for_features(features)
 
-    def params_for_features(self, features):
+    def params_for_features(self, features, knn=False):
         e = 1e4 / self.bucket_count()
+        prev = getattr(self, '_params_for_features_prev', None)
+        if prev and dlal.speech.features_distance(prev['features'], features) < e / 20:
+            return self._params_for_features_prev['params']
         while True:
             toniness = features[0]
             noisiness = 1 - features[0]
@@ -288,15 +290,30 @@ class Mmodel:
                     AND abs(f7 - {features[6]}) * {noisiness} < {e}
             '''
             rows = self.query(statement)
+            print(len(rows), end='\r')
             if len(rows) > 10: break
-            e *= 2
-        d_min = math.inf
-        for row in rows:
-            params = json.loads(row[0])
-            d = dlal.speech.features_distance(features, dlal.speech.get_features(params))
-            if d < d_min:
-                result = params
-                d_min = d
+            e *= 1.2
+        print()
+        if not knn:
+            d_min = math.inf
+            for row in rows:
+                params = json.loads(row[0])
+                d = dlal.speech.features_distance(features, dlal.speech.get_features(params))
+                if d < d_min:
+                    result = params
+                    d_min = d
+        else:
+            if len(rows) > 100:
+                random.shuffle(rows)
+                rows = rows[:100]
+            params = []
+            for row in rows:
+                params.append(json.loads(row[0]))
+            result = pe.frames_from_params(params)[0]
+        self._params_for_features_prev = {
+            'features': features,
+            'params': result,
+        }
         return result
 
     def bucket_count_for_phonetic(self, phonetic):
@@ -561,22 +578,35 @@ def markovize():
     mmodel.commit()
 
 def generate(phonetics=phonetics_ashes):
-    mmodel = Mmodel()
-    k = mmodel.buckets_for_phonetic('0', 1)[0]
     file = open('phonetic_markov.i16le', 'wb')
+    with open('assets/phonetics/model.json') as f:
+        model = json.loads(f.read())
+    mmodel = Mmodel()
+    smoother = dlal.speech.Smoother()
+    amp = 1e-3
+    was_silent = True
     for phonetic in phonetics:
         print(phonetic)
+        frame = model[phonetic]['frames'][0]
         for i in range(200):
-            params = mmodel.params_for_bucket(k)
+            if phonetic != '0':
+                smoothed_frame = smoother.smooth(frame, 0 if was_silent else 0.95)
+                features = dlal.speech.get_features(smoothed_frame)
+                params = mmodel.params_for_features(features, knn=True)
+                amp *= 1.1
+                if amp > 1: amp = 1
+                was_silent = False
+            else:
+                if amp > 1e-3:
+                    amp /= 1.1
+                was_silent = True
             pd.synth.synthesize(
-                params['tone']['spectrum'],
-                params['noise']['spectrum'],
+                [amp * i[0] for i in params['tone']['spectrum']],
+                [amp * i[0] for i in params['noise']['spectrum']],
                 0,
             )
             pd.audio.run()
             pd.tape.to_file_i16le(file)
-            nexts = mmodel.freqs_for_next_by_phonetic(k, phonetic)
-            k = random.sample([i[0] for i in nexts], 1, counts=[i[1] for i in nexts])[0]
 
 def interact():
     global mmodel
