@@ -74,18 +74,20 @@ phonetics_ashes = [
     'm', 'y', 'n', 'y', 'ng', '0',
 ]
 phonetics_fusion = [
-    'f', 'y', 'w', 'sh_v', 'n', '0',
-    'h', 'y', 'w', 'm', 'r', '0',
-    'i', 'z', '0',
-    's', 'o', 'w', '0',
-    'm', 'e', 's', 'y', '0',
+    'f', 'y', 'w', 'sh_v', 'i', 'n', '0',
+    'h', 'y', 'w', 'm', 'r',
+    'i', 'z',
+    's', '0', 'o', 'w',
+    'm', 'e', '0', 's', '0', 'y', '0',
+    '0',
 ]
-durations_fusion = [
-    0.07, 0.05, 0.07, 0.11, 0.12, 0.03,
-    0.10, 0.04, 0.07, 0.05, 0.08, 0.01,
-    0.05, 0.05, 0.03,
-    0.12, 0.05, 0.05, 0.03,
-    0.07, 0.10, 0.15, 0.12, 0.03,
+timings_fusion = [
+    0.08, 0.14, 0.19, 0.24, 0.35, 0.39, 0.44,
+    0.46, 0.55, 0.59, 0.63, 0.71,
+    0.81, 0.88,
+    0.92, 1.05, 1.08, 1.13,
+    1.18, 1.26, 1.36, 1.37, 1.50, 1.52, 1.64,
+    1.67,
 ]
 
 sample_rate = pe.audio.sample_rate()
@@ -298,10 +300,8 @@ class Mmodel:
                     AND abs(f7 - {features[6]}) * {noisiness} < {e}
             '''
             rows = self.query(statement)
-            print(len(rows), end='\r')
             if len(rows) > 10: break
             e *= 1.2
-        print()
         if not knn:
             d_min = math.inf
             for row in rows:
@@ -584,36 +584,40 @@ def markovize():
                 visited.add(p)
     mmodel.commit()
 
-def generate(phonetics=phonetics_ashes, durations=None):
+def generate(phonetics=phonetics_ashes, timings=None):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
     mmodel = Mmodel()
     smoother = dlal.speech.Smoother()
     amp = 1e-3
-    was_silent = True
     with open('phonetic_markov.i16le', 'wb') as file:
-        for phonetic, duration in zip(phonetics, durations or [1/4] * len(phonetics)):
+        phonetics.insert(0, '0')
+        if not timings:
+            timings = [i/4 for i in range(len(phonetics))]
+        params = None
+        time = 0
+        for phonetic, timing in zip(phonetics, timings):
             print(phonetic)
             frame = model[phonetic]['frames'][0]
-            for i in range(int(duration * sample_rate / run_size)):
+            while time < timing:
                 if phonetic != '0':
-                    smoothed_frame = smoother.smooth(frame, 0 if was_silent else 0.95)
+                    smoothed_frame = smoother.smooth(frame, 0.9)
                     features = dlal.speech.get_features(smoothed_frame)
                     params = mmodel.params_for_features(features, knn=True)
                     amp *= 1.1
                     if amp > 1: amp = 1
-                    was_silent = False
                 else:
                     if amp > 1e-3:
                         amp /= 1.1
-                    was_silent = True
-                pd.synth.synthesize(
-                    [amp * i[0] for i in params['tone']['spectrum']],
-                    [amp * i[0] for i in params['noise']['spectrum']],
-                    0,
-                )
+                if params:
+                    pd.synth.synthesize(
+                        [amp * i[0] for i in params['tone']['spectrum']],
+                        [amp * i[0] for i in params['noise']['spectrum']],
+                        0,
+                    )
                 pd.audio.run()
                 pd.tape.to_file_i16le(file)
+                time += run_size / sample_rate
 
 def interact():
     global mmodel
