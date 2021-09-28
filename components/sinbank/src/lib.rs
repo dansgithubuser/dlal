@@ -48,6 +48,9 @@ component!(
                 "kind": "norm",
             }],
         },
+        "zero": {
+            "args": [],
+        },
     },
 );
 
@@ -148,6 +151,13 @@ impl Component {
         let stft = unsafe { std::slice::from_raw_parts(data, len) };
         self.spectrum.resize(len, 0.0);
         self.spectrum.copy_from_slice(stft);
+        Ok(None)
+    }
+
+    fn zero_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        for i in self.spectrum.iter_mut() { *i = 0.0; }
+        for i in self.spectrum_e.iter_mut() { *i = 0.0; }
+        for i in self.spectrum_f.iter_mut() { *i = 0.0; }
         Ok(None)
     }
 }

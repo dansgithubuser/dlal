@@ -104,6 +104,7 @@ class SpeechSynth(Subsystem):
             },
             name=name,
         )
+        self.tone.zero()
         self.tone.smooth(0.8)
         self.noise.smooth(0.8)
         _connect(
