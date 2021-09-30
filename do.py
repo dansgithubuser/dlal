@@ -353,7 +353,7 @@ if args.run != None:
     if args.debug:
         os.environ['DLAL_LOG_LEVEL'] = 'debug'
     if args.run:
-        popen_args = ['python', '-i', *args.run]
+        popen_args = ['python', '-i', *[j for i in args.run for j in i.split()]]
     else:
         popen_args = ['python', '-i', '-c', 'import dlal']
     p = subprocess.Popen(popen_args)
