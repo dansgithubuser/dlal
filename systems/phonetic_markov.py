@@ -525,9 +525,10 @@ def transcode():
             params = pe.parameterize(*sample)
             features = dlal.speech.get_features(params)
             transams = mmodel.params_for_features(features)
+            amp = (sample[1] + sample[2]) / 2
             pd.synth.synthesize(
-                transams['tone']['spectrum'],
-                transams['noise']['spectrum'],
+                [amp * i for i in transams['tone']['spectrum']],
+                [amp * i for i in transams['noise']['spectrum']],
                 0,
             )
             pd.audio.run()

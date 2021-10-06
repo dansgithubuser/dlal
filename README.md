@@ -195,9 +195,11 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- plot features of a speech sample
-	- improve `generate_naive`
-		- sample a range of buckets instead of just nearest?
+	- get transcode to similar quality as in vocoder
+		- noise reduction?
+		- speak more clearly?
+		- smaller error?
+		- more data?
 - move from systems into skeleton
 	- another pass to tighten terminology
 - audiobro
