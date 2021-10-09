@@ -191,13 +191,22 @@ def find_tone(spectrum, amp_tone, phonetic=None):
     if f:
         for i in formants:
             i['amp'] /= f
+    median = sorted(spectrum)[len(spectrum) // 2]
+    threshold = 2 * median
     if not phonetic or phonetic in VOICED:
-        spectrum = [i * amp_tone for i in spectrum[:BINS_TONE]]
+        tone_spectrum = []
+        for i in range(BINS_TONE):
+            v = 0
+            if spectrum[i] > threshold:
+                v = spectrum[i] * amp_tone
+                spectrum[i] -= v
+                if spectrum[i] < 0: spectrum[i] = 0
+            tone_spectrum.append(v)
     else:
-        spectrum = [0] * BINS_TONE
+        tone_spectrum = [0] * BINS_TONE
     return {
         'formants': formants,
-        'spectrum': spectrum,
+        'spectrum': tone_spectrum,
     }
 
 def find_noise(spectrum, amp_noise, phonetic=None):
@@ -245,8 +254,11 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
 
 def sample_system():
     spectrum = stft.spectrum()
-    amp_tone = 5e1 * math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
-    amp_noise = 2e2 * math.sqrt(sum(i ** 2 for i in spectrum[6:]))
+    amp_tone = 5e1 * math.sqrt(sum(i ** 2 for i in spectrum[1:12]))
+    amp_noise = max(
+        2e2 * math.sqrt(sum(i ** 2 for i in spectrum[12:])) - amp_tone / 2,
+        0,
+    )
     return (spectrum, amp_tone, amp_noise)
 
 # model
