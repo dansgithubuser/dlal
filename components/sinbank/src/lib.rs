@@ -66,10 +66,6 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
-        if self.smooth != 0.0 {
-            smooth(&mut self.spectrum_e, &self.spectrum_f, self.smooth);
-            smooth(&mut self.spectrum, &self.spectrum_e, self.smooth);
-        }
         let output = match self.output.as_ref() {
             Some(v) => v,
             None => return,
@@ -84,6 +80,10 @@ impl ComponentTrait for Component {
                     })
                     .sum::<f32>();
             self.phase += self.step * self.bend;
+            if self.smooth != 0.0 {
+                smooth(&mut self.spectrum_e, &self.spectrum_f, self.smooth);
+                smooth(&mut self.spectrum, &self.spectrum_e, self.smooth);
+            }
         }
         let p = 2.0 * self.run_size as f32 * PI;
         if self.phase > p {

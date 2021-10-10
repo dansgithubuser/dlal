@@ -96,12 +96,8 @@ class SpeechSynth(Subsystem):
         Subsystem.init(self,
             {
                 'comm': ('comm', [1 << 12]),
-                'tone': ('sinbank', [44100 / (8 * 64)]),
-                'lpf1': ('lpf', [], { 'freq': 3500 }),
-                'lpf2': ('lpf', [], { 'freq': 3500 }),
-                'lpf3': ('lpf', [], { 'freq': 3500 }),
-                'lpf4': ('lpf', [], { 'freq': 3500 }),
-                'noise': 'noisebank',
+                'tone': ('sinbank', [44100 / (8 * 64), 0.998]),
+                'noise': ('noisebank', [0.8]),
                 'mul': ('mul', [1]),
                 'buf_tone': 'buf',
                 'buf_noise': 'buf',
@@ -109,14 +105,9 @@ class SpeechSynth(Subsystem):
             name=name,
         )
         self.tone.zero()
-        self.tone.smooth(0.8)
-        self.noise.smooth(0.8)
         _connect(
             (self.tone, self.noise),
             (self.buf_tone, self.buf_noise),
-            [],
-            [self.lpf1, self.lpf2, self.lpf3, self.lpf4],
-            self.buf_tone,
             [],
             self.mul,
             [self.buf_tone, self.buf_noise],
