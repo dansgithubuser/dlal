@@ -3,7 +3,6 @@ import collections
 import json
 import math
 import os
-import random
 import sqlite3
 
 try:
@@ -125,6 +124,10 @@ def features_to_frame(features, mmodel):
     bucket = bucketize(features)
     transams = mmodel.params_for_bucket(bucket, features)
     return pe.frames_from_params([transams])[0]
+
+def phonetic_to_params(phonetic):
+    features = dlal.speech.get_features(model[phonetic]['frames'][0])
+    return mmodel.params_for_features(features, knn=True)
 
 class Mmodel:
     def __init__(self):
@@ -311,12 +314,12 @@ class Mmodel:
                     result = params
                     d_min = d
         else:
-            if len(rows) > 100:
-                random.shuffle(rows)
-                rows = rows[:100]
             params = []
             for row in rows:
                 params.append(json.loads(row[0]))
+            if len(params) > 100:
+                params.sort(key=lambda i: dlal.speech.features_distance(features, dlal.speech.get_features(i)))
+                params = params[:100]
             result = pe.frames_from_params(params)[0]
         self._params_for_features_prev = {
             'features': features,
@@ -525,7 +528,7 @@ def transcode():
             params = pe.parameterize(*sample)
             features = dlal.speech.get_features(params)
             transams = mmodel.params_for_features(features)
-            amp = (sample[1] + sample[2]) / 2
+            amp = 1e2 * math.sqrt(sum(i**2 for i in sample[0]))
             pd.synth.synthesize(
                 [amp * i for i in transams['tone']['spectrum']],
                 [amp * i for i in transams['noise']['spectrum']],
@@ -593,8 +596,10 @@ def generate(phonetics=phonetics_ashes, timings=None):
     amp = 1e-3
     with open('phonetic_markov.i16le', 'wb') as file:
         phonetics.insert(0, '0')
-        if not timings:
+        if timings == None:
             timings = [i/4 for i in range(len(phonetics))]
+        elif type(timings) in [int, float]:
+            timings = [i * timings for i in range(len(phonetics))]
         params = None
         time = 0
         for phonetic, timing in zip(phonetics, timings):
@@ -621,8 +626,10 @@ def generate(phonetics=phonetics_ashes, timings=None):
                 time += run_size / sample_rate
 
 def interact():
-    global mmodel
+    global mmodel, model
     mmodel = Mmodel()
+    with open('assets/phonetics/model.json') as f:
+        model = json.loads(f.read())
 
 #===== main =====#
 eval(args.action)()

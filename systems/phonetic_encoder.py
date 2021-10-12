@@ -343,9 +343,9 @@ if __name__ == '__main__':
     runner = Runner()
     for phonetic in PHONETICS:
         print(phonetic)
-        runner.run(3)
+        runner.run(4)
         model.add_pre()
-        runner.run(6, lambda remaining: model.add(phonetic, remaining))
+        runner.run(5, lambda remaining: model.add(phonetic, remaining))
         model.add_post(phonetic)
         runner.run(1)
     model.add_0()
