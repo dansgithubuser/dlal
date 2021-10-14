@@ -196,7 +196,7 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - more intelligible speech synth
 	- get transcode to similar quality as in vocoder
-		- why s's have weird noise?
+		- why ae sounds like a?
 - move from systems into skeleton
 	- another pass to tighten terminology
 - audiobro

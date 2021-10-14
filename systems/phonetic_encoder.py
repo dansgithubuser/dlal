@@ -254,11 +254,8 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
 
 def sample_system():
     spectrum = stft.spectrum()
-    amp_tone = 5e1 * math.sqrt(sum(i ** 2 for i in spectrum[1:12]))
-    amp_noise = max(
-        2e2 * math.sqrt(sum(i ** 2 for i in spectrum[12:])) - amp_tone / 2,
-        0,
-    )
+    amp_tone = 1e2 * math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
+    amp_noise = 1e2 * math.sqrt(sum(i ** 2 for i in spectrum[32:]))
     return (spectrum, amp_tone, amp_noise)
 
 # model
