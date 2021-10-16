@@ -97,9 +97,15 @@ def descend(x, ks):
     for k in ks: x = x[k]
     return x
 
-def stats(l, ks):
+def stats(l, ks, reject_outliers=False):
     l = [descend(i, ks) for i in l]
     m = mean(l)
+    if reject_outliers:
+        r = max(l) - min(l)
+        l2 = [i for i in l if abs(i-m) <= r/4]
+        if len(l2):
+            l = l2
+            m = mean(l)
     return (
         m,
         math.sqrt(mean([(i - m) ** 2 for i in l])),
@@ -113,7 +119,7 @@ def frames_from_params(params, stop=False):
                 'tone': {
                     'formants': [
                         {
-                            'freq': stats(params, ['tone', 'formants', i, 'freq']),
+                            'freq': stats(params, ['tone', 'formants', i, 'freq'], True),
                             'amp': stats(params, ['tone', 'formants', i, 'amp']),
                         }
                         for i in range(len(FORMANT_BIN_RANGES))
@@ -140,7 +146,7 @@ def frames_from_params(params, stop=False):
                 'tone': {
                     'formants': [
                         {
-                            'freq': stats([k], ['tone', 'formants', i, 'freq']),
+                            'freq': stats([k], ['tone', 'formants', i, 'freq'], True),
                             'amp': stats([k], ['tone', 'formants', i, 'amp']),
                         }
                         for i in range(len(FORMANT_BIN_RANGES))
@@ -163,12 +169,18 @@ def frames_from_params(params, stop=False):
             for k in params
         ]
 
-def find_formant(spectrum, bin_i, bin_f, amp_tone):
-    spread = 2
+def find_formant(spectrum, bin_i, bin_f, amp_tone, formant_freq_prev=0):
+    bin_i = min(
+        max(
+            bin_i,
+            math.floor(formant_freq_prev * C) + 4
+        ),
+        bin_f - 1,
+    )
     window = spectrum[bin_i:bin_f]
-    e_window = sum(i ** 2 for i in window)
     bin_peak = window.index(max(window)) + bin_i
     bin_formant = bin_peak
+    spread = 2
     if bin_peak >= spread and bin_peak < len(spectrum) - spread:
         bins = [
             (i, spectrum[i])
@@ -177,16 +189,19 @@ def find_formant(spectrum, bin_i, bin_f, amp_tone):
         s = sum(v ** 2 for i, v in bins)
         if s != 0:
             bin_formant = sum(i * v ** 2 for i, v in bins) / s
+    e_window = sum(i ** 2 for i in window)
     return {
         'freq': bin_formant / C,
         'amp': math.sqrt(e_window) * amp_tone,
     }
 
 def find_tone(spectrum, amp_tone, phonetic=None):
-    formants = [
-        find_formant(spectrum, *i, amp_tone)
-        for i in FORMANT_BIN_RANGES
-    ]
+    formants = []
+    formant_freq_prev = 0
+    for i in FORMANT_BIN_RANGES:
+        formant = find_formant(spectrum, *i, amp_tone, formant_freq_prev)
+        formant_freq_prev = formant['freq']
+        formants.append(formant)
     f = max(i['amp'] for i in formants)
     if f:
         for i in formants:
