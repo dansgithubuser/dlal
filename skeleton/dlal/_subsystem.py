@@ -98,32 +98,47 @@ class SpeechSynth(Subsystem):
                 'comm': ('comm', [1 << 12]),
                 'tone': ('sinbank', [44100 / (8 * 64), 0.998]),
                 'noise': ('noisebank', [0.8]),
-                'mul': ('mul', [1]),
+                'buf_tone_1': 'buf',
+                'peak': 'peak',
+                'oracle': (
+                    'oracle',
+                    [],
+                    {
+                        'format': ('c', '%'),
+                    },
+                ),
+                'mul': ('mul', [0]),
                 'gain_tone': 'gain',
-                'buf_tone': 'buf',
-                'buf_noise': 'buf',
+                'buf_tone_o': 'buf',
+                'buf_noise_o': 'buf',
             },
             name=name,
         )
         self.tone.zero()
         _connect(
             (self.tone, self.noise),
-            (self.buf_tone, self.buf_noise),
+            (self.buf_tone_1, self.buf_noise_o),
+            (self.buf_tone_o,),
             [],
+            self.buf_tone_1,
+            self.peak,
+            self.oracle,
             self.mul,
-            [self.buf_tone, self.buf_noise],
+            [self.buf_tone_o, self.buf_noise_o],
             [],
             self.gain_tone,
-            self.buf_tone,
+            self.buf_tone_o,
         )
-        self.outputs = [self.buf_tone, self.buf_noise]
+        self.outputs = [self.buf_tone_o, self.buf_noise_o]
 
     def synthesize(self, tone_spectrum, noise_spectrum, toniness, wait):
         with _skeleton.Detach():
             with self.comm:
                 self.tone.spectrum(tone_spectrum)
                 self.noise.spectrum(noise_spectrum)
-                self.gain_tone.set(sorted([0, 10 * (toniness - 0.75), 1])[1], 0.8)
+                tonal_airflow = sorted([0, 10 * (toniness - 0.75), 1])[1]
+                self.oracle.b(1 - tonal_airflow)
+                self.gain_tone.set(tonal_airflow, 0.8)
             self.comm.wait(wait)
 
 class Portamento(Subsystem):

@@ -29,6 +29,10 @@ class Oracle(Component):
         return MODE.list[int(self.command('mode', args))]
 
     def format(self, name, *args, **kwargs):
+        '''Supply the name, args, and kwargs of a command.
+        Use % to represent the control voltage.
+        If mode is 'pitch_wheel', use %l and %h for low and high bytes.
+        '''
         return self.command('format', [json.dumps({
             'name': name,
             'args': args,
