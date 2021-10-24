@@ -99,15 +99,9 @@ class SpeechSynth(Subsystem):
                 'tone': ('sinbank', [44100 / (8 * 64), 0.998]),
                 'noise': ('noisebank', [0.8]),
                 'buf_tone_1': 'buf',
-                'peak': 'peak',
-                'oracle': (
-                    'oracle',
-                    [],
-                    {
-                        'format': ('c', '%'),
-                    },
-                ),
-                'mul': ('mul', [0]),
+                'peak': ('peak', [0.99]),
+                'mul': 'mul',
+                'buf_peak': 'buf',
                 'gain_tone': 'gain',
                 'buf_tone_o': 'buf',
                 'buf_noise_o': 'buf',
@@ -122,9 +116,10 @@ class SpeechSynth(Subsystem):
             [],
             self.buf_tone_1,
             self.peak,
-            self.oracle,
+            self.buf_peak,
+            [],
             self.mul,
-            [self.buf_tone_o, self.buf_noise_o],
+            [self.buf_peak, self.buf_noise_o],
             [],
             self.gain_tone,
             self.buf_tone_o,
@@ -136,8 +131,8 @@ class SpeechSynth(Subsystem):
             with self.comm:
                 self.tone.spectrum(tone_spectrum)
                 self.noise.spectrum(noise_spectrum)
-                tonal_airflow = sorted([0, 10 * (toniness - 0.75), 1])[1]
-                self.oracle.b(1 - tonal_airflow)
+                tonal_airflow = sorted([0, 20 * (toniness - 0.05), 1])[1]
+                self.mul.c(1 - tonal_airflow)
                 self.gain_tone.set(tonal_airflow, 0.8)
             self.comm.wait(wait)
 

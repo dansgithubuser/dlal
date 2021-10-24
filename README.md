@@ -195,15 +195,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- voiced fricatives...
-		- too much tone?
-			- why vocoding good but not synth?
-				- because mul const 1 is too much?
-					- but why doesn't that affect vocoder?
-					- because vocoder detects more toniness for whatever reason
-				- peak detector tone set mul const
-				- glottis works like a staircase, should be multiplying that by noise, not final tone sound
-				- peak detector detect tone cycles
 	- stops
 - move speech stuff from systems into skeleton
 	- another pass to tighten terminology
