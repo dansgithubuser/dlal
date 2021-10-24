@@ -115,6 +115,7 @@ def render(mmodel, buckets):
             pd.synth.synthesize(
                 params['tone']['spectrum'],
                 params['noise']['spectrum'],
+                params['toniness'],
                 0,
             )
             pd.audio.run()
@@ -532,6 +533,7 @@ def transcode():
             pd.synth.synthesize(
                 [amp * i for i in transams['tone']['spectrum']],
                 [amp * i for i in transams['noise']['spectrum']],
+                transams['toniness'],
                 0,
             )
             pd.audio.run()
@@ -555,6 +557,7 @@ def generate_naive(phonetics=phonetics_ashes):
                 pd.synth.synthesize(
                     [i[0] for i in transframe['tone']['spectrum']],
                     [i[0] for i in transframe['noise']['spectrum']],
+                    transframe['toniness'][0],
                     0,
                 )
                 pd.audio.run()
@@ -619,6 +622,7 @@ def generate(phonetics=phonetics_ashes, timings=None):
                     pd.synth.synthesize(
                         [amp * i[0] for i in params['tone']['spectrum']],
                         [amp * i[0] for i in params['noise']['spectrum']],
+                        params['toniness'][0],
                         0,
                     )
                 pd.audio.run()

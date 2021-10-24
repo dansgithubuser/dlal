@@ -99,6 +99,7 @@ class SpeechSynth(Subsystem):
                 'tone': ('sinbank', [44100 / (8 * 64), 0.998]),
                 'noise': ('noisebank', [0.8]),
                 'mul': ('mul', [1]),
+                'gain_tone': 'gain',
                 'buf_tone': 'buf',
                 'buf_noise': 'buf',
             },
@@ -111,14 +112,18 @@ class SpeechSynth(Subsystem):
             [],
             self.mul,
             [self.buf_tone, self.buf_noise],
+            [],
+            self.gain_tone,
+            self.buf_tone,
         )
         self.outputs = [self.buf_tone, self.buf_noise]
 
-    def synthesize(self, tone_spectrum, noise_spectrum, wait):
+    def synthesize(self, tone_spectrum, noise_spectrum, toniness, wait):
         with _skeleton.Detach():
             with self.comm:
                 self.tone.spectrum(tone_spectrum)
                 self.noise.spectrum(noise_spectrum)
+                self.gain_tone.set(sorted([0, 10 * (toniness - 0.75), 1])[1], 0.8)
             self.comm.wait(wait)
 
 class Portamento(Subsystem):

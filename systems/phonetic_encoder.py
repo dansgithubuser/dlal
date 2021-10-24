@@ -206,22 +206,21 @@ def find_tone(spectrum, amp_tone, phonetic=None):
     if f:
         for i in formants:
             i['amp'] /= f
-    median = sorted(spectrum)[len(spectrum) // 2]
-    threshold = 2 * median
+    spectrum_tone = [0] * BINS_TONE
     if not phonetic or phonetic in VOICED:
-        tone_spectrum = []
+        spectrum_tone = []
+        median = sorted(spectrum)[len(spectrum) // 2]
+        threshold = 2 * median
         for i in range(BINS_TONE):
             v = 0
             if spectrum[i] > threshold:
                 v = spectrum[i] * amp_tone
                 spectrum[i] -= v
                 if spectrum[i] < 0: spectrum[i] = 0
-            tone_spectrum.append(v)
-    else:
-        tone_spectrum = [0] * BINS_TONE
+            spectrum_tone.append(v)
     return {
         'formants': formants,
-        'spectrum': tone_spectrum,
+        'spectrum': spectrum_tone,
     }
 
 def find_noise(spectrum, amp_noise, phonetic=None):

@@ -61,6 +61,7 @@ class Phonetizer:
             self.synthesize(
                 transams_min['tone']['spectrum'],
                 transams_min['noise']['spectrum'],
+                transams_min['toniness'],
                 64,
             )
 

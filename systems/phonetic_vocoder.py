@@ -121,6 +121,7 @@ while samples < duration:
     pd.synth.synthesize(
         [i[0] for i in frame['tone']['spectrum']],
         [i[0] for i in frame['noise']['spectrum']],
+        frame['toniness'][0],
         0,
     )
     pd.audio.run()
