@@ -264,6 +264,7 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
         'toniness': toniness,
         'tone': tone,
         'noise': noise,
+        'f': f,
     }
 
 def sample_system():

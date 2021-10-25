@@ -118,9 +118,10 @@ while samples < duration:
     plotter.add(params)
     paramses.append(params)
     frame = pe.frames_from_params([params])[0]
+    amp = min(params['f'] * 10, 1)
     pd.synth.synthesize(
-        [i[0] for i in frame['tone']['spectrum']],
-        [i[0] for i in frame['noise']['spectrum']],
+        [amp * i[0] for i in frame['tone']['spectrum']],
+        [amp * i[0] for i in frame['noise']['spectrum']],
         frame['toniness'][0],
         0,
     )
