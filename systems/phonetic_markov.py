@@ -88,6 +88,34 @@ timings_fusion = [
     1.18, 1.26, 1.36, 1.37, 1.50, 1.52, 1.64,
     1.67,
 ]
+phonetics_cat = [
+    'h', 'ae', 'w', '0',
+    'd', 'u', 'z',
+    'th_v', 'u', '0',
+    'g', 'r', 'ay', 'y', '0', 't', '0',
+    'b', 'l', 'w', '0',
+    'k', 'ae', '0', 't', '0',
+    'j', 'u', 'm', '0', 'p', '0',
+    'j', 'ae', 'y', 'v', '0',
+    'ae', 'n', 'd', '0',
+    'd', 'ae', 'n', 's', '0',
+    'e', 'f', 'r', 't', 'l', 'e', 's', 'l', 'y', '0',
+    '0',
+]
+timings_cat = [
+    0.10, 0.20, 0.30, 0.38,
+    0.48, 0.49, 0.60,
+    0.67, 0.74, 0.77,
+    0.88, 0.94, 1.00, 1.04, 1.15, 1.20, 1.34,
+    1.48, 1.49, 1.57, 1.75,
+    1.92, 2.03, 2.20, 2.29, 2.40,
+    2.49, 2.56, 2.66, 2.73, 2.76, 2.89,
+    2.99, 3.05, 3.19, 3.31, 3.38,
+    3.43, 3.49, 3.55, 3.57,
+    3.66, 3.69, 3.87, 3.94, 4.06,
+    4.17, 4.27, 4.41, 4.46, 4.48, 4.58, 4.65, 4.84, 4.88, 4.99,
+    5.05,
+]
 
 sample_rate = pe.audio.sample_rate()
 run_size = pe.audio.run_size()
@@ -607,9 +635,17 @@ def generate(phonetics=phonetics_ashes, timings=None):
         time = 0
         for phonetic, timing in zip(phonetics, timings):
             print(phonetic)
-            frame = model[phonetic]['frames'][0]
+            frames = model[phonetic]['frames']
+            frame_i = 0
             while time < timing:
                 if phonetic != '0':
+                    if len(frames) == 1:
+                        frame = frames[0]
+                    elif frame_i >= len(frames):
+                        frame = model['0']['frames'][0]
+                    else:
+                        frame = frames[frame_i]
+                        frame_i += 1
                     smoothed_frame = smoother.smooth(frame, 0.9)
                     features = dlal.speech.get_features(smoothed_frame)
                     params = mmodel.params_for_features(features, knn=True)
