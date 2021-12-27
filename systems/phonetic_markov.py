@@ -635,18 +635,26 @@ def generate(phonetics=phonetics_ashes, timings=None):
         time = 0
         for phonetic, timing in zip(phonetics, timings):
             print(phonetic)
-            frames = model[phonetic]['frames']
+            info = model[phonetic]
+            frames = info['frames']
             frame_i = 0
             while time < timing:
                 if phonetic != '0':
-                    if len(frames) == 1:
+                    if info['type'] == 'continuant':
+                        smoothness = 0.9
+                    elif frame_i == 0:
+                        smoothness = 0
+                        amp = 1
+                    else:
+                        smoothness = 0.7
+                    if info['type'] == 'continuant':
                         frame = frames[0]
                     elif frame_i >= len(frames):
                         frame = model['0']['frames'][0]
                     else:
                         frame = frames[frame_i]
                         frame_i += 1
-                    smoothed_frame = smoother.smooth(frame, 0.9)
+                    smoothed_frame = smoother.smooth(frame, smoothness)
                     features = dlal.speech.get_features(smoothed_frame)
                     params = mmodel.params_for_features(features, knn=True)
                     amp *= 1.1
