@@ -633,15 +633,20 @@ def generate(phonetics=phonetics_ashes, timings=None):
             timings = [i * timings for i in range(len(phonetics))]
         params = None
         time = 0
+        info_prev = None
         for phonetic, timing in zip(phonetics, timings):
             print(phonetic)
             info = model[phonetic]
+            if not info_prev: info_prev = info
             frames = info['frames']
             frame_i = 0
             while time < timing:
                 if phonetic != '0':
                     if info['type'] == 'continuant':
-                        smoothness = 0.9
+                        if not info_prev['voiced'] and info['voiced']:
+                            smoothness = 0.5
+                        else:
+                            smoothness = 0.9
                     elif frame_i == 0:
                         smoothness = 0
                         amp = 1
@@ -672,6 +677,7 @@ def generate(phonetics=phonetics_ashes, timings=None):
                 pd.audio.run()
                 pd.tape.to_file_i16le(file)
                 time += run_size / sample_rate
+            info_prev = info
 
 def interact():
     global mmodel, model
