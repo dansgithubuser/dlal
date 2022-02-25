@@ -642,16 +642,19 @@ def generate(phonetics=phonetics_ashes, timings=None):
             frame_i = 0
             while time < timing:
                 if phonetic != '0':
-                    if info['type'] == 'continuant':
+                    if info['type'] == 'stop':
+                        if frame_i == 0:
+                            smoothness = 0
+                            amp = 1
+                        else:
+                            smoothness = 0.7
+                    elif info_prev['type'] == 'stop':
+                        smoothness = 0.7
+                    else:
                         if not info_prev['voiced'] and info['voiced']:
                             smoothness = 0.5
                         else:
                             smoothness = 0.9
-                    elif frame_i == 0:
-                        smoothness = 0
-                        amp = 1
-                    else:
-                        smoothness = 0.7
                     if info['type'] == 'continuant':
                         frame = frames[0]
                     elif frame_i >= len(frames):
