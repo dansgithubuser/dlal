@@ -12,7 +12,7 @@ except:
 
 parser = argparse.ArgumentParser(
     description='''
-        A phonetic model. It is built atop phonetic_encoder and phonetic_decoder, but works with an independent set of files.
+        A phonetic model. It is built atop phonetic_encoder and phonetic_decoder.
 
         Whereas a phonetic_encoder model deals with full params, a phonetic_markov model deals with reduced params, or features.
 

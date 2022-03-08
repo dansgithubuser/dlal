@@ -224,10 +224,10 @@ def find_tone(spectrum, amp_tone, phonetic=None):
     }
 
 def find_noise(spectrum, amp_noise, phonetic=None):
-    f = 0
-    s = 0
-    hi = 0
-    s2 = 0
+    f = 0  # amplitude-weighted sum of frequencies (to find center frequency)
+    s = 0  # sum of amplitudes (to find center frequency)
+    hi = 0  # high-frequency energy
+    s2 = 0  # squared sum of amplitudes (to normalize high-frequency energy)
     for i, v in enumerate(spectrum):
         freq = i / C
         if freq < 2000: continue
@@ -270,7 +270,7 @@ def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
 def sample_system():
     spectrum = stft.spectrum()
     amp_tone = 5e1 * math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
-    amp_noise = 2e2 * math.sqrt(sum(i ** 2 for i in spectrum[32:]))
+    amp_noise = 1e3 * math.sqrt(sum(i ** 2 for i in spectrum[32:]))
     return (spectrum, amp_tone, amp_noise)
 
 # model
