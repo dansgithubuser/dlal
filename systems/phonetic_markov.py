@@ -312,8 +312,8 @@ class Mmodel:
         if features:
             return self.params_for_features(features)
 
-    def params_for_features(self, features, knn=False):
-        e = 1e4 / self.bucket_count()
+    def params_for_features(self, features, knn=False, e_factor=1):
+        e = e_factor * 1e4 / self.bucket_count()
         prev = getattr(self, '_params_for_features_prev', None)
         if prev and dlal.speech.features_distance(prev['features'], features) < e / 20:
             return self._params_for_features_prev['params']
@@ -619,7 +619,7 @@ def markovize():
                 visited.add(p)
     mmodel.commit()
 
-def generate(phonetics=phonetics_ashes, timings=None):
+def generate(phonetics=phonetics_cat, timings=timings_cat):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
     mmodel = Mmodel()
@@ -664,7 +664,11 @@ def generate(phonetics=phonetics_ashes, timings=None):
                         frame_i += 1
                     smoothed_frame = smoother.smooth(frame, smoothness)
                     features = dlal.speech.get_features(smoothed_frame)
-                    params = mmodel.params_for_features(features, knn=True)
+                    if info['type'] == 'stop':
+                        e_factor = .1
+                    else:
+                        e_factor = 1
+                    params = mmodel.params_for_features(features, knn=True, e_factor=e_factor)
                     amp *= 1.1
                     if amp > 1: amp = 1
                 else:
