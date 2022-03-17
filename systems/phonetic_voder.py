@@ -43,7 +43,6 @@ parser.add_argument(
 )
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
 parser.add_argument('--labeled', action='store_true', help='whether the recording was created by phonetic_recorder or not')
-parser.add_argument('--fuzz', action='store_true', help='fuzz when training on labeled data')
 parser.add_argument('--voder-model-path', default='assets/phonetics/voder-model.sqlite3')
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
@@ -311,11 +310,6 @@ class Vmodel:
         return self.query_1c(statement)
 
     #----- analyze -----#
-    def max_intraphonetic_distances(self):
-        for phonetic in PHONETICS:
-            d = self.max_intraphonetic_distance(phonetic)
-            print(f'{phonetic:4} {d}')
-
     def analyze_phonetics(self):
         ranges = []
         for phonetic in PHONETICS:
@@ -422,15 +416,6 @@ def train():
             plot.point(samples, vmodel.bucket_count())
         bucket_prev = bucket
         samples += run_size
-    if args.fuzz:
-        for phonetic in PHONETICS:
-            statement = f'''
-                SELECT sum(freq)
-                FROM phonetics
-                WHERE freq > 1 AND phonetic = '{phonetic}'
-            '''
-            if (vmodel.query_1r1c(statement) or 0) > 100: continue
-            buckets = vmodel.buckets_for_phonetic(phonetic, 100)
     print()
     vmodel.commit()
 
