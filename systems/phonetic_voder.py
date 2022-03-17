@@ -190,6 +190,11 @@ class Vmodel:
                 CREATE INDEX i_phonetics_phonetic ON phonetics (phonetic);
                 CREATE INDEX i_phonetics_bucket ON phonetics (bucket);
                 CREATE INDEX i_phonetics_freq ON phonetics (freq);
+
+                CREATE TABLE shortcuts (
+                    bucket VARCHAR(12) PRIMARY KEY,
+                    params JSONB
+                );
             '''
             for statement in statements.split(';'):
                 self.query(statement)
@@ -252,8 +257,25 @@ class Vmodel:
         row = self.query_1r(statement)
         if row:
             return json.loads(row[0])
+        statement = f'''
+            SELECT params
+            FROM shortcuts
+            WHERE bucket = '{bucket}'
+        '''
+        row = self.query_1r(statement)
+        if row:
+            return json.loads(row[0])
         if features:
-            return self.params_for_features(features)
+            params = self.params_for_features(features)
+            self.query(f'''
+                INSERT INTO shortcuts
+                VALUES (
+                    '{bucket}',
+                    '{json.dumps(params)}'
+                )
+            ''')
+            self.commit()
+            return params
 
     def params_for_features(self, features, knn=False, e_factor=1):
         e = e_factor * 1e4 / self.bucket_count()
