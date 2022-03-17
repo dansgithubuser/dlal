@@ -544,7 +544,8 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                         e_factor = .1
                     else:
                         e_factor = 1
-                    params = vmodel.params_for_features(features)
+                    bucket = bucketize(features)
+                    params = vmodel.params_for_bucket(bucket, features)
                     amp *= 1.1
                     if amp > 1: amp = 1
                 else:
@@ -552,9 +553,9 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                         amp /= 1.1
                 if params:
                     pd.synth.synthesize(
-                        [amp * i[0] for i in params['tone']['spectrum']],
-                        [amp * i[0] for i in params['noise']['spectrum']],
-                        params['toniness'][0],
+                        [amp * i for i in params['tone']['spectrum']],
+                        [amp * i for i in params['noise']['spectrum']],
+                        params['toniness'],
                         0,
                     )
                 pd.audio.run()
