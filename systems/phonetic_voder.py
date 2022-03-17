@@ -14,19 +14,19 @@ parser = argparse.ArgumentParser(
     description='''
         A phonetic model. It is built atop phonetic_encoder and phonetic_decoder.
 
-        Whereas a phonetic_encoder model deals with full params, a phonetic_markov model deals with reduced params, or features.
+        Whereas a phonetic_encoder model deals with full params, a phonetic_voder model deals with reduced params, or features.
 
         The following actions can be performed:
         - analyze_model: print out the feature ranges for each phonetic group of a phonetic_encoder model
-        - train: start or update a phonetic_markov model
-        - transcode: transcode a recording with a phonetic_markov model
+        - train: start or update a phonetic_voder model
+        - transcode: transcode a recording with a phonetic_voder model
 
         Example flow:
-        `rm assets/phonetics/markov-model.sqlite3`
-        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/phonetics.flac --labeled'`
-        `./do.py -r 'systems/phonetic_markov.py train --recording-path assets/phonetics/sample1.flac'`
-        `./do.py -r 'systems/phonetic_markov.py transcode --recording-path something-you-recorded.flac'`
-        `./do.py -r 'systems/phonetic_markov.py generate'`
+        `rm assets/phonetics/voder-model.sqlite3`
+        `./do.py -r 'systems/phonetic_voder.py train --recording-path assets/phonetics/phonetics.flac --labeled'`
+        `./do.py -r 'systems/phonetic_voder.py train --recording-path assets/phonetics/sample1.flac'`
+        `./do.py -r 'systems/phonetic_voder.py transcode --recording-path something-you-recorded.flac'`
+        `./do.py -r 'systems/phonetic_voder.py generate'`
     ''',
     formatter_class=argparse.RawTextHelpFormatter,
 )
@@ -44,7 +44,7 @@ parser.add_argument(
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
 parser.add_argument('--labeled', action='store_true', help='whether the recording was created by phonetic_recorder or not')
 parser.add_argument('--fuzz', action='store_true', help='fuzz when training on labeled data')
-parser.add_argument('--markov-model-path', default='assets/phonetics/markov-model.sqlite3')
+parser.add_argument('--voder-model-path', default='assets/phonetics/voder-model.sqlite3')
 parser.add_argument('--plot', action='store_true')
 args = parser.parse_args()
 
@@ -134,10 +134,10 @@ def bucketize(features):
     else:
         return serialize_features((features[0],) + features[5:])
 
-def render(mmodel, buckets):
-    with open('phonetic_markov.i16le', 'wb') as file:
+def render(vmodel, buckets):
+    with open('phonetic_voder.i16le', 'wb') as file:
         for bucket in buckets:
-            params = mmodel.params_for_bucket(bucket)
+            params = vmodel.params_for_bucket(bucket)
             pd.synth.synthesize(
                 params['tone']['spectrum'],
                 params['noise']['spectrum'],
@@ -147,19 +147,19 @@ def render(mmodel, buckets):
             pd.audio.run()
             pd.tape.to_file_i16le(file)
 
-def features_to_frame(features, mmodel):
+def features_to_frame(features, vmodel):
     bucket = bucketize(features)
-    transams = mmodel.params_for_bucket(bucket, features)
+    transams = vmodel.params_for_bucket(bucket, features)
     return pe.frames_from_params([transams])[0]
 
 def phonetic_to_params(phonetic):
     features = dlal.speech.get_features(model[phonetic]['frames'][0])
-    return mmodel.params_for_features(features, knn=True)
+    return vmodel.params_for_features(features, knn=True)
 
-class Mmodel:
+class Vmodel:
     def __init__(self):
-        new = not os.path.exists(args.markov_model_path)
-        self.conn = sqlite3.connect(args.markov_model_path)
+        new = not os.path.exists(args.voder_model_path)
+        self.conn = sqlite3.connect(args.voder_model_path)
         if new:
             statements = '''
                 CREATE TABLE states (
@@ -371,16 +371,16 @@ def analyze_model():
 
 def train():
     global samples
-    mmodel = Mmodel()
+    vmodel = Vmodel()
     bucket_prev = None
     while samples < duration:
-        print(f'\r{samples / duration * 100:.1f} %; {mmodel.bucket_count()} buckets', end='')
+        print(f'\r{samples / duration * 100:.1f} %; {vmodel.bucket_count()} buckets', end='')
         pe.audio.run()
         sample = pe.sample_system()
         params = pe.parameterize(*sample)
         features = dlal.speech.get_features(params)
         bucket = bucketize(features)
-        mmodel.ensure_bucket(bucket, features, params)
+        vmodel.ensure_bucket(bucket, features, params)
         if args.labeled:
             seconds = int(samples / 44100)
             deciseconds = int(samples / 4410)
@@ -416,10 +416,10 @@ def train():
                                 phonetic = None
             # label accordingly
             if phonetic:
-                mmodel.label_bucket(bucket, phonetic)
+                vmodel.label_bucket(bucket, phonetic)
                 new = False
         if args.plot:
-            plot.point(samples, mmodel.bucket_count())
+            plot.point(samples, vmodel.bucket_count())
         bucket_prev = bucket
         samples += run_size
     if args.fuzz:
@@ -429,22 +429,22 @@ def train():
                 FROM phonetics
                 WHERE freq > 1 AND phonetic = '{phonetic}'
             '''
-            if (mmodel.query_1r1c(statement) or 0) > 100: continue
-            buckets = mmodel.buckets_for_phonetic(phonetic, 100)
+            if (vmodel.query_1r1c(statement) or 0) > 100: continue
+            buckets = vmodel.buckets_for_phonetic(phonetic, 100)
     print()
-    mmodel.commit()
+    vmodel.commit()
 
 def transcode():
     global samples
-    with open('phonetic_markov.i16le', 'wb') as file:
-        mmodel = Mmodel()
+    with open('phonetic_voder.i16le', 'wb') as file:
+        vmodel = Vmodel()
         while samples < duration:
             print(f'\r{samples / duration * 100:.1f} %', end='')
             pe.audio.run()
             sample = pe.sample_system()
             params = pe.parameterize(*sample)
             features = dlal.speech.get_features(params)
-            transams = mmodel.params_for_features(features)
+            transams = vmodel.params_for_features(features)
             amp = min(params['f'] * 10, 1)
             pd.synth.synthesize(
                 [amp * i for i in transams['tone']['spectrum']],
@@ -460,16 +460,16 @@ def transcode():
 def generate_naive(phonetics=phonetics_ashes):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
-    mmodel = Mmodel()
+    vmodel = Vmodel()
     smoother = dlal.speech.Smoother()
-    with open('phonetic_markov.i16le', 'wb') as file:
+    with open('phonetic_voder.i16le', 'wb') as file:
         for phonetic in phonetics:
             print(phonetic)
             frame = model[phonetic]['frames'][0]
             for _ in range(200):
                 smoothed_frame = smoother.smooth(frame, 0.99)
                 features = dlal.speech.get_features(smoothed_frame)
-                transframe = features_to_frame(features, mmodel)
+                transframe = features_to_frame(features, vmodel)
                 pd.synth.synthesize(
                     [i[0] for i in transframe['tone']['spectrum']],
                     [i[0] for i in transframe['noise']['spectrum']],
@@ -482,10 +482,10 @@ def generate_naive(phonetics=phonetics_ashes):
 def generate(phonetics=phonetics_cat, timings=timings_cat):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
-    mmodel = Mmodel()
+    vmodel = Vmodel()
     smoother = dlal.speech.Smoother()
     amp = 1e-3
-    with open('phonetic_markov.i16le', 'wb') as file:
+    with open('phonetic_voder.i16le', 'wb') as file:
         phonetics.insert(0, '0')
         if timings == None:
             timings = [i/4 for i in range(len(phonetics))]
@@ -528,7 +528,7 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                         e_factor = .1
                     else:
                         e_factor = 1
-                    params = mmodel.params_for_features(features, knn=True, e_factor=e_factor)
+                    params = vmodel.params_for_features(features, knn=True, e_factor=e_factor)
                     amp *= 1.1
                     if amp > 1: amp = 1
                 else:
@@ -547,8 +547,8 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
             info_prev = info
 
 def interact():
-    global mmodel, model
-    mmodel = Mmodel()
+    global vmodel, model
+    vmodel = Vmodel()
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
 
