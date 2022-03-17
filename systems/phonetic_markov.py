@@ -20,7 +20,6 @@ parser = argparse.ArgumentParser(
         - analyze_model: print out the feature ranges for each phonetic group of a phonetic_encoder model
         - train: start or update a phonetic_markov model
         - transcode: transcode a recording with a phonetic_markov model
-        - markovize: take an unmarkovized phonetic_markov model, calculate paths to different phonetics from each bucket, yielding a proper phonetic_markov model
 
         Example flow:
         `rm assets/phonetics/markov-model.sqlite3`
@@ -38,7 +37,6 @@ parser.add_argument(
         'train',
         'transcode',
         'generate_naive',
-        'markovize',
         'generate',
         'interact',
     ],
@@ -193,26 +191,6 @@ class Mmodel:
                 CREATE INDEX i_phonetics_phonetic ON phonetics (phonetic);
                 CREATE INDEX i_phonetics_bucket ON phonetics (bucket);
                 CREATE INDEX i_phonetics_freq ON phonetics (freq);
-
-                CREATE TABLE nexts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    bucket_i VARCHAR(12),
-                    bucket_f VARCHAR(12),
-                    freq INTEGER
-                );
-                CREATE INDEX i_nexts_bucket_i ON nexts (bucket_i);
-                CREATE INDEX i_nexts_bucket_f ON nexts (bucket_f);
-
-                CREATE TABLE nexts_by_phonetic (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    bucket_i VARCHAR(12),
-                    bucket_f VARCHAR(12),
-                    phonetic VARCHAR(4),
-                    freq INTEGER,
-                    distance INTEGER
-                );
-                CREATE INDEX i_nexts_by_phonetic_bucket_i ON nexts_by_phonetic (bucket_i);
-                CREATE INDEX i_nexts_by_phonetic_phonetic ON nexts_by_phonetic (phonetic);
             '''
             for statement in statements.split(';'):
                 self.query(statement)
@@ -258,40 +236,6 @@ class Mmodel:
                 INSERT INTO phonetics (bucket, phonetic, freq)
                 VALUES ('{bucket}', '{phonetic}', {freq})
             ''')
-
-    def add_next(self, bucket_i, bucket_f):
-        statement = f'''
-            SELECT id, freq
-            FROM nexts
-            WHERE bucket_i = '{bucket_i}'
-                AND bucket_f = '{bucket_f}'
-        '''
-        row = self.query_1r(statement)
-        if row:
-            id, freq = row
-        else:
-            id, freq = None, 0
-        freq += 1
-        if id:
-            self.query(f'''
-                UPDATE nexts
-                SET freq = {freq}
-                WHERE id = {id}
-            ''')
-        else:
-            self.query(f'''
-                INSERT INTO nexts (bucket_i, bucket_f, freq)
-                VALUES ('{bucket_i}', '{bucket_f}', {freq})
-            ''')
-
-    def clear_nexts_by_phonetic(self):
-        self.query('DELETE FROM nexts_by_phonetic')
-
-    def set_next_by_phonetic(self, bucket_i, bucket_f, phonetic, freq, distance):
-        self.query(f'''
-            INSERT INTO nexts_by_phonetic (bucket_i, bucket_f, phonetic, freq, distance)
-            VALUES ('{bucket_i}', '{bucket_f}', '{phonetic}', {freq}, {distance})
-        ''')
 
     def commit(self):
         self.conn.commit()
@@ -356,14 +300,6 @@ class Mmodel:
         }
         return result
 
-    def bucket_count_for_phonetic(self, phonetic):
-        statement = f'''
-            SELECT COUNT(*)
-            FROM phonetics
-            WHERE phonetic = '{phonetic}'
-        '''
-        return self.query_1r1c(statement)
-
     def buckets_for_phonetic(self, phonetic, limit):
         statement = f'''
             SELECT bucket
@@ -374,51 +310,7 @@ class Mmodel:
         '''
         return self.query_1c(statement)
 
-    def nexts_for_bucket(self, bucket):
-        statement = f'''
-            SELECT bucket_f, freq
-            FROM nexts
-            WHERE bucket_i = '{bucket}'
-        '''
-        return self.query(statement)
-
-    def prevs_for_bucket(self, bucket):
-        statement = f'''
-            SELECT bucket_i
-            FROM nexts
-            WHERE bucket_f = '{bucket}'
-        '''
-        return self.query_1c(statement)
-
-    def phonetic_freq_for_bucket(self, bucket, phonetic):
-        statement = f'''
-            SELECT freq
-            FROM phonetics
-            WHERE bucket = '{bucket}'
-        '''
-        row = self.query_1r(statement)
-        return row and row[0] or 0
-
-    def freqs_for_next_by_phonetic(self, bucket, phonetic):
-        statement = f'''
-            SELECT bucket_f, freq
-            FROM nexts_by_phonetic
-            WHERE bucket_i = '{bucket}'
-                AND phonetic = '{phonetic}'
-        '''
-        return self.query(statement)
-
     #----- analyze -----#
-    def max_intraphonetic_distance(self, phonetic):
-        statement = f'''
-            SELECT max(n.distance)
-            FROM phonetics p
-                JOIN nexts_by_phonetic n ON n.bucket_i = p.bucket
-            WHERE p.phonetic = '{phonetic}'
-                AND n.phonetic = '{phonetic}'
-        '''
-        return self.query_1r1c(statement)
-
     def max_intraphonetic_distances(self):
         for phonetic in PHONETICS:
             d = self.max_intraphonetic_distance(phonetic)
@@ -526,8 +418,6 @@ def train():
             if phonetic:
                 mmodel.label_bucket(bucket, phonetic)
                 new = False
-        if bucket_prev:
-            mmodel.add_next(bucket_prev, bucket)
         if args.plot:
             plot.point(samples, mmodel.bucket_count())
         bucket_prev = bucket
@@ -541,8 +431,6 @@ def train():
             '''
             if (mmodel.query_1r1c(statement) or 0) > 100: continue
             buckets = mmodel.buckets_for_phonetic(phonetic, 100)
-            for bucket_i, bucket_f in zip(buckets, buckets[1:]):
-                mmodel.add_next(bucket_i, bucket_f)
     print()
     mmodel.commit()
 
@@ -590,34 +478,6 @@ def generate_naive(phonetics=phonetics_ashes):
                 )
                 pd.audio.run()
                 pd.tape.to_file_i16le(file)
-
-def markovize():
-    mmodel = Mmodel()
-    mmodel.clear_nexts_by_phonetic()
-    for phonetic in PHONETICS + ['0']:
-        print(phonetic)
-        visited = set()
-        bucket_count = mmodel.bucket_count_for_phonetic(phonetic)
-        buckets = mmodel.buckets_for_phonetic(phonetic, max(bucket_count // 100, 10))
-        # steady-state transitions
-        for k in buckets:
-            for n, freq_t in mmodel.nexts_for_bucket(k):
-                freq_s = mmodel.phonetic_freq_for_bucket(n, phonetic)
-                if freq_s:
-                    mmodel.set_next_by_phonetic(k, n, phonetic, freq_t, 0)
-                    visited.add(k)
-        # transient transitions
-        queue = [(k, 1) for k in buckets]
-        while queue:
-            k, distance = queue[0]
-            queue = queue[1:]
-            ps = mmodel.prevs_for_bucket(k)
-            for p in ps:
-                if p in visited: continue
-                mmodel.set_next_by_phonetic(p, k, phonetic, 1, distance)
-                queue.append((p, distance + 1))
-                visited.add(p)
-    mmodel.commit()
 
 def generate(phonetics=phonetics_cat, timings=timings_cat):
     with open('assets/phonetics/model.json') as f:
