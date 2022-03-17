@@ -267,6 +267,24 @@ class Vmodel:
             return json.loads(row[0])
         if features:
             params = self.params_for_features(features)
+            params = {
+                'toniness': params['toniness'][0],
+                'tone': {
+                    'formants': [
+                        {
+                            'amp': i['amp'][0],
+                            'freq': i['freq'][0],
+                        }
+                        for i in params['tone']['formants']
+                    ],
+                    'spectrum': [i[0] for i in params['tone']['spectrum']],
+                },
+                'noise': {
+                    'freq_c': params['noise']['freq_c'][0],
+                    'hi': params['noise']['hi'][0],
+                    'spectrum': [i[0] for i in params['noise']['spectrum']],
+                },
+            }
             self.query(f'''
                 INSERT INTO shortcuts
                 VALUES (
