@@ -153,7 +153,7 @@ def features_to_frame(features, vmodel):
 
 def phonetic_to_params(phonetic):
     features = dlal.speech.get_features(model[phonetic]['frames'][0])
-    return vmodel.params_for_features(features, knn=True)
+    return vmodel.params_for_features(features)
 
 class Vmodel:
     def __init__(self):
@@ -277,8 +277,8 @@ class Vmodel:
             self.commit()
             return params
 
-    def params_for_features(self, features, knn=False, e_factor=1):
-        e = e_factor * 1e4 / self.bucket_count()
+    def params_for_features(self, features):
+        e = 1e3 / self.bucket_count()
         prev = getattr(self, '_params_for_features_prev', None)
         if prev and dlal.speech.features_distance(prev['features'], features) < e / 20:
             return self._params_for_features_prev['params']
@@ -299,22 +299,13 @@ class Vmodel:
             rows = self.query(statement)
             if len(rows) > 10: break
             e *= 1.2
-        if not knn:
-            d_min = math.inf
-            for row in rows:
-                params = json.loads(row[0])
-                d = dlal.speech.features_distance(features, dlal.speech.get_features(params))
-                if d < d_min:
-                    result = params
-                    d_min = d
-        else:
-            params = []
-            for row in rows:
-                params.append(json.loads(row[0]))
-            if len(params) > 100:
-                params.sort(key=lambda i: dlal.speech.features_distance(features, dlal.speech.get_features(i)))
-                params = params[:100]
-            result = pe.frames_from_params(params)[0]
+        params = []
+        for row in rows:
+            params.append(json.loads(row[0]))
+        if len(params) > 100:
+            params.sort(key=lambda i: dlal.speech.features_distance(features, dlal.speech.get_features(i)))
+            params = params[:100]
+        result = pe.frames_from_params(params)[0]
         self._params_for_features_prev = {
             'features': features,
             'params': result,
@@ -535,7 +526,7 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                         e_factor = .1
                     else:
                         e_factor = 1
-                    params = vmodel.params_for_features(features, knn=True, e_factor=e_factor)
+                    params = vmodel.params_for_features(features)
                     amp *= 1.1
                     if amp > 1: amp = 1
                 else:
