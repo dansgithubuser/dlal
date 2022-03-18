@@ -296,9 +296,9 @@ class Vmodel:
             return params
 
     def params_for_features(self, features):
-        e = 1e3 / self.bucket_count()
+        e = 1e4 / self.bucket_count()
         prev = getattr(self, '_params_for_features_prev', None)
-        if prev and dlal.speech.features_distance(prev['features'], features) < e / 20:
+        if prev and dlal.speech.features_distance(prev['features'], features) < e / 200:
             return self._params_for_features_prev['params']
         while True:
             toniness = features[0]
@@ -540,10 +540,6 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                         frame_i += 1
                     smoothed_frame = smoother.smooth(frame, smoothness)
                     features = dlal.speech.get_features(smoothed_frame)
-                    if info['type'] == 'stop':
-                        e_factor = .1
-                    else:
-                        e_factor = 1
                     bucket = bucketize(features)
                     params = vmodel.params_for_bucket(bucket, features)
                     amp *= 1.1
