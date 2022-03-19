@@ -1,7 +1,7 @@
 '''
 `phonetic` - symbol representing a sound
 `params` - set of low-level instructions for how to synthesize a sound
-`frame` - params with mean and deviation
+`frame` - aggregated params
 `info` - frames and prior information for a `phonetic`
 '''
 
@@ -97,7 +97,7 @@ def descend(x, ks):
     for k in ks: x = x[k]
     return x
 
-def stats(l, ks, reject_outliers=False):
+def aggregate(l, ks, reject_outliers=False):
     l = [descend(i, ks) for i in l]
     m = mean(l)
     if reject_outliers:
@@ -106,34 +106,31 @@ def stats(l, ks, reject_outliers=False):
         if len(l2):
             l = l2
             m = mean(l)
-    return (
-        m,
-        math.sqrt(mean([(i - m) ** 2 for i in l])),
-    )
+    return m
 
 def frames_from_params(params, stop=False):
     if not stop:
         return [
             {
-                'toniness': stats(params, ['toniness']),
+                'toniness': aggregate(params, ['toniness']),
                 'tone': {
                     'formants': [
                         {
-                            'freq': stats(params, ['tone', 'formants', i, 'freq'], True),
-                            'amp': stats(params, ['tone', 'formants', i, 'amp']),
+                            'freq': aggregate(params, ['tone', 'formants', i, 'freq'], True),
+                            'amp': aggregate(params, ['tone', 'formants', i, 'amp']),
                         }
                         for i in range(len(FORMANT_BIN_RANGES))
                     ],
                     'spectrum': [
-                        stats(params, ['tone', 'spectrum', i])
+                        aggregate(params, ['tone', 'spectrum', i])
                         for i in range(BINS_TONE)
                     ],
                 },
                 'noise': {
-                    'freq_c': stats(params, ['noise', 'freq_c']),
-                    'hi': stats(params, ['noise', 'hi']),
+                    'freq_c': aggregate(params, ['noise', 'freq_c']),
+                    'hi': aggregate(params, ['noise', 'hi']),
                     'spectrum': [
-                        stats(params, ['noise', 'spectrum', i])
+                        aggregate(params, ['noise', 'spectrum', i])
                         for i in range(BINS_NOISE)
                     ],
                 },
@@ -142,28 +139,7 @@ def frames_from_params(params, stop=False):
     else:
         return [
             {
-                'toniness': stats([k], ['toniness']),
-                'tone': {
-                    'formants': [
-                        {
-                            'freq': stats([k], ['tone', 'formants', i, 'freq'], True),
-                            'amp': stats([k], ['tone', 'formants', i, 'amp']),
-                        }
-                        for i in range(len(FORMANT_BIN_RANGES))
-                    ],
-                    'spectrum': [
-                        stats([k], ['tone', 'spectrum', i])
-                        for i in range(BINS_TONE)
-                    ],
-                },
-                'noise': {
-                    'freq_c': stats([k], ['noise', 'freq_c']),
-                    'hi': stats([k], ['noise', 'hi']),
-                    'spectrum': [
-                        stats([k], ['noise', 'spectrum', i])
-                        for i in range(BINS_NOISE)
-                    ],
-                },
+                **k,
                 'duration': RUN_SIZE,
             }
             for k in params

@@ -185,7 +185,6 @@ class Phonetizer:
 def get_param(params, ks):
     x = params
     for k in ks: x = x[k]
-    if type(x) == list: x = x[0]
     return x
 
 def get_features(params, normalized=True):
