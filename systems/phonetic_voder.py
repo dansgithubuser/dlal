@@ -248,6 +248,9 @@ class Vmodel:
     def bucket_count(self):
         return self.query_1r1c('SELECT COUNT(*) FROM states')
 
+    def shortcut_count(self):
+        return self.query_1r1c('SELECT COUNT(*) FROM shortcuts')
+
     def params_for_bucket(self, bucket, features=None):
         statement = f'''
             SELECT params
@@ -436,6 +439,7 @@ def transcode():
     global samples
     with open('phonetic_voder.i16le', 'wb') as file:
         vmodel = Vmodel()
+        shortcuts_i = vmodel.shortcut_count()
         while samples < duration:
             print(f'\r{samples / duration * 100:.1f} %', end='')
             pe.audio.run()
@@ -454,7 +458,8 @@ def transcode():
             pd.audio.run()
             pd.tape.to_file_i16le(file)
             samples += run_size
-    print()
+        shortcuts_f = vmodel.shortcut_count()
+        print(f'\nshortcuts: {shortcuts_i} -> {shortcuts_f}')
 
 def generate_naive(phonetics=phonetics_ashes):
     with open('assets/phonetics/model.json') as f:
@@ -482,6 +487,7 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
     vmodel = Vmodel()
+    shortcuts_i = vmodel.shortcut_count()
     smoother = dlal.speech.Smoother()
     amp = 1e-3
     with open('phonetic_voder.i16le', 'wb') as file:
@@ -550,6 +556,8 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                 pd.tape.to_file_i16le(file)
                 time += run_size / sample_rate
             info_prev = info
+    shortcuts_f = vmodel.shortcut_count()
+    print(f'shortcuts: {shortcuts_i} -> {shortcuts_f}')
 
 def interact():
     global vmodel, model
