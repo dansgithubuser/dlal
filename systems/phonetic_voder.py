@@ -460,7 +460,8 @@ def transcode():
             sample = pe.sample_system()
             params = pe.parameterize(*sample)
             features = dlal.speech.get_features(params)
-            transams = vmodel.params_for_features(features)
+            bucket = bucketize(features)
+            transams = vmodel.params_for_bucket(bucket, features)
             amp = min(params['f'] * 10, 1)
             pd.synth.synthesize(
                 [amp * i for i in transams['tone']['spectrum']],
