@@ -134,15 +134,18 @@ def frames_from_params(params, stop=False):
                         for i in range(BINS_NOISE)
                     ],
                 },
+                'amp': 1,
             },
         ]
     else:
+        f_max = max([i['f'] for i in params]) or 1
         return [
             {
-                **k,
+                **i,
+                'amp': i['f'] / f_max,
                 'duration': RUN_SIZE,
             }
-            for k in params
+            for i in params
         ]
 
 def find_formant(spectrum, bin_i, bin_f, amp_tone, formant_freq_prev=0):

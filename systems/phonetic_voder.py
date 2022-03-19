@@ -501,10 +501,10 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
             frame_i = 0
             while time < timing:
                 if phonetic != '0':
+                    # smoothness
                     if info['type'] == 'stop':
                         if frame_i == 0:
                             smoothness = 0
-                            amp = 1
                         else:
                             smoothness = 0.7
                     elif info_prev['type'] == 'stop':
@@ -514,19 +514,28 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                             smoothness = 0.5
                         else:
                             smoothness = 0.9
+                    # get frame from continuant or stop
                     if info['type'] == 'continuant':
                         frame = frames[0]
                     elif frame_i >= len(frames):
-                        frame = model['0']['frames'][0]
+                        frame = {
+                            **model['0']['frames'][0],
+                            'amp': 1e-3,
+                        }
                     else:
                         frame = frames[frame_i]
                         frame_i += 1
+                    # amp
+                    if info['type'] == 'stop':
+                        amp = frame['amp']
+                    else:
+                        amp *= 1.2
+                        if amp > 1: amp = 1
+                    # figure params
                     smoothed_frame = smoother.smooth(frame, smoothness)
                     features = dlal.speech.get_features(smoothed_frame)
                     bucket = bucketize(features)
                     params = vmodel.params_for_bucket(bucket, features)
-                    amp *= 1.1
-                    if amp > 1: amp = 1
                 else:
                     if amp > 1e-3:
                         amp /= 1.1
