@@ -35,6 +35,7 @@ parser.add_argument(
     choices=[
         'analyze_model',
         'train',
+        'transcode_no_buckets',
         'transcode',
         'generate_naive',
         'generate',
@@ -435,7 +436,10 @@ def train():
     print()
     vmodel.commit()
 
-def transcode():
+def transcode_no_buckets():
+    return transcode(use_buckets=False)
+
+def transcode(use_buckets=True):
     global samples
     with open('phonetic_voder.i16le', 'wb') as file:
         vmodel = Vmodel()
@@ -446,8 +450,11 @@ def transcode():
             sample = pe.sample_system()
             params = pe.parameterize(*sample)
             features = dlal.speech.get_features(params)
-            bucket = bucketize(features)
-            transams = vmodel.params_for_bucket(bucket, features)
+            if use_buckets:
+                bucket = bucketize(features)
+                transams = vmodel.params_for_bucket(bucket, features)
+            else:
+                transams = vmodel.params_for_features(features)
             amp = min(params['f'] * 10, 1)
             pd.synth.synthesize(
                 [amp * i for i in transams['tone']['spectrum']],
