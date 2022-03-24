@@ -360,6 +360,18 @@ class Vmodel:
         row = self.query_1r(statement)
         return row and row[0]
 
+#===== plots =====#
+def plot_toniness():
+    with open('assets/phonetics/model.json') as f:
+        model = json.loads(f.read())
+    plot = dpc.Plot()
+    i = 0
+    for phonetic, info in model.items():
+        for j, frame in enumerate(info['frames']):
+            plot.text(f'{phonetic}{j}', i, frame['toniness'])
+            i += 1
+    plot.show()
+
 #===== actions =====#
 def analyze_model():
     with open('assets/phonetics/model.json') as f:
