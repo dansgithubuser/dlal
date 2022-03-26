@@ -53,7 +53,6 @@ PHONETICS = [
 VOICED = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh_v', 'v', 'th_v', 'z', 'm', 'n', 'ng', 'r', 'l',
-    'b', 'd', 'g', 'j',
 ]
 FRICATIVES = [
     'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z',
@@ -233,6 +232,8 @@ def find_noise(spectrum, amp_noise, phonetic=None):
     }
 
 def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
+    if phonetic and phonetic not in VOICED:
+        amp_tone = 0
     tone = find_tone(spectrum, amp_tone, phonetic)
     noise = find_noise(spectrum, amp_noise, phonetic)
     f = math.sqrt(sum([
