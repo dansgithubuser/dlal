@@ -372,6 +372,13 @@ def plot_toniness():
             i += 1
     plot.show()
 
+def plot_spectrum(phonetic, frame=0):
+    with open('assets/phonetics/model.json') as f:
+        model = json.loads(f.read())
+    s_t = model[phonetic]['frames'][frame]['tone']['spectrum']
+    s_n = model[phonetic]['frames'][frame]['noise']['spectrum']
+    dpc.plot([s_n, s_t])
+
 #===== actions =====#
 def analyze_model():
     with open('assets/phonetics/model.json') as f:

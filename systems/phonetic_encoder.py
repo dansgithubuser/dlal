@@ -175,18 +175,21 @@ def find_formant(spectrum, bin_i, bin_f, amp_tone, formant_freq_prev=0):
     }
 
 def find_tone(spectrum, amp_tone, phonetic=None):
+    # find formants
     formants = []
     formant_freq_prev = 0
     for i in FORMANT_BIN_RANGES:
         formant = find_formant(spectrum, *i, amp_tone, formant_freq_prev)
         formant_freq_prev = formant['freq']
         formants.append(formant)
+    # normalize so highest formant has amp=1
     f = max(i['amp'] for i in formants)
     if f:
         for i in formants:
             i['amp'] /= f
-    spectrum_tone = [0] * BINS_TONE
+    # find tone spectrum, remove from full spectrum
     if not phonetic or phonetic in VOICED:
+        # take all bins with amplitudes above twice median
         spectrum_tone = []
         median = sorted(spectrum)[len(spectrum) // 2]
         threshold = 2 * median
@@ -197,6 +200,9 @@ def find_tone(spectrum, amp_tone, phonetic=None):
                 spectrum[i] -= v
                 if spectrum[i] < 0: spectrum[i] = 0
             spectrum_tone.append(v)
+    else:
+        spectrum_tone = [0] * BINS_TONE
+    #
     return {
         'formants': formants,
         'spectrum': spectrum_tone,
@@ -214,10 +220,12 @@ def find_noise(spectrum, amp_noise, phonetic=None):
         s += v
         if freq > 12000: hi += v ** 2
         s2 += v ** 2
+    # find noise spectrum
     spectrum_noise = [0] * BINS_NOISE
     if not phonetic or phonetic in FRICATIVES:
         for i, amp in enumerate(spectrum):
             spectrum_noise[math.floor(i / len(spectrum) * BINS_NOISE)] += amp * amp_noise
+    #
     return {
         'freq_c': f / s if s else 0,
         'hi': hi / s2 if s2 else 0,
