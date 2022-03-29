@@ -561,7 +561,7 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                     if info['type'] == 'stop':
                         amp = frame['amp']
                     else:
-                        amp *= 1.2
+                        amp *= 1.5
                         if amp > 1: amp = 1
                     # figure params
                     smoothed_frame = smoother.smooth(frame, smoothness)
@@ -570,7 +570,7 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
                     params = vmodel.params_for_bucket(bucket, features)
                 else:
                     if amp > 1e-3:
-                        amp /= 1.1
+                        amp /= 1.5
                 if params:
                     pd.synth.synthesize(
                         [amp * i for i in params['tone']['spectrum']],
