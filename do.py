@@ -9,6 +9,7 @@ import os
 import pprint
 import re
 import shutil
+import signal
 import socketserver
 import subprocess
 import sys
@@ -32,10 +33,8 @@ parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', nargs='*')
 parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
-parser.add_argument('--run', '-r', nargs='?', const=True, help=(
-    'run interactive Python with dlal imported, '
-    'or run specified system, optionally with args'
-))
+parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
+parser.add_argument('--run', '-r', nargs='+', help='run specified system, optionally with args')
 parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
 parser.add_argument('--web', '-w', action='store_true',
     help='open web interface and run web server'
@@ -342,8 +341,8 @@ if args.build is not None:
             fmt=None,
         )
 
-# ===== run ===== #
-if args.run:
+# ===== interact & run ===== #
+if args.interact or args.run:
     os.chdir(os.path.join(DIR))
     if 'PYTHONPATH' in os.environ:
         os.environ['PYTHONPATH'] += os.pathsep + os.path.join(DIR, 'skeleton')
@@ -351,10 +350,18 @@ if args.run:
         os.environ['PYTHONPATH'] = os.path.join(DIR, 'skeleton')
     if args.debug:
         os.environ['DLAL_LOG_LEVEL'] = 'debug'
-    if args.run != True:
-        invoke('python', '-i', *args.run.split())
+    if args.run:
+        popen_args = ['python']
+        if args.interact:
+            popen_args.append('-i')
+        for i in args.run:
+            for j in i.split():
+                popen_args.append(j)
     else:
-        invoke('python', '-i', '-c', 'import dlal')
+        popen_args = ['python', '-i', '-c', 'import dlal']
+    p = subprocess.Popen(popen_args)
+    signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
+    p.wait()
 
 # ===== web ===== #
 if args.web:

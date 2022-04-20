@@ -1,18 +1,9 @@
 #===== imports =====#
 import dlal
 
-import argparse
 import random
 import re
 import time
-
-#===== args =====#
-parser = argparse.ArgumentParser(description=
-    'Takes phonetic parameters as produced by phonetic_encoder.py, '
-    'and synthesizes a sound.'
-)
-parser.add_argument('--phonetics-path', default='assets/phonetics')
-args = parser.parse_args()
 
 #===== system =====#
 audio = dlal.Audio(driver=True)
@@ -44,20 +35,38 @@ def say_all():
             say_code('0')
             time.sleep(0.5)
 
-def say_sentence(i):
-    if i == 0 or 'ashes':
-        d = 6400
-        phonetizer.say_syllables(
-            '.[ae].[sh] .i.z f.a.l [th]r.w [th_v][uu]m.y n.y.[ng]',
-            [
-                { 'on':  2 * d, 'off':  4 * d},
-                { 'on':  4 * d, 'off':  6 * d},
-                { 'on':  6 * d, 'off':  8 * d },
-                { 'on':  8 * d, 'off': 10 * d },
-                { 'on': 10 * d, 'off': 12 * d },
-                { 'on': 12 * d, 'off': 14 * d },
-            ],
-        )
+def say_sentence(i=None):
+    if i == None: i = random.randint(0, 1)
+    synth.comm.resize(1 << 16)
+    with synth.comm.pauser():
+        if i in [0, 'ashes']:
+            d = 6400
+            phonetizer.say_syllables(
+                '.[ae].[sh] .i.z f.a.l [th]r.w [th_v][uu]m.y n.y.[ng]',
+                [
+                    { 'on':  2 * d, 'off':  4 * d},
+                    { 'on':  4 * d, 'off':  6 * d},
+                    { 'on':  6 * d, 'off':  8 * d },
+                    { 'on':  8 * d, 'off': 10 * d },
+                    { 'on': 10 * d, 'off': 12 * d },
+                    { 'on': 12 * d, 'off': 14 * d },
+                ],
+            )
+        elif i in [1, 'fusion']:
+            d = 7000
+            phonetizer.say_syllables(
+                'fy.w [sh_v].u.n hy.w m.r .i.z so.w m.e s.y',
+                [
+                    { 'on':  2 * d, 'off':  4 * d},
+                    { 'on':  4 * d, 'off':  6 * d},
+                    { 'on':  6 * d, 'off':  8 * d },
+                    { 'on':  8 * d, 'off': 10 * d },
+                    { 'on': 10 * d, 'off': 12 * d },
+                    { 'on': 12 * d, 'off': 14 * d },
+                    { 'on': 14 * d, 'off': 16 * d },
+                    { 'on': 16 * d, 'off': 18 * d },
+                ],
+            )
 
 def test():
     phonetics = phonetizer.model.keys()
@@ -77,5 +86,6 @@ def test():
 
 synth.tone.midi([0x90, 42, 127])
 
-dlal.typical_setup()
-phonetizer.say_code('0')
+if __name__ == '__main__':
+    dlal.typical_setup()
+    phonetizer.say_code('0')

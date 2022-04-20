@@ -39,7 +39,7 @@ component!(
                 "name": "spectrum",
                 "type": "array",
                 "element": "float",
-                "desc": "An array of bin amplitudes.",
+                "desc": "An array of bin amplitudes. Bins are 100 Hz by default.",
             }],
         },
         "stft": {
@@ -47,6 +47,9 @@ component!(
                 "name": "stft",
                 "kind": "norm",
             }],
+        },
+        "zero": {
+            "args": [],
         },
     },
 );
@@ -63,10 +66,6 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
-        if self.smooth != 0.0 {
-            smooth(&mut self.spectrum_e, &self.spectrum_f, self.smooth);
-            smooth(&mut self.spectrum, &self.spectrum_e, self.smooth);
-        }
         let output = match self.output.as_ref() {
             Some(v) => v,
             None => return,
@@ -81,6 +80,10 @@ impl ComponentTrait for Component {
                     })
                     .sum::<f32>();
             self.phase += self.step * self.bend;
+            if self.smooth != 0.0 {
+                smooth(&mut self.spectrum_e, &self.spectrum_f, self.smooth);
+                smooth(&mut self.spectrum, &self.spectrum_e, self.smooth);
+            }
         }
         let p = 2.0 * self.run_size as f32 * PI;
         if self.phase > p {
@@ -148,6 +151,13 @@ impl Component {
         let stft = unsafe { std::slice::from_raw_parts(data, len) };
         self.spectrum.resize(len, 0.0);
         self.spectrum.copy_from_slice(stft);
+        Ok(None)
+    }
+
+    fn zero_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        for i in self.spectrum.iter_mut() { *i = 0.0; }
+        for i in self.spectrum_e.iter_mut() { *i = 0.0; }
+        for i in self.spectrum_f.iter_mut() { *i = 0.0; }
         Ok(None)
     }
 }

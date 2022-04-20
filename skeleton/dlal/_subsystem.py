@@ -92,61 +92,48 @@ class IirBank(Subsystem):
             self.iirs[-1].command_immediate('gain', [0])
 
 class SpeechSynth(Subsystem):
-    def init(self, sample_rate=44100, name=None):
-        self.sample_rate = sample_rate
+    def init(self, name=None):
         Subsystem.init(self,
             {
                 'comm': ('comm', [1 << 12]),
-                'tone': 'train',
-                'tone_gain': ('gain', [100]),
-                'tone_buf': 'buf',
-                'tone_filter': (IirBank, [4]),
-                'noise': 'noisebank',
-                'mul': ('mul', [1]),
-                'buf_tone': 'buf',
-                'buf_noise': 'buf',
+                'tone': ('sinbank', [44100 / (8 * 64), 0.998]),
+                'noise': ('noisebank', [0.8]),
+                'buf_tone_1': 'buf',
+                'peak': ('peak', [0.99]),
+                'mul': 'mul',
+                'buf_peak': 'buf',
+                'gain_tone': 'gain',
+                'buf_tone_o': 'buf',
+                'buf_noise_o': 'buf',
             },
             name=name,
         )
+        self.tone.zero()
         _connect(
-            self.tone,
-            [self.tone_buf, '<+', self.tone_gain],
-            self.tone_filter,
-            self.buf_tone,
+            (self.tone, self.noise),
+            (self.buf_tone_1, self.buf_noise_o),
+            (self.buf_tone_o,),
             [],
-            self.noise,
-            self.buf_noise,
+            self.buf_tone_1,
+            self.peak,
+            self.buf_peak,
             [],
             self.mul,
-            [self.buf_tone, self.buf_noise],
+            [self.buf_peak, self.buf_noise_o],
+            [],
+            self.gain_tone,
+            self.buf_tone_o,
         )
-        self.outputs = [self.buf_tone, self.buf_noise]
+        self.outputs = [self.buf_tone_o, self.buf_noise_o]
 
-    def synthesize(self, info, frame_i, wait, smooth, warp_formants):
-        frame = info['frames'][frame_i]
+    def synthesize(self, tone_spectrum, noise_spectrum, toniness, wait):
         with _skeleton.Detach():
             with self.comm:
-                if info['voiced']:
-                    for i, formant in enumerate(frame['formants']):
-                        if warp_formants:
-                            self.tone_filter.iirs[i].pole_pairs_bandpass(
-                                formant['freq'][0] / self.sample_rate * 2 * math.pi,
-                                0.01,
-                                0,
-                                0,
-                                2,
-                            )
-                        self.tone_filter.iirs[i].pole_pairs_bandpass(
-                            formant['freq'][0] / self.sample_rate * 2 * math.pi,
-                            0.01,
-                            formant['amp'][0],
-                            smooth,
-                            2,
-                        )
-                else:
-                    for iir in self.tone_filter.iirs:
-                        iir.gain(0, smooth)
-                self.noise.spectrum([i[0] for i in frame['noise_spectrum']], smooth)
+                self.tone.spectrum(tone_spectrum)
+                self.noise.spectrum(noise_spectrum)
+                tonal_airflow = sorted([0, 20 * (toniness - 0.05), 1])[1]
+                self.mul.c(1 - tonal_airflow)
+                self.gain_tone.set(tonal_airflow, 0.8)
             self.comm.wait(wait)
 
 class Portamento(Subsystem):

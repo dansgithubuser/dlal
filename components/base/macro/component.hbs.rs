@@ -174,8 +174,11 @@ impl Component {
     {{#each features.field_helpers.rw}}
         fn {{this}}_cmd(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult {
             use dlal_component_base::Body;
-            if let Ok(v) = body.arg(0) {
-                self.{{this}} = v;
+            match body.arg(0) {
+                Ok(v) => self.{{this}} = v,
+                e => if body.has_arg(0) {
+                    e?;
+                }
             }
             Ok(Some(dlal_component_base::serde_json::json!(self.{{this}})))
         }

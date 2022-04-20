@@ -20,9 +20,9 @@ component!(
     },
     {
         "format": {"args": ["format"]},
-        "mode": {"args": ["mode"]},
-        "m": {"args": ["m"]},
-        "b": {"args": ["b"]},
+        "mode": {"args": [{"name": "mode", "default": "f32"}]},
+        "m": {"args": [{"name": "m", "default": 1}]},
+        "b": {"args": [{"name": "b", "default": 0}]},
         "last_error": {},
     },
 );

@@ -153,13 +153,23 @@ impl Arg for serde_json::Value {
 
 // ----- Body ----- //
 pub trait Body {
+    fn has_arg(&self, index: usize) -> bool;
     fn arg<T: Arg>(&self, index: usize) -> Result<T, Error>;
+    fn has_kwarg(&self, key: &str) -> bool;
     fn kwarg<T: Arg>(&self, key: &str) -> Result<T, Error>;
     fn at<T: Arg>(&self, key: &str) -> Result<T, Error>;
     fn to<T: Arg>(&self) -> Result<T, Error>;
 }
 
 impl Body for serde_json::Value {
+    fn has_arg(&self, index: usize) -> bool {
+        let args = match self.get("args") {
+            Some(args) => args,
+            _ => return false,
+        };
+        args.get(index).is_some()
+    }
+
     fn arg<T: Arg>(&self, index: usize) -> Result<T, Error> {
         let value = self
             .get("args")
@@ -168,6 +178,14 @@ impl Body for serde_json::Value {
             .ok_or_else(|| err!("missing arg {}", index))?;
         T::from_value(value)
             .ok_or_else(|| err!("arg {}: {:?} isn't a {}", index, value, type_name::<T>()))
+    }
+
+    fn has_kwarg(&self, key: &str) -> bool {
+        let kwargs = match self.get("kwargs") {
+            Some(kwargs) => kwargs,
+            _ => return false,
+        };
+        kwargs.get(key).is_some()
     }
 
     fn kwarg<T: Arg>(&self, key: &str) -> Result<T, Error> {

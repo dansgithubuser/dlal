@@ -1,8 +1,16 @@
+'''
+`phonetic` - symbol representing a sound
+`params` - set of low-level instructions for how to synthesize a sound
+`frame` - aggregated params
+`info` - frames and prior information for a `phonetic`
+'''
+
 import dlal
 
 import argparse
 import json
 import math
+import os
 
 try:
     import dansplotcore as dpc
@@ -11,17 +19,24 @@ except:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
-args = parser.parse_args()
+if __name__ == '__main__':
+    args = parser.parse_args()
+else:
+    class EnvArgs:
+        def __init__(self):
+            self.recording_path = os.environ.get(
+                'PHONETIC_ENCODER_RECORDING_PATH',
+                'assets/phonetics/phonetics.flac',
+            )
+    args = EnvArgs()
 
 # consts
 SAMPLE_RATE = 44100
 RUN_SIZE = 64
 BINS_STFT = 512
+BINS_TONE = 64
 BINS_NOISE = 64
 C = 1 / SAMPLE_RATE * BINS_STFT
-
-GAIN_LO = 200
-GAIN_HI = 1e5
 
 FORMANT_BIN_RANGES = [
     [math.floor(i * C) for i in [0, 200]],
@@ -38,7 +53,10 @@ PHONETICS = [
 VOICED = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh_v', 'v', 'th_v', 'z', 'm', 'n', 'ng', 'r', 'l',
-    'b', 'd', 'g', 'j',
+]
+FRICATIVES = [
+    'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
 STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
@@ -70,47 +88,193 @@ dlal.connect(
     peak_hi,
 )
 
-# model
+# functions
 def mean(l):
     return sum(l) / len(l)
 
-def stats(l):
-    m = mean(l)
-    return (
-        m,
-        math.sqrt(mean([(i - m) ** 2 for i in l])),
-    )
+def descend(x, ks):
+    for k in ks: x = x[k]
+    return x
 
-def find_formant(spectrum, bin_i, bin_f, pregain):
-    spectrum = spectrum[bin_i:bin_f]
-    amp = max(spectrum)
+def aggregate(l, ks, reject_outliers=False):
+    l = [descend(i, ks) for i in l]
+    m = mean(l)
+    if reject_outliers:
+        r = max(l) - min(l)
+        l2 = [i for i in l if abs(i-m) <= r/4]
+        if len(l2):
+            l = l2
+            m = mean(l)
+    return m
+
+def frames_from_params(params, stop=False):
+    if not stop:
+        return [
+            {
+                'toniness': aggregate(params, ['toniness']),
+                'tone': {
+                    'formants': [
+                        {
+                            'freq': aggregate(params, ['tone', 'formants', i, 'freq'], True),
+                            'amp': aggregate(params, ['tone', 'formants', i, 'amp']),
+                        }
+                        for i in range(len(FORMANT_BIN_RANGES))
+                    ],
+                    'spectrum': [
+                        aggregate(params, ['tone', 'spectrum', i])
+                        for i in range(BINS_TONE)
+                    ],
+                },
+                'noise': {
+                    'freq_c': aggregate(params, ['noise', 'freq_c']),
+                    'hi': aggregate(params, ['noise', 'hi']),
+                    'spectrum': [
+                        aggregate(params, ['noise', 'spectrum', i])
+                        for i in range(BINS_NOISE)
+                    ],
+                },
+                'amp': 1,
+            },
+        ]
+    else:
+        f_max = max([i['f'] for i in params]) or 1
+        return [
+            {
+                **i,
+                'amp': i['f'] / f_max,
+                'duration': RUN_SIZE,
+            }
+            for i in params
+        ]
+
+def find_formant(spectrum, bin_i, bin_f, amp_tone, formant_freq_prev=0):
+    bin_i = min(
+        max(
+            bin_i,
+            math.floor(formant_freq_prev * C) + 4
+        ),
+        bin_f - 1,
+    )
+    window = spectrum[bin_i:bin_f]
+    bin_peak = window.index(max(window)) + bin_i
+    bin_formant = bin_peak
+    spread = 2
+    if bin_peak >= spread and bin_peak < len(spectrum) - spread:
+        bins = [
+            (i, spectrum[i])
+            for i in range(bin_peak - spread, bin_peak + spread + 1)
+        ]
+        s = sum(v ** 2 for i, v in bins)
+        if s != 0:
+            bin_formant = sum(i * v ** 2 for i, v in bins) / s
+    e_window = sum(i ** 2 for i in window)
     return {
-        'freq': (spectrum.index(amp) + bin_i) / C,
-        'amp': amp * pregain,
+        'freq': bin_formant / C,
+        'amp': math.sqrt(e_window) * amp_tone,
     }
 
+def find_tone(spectrum, amp_tone, phonetic=None):
+    # find formants
+    formants = []
+    formant_freq_prev = 0
+    for i in FORMANT_BIN_RANGES:
+        formant = find_formant(spectrum, *i, amp_tone, formant_freq_prev)
+        formant_freq_prev = formant['freq']
+        formants.append(formant)
+    # normalize so highest formant has amp=1
+    f = max(i['amp'] for i in formants)
+    if f:
+        for i in formants:
+            i['amp'] /= f
+    # find tone spectrum, remove from full spectrum
+    if not phonetic or phonetic in VOICED:
+        # take all bins with amplitudes above twice median
+        spectrum_tone = []
+        median = sorted(spectrum)[len(spectrum) // 2]
+        threshold = 2 * median
+        for i in range(BINS_TONE):
+            v = 0
+            if spectrum[i] > threshold:
+                v = spectrum[i] * amp_tone
+                spectrum[i] -= v
+                if spectrum[i] < 0: spectrum[i] = 0
+            spectrum_tone.append(v)
+    else:
+        spectrum_tone = [0] * BINS_TONE
+    #
+    return {
+        'formants': formants,
+        'spectrum': spectrum_tone,
+    }
+
+def find_noise(spectrum, amp_noise, phonetic=None):
+    f = 0  # amplitude-weighted sum of frequencies (to find center frequency)
+    s = 0  # sum of amplitudes (to find center frequency)
+    hi = 0  # high-frequency energy
+    s2 = 0  # squared sum of amplitudes (to normalize high-frequency energy)
+    for i, v in enumerate(spectrum):
+        freq = i / C
+        if freq < 2000: continue
+        f += freq * v
+        s += v
+        if freq > 12000: hi += v ** 2
+        s2 += v ** 2
+    # find noise spectrum
+    spectrum_noise = [0] * BINS_NOISE
+    if not phonetic or phonetic in FRICATIVES:
+        for i, amp in enumerate(spectrum):
+            spectrum_noise[math.floor(i / len(spectrum) * BINS_NOISE)] += amp * amp_noise
+    #
+    return {
+        'freq_c': f / s if s else 0,
+        'hi': hi / s2 if s2 else 0,
+        'spectrum': spectrum_noise,
+    }
+
+def parameterize(spectrum, amp_tone, amp_noise, phonetic=None):
+    if phonetic and phonetic not in VOICED:
+        amp_tone = 0
+    tone = find_tone(spectrum, amp_tone, phonetic)
+    noise = find_noise(spectrum, amp_noise, phonetic)
+    f = math.sqrt(sum([
+        sum(i ** 2 for i in tone['spectrum']),
+        sum(i ** 2 for i in noise['spectrum']),
+    ]))
+    if f:
+        tone['spectrum'] = [i/f for i in tone['spectrum']]
+        noise['spectrum'] = [i/f for i in noise['spectrum']]
+    amp = amp_tone + amp_noise
+    if amp:
+        toniness = amp_tone / amp
+    else:
+        toniness = 0
+    return {
+        'toniness': toniness,
+        'tone': tone,
+        'noise': noise,
+        'f': f,
+    }
+
+def sample_system():
+    spectrum = stft.spectrum()
+    amp_tone = 5e1 * math.sqrt(sum(i ** 2 for i in spectrum[1:6]))
+    amp_noise = 1e3 * math.sqrt(sum(i ** 2 for i in spectrum[32:]))
+    return (spectrum, amp_tone, amp_noise)
+
+# model
 class Model:
     path = 'assets/phonetics/model.json'
 
     def __init__(self):
         self.new = True
-        self.samples = []
-        self.params = {}
-
-    def sample_system(self):
-        return (
-            stft.spectrum(),
-            peak_lo.value() * GAIN_LO,
-            peak_hi.value() * GAIN_HI,
-        )
+        self.params = []
+        self.info = {}
 
     def add_pre(self):
         self.new = True
 
     def add(self, phonetic, remaining):
-        spectrum, amp_tone, amp_noise = self.sample_system()
-        if phonetic not in VOICED:
-            amp_tone = 0
+        spectrum, amp_tone, amp_noise = sample_system()
         if phonetic in STOPS:
             if self.new and remaining < 0.2:
                 return
@@ -123,95 +287,37 @@ class Model:
                     self.new = True
                     return
         if self.new:
-            self.samples.append([])
-        self.samples[-1].append({
-            'formants': [
-                find_formant(spectrum, *i, amp_tone)
-                for i in FORMANT_BIN_RANGES
-            ],
-            'noise_spectrum': [
-                spectrum[i * len(spectrum) // BINS_NOISE] * amp_noise
-                for i in range(BINS_NOISE)
-            ],
-        })
+            self.params.append([])
+        params = parameterize(spectrum, amp_tone, amp_noise, phonetic)
+        self.params[-1].append(params)
         self.new = False
 
     def add_post(self, phonetic):
-        if phonetic not in STOPS:
-            self.params[phonetic] = {
-                'type': 'continuant',
-                'voiced': phonetic in VOICED,
-                'frames': [
-                    {
-                        'formants': [
-                            {
-                                'freq': stats([
-                                    j['formants'][i]['freq']
-                                    for j in self.samples[-1]
-                                ]),
-                                'amp': stats([
-                                    j['formants'][i]['amp']
-                                    for j in self.samples[-1]
-                                ]),
-                            }
-                            for i in range(len(FORMANT_BIN_RANGES))
-                        ],
-                        'noise_spectrum': [
-                            stats([
-                                j['noise_spectrum'][i]
-                                for j in self.samples[-1]
-                            ])
-                            for i in range(BINS_NOISE)
-                        ],
-                    },
-                ],
-            }
-        else:
-            self.params[phonetic] = {
-                'type': 'stop',
-                'voiced': phonetic in VOICED,
-                'frames': [
-                    {
-                        'formants': [
-                            {
-                                'freq': (k['formants'][i]['freq'], 0),
-                                'amp': (k['formants'][i]['amp'], 0),
-                            }
-                            for i in range(len(FORMANT_BIN_RANGES))
-                        ],
-                        'noise_spectrum': [
-                            (k['noise_spectrum'][i], 0)
-                            for i in range(BINS_NOISE)
-                        ],
-                        'duration': RUN_SIZE,
-                    }
-                    for k in self.samples[0]  # just take the first recital of the stop
-                ],
-            }
-        self.samples.clear()
+        stop = phonetic in STOPS
+        self.info[phonetic] = {
+            'type': 'stop' if stop else 'continuant',
+            'voiced': phonetic in VOICED,
+            'fricative': phonetic in FRICATIVES,
+            'frames': frames_from_params(self.params[0], stop)  # for stops, just take the first recital
+        }
+        self.params.clear()
 
     def add_0(self):
-        self.params['0'] = {
+        self.info['0'] = {
             'type': 'continuant',
             'voiced': False,
-            'frames': [
-                {
-                    'formants': [
-                        {
-                            'freq': ((i[0] + i[1]) / 2, 0),
-                            'amp': (0, 0),
-                        }
-                        for i in FORMANT_BIN_RANGES
-                    ],
-                    'noise_spectrum': [(0, 0)] * BINS_NOISE,
-                },
-            ],
+            'fricative': False,
+            'frames': frames_from_params([{
+                'toniness': 0,
+                'tone': find_tone([0] * BINS_STFT, 0),
+                'noise': find_noise([0] * BINS_STFT, 0),
+            }]),
         }
 
     def save(self):
         with open(Model.path, 'w') as f:
             f.write(json.dumps(
-                self.params,
+                self.info,
                 indent=2,
             ))
 
@@ -232,14 +338,15 @@ class Runner:
             if callback: callback(self.seconds - elapsed)
 
 # run
-model = Model()
-runner = Runner()
-for phonetic in PHONETICS:
-    print(phonetic)
-    runner.run(3)
-    model.add_pre()
-    runner.run(6, lambda remaining: model.add(phonetic, remaining))
-    model.add_post(phonetic)
-    runner.run(1)
-model.add_0()
-model.save()
+if __name__ == '__main__':
+    model = Model()
+    runner = Runner()
+    for phonetic in PHONETICS:
+        print(phonetic)
+        runner.run(4)
+        model.add_pre()
+        runner.run(5, lambda remaining: model.add(phonetic, remaining))
+        model.add_post(phonetic)
+        runner.run(1)
+    model.add_0()
+    model.save()

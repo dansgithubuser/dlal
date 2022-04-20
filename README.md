@@ -68,11 +68,11 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | __init__  |
 +===========+
 ↑
-+-+-------------+----------+
-| |             |          |
-| +===========+ +========+ +=========+
-| | subsystem | | _sound | | _speech |
-| +===========+ +========+ +=========+
++-+
+| |
+| +===========+
+| | subsystem |
+| +===========+
 | ↑
 +-+
 |
@@ -102,6 +102,12 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 
 ↑
 ↑# common resources
+|
++-+----------+
+| |          |
+| +========+ +=========+
+| | _sound | | _speech |
+| +========+ +=========+
 |
 +------------+
 |            |
@@ -189,8 +195,9 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - more intelligible speech synth
-	- fix up stops
-		- for voiced stops, record whispered
+	- stops
+- move speech stuff from systems into skeleton
+	- another pass to tighten terminology
 - audiobro
 	- track 1
 		- bass slide down in B section
