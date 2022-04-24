@@ -1,6 +1,7 @@
 #===== imports =====#
 import dlal
 
+import os
 import random
 import re
 import time
@@ -8,8 +9,12 @@ import time
 #===== system =====#
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
+porta = dlal.subsystem.Portamento()
 synth = dlal.subsystem.SpeechSynth()
 tape = dlal.Tape(44100*5)
+
+if os.environ.get('PHONETIC_DECODER_PORTAMENTO'):
+    porta.connect_outputs(synth.tone)
 
 dlal.connect(
     synth,

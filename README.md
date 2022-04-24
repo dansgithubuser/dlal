@@ -194,13 +194,15 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- more intelligible speech synth
-	- stops
+- audiobro
+	- track 3 use new speech synth
+		- there had been no laff uh
+		- its getting serious - need to get rid of silence after t
+		- end of d stuck before bass man?
+	- review existing tracks
+	- bassindaface / funky funky bass
+
 - move speech stuff from systems into skeleton
 	- another pass to tighten terminology
-- audiobro
-	- track 1
-		- bass slide down in B section
-	- bassindaface / funky funky bass
 - be able to open audio callback in more situations for demonstrating on skype
 - change verbiage to connector/connectee instead of input/output
