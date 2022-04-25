@@ -294,11 +294,14 @@ class Model:
 
     def add_post(self, phonetic):
         stop = phonetic in STOPS
+        frames = frames_from_params(self.params[0], stop)  # for stops, just take the first recital
+        if stop:
+            while frames[-1]['amp'] < 0.1: frames.pop()
         self.info[phonetic] = {
             'type': 'stop' if stop else 'continuant',
             'voiced': phonetic in VOICED,
             'fricative': phonetic in FRICATIVES,
-            'frames': frames_from_params(self.params[0], stop)  # for stops, just take the first recital
+            'frames': frames,
         }
         self.params.clear()
 
