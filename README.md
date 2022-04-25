@@ -195,10 +195,6 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - audiobro
-	- track 3 use new speech synth
-		- there had been no laff uh
-		- its getting serious - need to get rid of silence after t
-		- end of d stuck before bass man?
 	- review existing tracks
 	- bassindaface / funky funky bass
 

@@ -22,7 +22,7 @@ syllables = '''
     .w.y k.[ae].n s.u[uu] v.a ay.v w.i [th_v].aw.t f.w .w.d
     b.u.t n.a.t w.i [th].aw.t b.[ay]y.s
     w.e.l n.a.t v.e r.y l.a.[ng]g .e n.y .wey
-    [th_v].u.0 k.u l.u[uu] h.[ae].d jr.[ay]y.nd fr.u.m .e.v r.y w.u.nz f.[ay]y s.e.z
+    [th_v].u.0 k.u l.u h.[ae].d jr.[ay]y.nd fr.u.m .e.v r.y w.u.nz f.[ay]y s.e.z
     .e.v r.y d.ey [th_v].u t.[ae]w.nz p.y p.l w.e.nt t.w [th_v].u [ch].[uu].[ch] .[ae].nd pr.[ay]y.d f.o[uu] b.[ay]y.s
     .[ae].nd b.[ay]y.s m.[ae].n l.[uu].kd .u p.a.n [th_v].u t.[ae]w.n .[ae].nd h.y sm.ay.ld f.o[uu] h.y ny.w 0
 '''
