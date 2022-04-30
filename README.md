@@ -194,11 +194,16 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- remove phonetic voder
+- remove phonetic plotter
+- phonetic vocoder drop transcode
+- phonetic encoder into subsystem
+- visualizations for phonetic encoder
+- text-to-speech for dlal.subsystem.SpeechSynth
+
 - audiobro
 	- review existing tracks
 	- bassindaface / funky funky bass
 
-- move speech stuff from systems into skeleton
-	- another pass to tighten terminology
 - be able to open audio callback in more situations for demonstrating on skype
 - change verbiage to connector/connectee instead of input/output
