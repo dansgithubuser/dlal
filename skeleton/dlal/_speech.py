@@ -17,6 +17,10 @@ class _Code:
         m = _re.match(r'(-)?(\w+)', code)
         self.glide = m.group(1)
         self.phonetic = m.group(2)
+        self.code = code
+
+    def __repr__(self):
+        return self.code
 
 class Phonetizer:
     def __init__(
@@ -34,6 +38,7 @@ class Phonetizer:
             - noise_spectrum (64 bins from 0 to 22050)
             - wait (number of samples to synthesize for)
         and synthesizes the corresponding sound.
+        Alternatively, set to `'parse only`' to use `say_syllables` to get `phonetics` and `timings` without synthesizing.
 
         `grace` is how much time is allowed between notes without synthesizing a silence
         '''
@@ -76,6 +81,13 @@ class Phonetizer:
             smooth = 0.8
         # say
         total_wait = 0
+        if self.synthesize == 'parse only':
+            self.phonetics.append(code.phonetic)
+            self.timings.append(self.sample / self.sample_rate)
+            if code.phonetic != '0':
+                self.pitches.append(self.pitch)
+            else:
+                self.pitches.append(None)
         for i in range(len(info['frames'])):
             if info['type'] == 'continuant':
                 wait = continuant_wait
@@ -84,7 +96,8 @@ class Phonetizer:
             wait /= speed
             wait = int(wait)
             total_wait += wait
-            self.say_params(info, i, wait, smooth)
+            if type(self.synthesize) != str:
+                self.say_params(info, i, wait, smooth)
         self.phonetic = code.phonetic
         return total_wait
 
@@ -95,6 +108,10 @@ class Phonetizer:
             self.say_code(code)
 
     def say_syllables(self, syllables, notes, advance=0):
+        if self.synthesize == 'parse only':
+            self.phonetics = []
+            self.timings = []
+            self.pitches = []
         # translate into onset, nucleus, coda
         syllables = [syllable.split('.') for syllable in syllables.split()]
         for i in range(len(syllables)):
@@ -108,14 +125,11 @@ class Phonetizer:
             else:
                 raise Exception(f'invalid syllable {syllable}')
             syllables[i] = [onset, nucleus, coda]
-        # move onsets into codas
-        for i in range(1, len(syllables)):
-            if not syllables[i][0]: continue
-            syllables[i-1][2] += syllables[i][0]
-            syllables[i][0] = ''
         # say
         self.sample = 0
         for syllable, note in zip(syllables, notes):
+            if self.synthesize == 'parse only':
+                self.pitch = note['number']
             # parse phonetics
             onset, nucleus, coda = [
                 Phonetizer._parse_code_string(code_string)

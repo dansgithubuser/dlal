@@ -70,7 +70,7 @@ impl ComponentTrait for Component {
             Some(v) => v,
             None => return,
         };
-        let freq = self.step / (2.0 * PI) * self.sample_rate as f32;
+        let freq = self.step * self.bend / (2.0 * PI) * self.sample_rate as f32;
         for i in output.audio(self.run_size).unwrap() {
             *i += self.vol
                 * (1..std::cmp::min(((self.spectrum.len() as f32 - 0.5) * self.bin_size / freq) as u32, self.harmonics))

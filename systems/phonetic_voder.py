@@ -41,6 +41,8 @@ parser.add_argument(
         'generate',
         'interact',
     ],
+    nargs='?',
+    default='interact',
 )
 parser.add_argument('--recording-path', default='assets/phonetics/sample1.flac', help='input')
 parser.add_argument('--labeled', action='store_true', help='whether the recording was created by phonetic_recorder or not')
@@ -509,7 +511,7 @@ def generate_naive(phonetics=phonetics_ashes):
                 pd.audio.run()
                 pd.tape.to_file_i16le(file)
 
-def generate(phonetics=phonetics_cat, timings=timings_cat):
+def generate(phonetics=phonetics_cat, timings=timings_cat, pitches=None):
     with open('assets/phonetics/model.json') as f:
         model = json.loads(f.read())
     vmodel = Vmodel()
@@ -522,11 +524,22 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
             timings = [i/4 for i in range(len(phonetics))]
         elif type(timings) in [int, float]:
             timings = [i * timings for i in range(len(phonetics))]
+        if pitches:
+            pitches.insert(0, None)
+        else:
+            pitches = [None] * len(phonetics)
         params = None
         time = 0
         info_prev = None
-        for phonetic, timing in zip(phonetics, timings):
-            print(phonetic)
+        timings_next = timings[1:] + [None]
+        for phonetic, timing, timing_next, pitch in zip(phonetics, timings, timings_next, pitches):
+            print(f'{phonetic:<4} {time:>7.3f} {timing:>7.3f} {pitch if pitch else "-":>3}')
+            if timing_next:
+                duration = timing_next - timing
+            else:
+                duration = None
+            if pitch:
+                pd.porta.rhymel.midi([0x90, pitch, 0x7F])
             info = model[phonetic]
             if not info_prev: info_prev = info
             frames = info['frames']
@@ -534,7 +547,9 @@ def generate(phonetics=phonetics_cat, timings=timings_cat):
             while time < timing:
                 if phonetic != '0':
                     # smoothness
-                    if info['type'] == 'stop':
+                    if duration and duration < 0.1:
+                        smoothness = 0.5
+                    elif info['type'] == 'stop':
                         if frame_i == 0:
                             smoothness = 0
                         else:
@@ -592,5 +607,6 @@ def interact():
         model = json.loads(f.read())
 
 #===== main =====#
-eval(args.action)()
-if args.plot: plot.show()
+if __name__ == '__main__':
+    eval(args.action)()
+    if args.plot: plot.show()
