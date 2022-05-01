@@ -51,11 +51,11 @@ phonetics = [
 ]
 for i in phonetics:
     print(f'breathe, prep {i}')
-    time.sleep(3)
+    time.sleep(dlal.speech.RECORD_DURATION_PREP)
     print('go')
-    time.sleep(6)
+    time.sleep(dlal.speech.RECORD_DURATION_GO)
     print('stop')
-    time.sleep(1)
+    time.sleep(dlals.speech.RECORD_DURATION_STOP)
 
 tape.to_file_i16le_stop()
 dlal.sound.i16le_to_flac('phonetics.i16le')

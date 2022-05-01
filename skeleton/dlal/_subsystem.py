@@ -1,5 +1,6 @@
 from . import _skeleton
 from ._skeleton import connect as _connect
+from . import _speech
 from . import _utils
 
 import midi
@@ -17,6 +18,7 @@ class Subsystem:
         if driver:
             self.add_to(driver)
             _skeleton.driver_set(driver)
+        self.post_add_init()
 
     def init(self, components={}, inputs=[], outputs=[], name=None):
         if not hasattr(self, 'name'):
@@ -40,6 +42,8 @@ class Subsystem:
             self.add(name, kind, args, kwargs)
         self.inputs.extend(self.components[i] for i in inputs)
         self.outputs.extend(self.components[i] for i in outputs)
+
+    def post_add_init(self): pass
 
     def __repr__(self):
         return self.name
@@ -91,6 +95,67 @@ class IirBank(Subsystem):
             self.iirs[-1].connect(self.bufs[-1])
             self.iirs[-1].command_immediate('gain', [0])
 
+class SpeechSampler(Subsystem):
+    def init(
+        self,
+        stft_bins=512,
+        tone_amp_bins=[1, 6],
+        tone_amp_factor=5e1,
+        noise_amp_bins=[32, 256],
+        noise_amp_factor=1e3,
+        name=None,
+    ):
+        self.stft_bins = stft_bins
+        self.tone_amp_bins = tone_amp_bins
+        self.tone_amp_factor = tone_amp_factor
+        self.noise_amp_bins = noise_amp_bins
+        self.noise_amp_factor = noise_amp_factor
+        Subsystem.init(self,
+            {
+                'buf': 'buf',
+                'stft': ('stft', [self.stft_bins]),
+            },
+            ['buf'],
+            name=name,
+        )
+        _connect(
+            self.buf,
+            self.stft,
+        )
+
+    def sample(self):
+        spectrum = self.stft.spectrum()
+        return (
+            spectrum,
+            5e1 * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_amp_bins[0]:self.tone_amp_bins[1]])),
+            1e3 * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_amp_bins[0]:self.noise_amp_bins[1]])),
+        )
+
+    def sampleses_from_driver(self, driver):
+        sample_rate = driver.sample_rate()
+        run_size = driver.run_size()
+        self._run_to_seconds = 0
+        self._samples_elapsed = 0
+        self._sampleses = []
+
+        def run_for(seconds, take_samples=False):
+            self._run_to_seconds += seconds
+            while True:
+                seconds_elapsed = self._samples_elapsed / sample_rate
+                if seconds_elapsed >= self._run_to_seconds: break
+                driver.run()
+                self._samples_elapsed += run_size
+                if take_samples:
+                    self._sampleses[-1].append(self.sample())
+
+        for phonetic in _speech.PHONETICS:
+            print(phonetic)
+            self._sampleses.append([])
+            run_for(_speech.RECORD_DURATION_PREP+1)
+            run_for(_speech.RECORD_DURATION_GO-2, True)
+            run_for(_speech.RECORD_DURATION_STOP+1)
+        return self._sampleses
+
 class SpeechSynth(Subsystem):
     def init(self, name=None):
         Subsystem.init(self,
@@ -125,6 +190,9 @@ class SpeechSynth(Subsystem):
             self.buf_tone_o,
         )
         self.outputs = [self.buf_tone_o, self.buf_noise_o]
+
+    def post_add_init(self):
+        self.tone.midi([0x90, 42, 127])
 
     def synthesize(self, tone_spectrum, noise_spectrum, toniness, wait):
         with _skeleton.Detach():

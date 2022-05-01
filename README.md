@@ -194,8 +194,7 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- phonetic encoder into subsystem
-- visualizations for phonetic encoder
+- visualizations for each step
 - text-to-speech for dlal.subsystem.SpeechSynth
 
 - audiobro
