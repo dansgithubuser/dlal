@@ -60,6 +60,7 @@ class Model:
 
     def __init__(
         self,
+        path=None,
         stft_bins=512,
         tone_bins=64,
         noise_bins=64,
@@ -71,6 +72,7 @@ class Model:
         self.sample_rate = sample_rate
         self.freq_per_bin = sample_rate / stft_bins
         self.phonetics = {}
+        if path: self.load(path)
 
     def find_formant(self, spectrum, freq_i, freq_f, amp_tone, formant_freq_prev=0):
         bin_i = _math.floor(freq_i / self.freq_per_bin)
@@ -241,7 +243,8 @@ class Model:
 
     def save(self, path):
         with open(path, 'w') as f:
-            f.write(_json.dumps(
-                self.phonetics,
-                indent=2,
-            ))
+            _json.dump(self.phonetics, f, indent=2)
+
+    def load(self, path):
+        with open(path, 'r') as f:
+            self.phonetics = _json.load(f)
