@@ -194,8 +194,10 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- visualizations for each step
-- text-to-speech for dlal.subsystem.SpeechSynth
+- focus on visualization/analysis/tooling for speech
+	- plot tone features for each voiced continuant in model
+- phonetics & midi to singing
+	- tone features to tone spectrum
 
 - audiobro
 	- review existing tracks
