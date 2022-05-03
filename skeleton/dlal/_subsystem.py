@@ -200,8 +200,10 @@ class SpeechSynth(Subsystem):
                 self.tone.spectrum(tone_spectrum)
                 self.noise.spectrum(noise_spectrum)
                 tonal_airflow = sorted([0, 20 * (toniness - 0.05), 1])[1]
+                # c = 0 => noise is 100% modulated by tone
+                # c = 1 => noise in   0% modulated by tone
                 self.mul.c(1 - tonal_airflow)
-                self.gain_tone.set(tonal_airflow, 0.8)
+                self.gain_tone.set(1, 0.8)
             self.comm.wait(wait)
 
 class Portamento(Subsystem):
