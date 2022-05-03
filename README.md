@@ -201,6 +201,7 @@ The `audio` component is the driver component for interactive audio.
 	- separate files for each section
 - focus on visualization/analysis/tooling for speech
 - phonetics & midi to singing
+	- basic sing
 	- tone features to tone spectrum
 
 - audiobro
