@@ -127,8 +127,8 @@ class SpeechSampler(Subsystem):
         spectrum = self.stft.spectrum()
         return (
             spectrum,
-            5e1 * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_amp_bins[0]:self.tone_amp_bins[1]])),
-            1e3 * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_amp_bins[0]:self.noise_amp_bins[1]])),
+            self.tone_amp_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_amp_bins[0]:self.tone_amp_bins[1]])),
+            self.noise_amp_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_amp_bins[0]:self.noise_amp_bins[1]])),
         )
 
     def sampleses_from_driver(self, driver):
