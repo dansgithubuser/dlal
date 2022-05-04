@@ -33,6 +33,7 @@ run_size = audio.run_size()
 # model
 model = dlal.speech.Model()
 assert audio.sample_rate() == model.sample_rate
+assert audio.run_size() == model.run_size
 
 # visualizer
 class Visualizer:
@@ -107,7 +108,7 @@ while samples < duration:
     audio.run()
     sample = sampler.sample()
     params = model.parameterize(*sample)
-    frame = model.frames_from_params([params])[0]
+    frame = model.frames_from_paramses([params])[0]
     amp = min(params['f'] * 10, 1)
     visualizer.add(sample, params, amp)
     synth.synthesize(

@@ -10,12 +10,12 @@ except:
     pass
 
 parser = argparse.ArgumentParser()
-parser.add_argument('recording_path', nargs='?', default='assets/phonetics/phonetics.flac')
+parser.add_argument('recordings_path', nargs='?', default='assets/phonetics')
 args = parser.parse_args()
 
 # components
 audio = dlal.Audio(driver=True)
-filea = dlal.Filea(args.recording_path)
+filea = dlal.Filea()
 sampler = dlal.subsystem.SpeechSampler()
 
 # connect
@@ -27,10 +27,11 @@ dlal.connect(
 # model
 model = dlal.speech.Model()
 assert audio.sample_rate() == model.sample_rate
+assert audio.run_size() == model.run_size
 
 # run
 print('===== SAMPLING =====')
-sampleses = sampler.sampleses_from_driver(audio)
+sampleses = sampler.sampleses(args.recordings_path, filea, audio)
 
 print('===== MODELING =====')
 for phonetic, samples in zip(dlal.speech.PHONETICS, sampleses):
@@ -44,6 +45,11 @@ mean_spectra = {}
 for phonetic, samples in zip(dlal.speech.PHONETICS, sampleses):
     print(phonetic)
     mean_spectrum = [0] * len(samples[0][0])
+    if phonetic in dlal.speech.VOICED and phonetic not in dlal.speech.STOPS:
+        irrelevant = dlal.speech.RECORD_DURATION_UNSTRESSED_VOWEL + dlal.speech.RECORD_DURATION_TRANSITION + 1
+        total = irrelevant + dlal.speech.RECORD_DURATION_GO - 1
+        start = int(len(samples) * irrelevant / total)
+        samples = samples[start:]
     for (spectrum, _, _) in samples:
         for i in range(len(mean_spectrum)):
             mean_spectrum[i] += spectrum[i]

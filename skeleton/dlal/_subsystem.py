@@ -131,30 +131,16 @@ class SpeechSampler(Subsystem):
             self.noise_amp_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_amp_bins[0]:self.noise_amp_bins[1]])),
         )
 
-    def sampleses_from_driver(self, driver):
-        sample_rate = driver.sample_rate()
-        run_size = driver.run_size()
-        self._run_to_seconds = 0
-        self._samples_elapsed = 0
-        self._sampleses = []
-
-        def run_for(seconds, take_samples=False):
-            self._run_to_seconds += seconds
-            while True:
-                seconds_elapsed = self._samples_elapsed / sample_rate
-                if seconds_elapsed >= self._run_to_seconds: break
-                driver.run()
-                self._samples_elapsed += run_size
-                if take_samples:
-                    self._sampleses[-1].append(self.sample())
-
+    def sampleses(self, path, filea, driver):
+        sampleses = []
         for phonetic in _speech.PHONETICS:
             print(phonetic)
-            self._sampleses.append([])
-            run_for(_speech.RECORD_DURATION_PREP+1)
-            run_for(_speech.RECORD_DURATION_GO-2, True)
-            run_for(_speech.RECORD_DURATION_STOP+1)
-        return self._sampleses
+            filea.open(os.path.join(path, f'{phonetic}.flac'))
+            sampleses.append([])
+            while filea.playing():
+                driver.run()
+                sampleses[-1].append(self.sample())
+        return sampleses
 
 class SpeechSynth(Subsystem):
     def init(self, name=None):

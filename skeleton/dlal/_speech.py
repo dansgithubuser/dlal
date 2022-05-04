@@ -29,9 +29,44 @@ STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
 
-RECORD_DURATION_PREP = 3
-RECORD_DURATION_GO = 6
-RECORD_DURATION_STOP = 1
+PHONETIC_DESCRIPTIONS = {
+    'ae': 'a as in apple',
+    'ay': 'a as in day',
+    'a': 'a as in aw',
+    'e': 'e as in bed',
+    'y': 'e as in eat',
+    'i': 'i as in it',
+    'o': 'o as in oh',
+    'w': 'oo as in zoo',
+    'uu': 'oo as in foot',
+    'u': 'u as in uh',
+    'sh': 'sh as in shock',
+    'sh_v': 's as in fusion',
+    'h': 'h as in heel',
+    'f': 'f as in foot',
+    'v': 'v as in vine',
+    'th': 'th as in thin',
+    'th_v': 'th as in the',
+    's': 's as in soon',
+    'z': 'z as in zoo',
+    'm': 'm as in map',
+    'n': 'n as in nap',
+    'ng': 'ng as in thing',
+    'r': 'r as in run',
+    'l': 'l as in left',
+    'p': 'p as in pine (repeat)',
+    'b': 'b as in bin (repeat)',
+    't': 't as in tag (repeat)',
+    'd': 'd as in day (repeat)',
+    'k': 'k as in cook (repeat)',
+    'g': 'g as in go (repeat)',
+    'ch': 'ch as in choose (repeat)',
+    'j': 'j as in jog (repeat)',
+}
+
+RECORD_DURATION_UNSTRESSED_VOWEL = 1
+RECORD_DURATION_TRANSITION = 1
+RECORD_DURATION_GO = 4
 
 FORMANT_RANGES = [
     [0, 200],
@@ -65,11 +100,13 @@ class Model:
         tone_bins=64,
         noise_bins=64,
         sample_rate=44100,
+        run_size=64,
     ):
         self.stft_bins = stft_bins
         self.tone_bins = tone_bins
         self.noise_bins = noise_bins
         self.sample_rate = sample_rate
+        self.run_size = run_size
         self.freq_per_bin = sample_rate / stft_bins
         self.phonetics = {}
         if path: self.load(path)
@@ -160,7 +197,7 @@ class Model:
             'spectrum': spectrum_noise,
         }
 
-    def parameterize(self, spectrum, amp_tone, amp_noise, phonetic=None):
+    def parameterize(self, spectrum, amp_tone, amp_noise, phonetic=None, formants_prev=None):
         if phonetic and phonetic not in VOICED:
             amp_tone = 0
         spectrum = [i for i in spectrum]
@@ -185,55 +222,70 @@ class Model:
             'f': f,
         }
 
-    def frames_from_params(self, params, continuant=True):
+    def frames_from_paramses(self, paramses, continuant=True):
         if continuant:
             return [{
-                'toniness': Model.aggregate(params, ['toniness']),
+                'toniness': Model.aggregate(paramses, ['toniness']),
                 'tone': {
                     'formants': [
                         {
-                            'freq': Model.aggregate(params, ['tone', 'formants', i, 'freq'], True),
-                            'amp': Model.aggregate(params, ['tone', 'formants', i, 'amp']),
+                            'freq': Model.aggregate(paramses, ['tone', 'formants', i, 'freq'], True),
+                            'amp': Model.aggregate(paramses, ['tone', 'formants', i, 'amp']),
                         }
                         for i in range(len(FORMANT_RANGES))
                     ],
                     'spectrum': [
-                        Model.aggregate(params, ['tone', 'spectrum', i])
+                        Model.aggregate(paramses, ['tone', 'spectrum', i])
                         for i in range(self.tone_bins)
                     ],
                 },
                 'noise': {
-                    'freq_c': Model.aggregate(params, ['noise', 'freq_c']),
-                    'hi': Model.aggregate(params, ['noise', 'hi']),
+                    'freq_c': Model.aggregate(paramses, ['noise', 'freq_c']),
+                    'hi': Model.aggregate(paramses, ['noise', 'hi']),
                     'spectrum': [
-                        Model.aggregate(params, ['noise', 'spectrum', i])
+                        Model.aggregate(paramses, ['noise', 'spectrum', i])
                         for i in range(self.noise_bins)
                     ],
                 },
                 'amp': 1,
             }]
         else:
-            f_max = max([i['f'] for i in params]) or 1
+            f_max = max([i['f'] for i in paramses]) or 1
             return [
                 {
                     **i,
                     'amp': i['f'] / f_max,
                 }
-                for i in params
+                for i in paramses
             ]
 
     def add(self, phonetic, samples):
-        params = [self.parameterize(*i, phonetic) for i in samples]
         continuant = phonetic not in STOPS
-        frames = self.frames_from_params(params, continuant)
-        if not continuant:
-            i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
-            frames = frames[i_start:]
-            i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
-            frames = frames[:i_end]
+        voiced = phonetic in VOICED
+        if voiced and continuant:
+            sample_iter = iter(samples)
+            stride = int(0.1 * self.sample_rate / self.run_size)
+            start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)
+            formants_prev = None
+            for i_sample in range(stride, start, stride):
+                paramses_prev = [self.parameterize(*i, phonetic, formants_prev) for i in samples[i_sample:i_sample+stride]]
+                formants_prev = self.frames_from_paramses(paramses_prev, True)[0]['tone']['formants']
+            paramses = [self.parameterize(*i, phonetic, formants_prev) for i in samples[start:]]
+            frames = self.frames_from_paramses(paramses, continuant)
+        else:
+            paramses = [self.parameterize(*i, phonetic) for i in samples]
+            frames = self.frames_from_paramses(paramses, continuant)
+            if not continuant:
+                i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
+                frames = frames[i_start:]
+                try:
+                    i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
+                except StopIteration:
+                    i_end = None
+                frames = frames[:i_end]
         self.phonetics[phonetic] = {
             'type': 'continuant' if continuant else 'stop',
-            'voiced': phonetic in VOICED,
+            'voiced': voiced,
             'fricative': phonetic in FRICATIVES,
             'frames': frames,
         }

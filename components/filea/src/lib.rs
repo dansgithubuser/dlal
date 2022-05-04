@@ -7,12 +7,17 @@ component!(
         "sample_rate",
         "uni",
         "check_audio",
+        {
+            "name": "field_helpers",
+            "fields": ["playing"],
+            "kinds": ["r"]
+        },
     ],
     {
         reader: Option<claxon::FlacReader<std::fs::File>>,
         block: Vec<f32>,
         block_i: usize,
-        buffer: Vec<i32>,
+        playing: bool,
     },
     {
         "open": {
@@ -44,7 +49,10 @@ impl ComponentTrait for Component {
                             .map(|i| block.sample(0, i) as f32 / 0x8000 as f32)
                             .collect()
                     }
-                    _ => return,
+                    _ => {
+                        self.playing = false;
+                        return;
+                    }
                 };
                 self.block_i = 0;
             }
@@ -61,6 +69,7 @@ impl Component {
             Ok(v) => Some(v),
             Err(e) => return Err(err!("{:?}", e).into()),
         };
+        self.playing = true;
         Ok(None)
     }
 

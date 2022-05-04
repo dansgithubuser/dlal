@@ -195,10 +195,7 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - better recording
-	- record voiced continuant transitions so can track formants better
-	- unvoiced continuants are fine by themselves (sh, h, f, th, s)
-	- loud whisper all stops with schwa
-	- separate files for each section
+	- take advantage of better recording
 - focus on visualization/analysis/tooling for speech
 - phonetics & midi to singing
 	- basic sing
