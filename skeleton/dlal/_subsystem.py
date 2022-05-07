@@ -144,10 +144,12 @@ class SpeechSampler(Subsystem):
 
 class SpeechSynth(Subsystem):
     def init(self, name=None):
+        freq_per_bin = 44100 / (8 * 64)
         Subsystem.init(self,
             {
                 'comm': ('comm', [1 << 12]),
-                'tone': ('sinbank', [44100 / (8 * 64), 0.99]),
+                'forman': ('forman', [freq_per_bin]),
+                'tone': ('sinbank', [freq_per_bin, 0.99]),
                 'noise': ('noisebank', [0.8]),
                 'buf_tone_1': 'buf',
                 'peak': ('peak', [0.99]),
@@ -161,6 +163,7 @@ class SpeechSynth(Subsystem):
         )
         self.tone.zero()
         _connect(
+            (self.forman,),
             (self.tone, self.noise),
             (self.buf_tone_1, self.buf_noise_o),
             (self.buf_tone_o,),
@@ -180,16 +183,28 @@ class SpeechSynth(Subsystem):
     def post_add_init(self):
         self.tone.midi([0x90, 42, 127])
 
-    def synthesize(self, tone_spectrum, noise_spectrum, toniness, wait):
+    def synthesize(
+        self,
+        toniness=None,
+        tone_spectrum=None,
+        tone_formants=None,
+        noise_spectrum=None,
+        wait=None,
+    ):
         with _skeleton.Detach():
             with self.comm:
-                self.tone.spectrum(tone_spectrum)
-                self.noise.spectrum(noise_spectrum)
-                tonal_airflow = sorted([0, 20 * (toniness - 0.05), 1])[1]
-                # c = 0 => noise is 100% modulated by tone
-                # c = 1 => noise in   0% modulated by tone
-                self.mul.c(1 - tonal_airflow)
-                self.gain_tone.set(1, 0.8)
+                if toniness != None:
+                    tonal_airflow = toniness
+                    # c = 0 => noise is 100% modulated by tone
+                    # c = 1 => noise in   0% modulated by tone
+                    self.mul.c(1 - tonal_airflow)
+                    self.gain_tone.set(1, 0.8)
+                if tone_spectrum:
+                    self.tone.spectrum(tone_spectrum)
+                elif tone_formants:
+                    self.forman.formants(tone_formants)
+                if noise_spectrum:
+                    self.noise.spectrum(noise_spectrum)
             self.comm.wait(wait)
 
 class Portamento(Subsystem):

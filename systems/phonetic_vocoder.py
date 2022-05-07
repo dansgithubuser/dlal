@@ -112,10 +112,10 @@ while samples < duration:
     amp = min(params['f'] * 10, 1)
     visualizer.add(sample, params, amp)
     synth.synthesize(
-        [amp * i for i in frame['tone']['spectrum']],
-        [amp * i for i in frame['noise']['spectrum']],
-        frame['toniness'],
-        0,
+        toniness=frame['toniness'],
+        tone_spectrum=[amp * i for i in frame['tone']['spectrum']],
+        noise_spectrum=[amp * i for i in frame['noise']['spectrum']],
+        wait=0,
     )
     tape.to_file_i16le(file)
     samples += run_size

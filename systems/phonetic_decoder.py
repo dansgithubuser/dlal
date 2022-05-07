@@ -80,10 +80,10 @@ def say_one(phonetic, wait=None):
         if info['type'] == 'continuant':
             w = wait
         synth.synthesize(
-            frame['tone']['spectrum'],
-            frame['noise']['spectrum'],
-            frame['toniness'],
-            w,
+            toniness=frame['toniness'],
+            tone_formants=frame['tone']['formants'],
+            noise_spectrum=frame['noise']['spectrum'],
+            wait=w,
         )
         wait -= w
         if wait < 0: return
