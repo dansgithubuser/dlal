@@ -39,6 +39,7 @@ for phonetic, samples in zip(dlal.speech.PHONETICS, sampleses):
     model.add(phonetic, samples)
 model.add_0()
 model.save('assets/local/phonetic-model.json')
+model.save_formant_path_plot_data('assets/local/formant-paths.json')
 
 print('===== DUMPING MEAN SPECTRA =====')
 mean_spectra = {}

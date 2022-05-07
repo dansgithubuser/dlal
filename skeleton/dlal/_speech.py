@@ -71,8 +71,8 @@ RECORD_DURATION_GO = 4
 FORMANT_RANGES = [
     [0, 200],
     [200, 1000],
-    [1000, 2300],
-    [2300, 3000],
+    [800, 2300],
+    [1500, 3200],
 ]
 
 class Model:
@@ -109,20 +109,60 @@ class Model:
         self.run_size = run_size
         self.freq_per_bin = sample_rate / stft_bins
         self.phonetics = {}
+        self.formant_path_plot_data = {}
         if path: self.load(path)
 
-    def find_formant(self, spectrum, freq_i, freq_f, amp_tone, formant_freq_prev=0):
+    def find_formant(
+        self,
+        spectrum,
+        freq_i,
+        freq_f,
+        amp_tone,
+        formant_below_freq=0,
+        formant_prev_freq=None,
+    ):
+        # look for formant near where it was before
+        if formant_prev_freq:
+            e = 200
+            freq_i = max(freq_i, formant_prev_freq - e)
+            freq_f = min(freq_f, formant_prev_freq + e)
+        # convert freq range to bins
         bin_i = _math.floor(freq_i / self.freq_per_bin)
         bin_f = _math.floor(freq_f / self.freq_per_bin)
+        # make sure above formant below, and non-empty window
         bin_i = min(
             max(
                 bin_i,
-                _math.floor(formant_freq_prev / self.freq_per_bin) + 4
+                _math.floor(formant_below_freq / self.freq_per_bin) + 4
             ),
             bin_f - 1,
         )
-        window = spectrum[bin_i:bin_f]
-        bin_peak = window.index(max(window)) + bin_i
+        # avoid below formant
+        spread = 3
+        spectrum = spectrum[:]
+        if formant_below_freq:
+            formant_below_bin = _math.floor(formant_below_freq / self.freq_per_bin)
+            a = max(formant_below_bin - spread, 0)
+            b = min(formant_below_bin + spread + 1, len(spectrum))
+            for i in range(a, b):
+                spectrum[i] = 0
+        # find peak
+        spread = 2
+        e_peak = 0
+        if formant_prev_freq:
+            bin_peak = int(formant_prev_freq / self.freq_per_bin)
+        else:
+            bin_peak = (bin_i + bin_f) // 2
+        for i in range(bin_i, bin_f):
+            a = max(i-spread, 0)
+            b = min(i+spread+1, len(spectrum))
+            for j in range(a, b):
+                window = spectrum[a:b]
+                e_window = sum(i ** 2 for i in window)
+                if e_window > e_peak:
+                    e_peak = e_window
+                    bin_peak = i
+        # adjust based on neighboring bin amps
         bin_formant = bin_peak
         spread = 2
         if bin_peak >= spread and bin_peak < len(spectrum) - spread:
@@ -133,19 +173,28 @@ class Model:
             s = sum(v ** 2 for i, v in bins)
             if s != 0:
                 bin_formant = sum(i * v ** 2 for i, v in bins) / s
-        e_window = sum(i ** 2 for i in window)
+                bin_formant = max(bin_formant, bin_i)
+                bin_formant = min(bin_formant, bin_f)
+        #
         return {
             'freq': bin_formant * self.freq_per_bin,
-            'amp': _math.sqrt(e_window) * amp_tone,
+            'amp': _math.sqrt(e_peak) * amp_tone,
         }
 
-    def find_tone(self, spectrum, amp_tone, phonetic=None):
+    def find_tone(self, spectrum, amp_tone, phonetic=None, formants_prev=None):
         # find formants
         formants = []
-        formant_freq_prev = 0
-        for [freq_i, freq_f] in FORMANT_RANGES:
-            formant = self.find_formant(spectrum, freq_i, freq_f, amp_tone, formant_freq_prev)
-            formant_freq_prev = formant['freq']
+        formant_below_freq = 0
+        for i, [freq_i, freq_f] in enumerate(FORMANT_RANGES):
+            formant = self.find_formant(
+                spectrum,
+                freq_i,
+                freq_f,
+                amp_tone,
+                formant_below_freq,
+                formants_prev and formants_prev[i]['freq'],
+            )
+            formant_below_freq = formant['freq']
             formants.append(formant)
         # normalize so highest formant has amp=1
         f = max(i['amp'] for i in formants)
@@ -201,7 +250,7 @@ class Model:
         if phonetic and phonetic not in VOICED:
             amp_tone = 0
         spectrum = [i for i in spectrum]
-        tone = self.find_tone(spectrum, amp_tone, phonetic)
+        tone = self.find_tone(spectrum, amp_tone, phonetic, formants_prev)
         noise = self.find_noise(spectrum, amp_noise, phonetic)
         f = _math.sqrt(sum([
             sum(i ** 2 for i in tone['spectrum']),
@@ -266,11 +315,23 @@ class Model:
             sample_iter = iter(samples)
             stride = int(0.1 * self.sample_rate / self.run_size)
             start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)
-            formants_prev = None
+            formants = [
+                {'amp': 0, 'freq': 100},
+                {'amp': 0, 'freq': 500},
+                {'amp': 0, 'freq': 1000},
+                {'amp': 0, 'freq': 2500},
+            ]
+            plot_data = []
             for i_sample in range(stride, start, stride):
-                paramses_prev = [self.parameterize(*i, phonetic, formants_prev) for i in samples[i_sample:i_sample+stride]]
-                formants_prev = self.frames_from_paramses(paramses_prev, True)[0]['tone']['formants']
-            paramses = [self.parameterize(*i, phonetic, formants_prev) for i in samples[start:]]
+                paramses = [self.parameterize(*i, phonetic, formants) for i in samples[i_sample:i_sample+stride]]
+                frame = self.frames_from_paramses(paramses, True)[0]
+                formants = frame['tone']['formants']
+                plot_data.append({
+                    'spectrum': frame['tone']['spectrum'],
+                    'formants': formants,
+                })
+            self.formant_path_plot_data[phonetic] = plot_data
+            paramses = [self.parameterize(*i, phonetic, formants) for i in samples[start:]]
             frames = self.frames_from_paramses(paramses, continuant)
         else:
             paramses = [self.parameterize(*i, phonetic) for i in samples]
@@ -296,6 +357,10 @@ class Model:
     def save(self, path):
         with open(path, 'w') as f:
             _json.dump(self.phonetics, f, indent=2)
+
+    def save_formant_path_plot_data(self, path):
+        with open(path, 'w') as f:
+            _json.dump(self.formant_path_plot_data, f, indent=2)
 
     def load(self, path):
         with open(path, 'r') as f:
