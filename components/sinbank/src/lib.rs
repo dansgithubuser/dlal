@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 
 fn smooth(x: &mut [f32], xf: &[f32], smooth: f32) {
     for i in 0..x.len() {
-        x[i] = x[i] * smooth + (xf[i] - x[i]) * (1.0 - smooth);
+        x[i] = x[i] * smooth + xf[i] * (1.0 - smooth);
     }
 }
 
