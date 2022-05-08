@@ -150,7 +150,7 @@ class SpeechSynth(Subsystem):
                 'comm': ('comm', [1 << 12]),
                 'forman': ('forman', [freq_per_bin]),
                 'tone': ('sinbank', [freq_per_bin, 0.99]),
-                'noise': ('noisebank', [0.8]),
+                'noise': ('noisebank', [0.9]),
                 'buf_tone_1': 'buf',
                 'peak': ('peak', [0.99]),
                 'mul': 'mul',
