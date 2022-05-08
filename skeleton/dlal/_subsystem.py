@@ -192,9 +192,10 @@ class SpeechSynth(Subsystem):
         with _skeleton.Detach():
             with self.comm:
                 if toniness != None:
+                    tonal_airflow = min(toniness * 4, 1)
                     # c = 0 => noise is 100% modulated by tone
                     # c = 1 => noise in   0% modulated by tone
-                    self.mul.c(1 - toniness)
+                    self.mul.c(1 - tonal_airflow)
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
                 elif tone_formants:

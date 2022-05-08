@@ -194,8 +194,10 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- voiced fricatives not enough noise?
-- unvoiced stops too quiet?
+- unvoiced too loud
+	- voiced fricative too quiet?
+- k too quiet
+- p garbage
 
 - focus on visualization/analysis/tooling for speech
 - phonetics & midi to singing
