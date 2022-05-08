@@ -108,6 +108,7 @@ class Model:
         self.sample_rate = sample_rate
         self.run_size = run_size
         self.freq_per_bin = sample_rate / stft_bins
+        self.freq_per_bin_noise = sample_rate / 2 / noise_bins
         self.phonetics = {}
         self.formant_path_plot_data = {}
         if path: self.load(path)

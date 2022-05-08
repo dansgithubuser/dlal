@@ -27,7 +27,7 @@ if args.action == 'plot-tone-features':
     mean_spectra = json.load(open('assets/local/mean-spectra.json'))
     plot = dpc.Plot()
     for phonetic_i, (phonetic, info) in enumerate(model.phonetics.items()):
-        if not info['voiced'] or info['type'] == 'stop': continue
+        if info['type'] == 'stop' or phonetic == '0': continue
         x = phonetic_i * 2
         # label
         plot.text(phonetic, x, -100)
@@ -48,6 +48,22 @@ if args.action == 'plot-tone-features':
             freq = formant['freq']
             amp = log(formant['amp'], 2)
             plot.line(x, freq, x+amp, freq, r=1.0, g=amp, b=0.0)
+        # noise
+        if info['fricative']:
+            amp_max *= (model.stft_bins / 2) / model.noise_bins
+            noise_spectrum = info['frames'][0]['noise']['spectrum']
+            for bin_i, (amp_a, amp_b) in enumerate(zip(noise_spectrum, noise_spectrum[1:])):
+                amp_a /= amp_max
+                amp_b /= amp_max
+                plot.line(
+                    x+log(amp_a),
+                    (bin_i+0) * model.freq_per_bin_noise,
+                    x+log(amp_b),
+                    (bin_i+1) * model.freq_per_bin_noise,
+                    r=0,
+                    g=1.0,
+                    b=1.0,
+                )
     plot.show()
 
 if args.action == 'plot-formant-paths':
