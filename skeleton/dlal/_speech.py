@@ -232,7 +232,7 @@ class Model:
         spectrum_noise = [0] * self.noise_bins
         if not phonetic or phonetic in FRICATIVES:
             for i, amp in enumerate(spectrum):
-                spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp
+                spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp * amp_noise
         #
         return {
             'freq_c': f / s if s else 0,

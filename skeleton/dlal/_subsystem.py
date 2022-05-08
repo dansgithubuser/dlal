@@ -100,9 +100,9 @@ class SpeechSampler(Subsystem):
         self,
         stft_bins=512,
         tone_bins=[1, 6],
-        tone_factor=5e1,
+        tone_factor=1e1,
         noise_bins=[32, 256],
-        noise_factor=1e3,
+        noise_factor=2e2,
         name=None,
     ):
         self.stft_bins = stft_bins
