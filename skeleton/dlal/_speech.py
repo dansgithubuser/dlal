@@ -197,12 +197,7 @@ class Model:
             )
             formant_below_freq = formant['freq']
             formants.append(formant)
-        # normalize so highest formant has amp=1
-        f = max(i['amp'] for i in formants)
-        if f:
-            for i in formants:
-                i['amp'] /= f
-        # find tone spectrum, remove from full spectrum
+        # find tone spectrum
         if not phonetic or phonetic in VOICED:
             # take all bins with amplitudes above twice median
             spectrum_tone = []
@@ -212,8 +207,6 @@ class Model:
                 v = 0
                 if spectrum[i] > threshold:
                     v = spectrum[i] * amp_tone
-                    spectrum[i] -= v
-                    if spectrum[i] < 0: spectrum[i] = 0
                 spectrum_tone.append(v)
         else:
             spectrum_tone = [0] * self.tone_bins
@@ -250,16 +243,12 @@ class Model:
     def parameterize(self, spectrum, amp_tone, amp_noise, phonetic=None, formants_prev=None):
         if phonetic and phonetic not in VOICED:
             amp_tone = 0
-        spectrum = [i for i in spectrum]
         tone = self.find_tone(spectrum, amp_tone, phonetic, formants_prev)
         noise = self.find_noise(spectrum, amp_noise, phonetic)
         f = _math.sqrt(sum([
             sum(i ** 2 for i in tone['spectrum']),
             sum(i ** 2 for i in noise['spectrum']),
         ]))
-        if f:
-            tone['spectrum'] = [i/f for i in tone['spectrum']]
-            noise['spectrum'] = [i/f for i in noise['spectrum']]
         amp = amp_tone + amp_noise
         if amp:
             toniness = amp_tone / amp

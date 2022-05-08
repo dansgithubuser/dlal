@@ -40,13 +40,11 @@ class Visualizer:
     def __init__(self):
         self.sampleses = []
         self.paramses = []
-        self.amps = []
 
-    def add(self, sample, params, amp):
+    def add(self, sample, params):
         if not args.visualize: return
         self.sampleses.append(sample)
         self.paramses.append(params)
-        self.amps.append(amp)
 
     def show(self):
         if not args.visualize: return
@@ -109,12 +107,11 @@ while samples < duration:
     sample = sampler.sample()
     params = model.parameterize(*sample)
     frame = model.frames_from_paramses([params])[0]
-    amp = min(params['f'] * 10, 1)
-    visualizer.add(sample, params, amp)
+    visualizer.add(sample, params)
     synth.synthesize(
         toniness=frame['toniness'],
-        tone_spectrum=[amp * i for i in frame['tone']['spectrum']],
-        noise_spectrum=[amp * i for i in frame['noise']['spectrum']],
+        tone_spectrum=frame['tone']['spectrum'],
+        noise_spectrum=frame['noise']['spectrum'],
         wait=0,
     )
     tape.to_file_i16le(file)

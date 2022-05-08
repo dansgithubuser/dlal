@@ -33,10 +33,7 @@ if args.action == 'plot-tone-features':
         plot.text(phonetic, x, -100)
         # spectrum
         mean_spectrum = mean_spectra[phonetic]
-        amp_max = max(mean_spectrum)
         for bin_i, (amp_a, amp_b) in enumerate(zip(mean_spectrum, mean_spectrum[1:])):
-            amp_a /= amp_max
-            amp_b /= amp_max
             plot.line(
                 x+log(amp_a),
                 (bin_i+0) * model.freq_per_bin,
@@ -50,11 +47,11 @@ if args.action == 'plot-tone-features':
             plot.line(x, freq, x+amp, freq, r=1.0, g=amp, b=0.0)
         # noise
         if info['fricative']:
-            amp_max *= (model.stft_bins / 2) / model.noise_bins
+            noise_bin_per_stft_bin = model.noise_bins / (model.stft_bins / 2)
             noise_spectrum = info['frames'][0]['noise']['spectrum']
             for bin_i, (amp_a, amp_b) in enumerate(zip(noise_spectrum, noise_spectrum[1:])):
-                amp_a /= amp_max
-                amp_b /= amp_max
+                amp_a *= noise_bin_per_stft_bin
+                amp_b *= noise_bin_per_stft_bin
                 plot.line(
                     x+log(amp_a),
                     (bin_i+0) * model.freq_per_bin_noise,

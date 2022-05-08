@@ -99,17 +99,17 @@ class SpeechSampler(Subsystem):
     def init(
         self,
         stft_bins=512,
-        tone_amp_bins=[1, 6],
-        tone_amp_factor=5e1,
-        noise_amp_bins=[32, 256],
-        noise_amp_factor=1e3,
+        tone_bins=[1, 6],
+        tone_factor=5e1,
+        noise_bins=[32, 256],
+        noise_factor=1e3,
         name=None,
     ):
         self.stft_bins = stft_bins
-        self.tone_amp_bins = tone_amp_bins
-        self.tone_amp_factor = tone_amp_factor
-        self.noise_amp_bins = noise_amp_bins
-        self.noise_amp_factor = noise_amp_factor
+        self.tone_bins = tone_bins
+        self.tone_factor = tone_factor
+        self.noise_bins = noise_bins
+        self.noise_factor = noise_factor
         Subsystem.init(self,
             {
                 'buf': 'buf',
@@ -127,8 +127,8 @@ class SpeechSampler(Subsystem):
         spectrum = self.stft.spectrum()
         return (
             spectrum,
-            self.tone_amp_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_amp_bins[0]:self.tone_amp_bins[1]])),
-            self.noise_amp_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_amp_bins[0]:self.noise_amp_bins[1]])),
+            self.tone_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_bins[0]:self.tone_bins[1]])),
+            self.noise_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
         )
 
     def sampleses(self, path, filea, driver):
@@ -155,7 +155,6 @@ class SpeechSynth(Subsystem):
                 'peak': ('peak', [0.99]),
                 'mul': 'mul',
                 'buf_peak': 'buf',
-                'gain_tone': 'gain',
                 'buf_tone_o': 'buf',
                 'buf_noise_o': 'buf',
             },
@@ -175,7 +174,6 @@ class SpeechSynth(Subsystem):
             self.mul,
             [self.buf_peak, self.buf_noise_o],
             [],
-            self.gain_tone,
             self.buf_tone_o,
         )
         self.outputs = [self.buf_tone_o, self.buf_noise_o]
@@ -194,11 +192,9 @@ class SpeechSynth(Subsystem):
         with _skeleton.Detach():
             with self.comm:
                 if toniness != None:
-                    tonal_airflow = toniness
                     # c = 0 => noise is 100% modulated by tone
                     # c = 1 => noise in   0% modulated by tone
-                    self.mul.c(1 - tonal_airflow)
-                    self.gain_tone.set(1, 0.8)
+                    self.mul.c(1 - toniness)
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
                 elif tone_formants:
