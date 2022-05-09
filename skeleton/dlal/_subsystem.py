@@ -151,32 +151,25 @@ class SpeechSynth(Subsystem):
                 'forman': ('forman', [freq_per_bin]),
                 'tone': ('sinbank', [freq_per_bin, 0.99]),
                 'noise': ('noisebank', [0.9]),
-                'buf_tone_1': 'buf',
-                'peak': ('peak', [0.99]),
-                'mul': 'mul',
-                'buf_peak': 'buf',
-                'buf_tone_o': 'buf',
-                'buf_noise_o': 'buf',
+                'buf_tone': 'buf',
+                'mutt': 'mutt',
+                'buf_noise': 'buf',
+                'buf_out': 'buf',
             },
             name=name,
         )
         self.tone.zero()
         _connect(
-            (self.forman,),
-            (self.tone, self.noise),
-            (self.buf_tone_1, self.buf_noise_o),
-            (self.buf_tone_o,),
+            self.forman,
+            self.tone,
+            [self.buf_tone, '+>', self.mutt],
+            self.buf_out,
             [],
-            self.buf_tone_1,
-            self.peak,
-            self.buf_peak,
-            [],
-            self.mul,
-            [self.buf_peak, self.buf_noise_o],
-            [],
-            self.buf_tone_o,
+            self.noise,
+            [self.buf_noise, '<+', self.mutt],
+            self.buf_out,
         )
-        self.outputs = [self.buf_tone_o, self.buf_noise_o]
+        self.outputs = [self.buf_out]
 
     def post_add_init(self):
         self.tone.midi([0x90, 42, 127])
@@ -191,11 +184,6 @@ class SpeechSynth(Subsystem):
     ):
         with _skeleton.Detach():
             with self.comm:
-                if toniness != None:
-                    tonal_airflow = min(toniness * 4, 1)
-                    # c = 0 => noise is 100% modulated by tone
-                    # c = 1 => noise in   0% modulated by tone
-                    self.mul.c(1 - tonal_airflow)
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
                 elif tone_formants:

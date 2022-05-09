@@ -1,0 +1,10 @@
+[package]
+name = "mutt"
+version = "1.0.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dlal-component-base = { path = "../base" }

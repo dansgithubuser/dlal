@@ -394,6 +394,7 @@ pub unsafe extern "C" fn run(component: *mut Component) {
     component.run();
 }
 
+#[allow(unused_macros)]
 macro_rules! field_helper_to_json {
     ($self:expr, $extra:tt) => {
         dlal_component_base::serde_json::json!({
@@ -405,6 +406,7 @@ macro_rules! field_helper_to_json {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! field_helper_from_json {
     ($self:expr, $body:expr) => {
         {
