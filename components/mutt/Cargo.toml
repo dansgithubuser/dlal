@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlal-component-base = { path = "../base" }
+biquad = "0.4.0"

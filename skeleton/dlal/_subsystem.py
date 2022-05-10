@@ -173,6 +173,7 @@ class SpeechSynth(Subsystem):
 
     def post_add_init(self):
         self.tone.midi([0x90, 42, 127])
+        self.mutt.filter_hi(2, 1000, (1/2) ** (1/2))
 
     def synthesize(
         self,
