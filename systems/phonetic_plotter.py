@@ -9,10 +9,11 @@ import math
 parser = argparse.ArgumentParser()
 parser.add_argument('action',
     choices=[
-        'plot-tone-features',
-        'plot-formant-paths',
+        'continuants',
+        'stops',
+        'formants',
     ],
-    default='plot-tone-features',
+    default='continuants',
     nargs='?',
 )
 args = parser.parse_args()
@@ -23,7 +24,7 @@ def log(x, e=4):
     if x < 10 ** -e: return 0
     return (math.log10(x) + e) / e
 
-if args.action == 'plot-tone-features':
+if args.action == 'continuants':
     mean_spectra = json.load(open('assets/local/mean-spectra.json'))
     plot = dpc.Plot()
     for phonetic_i, (phonetic, info) in enumerate(model.phonetics.items()):
@@ -63,11 +64,31 @@ if args.action == 'plot-tone-features':
                 )
     plot.show()
 
-if args.action == 'plot-formant-paths':
+if args.action == 'stops':
+    plot = dpc.Plot()
+    x = 0
+    for phonetic, info in model.phonetics.items():
+        if info['type'] != 'stop': continue
+        plot.text(phonetic, x, -100)  # label
+        for frame in info['frames']:
+            spectrum = frame['noise']['spectrum']
+            for bin_i, amp in enumerate(spectrum):
+                plot.rect(
+                    x+0,
+                    (bin_i+0) * model.freq_per_bin_noise,
+                    x+1,
+                    (bin_i+1) * model.freq_per_bin_noise,
+                    a=log(amp, 4),
+                )
+            x += 1
+        x += 1
+    plot.show()
+
+if args.action == 'formants':
     formant_paths = json.load(open('assets/local/formant-paths.json'))
     plot = dpc.Plot()
     x = 0
-    for phonetic_i, (phonetic, info) in enumerate(model.phonetics.items()):
+    for phonetic, info in model.phonetics.items():
         if not info['voiced'] or info['type'] == 'stop': continue
         plot.text(phonetic, x, -100)  # label
         formants_prev = None
