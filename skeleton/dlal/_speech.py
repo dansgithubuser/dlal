@@ -355,3 +355,29 @@ class Model:
     def load(self, path):
         with open(path, 'r') as f:
             self.phonetics = _json.load(f)
+
+class Utterance:
+    def __init__(self, phonetics, timings=None, pitches=None):
+        self.phonetics = phonetics
+        self.timings = timings or [i / 4 for i in range(len(phonetics))]
+        self.pitches = pitches or [42 for _ in phonetics]
+
+    def from_str(s):
+        s.replace(' ', '0')
+        phonetics = []
+        bracketed_phonetic = None
+        for c in s:
+            if c == '[':
+                bracketed_phonetic = ''
+            elif c == ']':
+                phonetics.append(bracketed_phonetic)
+                bracketed_phonetic = None
+            elif bracketed_phonetic != None:
+                bracketed_phonetic += c
+            else:
+                phonetics.append(c)
+        phonetics.append('0')
+        return Utterance(phonetics)
+
+    def __iter__(self):
+        return iter(zip(self.phonetics, self.timings, self.pitches))

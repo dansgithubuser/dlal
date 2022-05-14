@@ -5,6 +5,7 @@ import argparse
 
 #===== args =====#
 parser = argparse.ArgumentParser()
+parser.add_argument('--utter', '-u')
 parser.add_argument('--eval', '-e')
 args = parser.parse_args()
 
@@ -97,6 +98,10 @@ def say_all(phonetics, timings):
         say_one(phonetic, int((timing - timing_last) * sample_rate))
         timing_last = timing
 
+def say_utterance(s):
+    u = dlal.speech.Utterance.from_str(s)
+    say_all(u.phonetics, u.timings)
+
 def say(*args, **kwargs):
     if type(args[0]) == str:
         say_one(*args, **kwargs)
@@ -104,6 +109,9 @@ def say(*args, **kwargs):
         say_all(*args, **kwargs)
     else:
         raise Exception('Bad first argument.')
+
+if args.utter:
+    say_utterance(args.utter)
 
 if args.eval:
     eval(args.eval)
