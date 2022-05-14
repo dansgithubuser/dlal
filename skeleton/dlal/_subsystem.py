@@ -100,9 +100,9 @@ class SpeechSampler(Subsystem):
         self,
         stft_bins=512,
         tone_bins=[1, 6],
-        tone_factor=1e1,
+        tone_factor=2e1,
         noise_bins=[32, 256],
-        noise_factor=2e2,
+        noise_factor=1e2,
         name=None,
     ):
         self.stft_bins = stft_bins
@@ -173,7 +173,6 @@ class SpeechSynth(Subsystem):
 
     def post_add_init(self):
         self.tone.midi([0x90, 42, 127])
-        self.mutt.filter_hi(2, 1000, (1/2) ** (1/2))
 
     def synthesize(
         self,

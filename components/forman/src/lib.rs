@@ -59,14 +59,14 @@ impl ComponentTrait for Component {
         for i in &mut self.spectrum {
             *i = 0.0;
         }
-        let spread = 4;
+        let spread = 8;
         for formant in &mut self.formants {
             let a = ((formant.freq / self.freq_per_bin) as isize - spread).max(0) as usize;
             let b = ((formant.freq / self.freq_per_bin) as isize + spread).min(self.spectrum.len() as isize) as usize;
             for i in a..(b + 1) {
                 let d = (formant.freq / self.freq_per_bin) - (i as f32);
-                let d2 = (d * d).max(1.0);
-                self.spectrum[i] += formant.amp / d2 / 2.0;
+                let d2 = (d * d / 2.0).max(1.0);
+                self.spectrum[i] += formant.amp / d2;
             }
         }
         // send to output
