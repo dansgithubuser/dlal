@@ -8,6 +8,7 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument('recording_path')
 parser.add_argument('--visualize', '-v', action='store_true')
+parser.add_argument('--noise-only', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -105,7 +106,7 @@ file = open('phonetic_vocoder.i16le', 'wb')
 while samples < duration:
     audio.run()
     sample = sampler.sample()
-    params = model.parameterize(*sample)
+    params = model.parameterize(*sample, 's' if args.noise_only else None)
     frame = model.frames_from_paramses([params])[0]
     visualizer.add(sample, params)
     synth.synthesize(
