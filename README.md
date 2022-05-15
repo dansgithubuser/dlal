@@ -194,10 +194,6 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- stops
-	- k too quiet
-	- p garbage
-
 - focus on visualization/analysis/tooling for speech
 - phonetics & midi to singing
 	- basic sing

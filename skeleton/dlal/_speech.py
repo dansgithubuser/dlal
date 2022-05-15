@@ -118,7 +118,6 @@ class Model:
         spectrum,
         freq_i,
         freq_f,
-        amp_tone,
         formant_below_freq=0,
         formant_prev_freq=None,
     ):
@@ -182,7 +181,7 @@ class Model:
             'amp': _math.sqrt(e_peak),
         }
 
-    def find_tone(self, spectrum, amp_tone, phonetic=None, formants_prev=None):
+    def find_tone(self, spectrum, phonetic=None, formants_prev=None):
         # find formants
         formants = []
         formant_below_freq = 0
@@ -191,7 +190,6 @@ class Model:
                 spectrum,
                 freq_i,
                 freq_f,
-                amp_tone,
                 formant_below_freq,
                 formants_prev and formants_prev[i]['freq'],
             )
@@ -218,7 +216,7 @@ class Model:
             'spectrum': spectrum_tone,
         }
 
-    def find_noise(self, spectrum, amp_noise, phonetic=None):
+    def find_noise(self, spectrum, phonetic=None):
         f = 0  # amplitude-weighted sum of frequencies (to find center frequency)
         s = 0  # sum of amplitudes (to find center frequency)
         hi = 0  # high-frequency energy
@@ -246,8 +244,8 @@ class Model:
     def parameterize(self, spectrum, amp_tone, amp_noise, phonetic=None, formants_prev=None):
         if phonetic and phonetic not in VOICED:
             amp_tone = 0
-        tone = self.find_tone(spectrum, amp_tone, phonetic, formants_prev)
-        noise = self.find_noise(spectrum, amp_noise, phonetic)
+        tone = self.find_tone(spectrum, phonetic, formants_prev)
+        noise = self.find_noise(spectrum, phonetic)
         f = _math.sqrt(sum([
             sum(i ** 2 for i in tone['spectrum']),
             sum(i ** 2 for i in noise['spectrum']),
