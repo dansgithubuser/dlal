@@ -179,7 +179,7 @@ class Model:
         #
         return {
             'freq': bin_formant * self.freq_per_bin,
-            'amp': _math.sqrt(e_peak) * amp_tone,
+            'amp': _math.sqrt(e_peak),
         }
 
     def find_tone(self, spectrum, amp_tone, phonetic=None, formants_prev=None):
@@ -196,6 +196,8 @@ class Model:
                 formants_prev and formants_prev[i]['freq'],
             )
             formant_below_freq = formant['freq']
+            if phonetic and phonetic not in VOICED:
+                formant['amp'] = 0
             formants.append(formant)
         # find tone spectrum
         if not phonetic or phonetic in VOICED:
@@ -206,7 +208,7 @@ class Model:
             for i in range(self.tone_bins):
                 v = 0
                 if spectrum[i] > threshold:
-                    v = spectrum[i] * amp_tone
+                    v = spectrum[i]
                 spectrum_tone.append(v)
         else:
             spectrum_tone = [0] * self.tone_bins
@@ -232,7 +234,8 @@ class Model:
         spectrum_noise = [0] * self.noise_bins
         if not phonetic or phonetic in FRICATIVES:
             for i, amp in enumerate(spectrum):
-                spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp * amp_noise
+                spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp
+        spectrum_noise[0] = 0
         #
         return {
             'freq_c': f / s if s else 0,
