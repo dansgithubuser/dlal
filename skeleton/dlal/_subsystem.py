@@ -143,11 +143,11 @@ class SpeechSampler(Subsystem):
         return sampleses
 
 class SpeechSynth(Subsystem):
-    def init(self, name=None):
-        freq_per_bin = 44100 / (8 * 64)
+    def init(self, sample_rate=44100, run_size=64, name=None):
+        freq_per_bin = sample_rate / (8 * 64)
         Subsystem.init(self,
             {
-                'comm': ('comm', [1 << 12]),
+                'comm': ('comm', [1 << 16]),
                 'forman': ('forman', [freq_per_bin]),
                 'tone': ('sinbank', [freq_per_bin, 0.99]),
                 'noise': ('noisebank', [0.8]),
@@ -170,6 +170,8 @@ class SpeechSynth(Subsystem):
             self.buf_out,
         )
         self.outputs = [self.buf_out]
+        self.sample_rate = sample_rate
+        self.run_size = run_size
 
     def post_add_init(self):
         self.tone.midi([0x90, 42, 127])
@@ -193,7 +195,25 @@ class SpeechSynth(Subsystem):
                         self.forman.formants(tone_formants)
                 if noise_spectrum:
                     self.noise.spectrum(noise_spectrum)
-            self.comm.wait(wait)
+                self.comm.wait(wait)
+
+    def say(self, phonetic, model, wait=0):
+        info = model.phonetics[phonetic]
+        frames = info['frames']
+        if info['type'] == 'stop':
+            w = self.run_size / self.sample_rate
+        else:
+            w = wait
+        for i_frame, frame in enumerate(frames):
+            self.synthesize(
+                toniness=frame['toniness'],
+                tone_formants=frame['tone']['formants'],
+                noise_spectrum=frame['noise']['spectrum'],
+                wait=int(w * self.sample_rate),
+            )
+            wait -= w
+            if wait < 1e-4: return
+        self.say('0', model, wait)
 
 class Portamento(Subsystem):
     def init(self, slowness=0.999, name=None):

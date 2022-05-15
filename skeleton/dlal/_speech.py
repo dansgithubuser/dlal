@@ -357,14 +357,116 @@ class Model:
         with open(path, 'r') as f:
             self.phonetics = _json.load(f)
 
-class Utterance:
-    def __init__(self, phonetics, timings=None, pitches=None):
-        self.phonetics = phonetics
-        self.timings = timings or [i / 4 for i in range(len(phonetics))]
-        self.pitches = pitches or [42 for _ in phonetics]
+    def duration(self, phonetic, default):
+        if phonetic in STOPS:
+            return len(self.phonetics[phonetic]['frames']) * self.run_size / self.sample_rate
+        else:
+            return default
 
-    def from_str(s):
+class Syllable:
+    def __init__(self, onset, nucleus, coda, default_wait, model):
+        self.onset = onset
+        self.nucleus = nucleus
+        self.coda = coda
+        self.default_wait = default_wait
+        self.model = model
+        self.start = None
+        self.end = None
+        self.speedup = 1
+
+    def __iter__(self):
+        if self.speedup == 1:
+            for phonetic in self.onset:
+                yield phonetic, self.model.duration(phonetic, self.default_wait)
+            duration_nucleus = self.duration() - self.duration_segment(self.onset) - self.duration_segment(self.coda)
+            for phonetic in self.nucleus:
+                yield phonetic, duration_nucleus / len(self.nucleus)
+            for phonetic in self.coda:
+                yield phonetic, self.model.duration(phonetic, self.default_wait)
+        else:
+            for segment in self.segments():
+                for phonetic in segment:
+                    yield phonetic, self.model.duration(phonetic, self.default_wait) / self.speedup
+
+    def from_str(s, default_wait, model):
+        split = s.split('.')
+        if len(split) == 1:
+            segments = '', split[0], ''
+        elif len(split) == 2:
+            segments = split[0], split[1], ''
+        elif len(split) == 3:
+            segments = split
+        else:
+            raise Exception(f'invalid syllable {s}')
+        segments = [Utterance.phonetics_from_str(i) for i in segments]
+        return Syllable(*segments, default_wait, model)
+
+    def squeeze(self):
+        expected_duration = self.end - self.start
+        if expected_duration == 0:
+            self.speedup = _math.inf
+            return
+        actual_duration = self.duration()
+        if actual_duration > expected_duration:
+            self.speedup = actual_duration / expected_duration
+
+    def duration(self):
+        return max(
+            sum(self.duration_segment(i) for i in self.segments()),
+            self.end - self.start,
+        )
+
+    def duration_segment(self, phonetics):
+        return sum(self.model.duration(i, self.default_wait) for i in phonetics)
+
+    def segments(self):
+        return self.onset, self.nucleus, self.coda
+
+class Utterance:
+    def __init__(
+        self,
+        model=None,
+        default_wait=1/8,
+        default_pitch=42,
+    ):
+        self.phonetics = []
+        self.waits = []
+        self.pitches = []
+        self.model = model
+        self.default_wait = default_wait
+        self.default_pitch = default_pitch
+
+    def __iter__(self):
+        return iter(zip(self.phonetics, self.waits, self.pitches))
+
+    def from_str(s, *args, **kwargs):
+        self = Utterance(*args, **kwargs)
         s.replace(' ', '0')
+        self.phonetics = Utterance.phonetics_from_str(s)
+        if self.phonetics[-1] != '0':
+            self.phonetics.append('0')
+        self.infer()
+        return self
+
+    def from_syllables_and_notes(syllables, notes, model, *args, **kwargs):
+        self = Utterance(model, *args, **kwargs)
+        syllables = [Syllable.from_str(i, self.default_wait, self.model) for i in syllables.split()]
+        for syllable, note in zip(syllables, notes):
+            syllable.start = note['on'] / self.model.sample_rate
+            syllable.end = note['off'] / self.model.sample_rate
+            syllable.squeeze()
+            silence = syllable.start - sum(self.waits)
+            if silence > 1e-2:
+                self.phonetics.append('0')
+                self.waits.append(silence)
+                self.pitches.append(self.pitches[-1] if self.pitches else self.default_pitch)
+            for phonetic, wait in syllable:
+                self.phonetics.append(phonetic)
+                self.waits.append(wait)
+                self.pitches.append(note['number'])
+        return self
+
+    def phonetics_from_str(s):
         phonetics = []
         bracketed_phonetic = None
         for c in s:
@@ -377,8 +479,26 @@ class Utterance:
                 bracketed_phonetic += c
             else:
                 phonetics.append(c)
-        phonetics.append('0')
-        return Utterance(phonetics)
+        return phonetics
 
-    def __iter__(self):
-        return iter(zip(self.phonetics, self.timings, self.pitches))
+    def infer(self):
+        while len(self.waits) < len(self.phonetics):
+            wait = self.default_wait
+            if self.model:
+                wait = self.model.duration(self.phonetics[len(self.waits)], wait)
+            self.waits.append(wait)
+        while len(self.pitches) < len(self.phonetics):
+            self.pitches.append(self.pitches[-1] if self.pitches else self.default_pitch)
+
+    def print(self):
+        i = 0
+        stride = 10
+        while i < len(self.phonetics):
+            s = min(stride, len(self.phonetics) - i)
+            for j in range(s): print(f'{self.phonetics[i+j]:>8}', end='')
+            print()
+            for j in range(s): print(f'{self.waits[i+j]:>8.2f}', end='')
+            print()
+            for j in range(s): print(f'{self.pitches[i+j]:>8}', end='')
+            print()
+            i += stride

@@ -2,11 +2,12 @@
 import dlal
 
 import argparse
+import time
 
 #===== args =====#
 parser = argparse.ArgumentParser()
 parser.add_argument('--utter', '-u')
-parser.add_argument('--eval', '-e')
+parser.add_argument('--recite', '-r', choices=['fusion', 'cat'])
 args = parser.parse_args()
 
 #===== system =====#
@@ -31,7 +32,6 @@ phonetics_fusion = [
     'i', 'z',
     's', '0', 'o', 'w',
     'm', 'e', '0', 's', '0', 'y', '0',
-    '0',
 ]
 timings_fusion = [
     0.08, 0.14, 0.19, 0.24, 0.35, 0.39, 0.44,
@@ -39,7 +39,6 @@ timings_fusion = [
     0.81, 0.88,
     0.92, 1.05, 1.08, 1.13,
     1.18, 1.26, 1.36, 1.37, 1.50, 1.52, 1.64,
-    1.67,
 ]
 
 phonetics_cat = [
@@ -54,7 +53,6 @@ phonetics_cat = [
     'ae', 'n', 'd', '0',
     'd', 'ae', 'n', 's', '0',
     'e', 'f', 'r', 't', 'l', 'e', 's', 'l', 'y', '0',
-    '0',
 ]
 timings_cat = [
     0.10, 0.20, 0.30, 0.38,
@@ -68,64 +66,41 @@ timings_cat = [
     3.43, 3.49, 3.55, 3.57,
     3.66, 3.69, 3.87, 3.94, 4.06,
     4.17, 4.27, 4.41, 4.46, 4.48, 4.58, 4.65, 4.84, 4.88, 4.99,
-    5.05,
 ]
 
-def say_one(phonetic, wait=None):
-    split = phonetic.split('/')
-    phonetic = split[0]
-    if len(split) > 1:
-        phonetic_tone = split[1]
-    else:
-        phonetic_tone = None
-    info = model.phonetics[phonetic]
-    frames = info['frames']
-    if wait == None:
-        wait = len(frames) * run_size
-    for i_frame, frame in enumerate(frames):
-        w = run_size
-        if info['type'] == 'continuant':
-            w = wait
-        if not phonetic_tone:
-            tone_formants = frame['tone']['formants']
-        elif i_frame > len(frames) / 2:
-            tone_formants = model.phonetics[phonetic_tone]['frames'][0]['tone']['formants']
-        else:
-            tone_formants = model.phonetics['0']['frames'][0]['tone']['formants']
-        synth.synthesize(
-            toniness=frame['toniness'],
-            tone_formants=tone_formants,
-            noise_spectrum=frame['noise']['spectrum'],
-            wait=w,
-        )
-        wait -= w
-        if wait < 0: return
-    if info['type'] == 'stop' and w > 0:
-        say_one('0', wait)
+def say_utterance(u):
+    w = 0
+    for phonetic, wait, _ in u:
+        synth.say(phonetic, model, wait)
+        w += wait
+    return w
 
-def say_all(phonetics, timings):
-    phonetics.insert(0, '0')
-    timing_last = 0
-    for phonetic, timing in zip(phonetics, timings):
-        say_one(phonetic, int((timing - timing_last) * sample_rate))
-        timing_last = timing
+def say_phonetics_and_timings(phonetics, timings):
+    u = dlal.speech.Utterance()
+    u.phonetics = ['0'] + phonetics
+    u.waits = [j-i for i, j in zip([0] + timings, timings + [timings[-1] + 0.25])]
+    u.infer()
+    w = 0
+    for phonetic, wait, _ in u:
+        w += wait
+        synth.say(phonetic, model, wait)
+    return w
 
-def say_utterance(s):
-    u = dlal.speech.Utterance.from_str(s)
-    say_all(u.phonetics, u.timings)
+def utter(s):
+    return say_utterance(dlal.speech.Utterance.from_str(s, model))
 
-def say(*args, **kwargs):
-    if type(args[0]) == str:
-        say_one(*args, **kwargs)
-    elif type(args[0]) == list:
-        say_all(*args, **kwargs)
-    else:
-        raise Exception('Bad first argument.')
+def recite(topic):
+    phonetics = eval('phonetics_' + topic)
+    timings = eval('timings_' + topic)
+    return say_phonetics_and_timings(phonetics, timings)
+
+w = 0
 
 if args.utter:
-    say_utterance(args.utter)
+    w = utter(args.utter)
 
-if args.eval:
-    eval(args.eval)
+if args.recite:
+    w = recite(args.recite)
 
 dlal.typical_setup()
+time.sleep(w)
