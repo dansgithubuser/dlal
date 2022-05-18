@@ -46,7 +46,7 @@ phonetics_cat = [
     'h', 'ae', 'w', '0',
     'd', 'u', 'z',
     'th_v', 'u', '0',
-    'g', 'r', 'ay', 'y', '0', 't', '0',
+    'g/r', 'r', 'ay', 'y', '0', 't', '0',
     'b', 'l', 'uu', 'w', '0',
     'k', 'ae', '0', 't', '0',
     'j', 'u', 'm', '0', 'p', '0',
@@ -72,17 +72,29 @@ timings_cat = [
 ]
 
 def say_one(phonetic, wait=None):
+    split = phonetic.split('/')
+    phonetic = split[0]
+    if len(split) > 1:
+        phonetic_tone = split[1]
+    else:
+        phonetic_tone = None
     info = model.phonetics[phonetic]
     frames = info['frames']
     if wait == None:
         wait = len(frames) * run_size
-    for frame in frames:
+    for i_frame, frame in enumerate(frames):
         w = run_size
         if info['type'] == 'continuant':
             w = wait
+        if not phonetic_tone:
+            tone_formants = frame['tone']['formants']
+        elif i_frame > len(frames) / 2:
+            tone_formants = model.phonetics[phonetic_tone]['frames'][0]['tone']['formants']
+        else:
+            tone_formants = model.phonetics['0']['frames'][0]['tone']['formants']
         synth.synthesize(
             toniness=frame['toniness'],
-            tone_formants=frame['tone']['formants'],
+            tone_formants=tone_formants,
             noise_spectrum=frame['noise']['spectrum'],
             wait=w,
         )
