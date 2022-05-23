@@ -187,7 +187,10 @@ class SpeechSynth(Subsystem):
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
                 elif tone_formants:
-                    self.forman.formants(tone_formants)
+                    if all(i['amp'] < 1e-2 for i in tone_formants):
+                        self.forman.zero()
+                    else:
+                        self.forman.formants(tone_formants)
                 if noise_spectrum:
                     self.noise.spectrum(noise_spectrum)
             self.comm.wait(wait)

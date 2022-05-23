@@ -38,6 +38,9 @@ component!(
         "formants": {
             "args": [{"name": "formants"}],
         },
+        "zero": {
+            "args": [],
+        },
     },
 );
 
@@ -87,6 +90,19 @@ impl Component {
         if self.formants.len() != self.formants_f.len() {
             self.formants = self.formants_f.clone();
             self.formants_e = self.formants_f.clone();
+        }
+        if self.formants.iter().all(|i| i.amp < 1e-2) {
+            for i in 0..self.formants_f.len() {
+                self.formants[i].freq = self.formants_f[i].freq;
+                self.formants_e[i].freq = self.formants_f[i].freq;
+            }
+        }
+        Ok(None)
+    }
+
+    fn zero_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        for i in &mut self.formants_f {
+            i.amp = 0.0;
         }
         Ok(None)
     }
