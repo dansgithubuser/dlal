@@ -426,7 +426,7 @@ class Utterance:
     def __init__(
         self,
         model=None,
-        default_wait=1/8,
+        default_wait=1/6,
         default_pitch=42,
     ):
         self.phonetics = []
@@ -441,11 +441,11 @@ class Utterance:
 
     def from_str(s, *args, **kwargs):
         self = Utterance(*args, **kwargs)
-        s.replace(' ', '0')
-        self.phonetics = Utterance.phonetics_from_str(s)
+        self.phonetics = Utterance.phonetics_from_str(s.replace(' ', '0'))
         if self.phonetics[-1] != '0':
             self.phonetics.append('0')
         self.infer()
+        self.add_prestop_silence()
         return self
 
     def from_syllables_and_notes(syllables, notes, model, *args, **kwargs):
@@ -464,6 +464,7 @@ class Utterance:
                 self.phonetics.append(phonetic)
                 self.waits.append(wait)
                 self.pitches.append(note['number'])
+        self.add_prestop_silence()
         return self
 
     def phonetics_from_str(s):
@@ -489,6 +490,22 @@ class Utterance:
             self.waits.append(wait)
         while len(self.pitches) < len(self.phonetics):
             self.pitches.append(self.pitches[-1] if self.pitches else self.default_pitch)
+
+    def add_prestop_silence(self):
+        silences = []
+        for i, phonetic in enumerate(self.phonetics):
+            if i == 0: continue
+            if phonetic in STOPS:
+                old = self.waits[i-1]
+                self.waits[i-1] = max(
+                    self.waits[i-1] - 0.05,
+                    self.waits[i-1] / 2,
+                )
+                silences.append((i, old - self.waits[i-1]))
+        for i, wait in reversed(silences):
+            self.phonetics.insert(i, '0')
+            self.waits.insert(i, wait)
+            self.pitches.insert(i, self.pitches[i-1])
 
     def print(self):
         i = 0

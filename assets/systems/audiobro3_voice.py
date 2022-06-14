@@ -21,7 +21,7 @@ dlal.connect(
 
 # command
 syllables = '''
-    o.w [sh].i.t .i.ts g.e t.ns s.y r.y .u.s
+    o.w [sh].i.t .i.ts g.e t.ns s.y r.y us
 
     .[ae].nd [th]r.w sm.ow.k h.y a p.y .[uu].d
     b.[ay]y.s m.[ae].n

@@ -33,7 +33,7 @@ component!(
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.decay = 0.999;
+        self.decay = 0.99;
         self.e = 0.01;
     }
 
