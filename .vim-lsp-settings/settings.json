@@ -1,0 +1,16 @@
+{
+	"pylsp-all": {
+		"workspace_config": {
+			"pylsp": {
+				"plugins": {
+					"pycodestyle": {
+						"maxLineLength": 120
+					},
+					"jedi": {
+						"extra_paths": ["./skeleton"]
+					}
+				}
+			}
+		}
+	}
+}
