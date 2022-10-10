@@ -56,6 +56,8 @@ Continuant parameters are averaged to produce a final result, rejecting outliers
 
 Stop parameters are kept in a sequence. Their overall amplitudes are normalized so that every stop peaks at 1.
 
+![record & encode](speech-record-encode.jpg)
+
 #### decoding
 A sequence of phonetics (or syllables), timings (or notes), and pitches (or notes) are taken as input. Some phonetic rules are applied, such as ensuring silence before each stop, and how syllables should stretch or shrink in time.
 
