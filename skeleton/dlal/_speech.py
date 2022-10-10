@@ -303,9 +303,9 @@ class Model:
         continuant = phonetic not in STOPS
         voiced = phonetic in VOICED
         if voiced and continuant:
-            sample_iter = iter(samples)
-            stride = int(0.1 * self.sample_rate / self.run_size)
-            start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)
+            # track formants movement from unstressed vowel to phonetic
+            stride = int(0.1 * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
+            start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
             formants = [
                 {'amp': 0, 'freq': 100},
                 {'amp': 0, 'freq': 500},
@@ -313,7 +313,7 @@ class Model:
                 {'amp': 0, 'freq': 2500},
             ]
             plot_data = []
-            for i_sample in range(stride, start, stride):
+            for i_sample in range(0, start, stride):
                 paramses = [self.parameterize(*i, phonetic, formants) for i in samples[i_sample:i_sample+stride]]
                 frame = self.frames_from_paramses(paramses, True)[0]
                 formants = frame['tone']['formants']
@@ -321,6 +321,7 @@ class Model:
                     'spectrum': frame['tone']['spectrum'],
                     'formants': formants,
                 })
+            # get this phonetic's formants
             self.formant_path_plot_data[phonetic] = plot_data
             paramses = [self.parameterize(*i, phonetic, formants) for i in samples[start:]]
             frames = self.frames_from_paramses(paramses, continuant)
