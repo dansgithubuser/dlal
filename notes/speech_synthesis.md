@@ -69,5 +69,7 @@ The noise signal is multiplied by the tone signal in such a way that voiced fric
 
 The noise signal is multiplied by a tunable parameter.
 
+![record & encode](speech-decode.jpg)
+
 #### vocoding
 An input signal is parameterized and the result is directly synthesized.
