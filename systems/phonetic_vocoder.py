@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('recording_path')
 parser.add_argument('--visualize', '-v', action='store_true')
 parser.add_argument('--noise-only', action='store_true')
+parser.add_argument('--power-plot', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -100,6 +101,29 @@ class Visualizer:
 
 visualizer = Visualizer()
 
+# power plot
+if args.power_plot:
+    power_rec = dlal.Power()
+    power_synth = dlal.Power()
+    sampler.buf.connect(power_rec)
+    synth.buf_out.connect(power_synth)
+    powers = [[] for i in range(2)]
+
+    from numpy.fft import ifft
+
+    def power(x):
+        energy = 0
+        x_prev = 0
+        for x_i in x:
+            v_i = x_i - x_prev
+            energy += v_i * v_i
+            x_prev = x_i
+        return energy / len(x)
+
+    def power_half_spectrum(spectrum):
+        x = ifft(spectrum + spectrum[::-1][1:-1])
+        return abs(power(x))
+
 # run
 samples = 0
 file = open('phonetic_vocoder.i16le', 'wb')
@@ -118,5 +142,15 @@ while samples < duration:
     tape.to_file_i16le(file)
     samples += run_size
     print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
+    if args.power_plot:
+        powers[0].append(power_rec.power())
+        powers[1].append(power_half_spectrum(sample[0]))
+        #powers[2].append(power_tone_spectrum(params['tone']['spectrum']))
+        #powers[3].append(power_noise_spectrum(params['noise']['spectrum']))
+        #powers[4].append(power_synth.power())
 print()
 visualizer.show()
+
+if args.power_plot:
+    import dansplotcore as dpc
+    dpc.plot(powers)

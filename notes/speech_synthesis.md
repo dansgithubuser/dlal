@@ -27,7 +27,7 @@ For unvoiced continuants, the phonetic is immediately parameterized and framed.
 For stops (which are recorded unvoiced), the first single utterance of the stop is taken. The start and end are found based on amplitude threshold parameters. The utterance is parameterized and framed.
 
 #### parameterization
-For voiced phonetics, formant frequencies and amplitudes are estimated. The amplitude of the formant is calculated based on the energy of the peak, with a parameter for how much of the peak to consider. The tone spectrum is estimated by taking bins above a threshold parameter.
+For voiced phonetics, formant frequencies and amplitudes are estimated. The amplitude of the formant is calculated based on the energy of the peak, with a parameter for how much of the peak to consider. The tone spectrum is estimated by taking bins below a frequency threshold parameter and above an amplitude threshold parameter.
 
 The low end of the spectrum is discarded according to a threshold parameter. Based on this we estimate the center frequency of noise and the high noise component. The center frequency is an amplitude-based weighted average. The high noise is the energy in the signal above a frequency threshold parameter divided by the total energy of the signal.
 
