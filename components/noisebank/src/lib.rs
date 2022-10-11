@@ -6,7 +6,7 @@ use rustfft::{num_complex::Complex, FftPlanner};
 use std::f32::consts::PI;
 
 fn smooth(x: &mut f32, xf: f32, smooth: f32) {
-    *x = *x * smooth + (xf - *x) * (1.0 - smooth);
+    *x = *x * smooth + xf * (1.0 - smooth);
 }
 
 const BINS: usize = 64;

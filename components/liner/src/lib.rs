@@ -259,11 +259,13 @@ component!(
         },
         "offset": {"args": ["line_index", "seconds"]},
         "advance": {"args": ["seconds"]},
+        "skip_line": {"args": [{"desc": "number of lines", "default": 1}]},
     },
 );
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
+        self.run_size = 64;
         self.sample_rate = 44100;
         self.outputs.reserve(16);
         for _ in 0..16 {
@@ -422,6 +424,14 @@ impl Component {
         let runs = (seconds * runs_per_second) as u32;
         for _ in 0..runs {
             self.run();
+        }
+        Ok(None)
+    }
+
+    fn skip_line_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let n: usize = body.arg(0)?;
+        for _ in 0..n {
+            self.outputs.push(None);
         }
         Ok(None)
     }

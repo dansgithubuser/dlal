@@ -351,15 +351,14 @@ if args.interact or args.run:
     if args.debug:
         os.environ['DLAL_LOG_LEVEL'] = 'debug'
     if args.run:
-        popen_args = ['python']
+        invocation = ['python']
         if args.interact:
-            popen_args.append('-i')
-        for i in args.run:
-            for j in i.split():
-                popen_args.append(j)
+            invocation.append('-i')
+        invocation.extend(args.run)
+        invocation = ' '.join(invocation)
     else:
-        popen_args = ['python', '-i', '-c', 'import dlal']
-    p = subprocess.Popen(popen_args)
+        invocation = 'python -i -c import dlal'
+    p = subprocess.Popen(invocation, shell=True)
     signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
     p.wait()
 

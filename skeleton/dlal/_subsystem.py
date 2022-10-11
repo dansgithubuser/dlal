@@ -1,5 +1,6 @@
 from . import _skeleton
 from ._skeleton import connect as _connect
+from . import _speech
 from . import _utils
 
 import midi
@@ -17,6 +18,7 @@ class Subsystem:
         if driver:
             self.add_to(driver)
             _skeleton.driver_set(driver)
+        self.post_add_init()
 
     def init(self, components={}, inputs=[], outputs=[], name=None):
         if not hasattr(self, 'name'):
@@ -40,6 +42,8 @@ class Subsystem:
             self.add(name, kind, args, kwargs)
         self.inputs.extend(self.components[i] for i in inputs)
         self.outputs.extend(self.components[i] for i in outputs)
+
+    def post_add_init(self): pass
 
     def __repr__(self):
         return self.name
@@ -91,50 +95,129 @@ class IirBank(Subsystem):
             self.iirs[-1].connect(self.bufs[-1])
             self.iirs[-1].command_immediate('gain', [0])
 
-class SpeechSynth(Subsystem):
-    def init(self, name=None):
+class SpeechSampler(Subsystem):
+    def init(
+        self,
+        stft_bins=512,
+        tone_bins=[1, 6],
+        tone_factor=2e1,
+        noise_bins=[32, 256],
+        noise_factor=1e2,
+        name=None,
+    ):
+        self.stft_bins = stft_bins
+        self.tone_bins = tone_bins
+        self.tone_factor = tone_factor
+        self.noise_bins = noise_bins
+        self.noise_factor = noise_factor
         Subsystem.init(self,
             {
-                'comm': ('comm', [1 << 12]),
-                'tone': ('sinbank', [44100 / (8 * 64), 0.99]),
+                'buf': 'buf',
+                'stft': ('stft', [self.stft_bins]),
+            },
+            ['buf'],
+            name=name,
+        )
+        _connect(
+            self.buf,
+            self.stft,
+        )
+
+    def sample(self):
+        spectrum = self.stft.spectrum()
+        return (
+            spectrum,
+            self.tone_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_bins[0]:self.tone_bins[1]])),
+            self.noise_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
+        )
+
+    def sampleses(self, path, filea, driver):
+        sampleses = []
+        for phonetic in _speech.PHONETICS:
+            print(phonetic)
+            filea.open(os.path.join(path, f'{phonetic}.flac'))
+            sampleses.append([])
+            while filea.playing():
+                driver.run()
+                sampleses[-1].append(self.sample())
+        return sampleses
+
+class SpeechSynth(Subsystem):
+    def init(self, sample_rate=44100, run_size=64, name=None):
+        freq_per_bin = sample_rate / (8 * 64)
+        Subsystem.init(self,
+            {
+                'comm': ('comm', [1 << 16]),
+                'forman': ('forman', [freq_per_bin]),
+                'tone': ('sinbank', [freq_per_bin, 0.99]),
                 'noise': ('noisebank', [0.8]),
-                'buf_tone_1': 'buf',
-                'peak': ('peak', [0.99]),
-                'mul': 'mul',
-                'buf_peak': 'buf',
-                'gain_tone': 'gain',
-                'buf_tone_o': 'buf',
-                'buf_noise_o': 'buf',
+                'gain_noise': ('gain', [4]),
+                'buf_tone': 'buf',
+                'mutt': 'mutt',
+                'buf_noise': 'buf',
+                'buf_out': 'buf',
             },
             name=name,
         )
         self.tone.zero()
         _connect(
-            (self.tone, self.noise),
-            (self.buf_tone_1, self.buf_noise_o),
-            (self.buf_tone_o,),
+            self.forman,
+            self.tone,
+            [self.buf_tone, '+>', self.mutt],
+            self.buf_out,
             [],
-            self.buf_tone_1,
-            self.peak,
-            self.buf_peak,
+            self.noise,
+            [self.buf_noise, '<+', self.mutt],
+            self.buf_out,
             [],
-            self.mul,
-            [self.buf_peak, self.buf_noise_o],
-            [],
-            self.gain_tone,
-            self.buf_tone_o,
+            self.gain_noise,
+            self.buf_noise,
         )
-        self.outputs = [self.buf_tone_o, self.buf_noise_o]
+        self.outputs = [self.buf_out]
+        self.sample_rate = sample_rate
+        self.run_size = run_size
 
-    def synthesize(self, tone_spectrum, noise_spectrum, toniness, wait):
+    def post_add_init(self):
+        self.tone.midi([0x90, 42, 127])
+
+    def synthesize(
+        self,
+        toniness=None,
+        tone_spectrum=None,
+        tone_formants=None,
+        noise_spectrum=None,
+        wait=None,
+    ):
         with _skeleton.Detach():
             with self.comm:
-                self.tone.spectrum(tone_spectrum)
-                self.noise.spectrum(noise_spectrum)
-                tonal_airflow = sorted([0, 20 * (toniness - 0.05), 1])[1]
-                self.mul.c(1 - tonal_airflow)
-                self.gain_tone.set(tonal_airflow, 0.8)
-            self.comm.wait(wait)
+                if tone_spectrum:
+                    self.tone.spectrum(tone_spectrum)
+                elif tone_formants:
+                    if all(i['amp'] < 1e-2 for i in tone_formants):
+                        self.forman.zero()
+                    else:
+                        self.forman.formants(tone_formants)
+                if noise_spectrum:
+                    self.noise.spectrum(noise_spectrum)
+                self.comm.wait(wait)
+
+    def say(self, phonetic, model, wait=0):
+        info = model.phonetics[phonetic]
+        frames = info['frames']
+        if info['type'] == 'stop':
+            w = self.run_size / self.sample_rate
+        else:
+            w = wait
+        for i_frame, frame in enumerate(frames):
+            self.synthesize(
+                toniness=frame['toniness'],
+                tone_formants=frame['tone']['formants'],
+                noise_spectrum=frame['noise']['spectrum'],
+                wait=int(w * self.sample_rate),
+            )
+            wait -= w
+            if wait < 1e-4: return
+        self.say('0', model, wait)
 
 class Portamento(Subsystem):
     def init(self, slowness=0.999, name=None):

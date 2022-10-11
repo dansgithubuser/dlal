@@ -1,300 +1,521 @@
+'''
+`phonetic` - symbol representing a sound
+`sample` - a single audio run's worth of sound information about a phonetic
+`params` - phonetic parameters derived from a `sample`
+`frames` - aggregated and focused `params` ready for use in synthesis
+`info` - `frames` and prior information for a `phonetic`
+'''
+
 import json as _json
 import math as _math
-import re as _re
 
-FEATURES = [
-    'toniness',
-    'f1_freq',
-    'f2_freq',
-    'f2_amp',
-    'f3_amp',
-    'freq_c',
-    'hi',
+PHONETICS = [
+    'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
+    'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z', 'm', 'n', 'ng', 'r', 'l',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
 
-class _Code:
-    def __init__(self, code):
-        m = _re.match(r'(-)?(\w+)', code)
-        self.glide = m.group(1)
-        self.phonetic = m.group(2)
-        self.code = code
+VOICED = [
+    'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
+    'sh_v', 'v', 'th_v', 'z', 'm', 'n', 'ng', 'r', 'l',
+]
 
-    def __repr__(self):
-        return self.code
+FRICATIVES = [
+    'sh', 'sh_v', 'h', 'f', 'v', 'th', 'th_v', 's', 'z',
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
 
-class Phonetizer:
+STOPS = [
+    'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
+
+PHONETIC_DESCRIPTIONS = {
+    'ae': 'a as in apple',
+    'ay': 'a as in day',
+    'a': 'a as in aw',
+    'e': 'e as in bed',
+    'y': 'e as in eat',
+    'i': 'i as in it',
+    'o': 'o as in oh',
+    'w': 'oo as in zoo',
+    'uu': 'oo as in foot',
+    'u': 'u as in uh',
+    'sh': 'sh as in shock',
+    'sh_v': 's as in fusion',
+    'h': 'h as in heel',
+    'f': 'f as in foot',
+    'v': 'v as in vine',
+    'th': 'th as in thin',
+    'th_v': 'th as in the',
+    's': 's as in soon',
+    'z': 'z as in zoo',
+    'm': 'm as in map',
+    'n': 'n as in nap',
+    'ng': 'ng as in thing',
+    'r': 'r as in run',
+    'l': 'l as in left',
+    'p': 'p as in pine (repeat)',
+    'b': 'b as in bin (repeat)',
+    't': 't as in tag (repeat)',
+    'd': 'd as in day (repeat)',
+    'k': 'k as in cook (repeat)',
+    'g': 'g as in go (repeat)',
+    'ch': 'ch as in choose (repeat)',
+    'j': 'j as in jog (repeat)',
+}
+
+RECORD_DURATION_UNSTRESSED_VOWEL = 1
+RECORD_DURATION_TRANSITION = 1
+RECORD_DURATION_GO = 4
+
+FORMANT_RANGES = [
+    [0, 200],
+    [200, 1000],
+    [800, 2300],
+    [1500, 3200],
+]
+
+class Model:
+    def mean(l):
+        return sum(l) / len(l)
+
+    def descend(x, ks):
+        for k in ks: x = x[k]
+        return x
+
+    def aggregate(x, ks, reject_outliers=False):
+        x = [Model.descend(i, ks) for i in x]
+        m = Model.mean(x)
+        if reject_outliers:
+            r = max(x) - min(x)
+            x2 = [i for i in x if abs(i-m) <= r/4]
+            if len(x2):
+                m = Model.mean(x2)
+        return m
+
     def __init__(
         self,
-        synthesize,
-        continuant_wait=44100//8,
-        grace = 44100//100,
-        model_path='assets/phonetics/model.json',
-        transamses_path='assets/phonetics/transamses.json',
+        path=None,
+        stft_bins=512,
+        tone_bins=64,
+        noise_bins=64,
         sample_rate=44100,
+        run_size=64,
     ):
-        '''
-        `synthesize` is a function that takes:
-            - tone_spectrum (64 bins from 0 to 5512.5)
-            - noise_spectrum (64 bins from 0 to 22050)
-            - wait (number of samples to synthesize for)
-        and synthesizes the corresponding sound.
-        Alternatively, set to `'parse only`' to use `say_syllables` to get `phonetics` and `timings` without synthesizing.
-
-        `grace` is how much time is allowed between notes without synthesizing a silence
-        '''
-        self.synthesize = synthesize
-        self.continuant_wait = continuant_wait
-        self.grace = grace
-        with open(model_path) as file:
-            self.model = _json.loads(file.read())
+        self.stft_bins = stft_bins
+        self.tone_bins = tone_bins
+        self.noise_bins = noise_bins
         self.sample_rate = sample_rate
-        self.phonetic = '0'
-        with open(transamses_path) as f:
-            self.transamses = _json.loads(f.read())
-        self._smoother = Smoother()
+        self.run_size = run_size
+        self.freq_per_bin = sample_rate / stft_bins
+        self.freq_per_bin_noise = sample_rate / 2 / noise_bins
+        self.phonetics = {}
+        self.formant_path_plot_data = {}
+        if path: self.load(path)
 
-    def say_params(self, info, frame_i, wait, smooth):
-        for i in range(0, wait, 64):
-            params = self._smoother.smooth(info['frames'][frame_i], smooth)
-            d_min = _math.inf
-            transams_min = None
-            for transams in self.transamses:
-                d = params_distance(params, transams)
-                if d < d_min:
-                    transams_min = transams
-                    d_min = d
-            self.synthesize(
-                transams_min['tone']['spectrum'],
-                transams_min['noise']['spectrum'],
-                transams_min['toniness'],
-                64,
-            )
-
-    def say_code(self, code, continuant_wait=None, speed=1):
-        if type(code) == str: code = _Code(code)
-        if continuant_wait == None:
-            continuant_wait = self.continuant_wait
-        info = self.model[code.phonetic]
-        if code.glide:
-            smooth = 0.9
-        else:
-            smooth = 0.8
-        # say
-        total_wait = 0
-        if self.synthesize == 'parse only':
-            self.phonetics.append(code.phonetic)
-            self.timings.append(self.sample / self.sample_rate)
-            if code.phonetic != '0':
-                self.pitches.append(self.pitch)
-            else:
-                self.pitches.append(None)
-        for i in range(len(info['frames'])):
-            if info['type'] == 'continuant':
-                wait = continuant_wait
-            else:
-                wait = info['frames'][i]['duration']
-            wait /= speed
-            wait = int(wait)
-            total_wait += wait
-            if type(self.synthesize) != str:
-                self.say_params(info, i, wait, smooth)
-        self.phonetic = code.phonetic
-        return total_wait
-
-    def say_code_string(self, code_string, end='0'):
-        code_string += end
-        codes = Phonetizer._parse_code_string(code_string)
-        for code in codes:
-            self.say_code(code)
-
-    def say_syllables(self, syllables, notes, advance=0):
-        if self.synthesize == 'parse only':
-            self.phonetics = []
-            self.timings = []
-            self.pitches = []
-        # translate into onset, nucleus, coda
-        syllables = [syllable.split('.') for syllable in syllables.split()]
-        for i in range(len(syllables)):
-            syllable = syllables[i]
-            if len(syllable) == 1:
-                onset, nucleus, coda = '', syllable[0], ''
-            elif len(syllable) == 2:
-                onset, nucleus, coda = syllable[0], syllable[1], ''
-            elif len(syllable) == 3:
-                onset, nucleus, coda = syllable
-            else:
-                raise Exception(f'invalid syllable {syllable}')
-            syllables[i] = [onset, nucleus, coda]
-        # say
-        self.sample = 0
-        for syllable, note in zip(syllables, notes):
-            if self.synthesize == 'parse only':
-                self.pitch = note['number']
-            # parse phonetics
-            onset, nucleus, coda = [
-                Phonetizer._parse_code_string(code_string)
-                for code_string in syllable
-            ]
-            # figure timing and say
-            start = note['on'] - advance
-            if start < 0: continue
-            normal_durations = [self._durate_codes(codes) for codes in [onset, nucleus, coda]]
-            normal_duration = sum(normal_durations)
-            end = note['off'] - advance
-            if normal_duration < end - start:
-                # enough time to say nucleus normally or extended
-                coda_start = end - normal_durations[2]
-                self._say_codes(onset, start)
-                self._say_codes(nucleus, total_continuant_wait=(coda_start - self.sample))
-                self._say_codes(coda, coda_start)
-            else:
-                # need speed-up
-                speed = normal_duration / (end - start)
-                self._say_codes(onset, start, speed=speed)
-                self._say_codes(nucleus, speed=speed)
-                self._say_codes(coda, speed=speed)
-        self._say_codes(['0'], start)
-
-    def _say_codes(self, codes, start=None, total_continuant_wait=None, speed=1):
-        for i in range(len(codes)):
-            if type(codes[i]) == str:
-                codes[i] = _Code(codes[i])
-        # figure arguments
-        if start == None:
-            start = self.sample
-        if total_continuant_wait != None:
-            continuant_wait = (
-                total_continuant_wait
-                //
-                len([code for code in codes if self.model[code.phonetic]['type'] == 'continuant'])
-            )
-        else:
-            continuant_wait = None
-        # synthesize silence if there's sufficient space between phonetics
-        if start - self.sample > self.grace:
-            self.say_code('0', continuant_wait=start - self.sample)
-            self.sample = start
-        # say
-        for code in codes:
-            self.sample += self.say_code(code, continuant_wait=continuant_wait, speed=speed)
-
-    def _durate_codes(self, codes):
-        result = 0
-        for code in codes:
-            if type(code) == str: code = _Code(code)
-            info = self.model[code.phonetic]
-            if info['type'] == 'continuant':
-                result += self.continuant_wait
-            else:
-                result += sum(i['duration'] for i in info['frames'])
-        return result
-
-    def _parse_code_string(code_string):
-        not_brackets = r'[^\[\]]'
-        return [
-            _Code(i.translate({ord('['): None, ord(']'): None}))
-            for i in _re.findall(f'{not_brackets}|\[{not_brackets}+\]', code_string)
-        ]
-
-def get_param(params, ks):
-    x = params
-    for k in ks: x = x[k]
-    return x
-
-def get_features(params, normalized=True):
-    features = (
-        get_param(params, ['toniness']),
-        get_param(params, ['tone', 'formants', 1, 'freq']),
-        get_param(params, ['tone', 'formants', 2, 'freq']),
-        get_param(params, ['tone', 'formants', 2, 'amp']),
-        get_param(params, ['tone', 'formants', 3, 'amp']),
-        get_param(params, ['noise', 'freq_c']),
-        get_param(params, ['noise', 'hi']),
-    )
-    if normalized:
-        def clamp(x):
-            assert 0 <= x <= 1
-            return x
-        return (
-            clamp(features[0]),
-            clamp(features[1] / 1250),
-            clamp((features[2] - 750) / 1750),
-            clamp(features[3]),
-            clamp(features[4]),
-            clamp(features[5] / 22050),
-            clamp(features[6]),
+    def find_formant(
+        self,
+        spectrum,
+        freq_i,
+        freq_f,
+        formant_below_freq=0,
+        formant_prev_freq=None,
+    ):
+        # look for formant near where it was before
+        if formant_prev_freq:
+            e = 200
+            freq_i = max(freq_i, formant_prev_freq - e)
+            freq_f = min(freq_f, formant_prev_freq + e)
+        # convert freq range to bins
+        bin_i = _math.floor(freq_i / self.freq_per_bin)
+        bin_f = _math.floor(freq_f / self.freq_per_bin)
+        # make sure above formant below, and non-empty window
+        bin_i = min(
+            max(
+                bin_i,
+                _math.floor(formant_below_freq / self.freq_per_bin) + 4
+            ),
+            bin_f - 1,
         )
-    else:
-        return features
-
-def params_distance(a, b):
-    return features_distance(get_features(a), get_features(b))
-
-def features_distance(a, b):
-    a_toniness, a_f1, a_f2, a_f2_amp, a_f3_amp, a_fn, a_hi = a
-    b_toniness, b_f1, b_f2, b_f2_amp, b_f3_amp, b_fn, b_hi = b
-    d_tone = (a_f1 - b_f1) ** 2 + (a_f2 - b_f2) ** 2 + (a_f2_amp - b_f2_amp) ** 2 + (a_f3_amp - b_f3_amp) ** 2
-    d_noise = (a_fn - b_fn) ** 2 + (a_hi - b_hi) ** 2
-    toniness = max(a_toniness, b_toniness)
-    noisiness = (1 - min(a_toniness, b_toniness))
-    d = d_tone * toniness + d_noise * noisiness + (a_toniness - b_toniness) ** 2
-    return d
-
-class Smoother:
-    def __init__(self):
-        self.fresh = True
-
-    def smooth(self, frame, value):
-        if self.fresh:
-            self.fresh = False
-            self.toniness = get_param(frame, ['toniness'])
-            self.f1_freq = get_param(frame, ['tone', 'formants', 1, 'freq'])
-            self.f2_freq = get_param(frame, ['tone', 'formants', 2, 'freq'])
-            self.f2_amp = get_param(frame, ['tone', 'formants', 2, 'amp'])
-            self.f3_amp = get_param(frame, ['tone', 'formants', 3, 'amp'])
-            self.fn = get_param(frame, ['noise', 'freq_c'])
-            self.hi = get_param(frame, ['noise', 'hi'])
-            self.e_toniness = self.toniness
-            self.e_f1_freq = self.f1_freq
-            self.e_f2_freq = self.f2_freq
-            self.e_f2_amp = self.f2_amp
-            self.e_f3_amp = self.f3_amp
-            self.e_fn = self.fn
-            self.e_hi = self.hi
+        # avoid below formant
+        spread = 3
+        spectrum = spectrum[:]
+        if formant_below_freq:
+            formant_below_bin = _math.floor(formant_below_freq / self.freq_per_bin)
+            a = max(formant_below_bin - spread, 0)
+            b = min(formant_below_bin + spread + 1, len(spectrum))
+            for i in range(a, b):
+                spectrum[i] = 0
+        # find peak
+        spread = 2
+        e_peak = 0
+        if formant_prev_freq:
+            bin_peak = int(formant_prev_freq / self.freq_per_bin)
         else:
-            self.e_toniness = value * self.e_toniness + (1 - value) * get_param(frame, ['toniness'])
-            self.e_f1_freq = value * self.e_f1_freq + (1 - value) * get_param(frame, ['tone', 'formants', 1, 'freq'])
-            self.e_f2_freq = value * self.e_f2_freq + (1 - value) * get_param(frame, ['tone', 'formants', 2, 'freq'])
-            self.e_f2_amp = value * self.e_f2_amp + (1 - value) * get_param(frame, ['tone', 'formants', 2, 'amp'])
-            self.e_f3_amp = value * self.e_f3_amp + (1 - value) * get_param(frame, ['tone', 'formants', 3, 'amp'])
-            self.e_fn = value * self.e_fn + (1 - value) * get_param(frame, ['noise', 'freq_c'])
-            self.e_hi = value * self.e_hi + (1 - value) * get_param(frame, ['noise', 'hi'])
-            self.toniness = value * self.toniness + (1 - value) * self.e_toniness
-            self.f1_freq = value * self.f1_freq + (1 - value) * self.e_f1_freq
-            self.f2_freq = value * self.f2_freq + (1 - value) * self.e_f2_freq
-            self.f2_amp = value * self.f2_amp + (1 - value) * self.e_f2_amp
-            self.f3_amp = value * self.f3_amp + (1 - value) * self.e_f3_amp
-            self.fn = value * self.fn + (1 - value) * self.e_fn
-            self.hi = value * self.hi + (1 - value) * self.e_hi
+            bin_peak = (bin_i + bin_f) // 2
+        for i in range(bin_i, bin_f):
+            a = max(i-spread, 0)
+            b = min(i+spread+1, len(spectrum))
+            for j in range(a, b):
+                window = spectrum[a:b]
+                e_window = sum(i ** 2 for i in window)
+                if e_window > e_peak:
+                    e_peak = e_window
+                    bin_peak = i
+        # adjust based on neighboring bin amps
+        bin_formant = bin_peak
+        spread = 2
+        if bin_peak >= spread and bin_peak < len(spectrum) - spread:
+            bins = [
+                (i, spectrum[i])
+                for i in range(bin_peak - spread, bin_peak + spread + 1)
+            ]
+            s = sum(v ** 2 for i, v in bins)
+            if s != 0:
+                bin_formant = sum(i * v ** 2 for i, v in bins) / s
+                bin_formant = max(bin_formant, bin_i)
+                bin_formant = min(bin_formant, bin_f)
+        #
         return {
-            'toniness': self.toniness,
-            'tone': {
-                'formants': [
-                    None,
-                    {
-                        'freq': self.f1_freq,
-                    },
-                    {
-                        'freq': self.f2_freq,
-                        'amp': self.f2_amp,
-                    },
-                    {
-                        'amp': self.f3_amp,
-                    },
-                ],
-            },
-            'noise': {
-                'freq_c': self.fn,
-                'hi': self.hi,
-            },
+            'freq': bin_formant * self.freq_per_bin,
+            'amp': _math.sqrt(e_peak),
         }
+
+    def find_tone(self, spectrum, phonetic=None, formants_prev=None):
+        # find formants
+        formants = []
+        formant_below_freq = 0
+        for i, [freq_i, freq_f] in enumerate(FORMANT_RANGES):
+            formant = self.find_formant(
+                spectrum,
+                freq_i,
+                freq_f,
+                formant_below_freq,
+                formants_prev and formants_prev[i]['freq'],
+            )
+            formant_below_freq = formant['freq']
+            if phonetic and phonetic not in VOICED:
+                formant['amp'] = 0
+            formants.append(formant)
+        # find tone spectrum
+        if not phonetic or phonetic in VOICED:
+            # take all bins with amplitudes above twice median
+            spectrum_tone = []
+            median = sorted(spectrum)[len(spectrum) // 2]
+            threshold = 2 * median
+            for i in range(self.tone_bins):
+                v = 0
+                if spectrum[i] > threshold:
+                    v = spectrum[i]
+                spectrum_tone.append(v)
+        else:
+            spectrum_tone = [0] * self.tone_bins
+        #
+        return {
+            'formants': formants,
+            'spectrum': spectrum_tone,
+        }
+
+    def find_noise(self, spectrum, phonetic=None):
+        f = 0  # amplitude-weighted sum of frequencies (to find center frequency)
+        s = 0  # sum of amplitudes (to find center frequency)
+        hi = 0  # high-frequency energy
+        s2 = 0  # squared sum of amplitudes (to normalize high-frequency energy)
+        for i, v in enumerate(spectrum):
+            freq = i * self.freq_per_bin
+            if freq < 2000: continue
+            f += freq * v
+            s += v
+            if freq > 12000: hi += v ** 2
+            s2 += v ** 2
+        # find noise spectrum
+        spectrum_noise = [0] * self.noise_bins
+        if not phonetic or phonetic in FRICATIVES:
+            for i, amp in enumerate(spectrum):
+                spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp
+        spectrum_noise[0] = 0
+        #
+        return {
+            'freq_c': f / s if s else 0,
+            'hi': hi / s2 if s2 else 0,
+            'spectrum': spectrum_noise,
+        }
+
+    def parameterize(self, spectrum, amp_tone, amp_noise, phonetic=None, formants_prev=None):
+        if phonetic and phonetic not in VOICED:
+            amp_tone = 0
+        tone = self.find_tone(spectrum, phonetic, formants_prev)
+        noise = self.find_noise(spectrum, phonetic)
+        f = _math.sqrt(sum([
+            sum(i ** 2 for i in tone['spectrum']),
+            sum(i ** 2 for i in noise['spectrum']),
+        ]))
+        amp = amp_tone + amp_noise
+        if amp:
+            toniness = amp_tone / amp
+        else:
+            toniness = 0
+        return {
+            'toniness': toniness,
+            'tone': tone,
+            'noise': noise,
+            'f': f,
+        }
+
+    def frames_from_paramses(self, paramses, continuant=True):
+        if continuant:
+            return [{
+                'toniness': Model.aggregate(paramses, ['toniness']),
+                'tone': {
+                    'formants': [
+                        {
+                            'freq': Model.aggregate(paramses, ['tone', 'formants', i, 'freq'], True),
+                            'amp': Model.aggregate(paramses, ['tone', 'formants', i, 'amp']),
+                        }
+                        for i in range(len(FORMANT_RANGES))
+                    ],
+                    'spectrum': [
+                        Model.aggregate(paramses, ['tone', 'spectrum', i])
+                        for i in range(self.tone_bins)
+                    ],
+                },
+                'noise': {
+                    'freq_c': Model.aggregate(paramses, ['noise', 'freq_c']),
+                    'hi': Model.aggregate(paramses, ['noise', 'hi']),
+                    'spectrum': [
+                        Model.aggregate(paramses, ['noise', 'spectrum', i])
+                        for i in range(self.noise_bins)
+                    ],
+                },
+                'amp': 1,
+            }]
+        else:
+            f_max = max([i['f'] for i in paramses]) or 1
+            return [
+                {
+                    **i,
+                    'amp': i['f'] / f_max,
+                }
+                for i in paramses
+            ]
+
+    def add(self, phonetic, samples):
+        continuant = phonetic not in STOPS
+        voiced = phonetic in VOICED
+        if voiced and continuant:
+            sample_iter = iter(samples)
+            stride = int(0.1 * self.sample_rate / self.run_size)
+            start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)
+            formants = [
+                {'amp': 0, 'freq': 100},
+                {'amp': 0, 'freq': 500},
+                {'amp': 0, 'freq': 1000},
+                {'amp': 0, 'freq': 2500},
+            ]
+            plot_data = []
+            for i_sample in range(stride, start, stride):
+                paramses = [self.parameterize(*i, phonetic, formants) for i in samples[i_sample:i_sample+stride]]
+                frame = self.frames_from_paramses(paramses, True)[0]
+                formants = frame['tone']['formants']
+                plot_data.append({
+                    'spectrum': frame['tone']['spectrum'],
+                    'formants': formants,
+                })
+            self.formant_path_plot_data[phonetic] = plot_data
+            paramses = [self.parameterize(*i, phonetic, formants) for i in samples[start:]]
+            frames = self.frames_from_paramses(paramses, continuant)
+        else:
+            paramses = [self.parameterize(*i, phonetic) for i in samples]
+            frames = self.frames_from_paramses(paramses, continuant)
+            if not continuant:
+                i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
+                frames = frames[i_start:]
+                try:
+                    i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
+                except StopIteration:
+                    i_end = None
+                frames = frames[:i_end]
+        self.phonetics[phonetic] = {
+            'type': 'continuant' if continuant else 'stop',
+            'voiced': voiced,
+            'fricative': phonetic in FRICATIVES,
+            'frames': frames,
+        }
+
+    def add_0(self):
+        self.add('0', [[[0] * self.stft_bins, 0, 0]])
+
+    def save(self, path):
+        with open(path, 'w') as f:
+            _json.dump(self.phonetics, f, indent=2)
+
+    def save_formant_path_plot_data(self, path):
+        with open(path, 'w') as f:
+            _json.dump(self.formant_path_plot_data, f, indent=2)
+
+    def load(self, path):
+        with open(path, 'r') as f:
+            self.phonetics = _json.load(f)
+
+    def duration(self, phonetic, default):
+        if phonetic in STOPS:
+            return len(self.phonetics[phonetic]['frames']) * self.run_size / self.sample_rate
+        else:
+            return default
+
+class Syllable:
+    def __init__(self, onset, nucleus, coda, default_wait, model):
+        self.onset = onset
+        self.nucleus = nucleus
+        self.coda = coda
+        self.default_wait = default_wait
+        self.model = model
+        self.start = None
+        self.end = None
+        self.speedup = 1
+
+    def __iter__(self):
+        if self.speedup == 1:
+            for phonetic in self.onset:
+                yield phonetic, self.model.duration(phonetic, self.default_wait)
+            duration_nucleus = self.duration() - self.duration_segment(self.onset) - self.duration_segment(self.coda)
+            for phonetic in self.nucleus:
+                yield phonetic, duration_nucleus / len(self.nucleus)
+            for phonetic in self.coda:
+                yield phonetic, self.model.duration(phonetic, self.default_wait)
+        else:
+            for segment in self.segments():
+                for phonetic in segment:
+                    yield phonetic, self.model.duration(phonetic, self.default_wait) / self.speedup
+
+    def from_str(s, default_wait, model):
+        split = s.split('.')
+        if len(split) == 1:
+            segments = '', split[0], ''
+        elif len(split) == 2:
+            segments = split[0], split[1], ''
+        elif len(split) == 3:
+            segments = split
+        else:
+            raise Exception(f'invalid syllable {s}')
+        segments = [Utterance.phonetics_from_str(i) for i in segments]
+        return Syllable(*segments, default_wait, model)
+
+    def squeeze(self):
+        expected_duration = self.end - self.start
+        if expected_duration == 0:
+            self.speedup = _math.inf
+            return
+        actual_duration = self.duration()
+        if actual_duration > expected_duration:
+            self.speedup = actual_duration / expected_duration
+
+    def duration(self):
+        return max(
+            sum(self.duration_segment(i) for i in self.segments()),
+            self.end - self.start,
+        )
+
+    def duration_segment(self, phonetics):
+        return sum(self.model.duration(i, self.default_wait) for i in phonetics)
+
+    def segments(self):
+        return self.onset, self.nucleus, self.coda
+
+class Utterance:
+    def __init__(
+        self,
+        model=None,
+        default_wait=1/6,
+        default_pitch=42,
+    ):
+        self.phonetics = []
+        self.waits = []
+        self.pitches = []
+        self.model = model
+        self.default_wait = default_wait
+        self.default_pitch = default_pitch
+
+    def __iter__(self):
+        return iter(zip(self.phonetics, self.waits, self.pitches))
+
+    def from_str(s, *args, **kwargs):
+        self = Utterance(*args, **kwargs)
+        self.phonetics = Utterance.phonetics_from_str(s.replace(' ', '0'))
+        if self.phonetics[-1] != '0':
+            self.phonetics.append('0')
+        self.infer()
+        self.add_prestop_silence()
+        return self
+
+    def from_syllables_and_notes(syllables, notes, model, *args, **kwargs):
+        self = Utterance(model, *args, **kwargs)
+        syllables = [Syllable.from_str(i, self.default_wait, self.model) for i in syllables.split()]
+        for syllable, note in zip(syllables, notes):
+            syllable.start = note['on'] / self.model.sample_rate
+            syllable.end = note['off'] / self.model.sample_rate
+            syllable.squeeze()
+            silence = syllable.start - sum(self.waits)
+            if silence > 1e-2:
+                self.phonetics.append('0')
+                self.waits.append(silence)
+                self.pitches.append(self.pitches[-1] if self.pitches else self.default_pitch)
+            for phonetic, wait in syllable:
+                self.phonetics.append(phonetic)
+                self.waits.append(wait)
+                self.pitches.append(note['number'])
+        self.add_prestop_silence()
+        return self
+
+    def phonetics_from_str(s):
+        phonetics = []
+        bracketed_phonetic = None
+        for c in s:
+            if c == '[':
+                bracketed_phonetic = ''
+            elif c == ']':
+                phonetics.append(bracketed_phonetic)
+                bracketed_phonetic = None
+            elif bracketed_phonetic != None:
+                bracketed_phonetic += c
+            else:
+                phonetics.append(c)
+        return phonetics
+
+    def infer(self):
+        while len(self.waits) < len(self.phonetics):
+            wait = self.default_wait
+            if self.model:
+                wait = self.model.duration(self.phonetics[len(self.waits)], wait)
+            self.waits.append(wait)
+        while len(self.pitches) < len(self.phonetics):
+            self.pitches.append(self.pitches[-1] if self.pitches else self.default_pitch)
+
+    def add_prestop_silence(self):
+        silences = []
+        for i, phonetic in enumerate(self.phonetics):
+            if i == 0: continue
+            if phonetic in STOPS:
+                old = self.waits[i-1]
+                self.waits[i-1] = max(
+                    self.waits[i-1] - 0.05,
+                    self.waits[i-1] / 2,
+                )
+                silences.append((i, old - self.waits[i-1]))
+        for i, wait in reversed(silences):
+            self.phonetics.insert(i, '0')
+            self.waits.insert(i, wait)
+            self.pitches.insert(i, self.pitches[i-1])
+
+    def print(self):
+        i = 0
+        stride = 10
+        while i < len(self.phonetics):
+            s = min(stride, len(self.phonetics) - i)
+            for j in range(s): print(f'{self.phonetics[i+j]:>8}', end='')
+            print()
+            for j in range(s): print(f'{self.waits[i+j]:>8.2f}', end='')
+            print()
+            for j in range(s): print(f'{self.pitches[i+j]:>8}', end='')
+            print()
+            i += stride
