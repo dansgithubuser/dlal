@@ -105,9 +105,13 @@ visualizer = Visualizer()
 # amp plot
 if args.amp_plot:
     peak_rec = dlal.Peak()
-    peak_synth = dlal.Peak()
+    peak_synth_full = dlal.Peak()
+    peak_synth_tone = dlal.Peak()
+    peak_synth_noise = dlal.Peak()
     sampler.buf.connect(peak_rec)
-    synth.buf_out.connect(peak_synth)
+    synth.buf_tone.connect(peak_synth_tone)
+    synth.buf_noise.connect(peak_synth_noise)
+    synth.buf_out.connect(peak_synth_full)
     amps = collections.defaultdict(list)
 
     def amp_spectrum(spectrum):
@@ -136,7 +140,9 @@ while samples < duration:
         amps['stft'].append(amp_spectrum(sample[0]))
         amps['tone'].append(amp_spectrum(params['tone']['spectrum']))
         amps['noise'].append(amp_spectrum(params['noise']['spectrum']))
-        amps['synth'].append(peak_synth.value())
+        amps['synth_tone'].append(peak_synth_tone.value())
+        amps['synth_noise'].append(peak_synth_noise.value())
+        amps['synth_full'].append(peak_synth_full.value())
 print()
 visualizer.show()
 
