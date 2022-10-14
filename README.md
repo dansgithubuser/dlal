@@ -194,8 +194,6 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- why need `gain_noise` for phonetic decoder but not for phonetic vocoder?
-
 - audiobro
 	- review existing tracks
 	- bassindaface / funky funky bass
