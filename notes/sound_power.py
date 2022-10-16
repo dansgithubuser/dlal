@@ -1,5 +1,5 @@
 import dansplotcore as dpc
-from numpy.fft import fft, ifft
+from numpy.fft import rfft, irfft
 import soundfile as sf
 
 import argparse
@@ -15,19 +15,17 @@ args = parser.parse_args()
 # For example, a DC sound signal carries no energy, but calculating the energy of the signal can be nonzero.
 # For a DC air velocity signal, it makes sense for the signal to carry energy.
 def power(x):
-    energy = 0
-    x_prev = 0
-    for x_i in x:
-        v_i = x_i - x_prev
-        energy += v_i * v_i
-        x_prev = x_i
-    return float(energy / len(x))
+    dxdt = [
+        x[(i+1) % len(x)] - x[i]
+        for i in range(len(x))
+    ]
+    return float(sum(i ** 2 for i in dxdt) / len(x))
 
 def power_ft(x):
-    fx = fft(x)
+    fx = rfft(x)
     afx = [abs(i) for i in fx]
-    ifafx = ifft(afx)
-    return abs(power(ifafx))
+    ifafx = irfft(afx)
+    return power(ifafx)
 
 # We want to know the power in an FT of x with phase information discarded.
 def cmp_powers(name, f):
@@ -38,10 +36,6 @@ cmp_powers('random', lambda i: random.uniform(-1, 1))
 cmp_powers('sin', lambda i: math.sin(i))
 cmp_powers('harmonics', lambda i: math.sin(i) + math.sin(2 * i))
 
-# There is some error but the numbers mostly align.
-# I think the FT math assumes repeating signal, but my power calc does not.
-
-# It doesn't look great on a real recording....
 if args.flac:
     data, sample_rate = sf.read(args.flac)
     powers = []
