@@ -357,7 +357,7 @@ if args.interact or args.run:
         invocation.extend(args.run)
         invocation = ' '.join(invocation)
     else:
-        invocation = 'python -i -c import dlal'
+        invocation = 'python -i -c "import dlal"'
     p = subprocess.Popen(invocation, shell=True)
     signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
     p.wait()
