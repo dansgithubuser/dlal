@@ -28,15 +28,16 @@ impl NoiseBin {
 
     fn init(&mut self, freq_i: f32, freq_f: f32, sample_rate: u32) {
         let size = 30000 + 2 * (random::<usize>() % 5000);
+        let freq_per_bin = sample_rate as f32 / size as f32;
         let c0 = Complex { re: 0.0, im: 0.0 };
         let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(size);
+        let fft = planner.plan_fft_inverse(size);
         let mut buffer = vec![c0];
         for i in 1..size / 2 + 1 {
-            let freq = i as f32 * sample_rate as f32 / size as f32;
+            let freq = i as f32 * freq_per_bin;
             if freq_i <= freq && freq < freq_f {
                 buffer.push(Complex::from_polar(
-                    (freq_f - freq_i) / size as f32,
+                    1.0,
                     2.0 * PI * random::<f32>(),
                 ));
             } else {
@@ -44,10 +45,11 @@ impl NoiseBin {
             }
         }
         for i in size / 2 + 1..size {
-            buffer.push(buffer[size - i]);
+            buffer.push(buffer[size - i].conj());
         }
         fft.process(&mut buffer);
-        self.audio = buffer.iter().map(|i| i.re).collect();
+        let m = buffer.iter().map(|i| i.re.abs()).reduce(f32::max).unwrap();
+        self.audio = buffer.iter().map(|i| i.re / m).collect();
     }
 
     fn run(&mut self, audio: &mut [f32]) {

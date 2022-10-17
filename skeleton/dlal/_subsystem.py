@@ -151,7 +151,6 @@ class SpeechSynth(Subsystem):
                 'forman': ('forman', [freq_per_bin]),
                 'tone': ('sinbank', [freq_per_bin, 0.99]),
                 'noise': ('noisebank', [0.8]),
-                'gain_noise': ('gain', [4]),
                 'buf_tone': 'buf',
                 'mutt': 'mutt',
                 'buf_noise': 'buf',
@@ -170,7 +169,6 @@ class SpeechSynth(Subsystem):
             [self.buf_noise, '<+', self.mutt],
             self.buf_out,
             [],
-            self.gain_noise,
             self.buf_noise,
         )
         self.outputs = [self.buf_out]

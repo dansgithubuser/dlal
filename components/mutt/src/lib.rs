@@ -19,10 +19,10 @@ component!(
         {"name": "field_helpers", "fields": ["decay", "e"], "kinds": ["rw", "json"]},
     ],
     {
-        value: f32,
-        decay: f32,
-        e: f32,
-        filters: Vec<biquad::DirectForm2Transposed<f32>>,
+        value: f32, // follows contour of input
+        decay: f32, // how quickly to drop down when input heads to zero
+        e: f32, // only when value is greater than this should output signal be multiplied by input signal
+        filters: Vec<biquad::DirectForm2Transposed<f32>>, // filter output signal when multiplying
     },
     {
         "filter": {"args": ["n", "a1", "a2", "b0", "b1", "b2"]},

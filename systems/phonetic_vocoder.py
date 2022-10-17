@@ -1,6 +1,7 @@
 import dlal
 
 import argparse
+import collections
 import json
 import math
 import os
@@ -9,6 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('recording_path')
 parser.add_argument('--visualize', '-v', action='store_true')
 parser.add_argument('--noise-only', action='store_true')
+parser.add_argument('--amp-plot', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -100,6 +102,21 @@ class Visualizer:
 
 visualizer = Visualizer()
 
+# amp plot
+if args.amp_plot:
+    peak_rec = dlal.Peak()
+    peak_synth_full = dlal.Peak()
+    peak_synth_tone = dlal.Peak()
+    peak_synth_noise = dlal.Peak()
+    sampler.buf.connect(peak_rec)
+    synth.buf_tone.connect(peak_synth_tone)
+    synth.buf_noise.connect(peak_synth_noise)
+    synth.buf_out.connect(peak_synth_full)
+    amps = collections.defaultdict(list)
+
+    def amp_spectrum(spectrum):
+        return sum(spectrum[1:])
+
 # run
 samples = 0
 file = open('phonetic_vocoder.i16le', 'wb')
@@ -118,5 +135,21 @@ while samples < duration:
     tape.to_file_i16le(file)
     samples += run_size
     print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
+    if args.amp_plot:
+        amps['rec'].append(peak_rec.value())
+        amps['stft'].append(amp_spectrum(sample[0]))
+        amps['tone'].append(amp_spectrum(params['tone']['spectrum']))
+        amps['noise'].append(amp_spectrum(params['noise']['spectrum']))
+        amps['synth_tone'].append(peak_synth_tone.value())
+        amps['synth_noise'].append(peak_synth_noise.value())
+        amps['synth_full'].append(peak_synth_full.value())
 print()
 visualizer.show()
+
+if args.amp_plot:
+    import dansplotcore as dpc
+    plot = dpc.Plot(primitive=dpc.primitives.Line())
+    for i, (k, v) in enumerate(amps.items()):
+        plot.text(k, **plot.transform(0, -(i+1)/5, i, plot.series))
+        plot.plot(v)
+    plot.show()
