@@ -2,6 +2,7 @@ import dlal
 
 import midi
 
+import datetime
 import os
 import sys
 
@@ -10,7 +11,10 @@ def sys_arg(i):
         return sys.argv[i]
 
 #===== init =====#
-if not os.path.exists('assets/local/audiobro3_voice.flac'):
+if os.path.exists('assets/local/audiobro3_voice.flac'):
+    created_at = datetime.datetime.fromtimestamp(os.stat('assets/local/audiobro3_voice.flac').st_ctime)
+    print(f'using voice from {created_at.isoformat()}')
+else:
     import audiobro3_voice
 
 audio = dlal.Audio(driver=True)
