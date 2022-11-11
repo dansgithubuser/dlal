@@ -70,7 +70,7 @@ drum.clip(0.5, 38)
 drum.amplify(0.5, 38)
 # hat
 drum.load('assets/sounds/drum/hat.wav', 42)
-drum.amplify(0.5, 42)
+drum.amplify(0.25, 42)
 # crash
 drum.load('assets/sounds/drum/crash.wav', 57)
 drum.amplify(0.5, 57)
