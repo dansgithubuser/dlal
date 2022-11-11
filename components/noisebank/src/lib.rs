@@ -52,12 +52,10 @@ impl NoiseBin {
         self.audio = buffer.iter().map(|i| i.re / m).collect();
     }
 
-    fn run(&mut self, audio: &mut [f32]) {
-        for i in audio.iter_mut() {
-            *i += self.vol * self.audio[self.index];
-            self.index += 1;
-            self.index %= self.audio.len();
-        }
+    fn run(&mut self) -> f32 {
+        self.index += 1;
+        self.index %= self.audio.len();
+        self.vol * self.audio[self.index]
     }
 }
 
@@ -113,19 +111,20 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
-        if self.smooth != 0.0 {
-            for i in 0..BINS {
-                smooth(&mut self.spectrum_e[i], self.spectrum_f[i], self.smooth);
-                smooth(&mut self.bins[i].vol, self.spectrum_e[i], self.smooth);
-            }
-        }
         let output = match self.output.as_ref() {
             Some(v) => v,
             None => return,
         };
-        let audio = output.audio(self.run_size).unwrap();
-        for bin in &mut self.bins {
-            bin.run(audio);
+        for i in output.audio(self.run_size).unwrap().iter_mut() {
+            if self.smooth != 0.0 {
+                for i in 0..BINS {
+                    smooth(&mut self.spectrum_e[i], self.spectrum_f[i], self.smooth);
+                    smooth(&mut self.bins[i].vol, self.spectrum_e[i], self.smooth);
+                }
+            }
+            for bin in &mut self.bins {
+                *i += bin.run();
+            }
         }
     }
 }
