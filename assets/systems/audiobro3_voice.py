@@ -26,7 +26,7 @@ syllables = '''
     .[ae].nd [th]r.w sm.ow.k h.y a p.y .[uu].d
     b.[ay]y.s m.[ae].n
     [th_v].u t.[ae]w.n h.[ae].d b.y.n .wi.[th_v] .aw.t b.[ay]y.s f.o[uu] o v.[uu] f.o[uu] t.y.0 y.i .[uu].z
-    [th_v].eu w.u.z n.o.0 d.[ae].n s.y.[ng]g
+    [th_v].eu w.u.z n.o.d [ae].n s.y.[ng]g
     [th_v].eu w.u.z n.o.0 rr.u.mp0 [sh].[ay]y k.y.[ng]g
     [th_v].eu h.[ae].d b.y.n n.o l.a.f t.u
     .[ae].nd 0d.e .e.[th]
