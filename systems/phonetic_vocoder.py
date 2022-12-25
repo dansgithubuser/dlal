@@ -11,6 +11,7 @@ parser.add_argument('recording_path')
 parser.add_argument('--visualize', '-v', action='store_true')
 parser.add_argument('--noise-only', action='store_true')
 parser.add_argument('--amp-plot', action='store_true')
+parser.add_argument('--formants', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -120,17 +121,23 @@ if args.amp_plot:
 # run
 samples = 0
 file = open('phonetic_vocoder.i16le', 'wb')
+formants_prev = None
 while samples < duration:
     audio.run()
     sample = sampler.sample()
-    params = model.parameterize(*sample, 's' if args.noise_only else None)
+    params = model.parameterize(*sample, 's' if args.noise_only else None, formants_prev=formants_prev)
+    formants_prev = params['tone']['formants']
     frame = model.frames_from_paramses([params])[0]
     visualizer.add(sample, params)
+    if args.formants:
+        tone_params = {'tone_formants': frame['tone']['formants']}
+    else:
+        tone_params = {'tone_spectrum': frame['tone']['spectrum']}
     synth.synthesize(
         toniness=frame['toniness'],
-        tone_spectrum=frame['tone']['spectrum'],
         noise_spectrum=frame['noise']['spectrum'],
         wait=0,
+        **tone_params,
     )
     tape.to_file_i16le(file)
     samples += run_size
