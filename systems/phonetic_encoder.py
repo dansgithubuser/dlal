@@ -38,6 +38,8 @@ for phonetic, samples in zip(dlal.speech.PHONETICS, sampleses):
     print(phonetic)
     model.add(phonetic, samples)
 model.add_0()
+print('----- finalize -----')
+model.finalize()
 model.save('assets/local/phonetic-model.json')
 model.save_formant_path_plot_data('assets/local/formant-paths.json')
 
