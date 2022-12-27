@@ -6,12 +6,8 @@
 `info` - `frames` and prior information for a `phonetic`
 '''
 
-import tensorflow.keras as _keras
-
-import base64 as _base64
 import json as _json
 import math as _math
-import pickle as _pickle
 
 PHONETICS = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
@@ -79,42 +75,6 @@ FORMANT_RANGES = [
     [1500, 3200],
 ]
 
-class NoiseController:
-    def __init__(self, bins=64):
-        self.model = _keras.Sequential([
-            _keras.Input(shape=(3,)),
-            _keras.layers.Dense(64),
-            _keras.layers.Dense(64, activation='relu'),
-            _keras.layers.Dense(bins),
-        ])
-        self.inputs = []
-        self.outputs = []
-
-    def add(self, toniness, freq_c, hi, spectrum):
-        self.inputs.append([toniness, freq_c / 2e4, hi])
-        self.outputs.append(spectrum)
-
-    def train(self, epochs, callback):
-        self.model.compile(loss='mean_squared_error')
-        assert self.inputs
-        assert self.outputs
-        self.model.fit(
-            self.inputs,
-            self.outputs,
-            epochs=epochs,
-            callbacks=[_keras.callbacks.LambdaCallback(callback)],
-        )
-
-    def predict(self, toniness, freq_c, hi):
-        p = self.model.predict([[toniness, freq_c / 2e4, hi]], verbose=0)[0]
-        return [float(i) for i in p]
-
-    def serialize(self):
-        return _base64.b64encode(_pickle.dumps(self.model.get_weights())).decode()
-
-    def deserialize(self, s):
-        self.model.set_weights(_pickle.loads(_base64.b64decode(s)))
-
 class Model:
     def mean(l):
         return sum(l) / len(l)
@@ -151,7 +111,6 @@ class Model:
         self.freq_per_bin_noise = sample_rate / 2 / noise_bins
         self.phonetics = {}
         self.formant_path_plot_data = {}
-        self.noise_controller = NoiseController()
         if path: self.load(path)
 
     def find_formant(
@@ -343,7 +302,6 @@ class Model:
     def add(self, phonetic, samples):
         continuant = phonetic not in STOPS
         voiced = phonetic in VOICED
-        fricative = phonetic in FRICATIVES
         if voiced and continuant:
             # track formants movement from unstressed vowel to phonetic
             stride = int(0.1 * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
@@ -378,46 +336,19 @@ class Model:
                 except StopIteration:
                     i_end = None
                 frames = frames[:i_end]
-        if fricative:
-            if continuant:
-                for params in paramses[:50]:
-                    self.noise_controller.add(
-                        params['toniness'],
-                        params['noise']['freq_c'],
-                        params['noise']['hi'],
-                        params['noise']['spectrum'],
-                    )
-            else:
-                for frame in frames:
-                    self.noise_controller.add(
-                        frame['toniness'],
-                        frame['noise']['freq_c'],
-                        frame['noise']['hi'],
-                        frame['noise']['spectrum'],
-                    )
         self.phonetics[phonetic] = {
             'type': 'continuant' if continuant else 'stop',
             'voiced': voiced,
-            'fricative': fricative,
+            'fricative': phonetic in FRICATIVES,
             'frames': frames,
         }
 
     def add_0(self):
         self.add('0', [[[0] * self.stft_bins, 0, 0]])
 
-    def finalize(self, epochs=100, noise_controller_fit_callback=lambda epoch, logs: None):
-        self.noise_controller.train(epochs, noise_controller_fit_callback)
-
     def save(self, path):
         with open(path, 'w') as f:
-            _json.dump(
-                {
-                    'phonetics': self.phonetics,
-                    'noise_controller': self.noise_controller.serialize(),
-                },
-                f,
-                indent=2,
-            )
+            _json.dump(self.phonetics, f, indent=2)
 
     def save_formant_path_plot_data(self, path):
         with open(path, 'w') as f:
@@ -425,9 +356,7 @@ class Model:
 
     def load(self, path):
         with open(path, 'r') as f:
-            json = _json.load(f)
-            self.phonetics = json['phonetics']
-            self.noise_controller.deserialize(json['noise_controller'])
+            self.phonetics = _json.load(f)
 
     def duration(self, phonetic, default):
         if phonetic in STOPS:

@@ -12,7 +12,6 @@ parser.add_argument('--visualize', '-v', action='store_true')
 parser.add_argument('--noise-only', action='store_true')
 parser.add_argument('--amp-plot', action='store_true')
 parser.add_argument('--formants', action='store_true')
-parser.add_argument('--noise-controller', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -134,17 +133,9 @@ while samples < duration:
         tone_params = {'tone_formants': frame['tone']['formants']}
     else:
         tone_params = {'tone_spectrum': frame['tone']['spectrum']}
-    if args.noise_controller:
-        noise_spectrum = model.noise_controller.predict(
-            frame['toniness'],
-            frame['noise']['freq_c'],
-            frame['noise']['hi'],
-        )
-    else:
-        noise_spectrum = frame['noise']['spectrum']
     synth.synthesize(
         toniness=frame['toniness'],
-        noise_spectrum=noise_spectrum,
+        noise_spectrum=frame['noise']['spectrum'],
         wait=0,
         **tone_params,
     )
