@@ -27,7 +27,7 @@ def linear(a, b, t):
 # minimize f(x')
 # x' is a list of numbers from 0-1
 # x is a starting guess
-def minimize(f, x, heat=0.05, anneal=0.9, iterations=50):
+def minimize(f, x, heat=0.05, anneal=0.8, iterations=10):
     e = f(x)
     for i in range(iterations):
         for j in range(len(x)):
