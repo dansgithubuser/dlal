@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 import os
+import random
 import re
 
 DIR = os.path.dirname(os.path.realpath(__file__))
@@ -19,3 +20,28 @@ def upper_camel_to_snake_case(s):
 
 def iterable(x):
     return isinstance(x, Iterable)
+
+def linear(a, b, t):
+    return a * (1-t) + b * t
+
+# minimize f(x')
+# x' is a list of numbers from 0-1
+# x is a starting guess
+def minimize(f, x, heat=0.05, anneal=0.9, iterations=50):
+    e = f(x)
+    for i in range(iterations):
+        for j in range(len(x)):
+            x_n = [
+                sorted([
+                    0,
+                    k + heat * (random.random() - 0.5),
+                    1,
+                ])[1]
+                for k in x
+            ]
+            e_n = f(x_n)
+            if e_n < e:
+                x = x_n
+                e = e_n
+        heat *= anneal
+    return x

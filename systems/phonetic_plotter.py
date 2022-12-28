@@ -62,6 +62,18 @@ if args.action == 'continuants':
                     g=1.0,
                     b=1.0,
                 )
+            piece_prev = (0, 0)
+            for piece in zip(dlal.speech.NOISE_PIECES + [20000], info['frames'][0]['noise']['pieces'] + [0]):
+                plot.line(
+                    x+log(piece_prev[1] * noise_bin_per_stft_bin),
+                    piece_prev[0],
+                    x+log(piece[1] * noise_bin_per_stft_bin),
+                    piece[0],
+                    r=0,
+                    g=1.0,
+                    b=0,
+                )
+                piece_prev = piece
     plot.show()
 
 if args.action == 'stops':
