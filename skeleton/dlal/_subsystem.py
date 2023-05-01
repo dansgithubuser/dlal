@@ -184,6 +184,7 @@ class SpeechSynth(Subsystem):
         tone_spectrum=None,
         tone_formants=None,
         noise_spectrum=None,
+        noise_pieces=None,
         wait=None,
     ):
         with _skeleton.Detach():
@@ -197,6 +198,8 @@ class SpeechSynth(Subsystem):
                         self.forman.formants(tone_formants)
                 if noise_spectrum:
                     self.noise.spectrum(noise_spectrum)
+                elif noise_pieces:
+                    self.noise.piecewise([0] + _speech.NOISE_PIECES + [20000], [0] + noise_pieces + [0])
                 self.comm.wait(wait)
 
     def say(self, phonetic, model, wait=0):

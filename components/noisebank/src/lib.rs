@@ -88,6 +88,20 @@ component!(
                 "kind": "norm",
              }],
         },
+        "piecewise": {
+            "args": [
+                {
+                    "name": "frequencies",
+                    "type": "array",
+                    "element": "float",
+                },
+                {
+                    "name": "amplitudes",
+                    "type": "array",
+                    "element": "float",
+                },
+            ],
+        },
     },
 );
 
@@ -152,6 +166,34 @@ impl Component {
         let stft = unsafe { std::slice::from_raw_parts(data, len) };
         for i in 0..self.bins.len() {
             self.bins[i].vol = stft[i * (len / 2 + 1) / self.bins.len()];
+        }
+        Ok(None)
+    }
+
+    fn piecewise_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let freqs = body.arg::<Vec<f32>>(0)?;
+        let amps = body.arg::<Vec<f32>>(1)?;
+        let mut spectrum = vec![0.0; BINS];
+        let freq_per_bin = (self.sample_rate as f32 / 2.0) / BINS as f32;
+        let mut j = 0;
+        for (i, v) in spectrum.iter_mut().enumerate() {
+            let f = freq_per_bin * i as f32;
+            while j + 1 < freqs.len() && f > freqs[j + 1] {
+                j += 1;
+            }
+            if j + 1 >= freqs.len() {
+                break;
+            }
+            let t = (f - freqs[j]) / (freqs[j + 1] - freqs[j]);
+            *v = amps[j] * (1.0 - t) + amps[j + 1] * t;
+        }
+        if self.smooth != 0.0 {
+            self.spectrum_f = spectrum;
+            self.spectrum_e.resize(BINS, 0.0);
+        } else {
+            for i in 0..BINS {
+                self.bins[i].vol = spectrum[i];
+            }
         }
         Ok(None)
     }

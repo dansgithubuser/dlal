@@ -11,6 +11,8 @@ parser.add_argument('recording_path')
 parser.add_argument('--visualize', '-v', action='store_true')
 parser.add_argument('--noise-only', action='store_true')
 parser.add_argument('--amp-plot', action='store_true')
+parser.add_argument('--formants', action='store_true')
+parser.add_argument('--noise-pieces', action='store_true')
 args = parser.parse_args()
 
 # components
@@ -72,7 +74,7 @@ class Visualizer:
                     (bin_i+1) * model.freq_per_bin,
                     a=log(amp_n),
                 )
-        # formants and freq_c
+        # formants
         for formant_i in range(len(dlal.speech.FORMANT_RANGES)):
             for i, (a, b) in enumerate(zip(self.paramses, self.paramses[1:])):
                 plot.line(
@@ -84,17 +86,8 @@ class Visualizer:
                     g=log(a['tone']['formants'][formant_i]['amp'], 2),
                     b=0.0,
                 )
-                plot.line(
-                    i,
-                    a['noise']['freq_c'],
-                    i+1,
-                    b['noise']['freq_c'],
-                    r=0.0,
-                )
         # toniness
         plot.plot([(i['toniness']-1) * 100 for i in self.paramses])
-        # noise hi
-        plot.plot([(i['noise']['hi']-3) * 100 for i in self.paramses])
         # f
         plot.plot([(i['f']-5) * 100 for i in self.paramses])
         #
@@ -120,17 +113,27 @@ if args.amp_plot:
 # run
 samples = 0
 file = open('phonetic_vocoder.i16le', 'wb')
+formants_prev = None
 while samples < duration:
     audio.run()
     sample = sampler.sample()
-    params = model.parameterize(*sample, 's' if args.noise_only else None)
+    params = model.parameterize(*sample, 's' if args.noise_only else None, formants_prev=formants_prev)
+    formants_prev = params['tone']['formants']
     frame = model.frames_from_paramses([params])[0]
     visualizer.add(sample, params)
+    if args.formants:
+        tone_params = {'tone_formants': frame['tone']['formants']}
+    else:
+        tone_params = {'tone_spectrum': frame['tone']['spectrum']}
+    if args.noise_pieces:
+        noise_params = {'noise_pieces': frame['noise']['pieces']}
+    else:
+        noise_params = {'noise_spectrum': frame['noise']['spectrum']}
     synth.synthesize(
         toniness=frame['toniness'],
-        tone_spectrum=frame['tone']['spectrum'],
-        noise_spectrum=frame['noise']['spectrum'],
         wait=0,
+        **tone_params,
+        **noise_params,
     )
     tape.to_file_i16le(file)
     samples += run_size

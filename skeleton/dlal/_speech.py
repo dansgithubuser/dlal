@@ -6,6 +6,8 @@
 `info` - `frames` and prior information for a `phonetic`
 '''
 
+from . import _utils
+
 import json as _json
 import math as _math
 
@@ -73,6 +75,13 @@ FORMANT_RANGES = [
     [200, 1000],
     [800, 2300],
     [1500, 3200],
+]
+
+NOISE_PIECES = [
+    1000,
+    2000,
+    7000,
+    14000,
 ]
 
 class Model:
@@ -217,27 +226,34 @@ class Model:
         }
 
     def find_noise(self, spectrum, phonetic=None):
-        f = 0  # amplitude-weighted sum of frequencies (to find center frequency)
-        s = 0  # sum of amplitudes (to find center frequency)
-        hi = 0  # high-frequency energy
-        s2 = 0  # squared sum of amplitudes (to normalize high-frequency energy)
-        for i, v in enumerate(spectrum):
-            freq = i * self.freq_per_bin
-            if freq < 2000: continue
-            f += freq * v
-            s += v
-            if freq > 12000: hi += v ** 2
-            s2 += v ** 2
-        # find noise spectrum
         spectrum_noise = [0] * self.noise_bins
+        pieces = [0] * len(NOISE_PIECES)
         if not phonetic or phonetic in FRICATIVES:
             for i, amp in enumerate(spectrum):
                 if i * self.freq_per_bin < 1000: continue
                 spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp
-        #
+            # estimate with piecewise function
+            # assume < 1 kHz is 0
+            # assume 20 kHz is 0
+            # find optimal points at NOISE_PIECES
+            freq_per_noise_bin = (self.sample_rate / 2) / len(spectrum_noise)
+            def error(x):
+                err = 0
+                for i, v in enumerate(spectrum_noise):
+                    f = i * freq_per_noise_bin
+                    u = 0
+                    for f_a, f_b, a, b in zip(NOISE_PIECES, NOISE_PIECES[1:] + [20000], x, x[1:] + [0]):
+                        if f_a < f < f_b:
+                            u = _utils.linear(a, b, (f - f_a) / (f_b - f_a))
+                            break
+                    err += (v - u) ** 2
+                return err
+            pieces = _utils.minimize(error, [
+                spectrum_noise[_math.floor(i / freq_per_noise_bin)]
+                for i in NOISE_PIECES
+            ])
         return {
-            'freq_c': f / s if s else 0,
-            'hi': hi / s2 if s2 else 0,
+            'pieces': pieces,
             'spectrum': spectrum_noise,
         }
 
@@ -280,8 +296,10 @@ class Model:
                     ],
                 },
                 'noise': {
-                    'freq_c': Model.aggregate(paramses, ['noise', 'freq_c']),
-                    'hi': Model.aggregate(paramses, ['noise', 'hi']),
+                    'pieces': [
+                        Model.aggregate(paramses, ['noise', 'pieces', i])
+                        for i in range(len(NOISE_PIECES))
+                    ],
                     'spectrum': [
                         Model.aggregate(paramses, ['noise', 'spectrum', i])
                         for i in range(self.noise_bins)
