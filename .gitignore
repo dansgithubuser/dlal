@@ -4,3 +4,4 @@ matrix.html
 assets/local
 Cargo.lock
 *.i16le
+*.mscz~
