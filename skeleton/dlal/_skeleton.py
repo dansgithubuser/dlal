@@ -278,6 +278,8 @@ def typical_setup():
             for i in range(runs):
                 audio.run()
                 if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
+                print(f'{100*(i+1)/runs:5.1f} %', end='\r')
+            print()
     else:
         if audio:
             audio.start()
