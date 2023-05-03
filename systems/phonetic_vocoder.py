@@ -77,15 +77,19 @@ class Visualizer:
         # formants
         for formant_i in range(len(dlal.speech.FORMANT_RANGES)):
             for i, (a, b) in enumerate(zip(self.paramses, self.paramses[1:])):
-                plot.line(
-                    i,
-                    a['tone']['formants'][formant_i]['freq'],
-                    i+1,
-                    b['tone']['formants'][formant_i]['freq'],
+                yi = a['tone']['formants'][formant_i]['freq']
+                yf = b['tone']['formants'][formant_i]['freq']
+                dy_a = 100 * log(a['tone']['formants'][formant_i]['amp'], 3)
+                dy_b = 100 * log(b['tone']['formants'][formant_i]['amp'], 3)
+                kwargs = dict(
+                    xi=i,
+                    xf=i+1,
                     r=1.0,
-                    g=log(a['tone']['formants'][formant_i]['amp'], 2),
                     b=0.0,
                 )
+                plot.line(yi=yi, yf=yf, g=0.5, **kwargs)
+                plot.line(yi=yi+dy_a, yf=yf+dy_b, g=0, **kwargs)
+                plot.line(yi=yi-dy_a, yf=yf-dy_b, g=0, **kwargs)
         # toniness
         plot.plot([(i['toniness']-1) * 100 for i in self.paramses])
         # f
