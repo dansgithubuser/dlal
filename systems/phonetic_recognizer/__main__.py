@@ -19,6 +19,7 @@ result = model.transcribe(
     args.audio_path,
     verbose=True,
     word_timestamps=True,
+    language='en',
 )
 
 print('===== Results =====')
