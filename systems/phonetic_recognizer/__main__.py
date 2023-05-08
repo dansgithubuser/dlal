@@ -9,10 +9,16 @@ import re
 
 parser = argparse.ArgumentParser()
 parser.add_argument('audio_path')
+parser.add_argument(
+    '--model',
+    '-m',
+    choices=['tiny', 'base', 'small', 'medium', 'large'],
+    default='base',
+)
 args = parser.parse_args()
 
 print('===== Load Model =====')
-model = whisper.load_model('base')
+model = whisper.load_model(args.model)
 
 print('===== Transcribe =====')
 result = model.transcribe(
