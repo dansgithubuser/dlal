@@ -4,8 +4,10 @@ import cmudict
 import whisper
 
 import argparse
+import os
 import pprint
 import re
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('audio_path')
@@ -18,7 +20,15 @@ parser.add_argument(
 args = parser.parse_args()
 
 print('===== Load Model =====')
-model = whisper.load_model(args.model)
+try:
+    model = whisper.load_model(args.model)
+except:
+    if type(e).__name__ != 'OutOfMemoryError':
+        raise
+    if os.environ.get('CUDA_VISIBLE_DEVICES') == '':
+        raise
+    print("Ran out of VRAM. Try CUDA_VISIBLE_DEVICES=''")
+    sys.exit(1)
 
 print('===== Transcribe =====')
 result = model.transcribe(
