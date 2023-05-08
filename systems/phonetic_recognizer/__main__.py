@@ -1,4 +1,9 @@
+def timestamp():
+    import datetime
+    return '{:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now())
+
 print('===== Setup =====')
+print(timestamp())
 import cmudict
 
 import whisper
@@ -20,6 +25,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 print('===== Load Model =====')
+print(timestamp())
 try:
     model = whisper.load_model(args.model)
 except:
@@ -31,6 +37,7 @@ except:
     sys.exit(1)
 
 print('===== Transcribe =====')
+print(timestamp())
 result = model.transcribe(
     args.audio_path,
     verbose=True,
@@ -39,6 +46,7 @@ result = model.transcribe(
 )
 
 print('===== Results =====')
+print(timestamp())
 print('----- Whisper Output -----')
 pprint.pprint(result)
 print('----- IPA -----')
