@@ -4,23 +4,34 @@ def timestamp():
 
 print('===== Setup =====')
 print(timestamp())
-import cmudict
 
+import dlal
+
+import cmudict
 import whisper
 
 import argparse
+import math
 import os
+from pathlib import Path
 import pprint
 import re
 import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument('audio_path')
+parser.add_argument('audio_path', type=Path)
 parser.add_argument(
     '--model',
     '-m',
     choices=['tiny', 'base', 'small', 'medium', 'large'],
     default='base',
+)
+parser.add_argument('--output-aligner-dataset', '--oad',
+    type=Path,
+    nargs='?',
+    const=Path('.'),
+    metavar='path',
+    help='default .',
 )
 args = parser.parse_args()
 
@@ -39,7 +50,7 @@ except:
 print('===== Transcribe =====')
 print(timestamp())
 result = model.transcribe(
-    args.audio_path,
+    str(args.audio_path),
     verbose=True,
     word_timestamps=True,
     language='en',
@@ -53,4 +64,19 @@ print('----- IPA -----')
 for segment in result['segments']:
     for word in segment['words']:
         ipa = cmudict.convert(re.sub('[ ,.?]', '', word['word']))
-        print(word['start'], word['end'], word['word'], ipa)
+        print(f'''{word['start']:5.2f} {word['end']:5.2f}''', word['word'], ipa)
+
+if args.output_aligner_dataset:
+    sound = dlal.sound.read(args.audio_path)
+    out_dir = args.output_aligner_dataset / ('recognized-' + args.audio_path.stem)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    size = sum(len(segment['words']) for segment in result['segments'])
+    size_mag = math.floor(math.log10(size)) + 1
+    index_fmt = f'{{:0{size_mag}}}'
+    for segment in result['segments']:
+        for word_i, word in enumerate(segment['words']):
+            print(word['word'])
+            prefix = out_dir / index_fmt.format(word_i + 1)
+            sound.copy(word['start'], word['end']).to_flac(prefix.with_suffix('.flac'))
+            with open(prefix.with_suffix('.txt'), 'w') as txt:
+                txt.write(word['word'].strip().upper())
