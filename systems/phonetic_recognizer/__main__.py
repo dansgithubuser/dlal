@@ -73,10 +73,8 @@ if args.output_aligner_dataset:
     size = sum(len(segment['words']) for segment in result['segments'])
     size_mag = math.floor(math.log10(size)) + 1
     index_fmt = f'{{:0{size_mag}}}'
-    for segment in result['segments']:
-        for word_i, word in enumerate(segment['words']):
-            print(word['word'])
-            prefix = out_dir / index_fmt.format(word_i + 1)
-            sound.copy(word['start'], word['end']).to_flac(prefix.with_suffix('.flac'))
-            with open(prefix.with_suffix('.txt'), 'w') as txt:
-                txt.write(word['word'].strip().upper())
+    for segment_i, segment in enumerate(result['segments']):
+        prefix = out_dir / index_fmt.format(segment_i + 1)
+        sound.copy(segment['start'], segment['end']).to_flac(prefix.with_suffix('.flac'))
+        with open(prefix.with_suffix('.txt'), 'w') as txt:
+            txt.write(segment['text'].strip().upper())
