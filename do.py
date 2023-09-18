@@ -31,7 +31,7 @@ parser.add_argument('--component-new', '--cn', nargs='+')
 parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
-parser.add_argument('--build', '-b', nargs='*')
+parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
 parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
 parser.add_argument('--run', '-r', nargs='+', help='run specified system, optionally with args')
@@ -45,22 +45,83 @@ args = parser.parse_args()
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
-def timestamp():
-    return '{:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now()).lower()
+def blue(text):
+    return '\x1b[34m' + text + '\x1b[0m'
 
-def invoke(*args, kwargs={}, title='invoke', fmt='{ts} {cwd} {args} {kwargs}'):
-    if 'check' not in kwargs: kwargs['check'] = True
-    if title:
-        title = ' ' + title + ' '
-    else:
-        title = ''
-    print('-' * 20 + title + '-' * 20)
-    ts = timestamp()
-    cwd = os.getcwd()
-    if fmt: exec(f'print(f"{fmt}")')
-    result = subprocess.run(args, **kwargs)
-    print()
-    return result
+def timestamp():
+    return '{:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now())
+
+def invoke(
+    *args,
+    quiet=False,
+    env_add={},
+    env_add_secrets=set(),
+    handle_sigint=True,
+    popen=False,
+    check=True,
+    put_in=False,
+    get_out=False,
+    get_err=False,
+    **kwargs,
+):
+    if len(args) == 1 and type(args[0]) == str:
+        args = args[0].split()
+    if not quiet:
+        print(blue('-'*40))
+        print(timestamp())
+        print(os.getcwd()+'$', end=' ')
+        if any([re.search(r'\s', i) for i in args]):
+            print()
+            for i in args: print(f'\t{i} \\')
+        else:
+            for i, v in enumerate(args):
+                if i != len(args)-1:
+                    end = ' '
+                else:
+                    end = ';\n'
+                print(v, end=end)
+        if env_add:
+            print('env_add:', {k: (v if k not in env_add_secrets else '...') for k, v in env_add.items()})
+        if kwargs: print(kwargs)
+        if popen: print('popen')
+        print()
+    if env_add:
+        env = os.environ.copy()
+        env.update(env_add)
+        kwargs['env'] = env
+    if put_in and 'stdin' not in kwargs: kwargs['stdin'] = subprocess.PIPE
+    if get_out: kwargs['stdout'] = subprocess.PIPE
+    if get_err: kwargs['stderr'] = subprocess.PIPE
+    p = subprocess.Popen(args, **kwargs)
+    if handle_sigint:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if put_in:
+        if type(put_in) == str:
+            put_in = put_in.encode()
+        p.stdin.write(put_in)
+        if popen:
+            p.stdin.flush()
+        else:
+            p.stdin.close()
+    if popen:
+        return p
+    stdout, stderr = p.communicate()
+    p.out = stdout
+    p.err = stderr
+    if handle_sigint:
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+    if check and p.returncode:
+        raise Exception(f'invocation {repr(args)} returned code {p.returncode}.')
+    if get_out:
+        stdout = stdout.decode('utf-8')
+        if get_out != 'exact': stdout = stdout.strip()
+        if not get_err: return stdout
+    if get_err:
+        stderr = stderr.decode('utf-8')
+        if get_err != 'exact': stderr = stderr.strip()
+        if not get_out: return stderr
+    if get_out and get_err: return stdout, stderr
+    return p
 
 # ===== skeleton ===== #
 os.chdir(os.path.join(DIR, 'skeleton'))
@@ -326,20 +387,11 @@ if args.component_matrix:
     webbrowser.open_new_tab(os.path.join(DIR, 'matrix.html'))
 
 # ===== build ===== #
-if args.build is not None:
+if args.build:
     for i in args.build_snoop:
         os.environ[f'DLAL_SNOOP_{i.upper()}'] = '1'
-    for component_path in glob.glob(os.path.join(DIR, 'components', '*')):
-        component = os.path.basename(component_path)
-        if args.build and component not in args.build: continue
-        if component == 'base': continue
-        os.chdir(component_path)
-        if not os.path.exists('Cargo.toml'): continue
-        invoke(
-            'cargo', 'build', '--release',
-            title=component,
-            fmt=None,
-        )
+    os.chdir(os.path.join(DIR, 'components'))
+    invoke('cargo', 'build', '--release')
 
 # ===== interact & run ===== #
 if args.interact or args.run:
