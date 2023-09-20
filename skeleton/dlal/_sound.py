@@ -50,9 +50,9 @@ class Sound:
         end = int(end)
         return Sound(self.samples[start:end], self.sample_rate)
 
-def read(file_path):
+def read(file_path, channel=0):
     data, sample_rate = sf.read(file_path)
-    return Sound([float(i) for i in data], sample_rate)
+    return Sound([float(i[channel]) for i in data], sample_rate)
 
 def i16le_to_flac(i16le_file_path, flac_file_path=None):
     if flac_file_path == None:

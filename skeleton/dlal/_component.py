@@ -16,7 +16,10 @@ log = _logging.get_log(__name__)
 COMPONENTS_DIR = os.path.join(DIR, '..', '..', 'components')
 
 def component_kinds(special=None):
-    avoid = []
+    avoid = [
+        'Cargo.lock',
+        'Cargo.toml',
+    ]
     if special is not None:
         special_kinds = [
             i[:-3]
@@ -24,7 +27,7 @@ def component_kinds(special=None):
             if not i.startswith('_') and i.endswith('.py')
         ]
         if special is True: return special_kinds
-        avoid = special_kinds
+        avoid.extend(special_kinds)
     return [
         i
         for i in os.listdir(COMPONENTS_DIR)
