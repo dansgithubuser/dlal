@@ -34,6 +34,7 @@ component!(
     {
         "window_size": {"args": ["size"]},
         "spectrum": {"args": []},
+        "cepstrum": {"args": []},
     },
 );
 
@@ -149,6 +150,27 @@ impl Component {
             self.buffer[..window_size / 2 + 1]
                 .iter()
                 .map(|i| i.norm() / window_size as f32)
+                .collect::<Vec<_>>()
+        )))
+    }
+
+    fn cepstrum_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let window_size = self.input.len();
+        let mut buffer = self.buffer
+            .iter()
+            .map(|i| Complex {
+                re: (i.norm() / window_size as f32).max(1e-20).ln(),
+                im: 0.0,
+            })
+            .collect::<Vec<_>>();
+        self.fft
+            .as_ref()
+            .unwrap()
+            .process_with_scratch(&mut buffer, &mut self.scratch);
+        Ok(Some(json!(
+            buffer[..window_size / 2 + 1]
+                .iter()
+                .map(|i| i.norm())
                 .collect::<Vec<_>>()
         )))
     }

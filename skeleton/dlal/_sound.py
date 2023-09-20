@@ -40,6 +40,16 @@ class Sound:
             result.append(sound)
         return result
 
+    def copy(self, start=0, end=-1):
+        start *= self.sample_rate
+        if end < 0:
+            end = len(self.samples) + (end + 1) * self.sample_rate
+        else:
+            end *= self.sample_rate
+        start = int(start)
+        end = int(end)
+        return Sound(self.samples[start:end], self.sample_rate)
+
 def read(file_path):
     data, sample_rate = sf.read(file_path)
     return Sound([float(i) for i in data], sample_rate)

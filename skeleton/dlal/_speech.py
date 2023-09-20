@@ -78,8 +78,8 @@ FORMANT_RANGES = [
 ]
 
 NOISE_PIECES = [
-    1000,
     2000,
+    3000,
     7000,
     14000,
 ]
@@ -233,11 +233,11 @@ class Model:
                 if i * self.freq_per_bin < 1000: continue
                 spectrum_noise[_math.floor(i / len(spectrum) * self.noise_bins)] += amp
             # estimate with piecewise function
-            # assume < 1 kHz is 0
-            # assume 20 kHz is 0
-            # find optimal points at NOISE_PIECES
+            # assume 0 Hz to first noise piece is 0
+            # roughly optimize a piecewise function
             freq_per_noise_bin = (self.sample_rate / 2) / len(spectrum_noise)
             def error(x):
+                x = [0, *x]
                 err = 0
                 for i, v in enumerate(spectrum_noise):
                     f = i * freq_per_noise_bin
@@ -248,10 +248,10 @@ class Model:
                             break
                     err += (v - u) ** 2
                 return err
-            pieces = _utils.minimize(error, [
+            pieces = [0, *_utils.minimize(error, [
                 spectrum_noise[_math.floor(i / freq_per_noise_bin)]
-                for i in NOISE_PIECES
-            ])
+                for i in NOISE_PIECES[1:]
+            ])]
         return {
             'pieces': pieces,
             'spectrum': spectrum_noise,
