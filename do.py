@@ -34,7 +34,7 @@ parser.add_argument('--component-matrix', '--cm', action='store_true')
 parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
 parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
-parser.add_argument('--run', '-r', nargs='+', help='run specified system, optionally with args')
+parser.add_argument('--run', '-r', nargs=argparse.REMAINDER, help='run specified system, optionally with args')
 parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
 parser.add_argument('--web', '-w', action='store_true',
     help='open web interface and run web server'
