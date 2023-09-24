@@ -170,7 +170,7 @@ class Component:
         lib = obvious.load_lib(
             kind,
             paths=[
-                os.path.join(COMPONENTS_DIR, kind, 'target', 'release'),  # dev
+                os.path.join(COMPONENTS_DIR, 'target', 'release'),  # dev
             ],
         )
         obvious.set_ffi_types(lib.construct, 'void*', str)
