@@ -10,6 +10,7 @@ from . import _utils
 
 import json as _json
 import math as _math
+import re as _re
 
 PHONETICS = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
@@ -461,8 +462,6 @@ class Utterance:
     def from_str(s, *args, **kwargs):
         self = Utterance(*args, **kwargs)
         self.phonetics = Utterance.phonetics_from_str(s.replace(' ', '0'))
-        if self.phonetics[-1] != '0':
-            self.phonetics.append('0')
         self.infer()
         self.add_prestop_silence()
         return self
@@ -486,6 +485,63 @@ class Utterance:
         self.add_prestop_silence()
         return self
 
+    def from_textgrid(path, *args, **kwargs):
+        import textgrid
+        self = Utterance(*args, **kwargs)
+        tg = textgrid.TextGrid.fromFile(path)
+        tg_phones = tg.getList('phones')[0]
+        translations = {
+            'B' : 'b'   , 'AA': 'a'        , 'spn': '0',
+            'CH': 'ch'  , 'AE': 'ae'       , 'sil': '0',
+            'D' : 'd'   , 'AH': 'u'        , ''   : '0',
+            'DH': 'th_v', 'AO': 'o'        ,
+            'DX': 'd'   , 'AW': ['ae', 'w'],
+            'EL': 'l'   , 'AX': 'u'        ,
+            'EM': 'm'   , 'AXR': 'r'       ,
+            'EN': 'n'   , 'AY': ['u', 'y'] ,
+            'F' : 'f'   , 'EH': 'e'        ,
+            'G' : 'g'   , 'ER': 'r'        ,
+            'H' : 'h'   , 'EY': ['ay', 'y'],
+            'HH': 'h'   , 'IH': 'i'        ,
+            'JH': 'j'   , 'IX': 'i'        ,
+            'K' : 'k'   , 'IY': 'y'        ,
+            'L' : 'l'   , 'OW': ['o', 'w'] ,
+            'M' : 'm'   , 'OY': ['o', 'y'] ,
+            'N' : 'n'   , 'UH': 'uu'       ,
+            'NX': 'ng'  , 'UW': 'w'        ,
+            'NG': 'ng'  , 'UX': 'w'        ,
+            'P' : 'p'   ,
+            'Q' : '0'   ,
+            'R' : 'r'   ,
+            'S' : 's'   ,
+            'T' : 't'   ,
+            'TH': 'th'  ,
+            'V' : 'v'   ,
+            'W' : 'w'   ,
+            'Y' : 'y'   ,
+            'Z' : 'z'   ,
+            'ZH': 'j'   ,
+        }
+        t = 0
+        for tg_phone in tg_phones:
+            t_i, t_f = tg_phone.bounds()
+            if t_i - t > 0.001:
+                self.phones.append('0')
+                self.waits.append(t_i - t)
+            translation = translations[_re.sub(f'\d', '', tg_phone.mark)]
+            if type(translation) == str:
+                self.phonetics.append(translation)
+                self.waits.append(t_f - t_i)
+            elif type(translation) == list:
+                self.phonetics.extend(translation)
+                l = len(translation)
+                self.waits.extend([(t_f - t_i) / l] * l)
+            else:
+                raise Exception(f'Bad translation: {translation}')
+            t = t_f
+        self.infer()
+        return self
+
     def phonetics_from_str(s):
         phonetics = []
         bracketed_phonetic = None
@@ -502,6 +558,8 @@ class Utterance:
         return phonetics
 
     def infer(self):
+        if self.phonetics[-1] != '0':
+            self.phonetics.append('0')
         while len(self.waits) < len(self.phonetics):
             wait = self.default_wait
             if self.model:
