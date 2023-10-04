@@ -36,6 +36,7 @@ def invoke(
     return result
 
 if invoke('docker image inspect mfa-english', check=False).returncode:
+    invoke('docker pull mmcauliffe/montreal-forced-aligner')
     invoke(
         'docker', 'run',
         '--name', 'mfa-english',
