@@ -485,11 +485,12 @@ class Utterance:
         self.add_prestop_silence()
         return self
 
-    def from_textgrid(path, *args, **kwargs):
+    def from_textgrid(path, model, *args, **kwargs):
         import textgrid
         self = Utterance(*args, **kwargs)
         tg = textgrid.TextGrid.fromFile(path)
         tg_phones = tg.getList('phones')[0]
+        tg_words = (i for i in tg.getList('words')[0])
         translations = {
             'B' : 'b'   , 'AA': 'a'        , 'spn': '0',
             'CH': 'ch'  , 'AE': 'ae'       , 'sil': '0',
@@ -522,14 +523,38 @@ class Utterance:
             'Z' : 'z'   ,
             'ZH': 'j'   ,
         }
+        # init state
         t = 0
-        for tg_phone in tg_phones:
+        tg_word = next(tg_words)
+        for tg_phone_i, tg_phone in enumerate(tg_phones):
+            # get phone and word
             t_i, t_f = tg_phone.bounds()
+            while True:
+                t_wi, t_wf = tg_word.bounds()
+                if t_wi <= t_i < t_wf:
+                    break
+                try:
+                    tg_word = next(tg_words)
+                except StopIteration:
+                    break
+            # add silence
             if t_i - t > 0.001:
                 self.phones.append('0')
                 self.waits.append(t_i - t)
+            # translate
             translation = translations[_re.sub(f'\d', '', tg_phone.mark)]
-            if type(translation) == str:
+            if translation in STOPS and abs(t_i - t_wi) < 0.001 and tg_phone_i + 1 < len(tg_phones):
+                # special case for stops at beginning of word
+                # aligner seems to collapse silence and stop together
+                # so we put the stop just before the next phone
+                tg_phone_next = tg_phones[tg_phone_i + 1]
+                t_ni, _ = tg_phone_next.bounds()
+                t_i = max(t_i, t_ni - model.duration(translation, None))
+                self.phonetics.append('0')
+                self.waits.append(t_i - t)
+                self.phonetics.append(translation)
+                self.waits.append(t_f - t_i)
+            elif type(translation) == str:
                 self.phonetics.append(translation)
                 self.waits.append(t_f - t_i)
             elif type(translation) == list:
@@ -538,7 +563,9 @@ class Utterance:
                 self.waits.extend([(t_f - t_i) / l] * l)
             else:
                 raise Exception(f'Bad translation: {translation}')
+            # update state
             t = t_f
+        # finish
         self.infer()
         return self
 
