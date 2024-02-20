@@ -614,12 +614,18 @@ class Utterance:
     def print(self):
         i = 0
         stride = 10
+        t = 0
         while i < len(self.phonetics):
             s = min(stride, len(self.phonetics) - i)
-            for j in range(s): print(f'{self.phonetics[i+j]:>8}', end='')
+            for j in range(s):
+                print(f'{self.phonetics[i+j]:>8}', end='')
             print()
-            for j in range(s): print(f'{self.waits[i+j]:>8.2f}', end='')
+            for j in range(s):
+                t += self.waits[i+j]
+                print(f'{t:>8.2f}', end='')
             print()
-            for j in range(s): print(f'{self.pitches[i+j]:>8}', end='')
+            for j in range(s):
+                print(f'{self.pitches[i+j]:>8}', end='')
+            print()
             print()
             i += stride
