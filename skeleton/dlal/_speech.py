@@ -21,6 +21,7 @@ PHONETICS = [
 VOICED = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh_v', 'v', 'th_v', 'z', 'm', 'n', 'ng', 'r', 'l',
+    'b', 'd', 'g', 'j',
 ]
 
 FRICATIVES = [

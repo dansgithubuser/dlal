@@ -128,7 +128,7 @@ os.chdir(os.path.join(DIR, 'skeleton'))
 
 if args.venv_freshen:
     shutil.rmtree('venv', ignore_errors=True)
-    invoke('python', '-m', 'venv', 'venv')
+    invoke('python3', '-m', 'venv', 'venv')
 
 if args.venv_update:
     invoke('pip', 'install', '-r', 'human-reqs.txt')
@@ -403,13 +403,13 @@ if args.interact or args.run:
     if args.debug:
         os.environ['DLAL_LOG_LEVEL'] = 'debug'
     if args.run:
-        invocation = ['python']
+        invocation = ['python3']
         if args.interact:
             invocation.append('-i')
         invocation.extend(args.run)
         invocation = ' '.join(invocation)
     else:
-        invocation = 'python -i -c "import dlal"'
+        invocation = 'python3 -i -c "import dlal"'
     p = subprocess.Popen(invocation, shell=True)
     signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
     p.wait()
