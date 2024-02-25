@@ -132,14 +132,15 @@ class SpeechSampler(Subsystem):
         )
 
     def sampleses(self, path, filea, driver):
-        sampleses = []
-        for phonetic in _speech.PHONETICS:
-            print(phonetic)
-            filea.open(os.path.join(path, f'{phonetic}.flac'))
-            sampleses.append([])
+        sampleses = {}
+        for k in _speech.PHONETICS + _speech.VOICED_STOP_CONTEXTS:
+            print(k)
+            filea.open(os.path.join(path, f'{k}.flac'))
+            samples = []
             while filea.playing():
                 driver.run()
-                sampleses[-1].append(self.sample())
+                samples.append(self.sample())
+            sampleses[k] = samples
         return sampleses
 
 class SpeechSynth(Subsystem):

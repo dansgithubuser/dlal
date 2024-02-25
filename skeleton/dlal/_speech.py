@@ -33,6 +33,13 @@ STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
 ]
 
+VOICED_STOP_CONTEXTS = [
+    'bub',
+    'dud',
+    'gug',
+    'juj',
+]
+
 PHONETIC_DESCRIPTIONS = {
     'ae': 'a as in apple',
     'ay': 'a as in day',
@@ -349,6 +356,7 @@ class Model:
             paramses = [self.parameterize(*i, phonetic) for i in samples]
             frames = self.frames_from_paramses(paramses, continuant)
             if not continuant:
+                # stops - take only the first rendition of the stop as frames
                 i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
                 frames = frames[i_start:]
                 try:
@@ -362,6 +370,24 @@ class Model:
             'fricative': phonetic in FRICATIVES,
             'frames': frames,
         }
+
+    def add_voiced_stop_context(self, context, samples):
+        formants = [
+            {'amp': 0, 'freq': 100},
+            {'amp': 0, 'freq': 500},
+            {'amp': 0, 'freq': 1000},
+            {'amp': 0, 'freq': 2500},
+        ]
+        max_amp_noise = 0
+        for spectrum, amp_tone, amp_noise in samples[(len(samples) // 2):0:-1]:
+            params = self.parameterize(spectrum, amp_tone, amp_noise, formants_prev=formants)
+            max_amp_noise = max(amp_noise, max_amp_noise)
+            if amp_noise < 0.5 * max_amp_noise:
+                break
+            if amp_noise > 0.75 * max_amp_noise:
+                formants = params['tone']['formants']
+        self.phonetics[context[0]]['frames'][0]['formants'] = formants
+        self.phonetics[context[0]]['voiced'] = True
 
     def add_0(self):
         self.add('0', [[[0] * self.stft_bins, 0, 0]])

@@ -196,7 +196,6 @@ The `audio` component is the driver component for interactive audio.
 ## todo
 - robot voice
 	- voiced stops needs formants
-		- find formants by tracking
 		- incorporate
 		- update speech_synthesis.md
 
