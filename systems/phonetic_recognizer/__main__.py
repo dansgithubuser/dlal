@@ -39,7 +39,7 @@ print('===== Load Model =====')
 print(timestamp())
 try:
     model = whisper.load_model(args.model)
-except:
+except Exception as e:
     if type(e).__name__ != 'OutOfMemoryError':
         raise
     if os.environ.get('CUDA_VISIBLE_DEVICES') == '':
