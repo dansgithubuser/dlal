@@ -140,9 +140,6 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- robot voice
-	- speech recog: discard silence
-
 - audiobro
 	- review existing tracks
 	- bassindaface / funky funky bass
