@@ -5,7 +5,7 @@ import dlal
 audio = dlal.Audio(driver=True)
 liner = dlal.Liner()
 porta = dlal.subsystem.Portamento()
-synth = dlal.subsystem.SpeechSynth()
+synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape(1 << 16)
 
 # connect

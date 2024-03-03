@@ -16,7 +16,7 @@ args = parser.parse_args()
 # components
 audio = dlal.Audio(driver=True)
 filea = dlal.Filea()
-sampler = dlal.subsystem.SpeechSampler()
+sampler = dlal.speech.SpeechSampler()
 
 # connect
 dlal.connect(

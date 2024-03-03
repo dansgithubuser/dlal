@@ -14,7 +14,7 @@ args = parser.parse_args()
 #===== system =====#
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
-synth = dlal.subsystem.SpeechSynth()
+synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape(44100*5)
 
 dlal.connect(

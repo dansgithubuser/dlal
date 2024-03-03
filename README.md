@@ -62,60 +62,6 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 - web: GUI
 
 ## skeleton
-### import graph
-```
-+===========+
-| __init__  |
-+===========+
-↑
-+-+
-| |
-| +===========+
-| | subsystem |
-| +===========+
-| ↑
-+-+
-|
-+-+
-| |
-| +===========+  +===================+  +===================+
-| | _skeleton |  | _websocket_server |  | _websocket_client |
-| +===========+  +===================+  +===================+
-| ↑ ↑            ↑                      ↑
-| | +------------+----------------------+
-| |              |
-| |              +=========+
-| |              | _server |
-| |              +=========+
-| +----------------------------------------------+
-+------------------------+                       |
-|                        |                       |
-+=====================+  +=====================+ |
-| _default_components |  | _special_components | |
-+=====================+  +=====================+ |
-↑                        ↑                       |
-+------------------------+-----------------------+
-|
-+============+
-| _component |
-+============+
-
-↑
-↑# common resources
-|
-+-+----------+
-| |          |
-| +========+ +=========+
-| | _sound | | _speech |
-| +========+ +=========+
-|
-+------------+
-|            |
-+==========+ +========+
-| _logging | | _utils |
-+==========+ +========+
-```
-
 ### server
 Not to be confused with the simple HTTP file server run via `./do.py -w`, the skeleton server allows arbitrary dlal operation over the web.
 
@@ -195,9 +141,7 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - robot voice
-	- voiced stops needs formants
-		- incorporate
-		- update speech_synthesis.md
+	- speech recog: discard silence
 
 - audiobro
 	- review existing tracks
