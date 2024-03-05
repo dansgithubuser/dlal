@@ -48,6 +48,8 @@ u.print()
 for phonetic, wait, pitch in u:
     synth.say(phonetic, model, wait)
 
+porta.rhymel.pitch(43 / 128)
+
 # run
 runs = int(240 * audio.sample_rate() / audio.run_size())
 n = tape.size() // audio.run_size()
