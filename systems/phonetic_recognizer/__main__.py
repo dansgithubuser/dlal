@@ -36,7 +36,7 @@ parser.add_argument('--output-aligner-dataset', '--oad',
 args = parser.parse_args()
 
 def split(sound):
-    return sound.split(window_backward=sound.sample_rate * 2)
+    return sound.split(window_backward=sound.sample_rate * 10)
 
 print('===== Load Model =====')
 print(timestamp())
