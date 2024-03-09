@@ -140,6 +140,29 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+use voiced stops at end of context
+
+compare freq spectrum
+
+formants for all phonetics?
+
+[00:00.000 --> 00:03.300]  Oh shit, it's getting serious.
+[00:00.000 --> 00:01.440]  and through the field
+[00:01.440 --> 00:04.380]  placeman
+[00:04.380 --> 00:15.000]  The town had been without a school for 40 years
+[00:15.000 --> 00:20.100]  There was no dancing
+[00:20.100 --> 00:23.440]  There was no rock shaking
+[00:23.440 --> 00:27.880]  There had been no laughter
+[00:30.260 --> 00:32.040]  And death
+[00:32.040 --> 00:35.640]  Was nearing everybody
+[00:35.640 --> 00:40.180]  We can survive without food
+[00:40.180 --> 00:43.620]  But not without place
+[00:43.620 --> 00:45.600]  Well
+[00:45.600 --> 00:49.460]  Not very long anyway
+[00:49.460 --> 00:55.760]  The color had rained from everyone's faces
+[01:01.700 --> 01:06.580]  Every day the town people went to the pool and played with place
+[01:06.580 --> 01:16.160]  And placeman looked upon the town and he smiled for he knew
+
 - audiobro
 	- review existing tracks
 	- bassindaface / funky funky bass

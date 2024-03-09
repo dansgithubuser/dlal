@@ -12,6 +12,7 @@ from ._subsystem import Subsystem
 
 import json as _json
 import math as _math
+import os as _os
 import re as _re
 
 PHONETICS = [
@@ -127,15 +128,15 @@ class SpeechSampler(Subsystem):
         spectrum = self.stft.spectrum()
         return (
             spectrum,
-            self.tone_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.tone_bins[0]:self.tone_bins[1]])),
-            self.noise_factor * math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
+            self.tone_factor * _math.sqrt(sum(i ** 2 for i in spectrum[self.tone_bins[0]:self.tone_bins[1]])),
+            self.noise_factor * _math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
         )
 
     def sampleses(self, path, filea, driver):
         sampleses = {}
-        for k in _speech.PHONETICS + _speech.VOICED_STOP_CONTEXTS:
+        for k in PHONETICS + VOICED_STOP_CONTEXTS:
             print(k)
-            filea.open(os.path.join(path, f'{k}.flac'))
+            filea.open(_os.path.join(path, f'{k}.flac'))
             samples = []
             while filea.playing():
                 driver.run()
@@ -217,6 +218,7 @@ class Model:
         # find peak
         spread = 2
         e_peak = 0
+        e_min = _math.inf
         if formant_prev_freq:
             bin_peak = int(formant_prev_freq / self.freq_per_bin)
         else:
@@ -230,6 +232,8 @@ class Model:
                 if e_window > e_peak:
                     e_peak = e_window
                     bin_peak = i
+                if e_window < e_min:
+                    e_min = e_window
         # adjust based on neighboring bin amps
         bin_formant = bin_peak
         spread = 2
@@ -243,6 +247,10 @@ class Model:
                 bin_formant = sum(i * v ** 2 for i, v in bins) / s
                 bin_formant = max(bin_formant, bin_i)
                 bin_formant = min(bin_formant, bin_f)
+        # inertia, don't lose prev formant too quickly if there's no strong peak
+        if formant_prev_freq and e_min < e_peak and e_min != 0:
+            t = min(e_peak / e_min - 1, 1)
+            bin_formant = t * bin_formant + (1 - t) * formant_prev_freq / self.freq_per_bin
         #
         return {
             'freq': bin_formant * self.freq_per_bin,
@@ -764,7 +772,7 @@ class SpeechSynth(Subsystem):
                 if noise_spectrum:
                     self.noise.spectrum(noise_spectrum)
                 elif noise_pieces:
-                    self.noise.piecewise([0] + _speech.NOISE_PIECES + [20000], [0] + noise_pieces + [0])
+                    self.noise.piecewise([0] + NOISE_PIECES + [20000], [0] + noise_pieces + [0])
                 self.comm.wait(wait)
 
     def say(self, phonetic, model, wait=0):
