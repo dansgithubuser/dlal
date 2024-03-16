@@ -11,7 +11,10 @@ except:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('recordings_path', nargs='?', default='assets/phonetics')
+parser.add_argument('--only', nargs='+')
 args = parser.parse_args()
+
+MODEL_PATH = 'assets/local/phonetic-model.json'
 
 # components
 audio = dlal.Audio(driver=True)
@@ -25,13 +28,16 @@ dlal.connect(
 )
 
 # model
-model = dlal.speech.Model()
+if args.only:
+    model = dlal.speech.Model(MODEL_PATH)
+else:
+    model = dlal.speech.Model()
 assert audio.sample_rate() == model.sample_rate
 assert audio.run_size() == model.run_size
 
 # run
 print('===== SAMPLING =====')
-sampleses = sampler.sampleses(args.recordings_path, filea, audio)
+sampleses = sampler.sampleses(args.recordings_path, filea, audio, args.only)
 
 print('===== MODELING =====')
 for k, samples in sampleses.items():
@@ -41,7 +47,7 @@ for k, samples in sampleses.items():
     elif k in dlal.speech.VOICED_STOP_CONTEXTS:
         model.add_voiced_stop_context(k, samples)
 model.add_0()
-model.save('assets/local/phonetic-model.json')
+model.save(MODEL_PATH)
 model.save_formant_path_plot_data('assets/local/formant-paths.json')
 
 print('===== DUMPING MEAN SPECTRA =====')

@@ -132,9 +132,10 @@ class SpeechSampler(Subsystem):
             self.noise_factor * _math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
         )
 
-    def sampleses(self, path, filea, driver):
+    def sampleses(self, path, filea, driver, only=None):
         sampleses = {}
-        for k in PHONETICS + VOICED_STOP_CONTEXTS:
+        for k in PHONETICS:
+            if only and k not in only: continue
             print(k)
             filea.open(_os.path.join(path, f'{k}.flac'))
             samples = []
@@ -387,16 +388,16 @@ class Model:
     def add(self, phonetic, samples):
         continuant = phonetic not in STOPS
         voiced = phonetic in VOICED
+        formants = [
+            {'amp': 0, 'freq': 100},
+            {'amp': 0, 'freq': 500},
+            {'amp': 0, 'freq': 1000},
+            {'amp': 0, 'freq': 2500},
+        ]
         if voiced and continuant:
             # track formants movement from unstressed vowel to phonetic
             stride = int(0.1 * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
             start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
-            formants = [
-                {'amp': 0, 'freq': 100},
-                {'amp': 0, 'freq': 500},
-                {'amp': 0, 'freq': 1000},
-                {'amp': 0, 'freq': 2500},
-            ]
             plot_data = []
             for i_sample in range(0, start, stride):
                 paramses = [self.parameterize(*i, phonetic, formants) for i in samples[i_sample:i_sample+stride]]
@@ -410,42 +411,49 @@ class Model:
             self.formant_path_plot_data[phonetic] = plot_data
             paramses = [self.parameterize(*i, phonetic, formants) for i in samples[start:]]
             frames = self.frames_from_paramses(paramses, continuant)
-        else:
+        elif voiced and not continuant:
             paramses = [self.parameterize(*i, phonetic) for i in samples]
             frames = self.frames_from_paramses(paramses, continuant)
-            if not continuant:
-                # stops - take only the first rendition of the stop as frames
-                i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
-                frames = frames[i_start:]
-                try:
-                    i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
-                except StopIteration:
-                    i_end = None
-                frames = frames[:i_end]
+            # find the isolated rendition of the stop at the end of the recording
+            i_start = len(frames) // 2
+            while frames[i_start]['amp'] > 0.3:  # skip unstressed vowel
+                i_start += 1
+            while frames[i_start]['amp'] < 0.6:  # skip silence before stop
+                i_start += 1
+            i_end = i_start
+            while frames[i_end]['amp'] > 0.1:  # capture stop
+                i_end += 1
+            frames = self.frames_from_paramses(paramses[i_start:i_end], continuant)  # make sure subset of frames are normalized correctly
+            # improve accuracy of initial formants by tracking from middle of unstressed vowel back to initial rendition of stop
+            max_amp_noise = 0
+            for spectrum, amp_tone, amp_noise in samples[(len(samples) // 2):0:-1]:
+                params = self.parameterize(spectrum, amp_tone, amp_noise, formants_prev=formants)
+                max_amp_noise = max(amp_noise, max_amp_noise)
+                if amp_noise < 0.5 * max_amp_noise:
+                    break
+                if amp_noise > 0.75 * max_amp_noise:
+                    formants = params['tone']['formants']
+            frames[0]['formants'] = formants
+        elif not voiced and continuant:
+            paramses = [self.parameterize(*i, phonetic) for i in samples]
+            frames = self.frames_from_paramses(paramses, continuant)
+        elif not voiced and not continuant:
+            paramses = [self.parameterize(*i, phonetic) for i in samples]
+            frames = self.frames_from_paramses(paramses, continuant)
+            # take only the first rendition of the stop as frames
+            i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
+            frames = frames[i_start:]
+            try:
+                i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
+            except StopIteration:
+                i_end = None
+            frames = frames[:i_end]
         self.phonetics[phonetic] = {
             'type': 'continuant' if continuant else 'stop',
             'voiced': voiced,
             'fricative': phonetic in FRICATIVES,
             'frames': frames,
         }
-
-    def add_voiced_stop_context(self, context, samples):
-        formants = [
-            {'amp': 0, 'freq': 100},
-            {'amp': 0, 'freq': 500},
-            {'amp': 0, 'freq': 1000},
-            {'amp': 0, 'freq': 2500},
-        ]
-        max_amp_noise = 0
-        for spectrum, amp_tone, amp_noise in samples[(len(samples) // 2):0:-1]:
-            params = self.parameterize(spectrum, amp_tone, amp_noise, formants_prev=formants)
-            max_amp_noise = max(amp_noise, max_amp_noise)
-            if amp_noise < 0.5 * max_amp_noise:
-                break
-            if amp_noise > 0.75 * max_amp_noise:
-                formants = params['tone']['formants']
-        self.phonetics[context[0]]['frames'][0]['formants'] = formants
-        self.phonetics[context[0]]['voiced'] = True
 
     def add_0(self):
         self.add('0', [[[0] * self.stft_bins, 0, 0]])
