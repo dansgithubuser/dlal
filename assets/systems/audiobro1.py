@@ -278,4 +278,4 @@ if end:
             if i % (1 << 8) == 0xff:
                 tape.to_file_i16le(file, 1 << 14)
 else:
-    dlal.typical_setup()
+    dlal.typical_setup(live=False, duration=270)

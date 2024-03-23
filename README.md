@@ -44,7 +44,6 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 | var | description |
 | - | - |
 | `DLAL_MIDI_INPUT` | which MIDI port to open by default when initializing a `dlal.Midi` |
-| `DLAL_TO_FILE` | when using `dlal.typical_setup`, record to file for this many seconds instead of playing live |
 | `DLAL_LOG_LEVEL` | critical, error, warning (default), info, debug, verbose |
 | `DLAL_SNOOP_CONNECT` | snoop on connections |
 | `DLAL_SNOOP_COMMAND` | snoop on commands |
@@ -140,6 +139,8 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- stereo
+
 - audiobro
 	- review existing tracks
 	- bassindaface / funky funky bass

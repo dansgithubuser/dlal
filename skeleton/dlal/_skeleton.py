@@ -264,29 +264,31 @@ def disconnect(*args):
     Useful for agnostic disconnection more than for disconnecting complex structures.'''
     connect(*args, _dis=True)
 
-def typical_setup():
+def typical_setup(*, live=True, duration=None, out_path='out.i16le'):
     import atexit
     import os
     audio = component('audio', None)
     comm = component('comm', None)
     tape = component('tape', None)
-    if tape and 'DLAL_TO_FILE' in os.environ and audio:
-        duration = float(os.environ['DLAL_TO_FILE'])
-        runs = int(duration * audio.sample_rate() / audio.run_size())
-        n = tape.size() // audio.run_size()
-        with open('out.i16le', 'wb') as file:
-            for i in range(runs):
-                audio.run()
-                if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
-                print(f'{100*(i+1)/runs:5.1f} %', end='\r')
-            print()
-    else:
+    if live:
         if audio:
             audio.start()
             atexit.register(lambda: audio.stop())
         if comm:
             comm_set(comm)
         serve()
+    else:
+        assert tape
+        assert audio
+        assert duration
+        runs = int(duration * audio.sample_rate() / audio.run_size())
+        n = tape.size() // audio.run_size()
+        with open(out_path, 'wb') as file:
+            for i in range(runs):
+                audio.run()
+                if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
+                print(f'{100*(i+1)/runs:5.1f} %', end='\r')
+            print()
 
 def system_info():
     return {
