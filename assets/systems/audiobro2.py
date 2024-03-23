@@ -3,12 +3,12 @@ import dlal
 import midi
 
 import math
-import sys
+import argparse
 
-def sys_arg(i, f=str, default=None):
-    if len(sys.argv) > i:
-        return f(sys.argv[i])
-    return default
+parser = argparse.ArgumentParser()
+parser.add_argument('--live', '-l', action='store_true')
+parser.add_argument('--start', '-s')
+args = parser.parse_args()
 
 class Voice:
     def __init__(self, name, *kinds, input=None, output=None):
@@ -138,7 +138,8 @@ audio.add(tape)
 
 # commands
 liner.load('assets/midis/audiobro2.mid', immediate=True)
-liner.advance(sys_arg(1, float, 0))
+if args.start:
+    liner.advance(float(args.start))
 
 # cowbell
 drum.buf.load('assets/sounds/drum/cowbell.wav', 56)
@@ -335,14 +336,7 @@ buf.connect(tape)
 buf.connect(audio)
 
 # setup
-end = sys_arg(2, float)
-if end:
-    duration = end - sys_arg(1, float, 0)
-    runs = int(duration * 44100 / 64)
-    with open('audiobro2.raw', 'wb') as file:
-        for i in range(runs):
-            audio.run()
-            if i % (1 << 8) == 0xff:
-                tape.to_file_i16le(file, 1 << 14)
-else:
+if args.live:
     dlal.typical_setup()
+else:
+    dlal.typical_setup(live=False, duration=164)

@@ -287,4 +287,4 @@ buf.connect(driver)
 if args.live:
     dlal.typical_setup()
 else:
-    dlal.typical_setup(live=False, duration=216)
+    dlal.typical_setup(live=False, duration=212)
