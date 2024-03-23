@@ -25,3 +25,8 @@ class Buf(Component):
         path = os.path.join(pitched_path, instrument)
         for i in os.listdir(path):
             self.load(os.path.join(path, i), int(i.split('.')[0]))
+
+    def plot(self, note):
+        samples = self.to_json()['_extra']['sounds'][str(note)]['samples']
+        import dansplotcore as dpc
+        dpc.plot(samples)

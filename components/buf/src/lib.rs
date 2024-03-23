@@ -47,7 +47,9 @@ component!(
         "crop": {"args": ["start", "end", "note"]},
         "clip": {"args": ["amplitude", "note"]},
         "amplify": {"args": ["amount", "note"]},
-        "add": {"args": ["note_to", "note_from"]},
+        "add": {"args": ["note_augend", "note_addend"]},
+        "mul": {"args": ["note_multiplicand", "note_multiplier"]},
+        "sin": {"args": ["amplitude", "frequency", "offset", "duration", "note"]},
         "repeat": {
             "args": ["enable"],
             "kwargs": [
@@ -272,21 +274,59 @@ impl Component {
     }
 
     fn add_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let note_to: usize = body.arg(0)?;
-        if note_to >= 128 {
-            return Err(err!("invalid note_to").into());
+        let note_augend: usize = body.arg(0)?;
+        if note_augend >= 128 {
+            return Err(err!("invalid note_augend").into());
         }
-        let note_from: usize = body.arg(1)?;
-        if note_from >= 128 {
-            return Err(err!("invalid note_from").into());
+        let note_addend: usize = body.arg(1)?;
+        if note_addend >= 128 {
+            return Err(err!("invalid note_addend").into());
         }
-        if self.sounds[note_from].samples.len() > self.sounds[note_to].samples.len() {
-            let len = self.sounds[note_from].samples.len();
-            self.sounds[note_to].samples.resize(len, 0.0);
+        if self.sounds[note_addend].samples.len() > self.sounds[note_augend].samples.len() {
+            let len = self.sounds[note_addend].samples.len();
+            self.sounds[note_augend].samples.resize(len, 0.0);
         }
-        for i in 0..self.sounds[note_from].samples.len() {
-            self.sounds[note_to].samples[i] += self.sounds[note_from].samples[i];
+        for i in 0..self.sounds[note_addend].samples.len() {
+            self.sounds[note_augend].samples[i] += self.sounds[note_addend].samples[i];
         }
+        Ok(None)
+    }
+
+    fn mul_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let note_multiplicand: usize = body.arg(0)?;
+        if note_multiplicand >= 128 {
+            return Err(err!("invalid note_multiplicand").into());
+        }
+        let note_multiplier: usize = body.arg(1)?;
+        if note_multiplier >= 128 {
+            return Err(err!("invalid note_multiplicand").into());
+        }
+        if self.sounds[note_multiplier].samples.len() < self.sounds[note_multiplicand].samples.len() {
+            let len = self.sounds[note_multiplier].samples.len();
+            self.sounds[note_multiplicand].samples.resize(len, 0.0);
+        }
+        for i in 0..self.sounds[note_multiplicand].samples.len() {
+            self.sounds[note_multiplicand].samples[i] *= self.sounds[note_multiplier].samples[i];
+        }
+        Ok(None)
+    }
+
+    fn sin_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let amp: f32 = body.arg(0)?;
+        let freq: f32 = body.arg(1)?;
+        let offset: f32 = body.arg(2)?;
+        let duration: f32 = body.arg(3)?;
+        let note: usize = body.arg(4)?;
+        if note >= 128 {
+            return Err(err!("invalid note").into());
+        }
+        let len = (duration * self.sample_rate as f32) as usize;
+        let mut sin = vec![0.0; len];
+        for i in 0..len {
+            let phase =  i as f32 / self.sample_rate as f32 * freq * std::f32::consts::TAU;
+            sin[i] = amp * phase.sin() + offset;
+        }
+        self.sounds[note].samples = sin;
         Ok(None)
     }
 
