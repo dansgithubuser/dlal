@@ -139,6 +139,7 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
+- fix live audio on linux
 - stereo
 
 - audiobro

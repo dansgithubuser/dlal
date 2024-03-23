@@ -2,12 +2,12 @@ import dlal
 
 import midi
 
-import sys
+import argparse
 
-def sys_arg(i, f=str, default=None):
-    if len(sys.argv) > i:
-        return f(sys.argv[i])
-    return default
+parser = argparse.ArgumentParser()
+parser.add_argument('--live', '-l', action='store_true')
+parser.add_argument('--start', '-s')
+args = parser.parse_args()
 
 class Voice:
     def __init__(self, name, *kinds, input=None, output=None):
@@ -96,11 +96,15 @@ driver.add(gain)
 
 # commands
 liner.load('assets/midis/audiobro1.mid', immediate=True)
-liner.advance(sys_arg(1, float, 0))
+if args.start:
+    liner.advance(float(args.start))
 
+# 80 Hz sin
+drum.buf.sin(0.5, 80, 0.5, 1, 1)
 # cricket
 drum.buf.load('assets/sounds/animal/cricket.wav', 56)
 drum.buf.amplify(1.5, 56)
+drum.buf.mul(56, 1)
 # shunk
 drum.buf.load('assets/sounds/drum/snare.wav', 36)
 drum.buf.resample(0.3, 36)
@@ -111,14 +115,17 @@ drum.buf.resample(1.2, 0)
 drum.buf.amplify(1.4, 0)
 drum.buf.clip(1.0, 0)
 drum.buf.add(36, 0)
+drum.buf.mul(36, 1)
 # snare
 drum.buf.load('assets/sounds/drum/snare.wav', 38)
 drum.buf.resample(0.5, 38)
 drum.buf.amplify(0.8, 38)
+drum.buf.mul(38, 1)
 # ride
 drum.buf.load('assets/sounds/drum/ride-bell.wav', 46)
 drum.buf.resample(0.465, 53)
 drum.buf.amplify(0.3, 53)
+drum.buf.mul(53, 1)
 
 bass.sonic.from_json({
     "0": {
@@ -268,14 +275,7 @@ gain.connect(buf)
 buf.connect(driver)
 
 # setup
-end = sys_arg(2, float)
-if end:
-    duration = end - sys_arg(1, float, 0)
-    runs = int(duration * 44100 / 64)
-    with open('audiobro1.raw', 'wb') as file:
-        for i in range(runs):
-            driver.run()
-            if i % (1 << 8) == 0xff:
-                tape.to_file_i16le(file, 1 << 14)
+if args.live:
+    dlal.typical_setup()
 else:
     dlal.typical_setup(live=False, duration=270)
