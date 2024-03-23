@@ -10,15 +10,16 @@ parser.add_argument('--start', '-s')
 args = parser.parse_args()
 
 class Voice:
-    def __init__(self, name, *kinds, input=None, output=None):
+    def __init__(self, name, *component_names, input=None, output=None):
         globals()[name] = self
         self.components = {}
-        for kind in kinds:
-            component = dlal.component_class(kind)(name=f'{name}.{kind}')
-            self.components[kind] = component
-            setattr(self, kind, component)
-        self.input = self.pick(input or [kinds[0]])
-        self.output = self.pick(output or [kinds[-1]])
+        for component_name in component_names:
+            kind = component_name.split('_')[0]
+            component = dlal.component_class(kind)(name=f'{name}.{component_name}')
+            self.components[component_name] = component
+            setattr(self, component_name, component)
+        self.input = self.pick(input or [component_names[0]])
+        self.output = self.pick(output or [component_names[-1]])
 
     def pick(self, ks):
         return [
@@ -49,7 +50,7 @@ class Lforacle:
 driver = dlal.Audio()
 comm = dlal.Comm()
 Voice('drum', 'buf')
-Voice('piano', 'sonic')
+Voice('piano', 'sonic', 'lfo', 'mul', 'buf_1', 'buf_2')
 Voice('bass', 'sonic', 'lim', 'buf')
 Voice('ghost', 'gain', 'midman', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', 'lim', 'buf', input=['rhymel'])
 Lforacle('ghost_lfo_i20', 0.40000, 0.3, 0.3, 'i2', 0, '%')
@@ -104,7 +105,8 @@ drum.buf.sin(0.5, 80, 0.5, 1, 1)
 # cricket
 drum.buf.load('assets/sounds/animal/cricket.wav', 56)
 drum.buf.amplify(1.5, 56)
-drum.buf.mul(56, 1)
+drum.buf.sin(0.25, 80, 0.75, 1, 2)
+drum.buf.mul(56, 2)
 # shunk
 drum.buf.load('assets/sounds/drum/snare.wav', 36)
 drum.buf.resample(0.3, 36)
@@ -150,7 +152,7 @@ bass.lim.hard(0.25)
 
 piano.sonic.from_json({
     "0": {
-        "a": 4e-3, "d": 1e-4, "s": 0, "r": 2e-4, "m": 1,
+        "a": 4e-3, "d": 5e-5, "s": 0.2, "r": 2e-4, "m": 1,
         "i0": 0, "i1": 0.06, "i2": 0, "i3": 0, "o": 0.25,
     },
     "1": {
@@ -166,6 +168,9 @@ piano.sonic.from_json({
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
+piano.lfo.freq(12)
+piano.lfo.amp(0.5)
+piano.lfo.offset(1)
 
 ghost.gain.set(0)
 ghost.midman.directive([{'nibble': 0x90}], 0, 'midi', [0x90, '%1', 0])
@@ -178,7 +183,7 @@ ghost.oracle.format('midi', [0xe0, '%l', '%h'])
 ghost.sonic.from_json({
     "0": {
         "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
-        "i0": 0, "i1": 0.15, "i2": 0, "i3": 0, "o": 0.95,
+        "i0": 0, "i1": 0.15, "i2": 0, "i3": 0, "o": 0.95/2,
     },
     "1": {
         "a": 1, "d": 2e-5, "s": 0, "r": 1, "m": 1,
@@ -194,8 +199,8 @@ ghost.sonic.from_json({
     },
 })
 ghost.sonic.midi(midi.Msg.pitch_bend_range(64))
-ghost.lim.hard(0.25)
-ghost.lim.soft(0.15)
+ghost.lim.hard(0.25/2)
+ghost.lim.soft(0.15/2)
 
 bell.sonic.from_json({
     "0": {
@@ -246,6 +251,10 @@ reverb.set(1)
 gain.set(0)
 
 # connect
+piano.sonic.connect(piano.buf_2)
+piano.lfo.connect(piano.buf_1)
+piano.mul.connect(piano.buf_1)
+piano.mul.connect(piano.buf_2)
 bass.sonic.connect(bass.buf)
 bass.lim.connect(bass.buf)
 ghost.gain.connect(ghost.oracle)
@@ -278,4 +287,4 @@ buf.connect(driver)
 if args.live:
     dlal.typical_setup()
 else:
-    dlal.typical_setup(live=False, duration=270)
+    dlal.typical_setup(live=False, duration=216)
