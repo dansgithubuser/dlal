@@ -35,11 +35,14 @@ parser.add_argument('--output-aligner-dataset', '--oad',
 )
 args = parser.parse_args()
 
+def split(sound):
+    return sound.split(window_backward=sound.sample_rate * 10)
+
 print('===== Load Model =====')
 print(timestamp())
 try:
     model = whisper.load_model(args.model)
-except:
+except Exception as e:
     if type(e).__name__ != 'OutOfMemoryError':
         raise
     if os.environ.get('CUDA_VISIBLE_DEVICES') == '':
@@ -49,32 +52,42 @@ except:
 
 print('===== Transcribe =====')
 print(timestamp())
-result = model.transcribe(
-    str(args.audio_path),
-    verbose=True,
-    word_timestamps=True,
-    language='en',
-)
+tmp_path = 'phonetic_recognizer_tmp.flac'
+transcriptions = []
+sound = dlal.sound.read(args.audio_path)
+for sound_part in split(sound):
+    sound_part.to_flac(tmp_path)
+    transcription = model.transcribe(
+        tmp_path,
+        verbose=True,
+        word_timestamps=True,
+        language='en',
+    )
+    transcription['start_time'] = sound_part.start_time
+    transcriptions.append(transcription)
+os.remove(tmp_path)
 
 print('===== Results =====')
 print(timestamp())
-print('----- Whisper Output -----')
-pprint.pprint(result)
-print('----- IPA -----')
-for segment in result['segments']:
-    for word in segment['words']:
-        ipa = cmudict.convert(re.sub('[ ,.?]', '', word['word']))
-        print(f'''{word['start']:5.2f} {word['end']:5.2f}''', word['word'], ipa)
+for transcription in transcriptions:
+    print(f'transcription starting at {transcription["start_time"]:.3f}')
+    print(transcription['text'])
+    for segment in transcription['segments']:
+        for word in segment['words']:
+            ipa = cmudict.convert(re.sub('[ ,.?]', '', word['word']))
+            print(f'''{word['start']:5.2f} {word['end']:5.2f}''', word['word'], ipa)
+    print()
 
 if args.output_aligner_dataset:
     sound = dlal.sound.read(args.audio_path)
-    out_dir = args.output_aligner_dataset / ('recognized-' + args.audio_path.stem)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    size = sum(len(segment['words']) for segment in result['segments'])
-    size_mag = math.floor(math.log10(size)) + 1
-    index_fmt = f'{{:0{size_mag}}}'
-    for segment_i, segment in enumerate(result['segments']):
-        prefix = out_dir / index_fmt.format(segment_i + 1)
-        sound.copy(segment['start'], segment['end']).to_flac(prefix.with_suffix('.flac'))
-        with open(prefix.with_suffix('.txt'), 'w') as txt:
-            txt.write(segment['text'].strip().upper())
+    for sound_part, transcription in zip(split(sound), transcriptions):
+        out_dir = args.output_aligner_dataset / f'recognized-{args.audio_path.stem}' / '{sound_part.start_time:08.3f}'
+        out_dir.mkdir(parents=True, exist_ok=True)
+        size = sum(len(segment['words']) for segment in transcription['segments'])
+        size_mag = math.floor(math.log10(size)) + 1
+        index_fmt = f'{{:0{size_mag}}}'
+        for segment_i, segment in enumerate(transcription['segments']):
+            prefix = out_dir / index_fmt.format(segment_i + 1)
+            sound.copy(segment['start'], segment['end']).to_flac(prefix.with_suffix('.flac'))
+            with open(prefix.with_suffix('.txt'), 'w') as txt:
+                txt.write(segment['text'].strip().upper())

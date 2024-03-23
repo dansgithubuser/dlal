@@ -1,11 +1,8 @@
 # goals
 dlal's approach to speech synthesis has the following features:
-- it learns phonetics from a recording
-- it loosely mimics the vocal tract
-- when synthesizing, it takes a tone source, a noise source, and a phonetic as input
-- it can synthesize in real time
-
-Regarding the first point: this feature prevents a kind of overfitting. If we truly understand how speech is synthesized, we should be able to extract parameters automatically.
+- it learns phonetics from a recording (magic numbers don't correspond to an individual voice)
+- it loosely mimics the vocal tract (we can experiment with voice-like sound processing)
+- it can synthesize in real time (it can be used in a live performance)
 
 # architecture
 ## recording
@@ -13,21 +10,27 @@ A practical set of English phonetics are recorded. They are recorded according t
 - Voiced continuants are recorded following an unstressed vowel sound and slow transition.
 - Unvoiced continuants are recorded in isolation.
 - Stops are recorded unvoiced, each followed by an unvoiced unstressed vowel sound.
-The recordee is encouraged to produce similar recordings, we must handle some amount of variance between recordings. For example one phonetic recording being louder than another.
+- Voiced stops are rerecorded around an unstressed vowel.
+Although the recordee is encouraged to produce similar recordings, we must handle some amount of variance between recordings. For example one phonetic recording being louder than another.
 
 ## encoding
 ### sampling
-Overlapping short-time Fourier transforms (STFTs) are taken. The tone and noise energy in the signal are estimated based on bin range and gain factor parameters and converted to amplitudes.
+Overlapping short-time Fourier transforms (STFTs) are taken. For each, the tone and noise energy in the signal are estimated based on bin range and gain factor parameters and converted to amplitudes. So samples have the form `[(spectrum, amp_tone, amp_noise), ...]`.
 
 ### modeling
-For voiced continuants, formants are tracked from the unstressed vowel portion of the recording, and then measured. This helps ensure formants are not accidentally shuffled. The phonetic is then parameterized and framed.
+Samples are selected, converted to speech parameters, and framed to express how the phonetic changes over time. Continuant, stop, voiced, and unvoiced phonetics may be treated differently at each step.
 
-For unvoiced continuants, the phonetic is immediately parameterized and framed.
+#### selection
+For voiced continuants, formants are tracked from the unstressed vowel portion of the recording, and then selected. This ensures formants are not accidentally shuffled.
 
-For stops (which are recorded unvoiced), the first single utterance of the stop is taken. The start and end are found based on amplitude threshold parameters. The utterance is parameterized and framed.
+For unvoiced continuants, all samples are selected.
+
+For stops (which are recorded unvoiced), the first single utterance of the stop is selected. The start and end are found based on amplitude threshold parameters.
+
+Voiced stops have an additional recording surrounding an unstressed vowel. Formants are tracked from the vowel portion of the recording backward to the start of the stop. The start is found based on noise amplitude threshold parameters.
 
 #### parameterization
-For voiced phonetics, formant frequencies and amplitudes are estimated. The amplitude of the formant is calculated based on the energy of the peak, with a parameter for how much of the peak to consider. The tone spectrum is estimated by taking bins below a frequency threshold parameter and above an amplitude threshold parameter.
+For voiced continuants, formant frequencies and amplitudes are estimated. The amplitude of the formant is calculated based on the energy of the peak, with a parameter for how much of the peak to consider. The tone spectrum is estimated by taking bins below a frequency threshold parameter and above an amplitude threshold parameter.
 
 The low end of the spectrum is discarded according to a threshold parameter. Based on this we estimate the center frequency of noise and the high noise component. The center frequency is an amplitude-based weighted average. The high noise is the energy in the signal above a frequency threshold parameter divided by the total energy of the signal.
 
@@ -42,6 +45,7 @@ Continuant parameters are averaged to produce a final result, rejecting outliers
 
 Stop parameters are kept in a sequence. Their overall amplitudes are normalized so that every stop peaks at 1.
 
+## record & encode diagram
 ![record & encode](speech-record-encode.jpg)
 
 ## decoding

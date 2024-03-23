@@ -4,6 +4,7 @@ import midi
 
 import datetime
 import os
+import subprocess
 import sys
 
 def sys_arg(i):
@@ -15,7 +16,10 @@ if os.path.exists('assets/local/audiobro3_voice.flac'):
     created_at = datetime.datetime.fromtimestamp(os.stat('assets/local/audiobro3_voice.flac').st_ctime)
     print(f'using voice from {created_at.isoformat()}')
 else:
+    print('no voice, rendering')
     import audiobro3_voice
+    print('voice rendered, exiting (run me again)')
+    sys.exit()
 
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()

@@ -18,8 +18,8 @@ args = parser.parse_args()
 # components
 audio = dlal.Audio(driver=True)
 filea = dlal.Filea(args.recording_path)
-sampler = dlal.subsystem.SpeechSampler()
-synth = dlal.subsystem.SpeechSynth()
+sampler = dlal.speech.SpeechSampler()
+synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape()
 
 # connect

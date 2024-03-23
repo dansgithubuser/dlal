@@ -260,6 +260,7 @@ component!(
         "offset": {"args": ["line_index", "seconds"]},
         "advance": {"args": ["seconds"]},
         "skip_line": {"args": [{"desc": "number of lines", "default": 1}]},
+        "multiply_deltas": {"args": ["multiplier"]},
     },
 );
 
@@ -432,6 +433,16 @@ impl Component {
         let n: usize = body.arg(0)?;
         for _ in 0..n {
             self.outputs.push(None);
+        }
+        Ok(None)
+    }
+
+    fn multiply_deltas_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let multiplier: f32 = body.arg(0)?;
+        for line in &mut self.lines {
+            for deltamsg in &mut line.deltamsgs {
+                deltamsg.delta = (deltamsg.delta as f32 * multiplier) as u32;
+            }
         }
         Ok(None)
     }

@@ -7,9 +7,13 @@
 '''
 
 from . import _utils
+from ._skeleton import connect as _connect, Detach
+from ._subsystem import Subsystem
 
 import json as _json
 import math as _math
+import os as _os
+import re as _re
 
 PHONETICS = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
@@ -20,6 +24,7 @@ PHONETICS = [
 VOICED = [
     'ae', 'ay', 'a', 'e', 'y', 'i', 'o', 'w', 'uu', 'u',
     'sh_v', 'v', 'th_v', 'z', 'm', 'n', 'ng', 'r', 'l',
+    'b', 'd', 'g', 'j',
 ]
 
 FRICATIVES = [
@@ -29,6 +34,13 @@ FRICATIVES = [
 
 STOPS = [
     'p', 'b', 't', 'd', 'k', 'g', 'ch', 'j',
+]
+
+VOICED_STOP_CONTEXTS = [
+    'bub',
+    'dud',
+    'gug',
+    'juj',
 ]
 
 PHONETIC_DESCRIPTIONS = {
@@ -83,6 +95,55 @@ NOISE_PIECES = [
     7000,
     14000,
 ]
+
+class SpeechSampler(Subsystem):
+    def init(
+        self,
+        stft_bins=512,
+        tone_bins=[1, 6],
+        tone_factor=2e1,
+        noise_bins=[32, 256],
+        noise_factor=1e2,
+        name=None,
+    ):
+        self.stft_bins = stft_bins
+        self.tone_bins = tone_bins
+        self.tone_factor = tone_factor
+        self.noise_bins = noise_bins
+        self.noise_factor = noise_factor
+        Subsystem.init(self,
+            {
+                'buf': 'buf',
+                'stft': ('stft', [self.stft_bins]),
+            },
+            ['buf'],
+            name=name,
+        )
+        _connect(
+            self.buf,
+            self.stft,
+        )
+
+    def sample(self):
+        spectrum = self.stft.spectrum()
+        return (
+            spectrum,
+            self.tone_factor * _math.sqrt(sum(i ** 2 for i in spectrum[self.tone_bins[0]:self.tone_bins[1]])),
+            self.noise_factor * _math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
+        )
+
+    def sampleses(self, path, filea, driver, only=None):
+        sampleses = {}
+        for k in PHONETICS:
+            if only and k not in only: continue
+            print(k)
+            filea.open(_os.path.join(path, f'{k}.flac'))
+            samples = []
+            while filea.playing():
+                driver.run()
+                samples.append(self.sample())
+            sampleses[k] = samples
+        return sampleses
 
 class Model:
     def mean(l):
@@ -158,6 +219,7 @@ class Model:
         # find peak
         spread = 2
         e_peak = 0
+        e_min = _math.inf
         if formant_prev_freq:
             bin_peak = int(formant_prev_freq / self.freq_per_bin)
         else:
@@ -171,6 +233,8 @@ class Model:
                 if e_window > e_peak:
                     e_peak = e_window
                     bin_peak = i
+                if e_window < e_min:
+                    e_min = e_window
         # adjust based on neighboring bin amps
         bin_formant = bin_peak
         spread = 2
@@ -184,6 +248,10 @@ class Model:
                 bin_formant = sum(i * v ** 2 for i, v in bins) / s
                 bin_formant = max(bin_formant, bin_i)
                 bin_formant = min(bin_formant, bin_f)
+        # inertia, don't lose prev formant too quickly if there's no strong peak
+        if formant_prev_freq and e_min < e_peak and e_min != 0:
+            t = min(e_peak / e_min - 1, 1)
+            bin_formant = t * bin_formant + (1 - t) * formant_prev_freq / self.freq_per_bin
         #
         return {
             'freq': bin_formant * self.freq_per_bin,
@@ -320,16 +388,16 @@ class Model:
     def add(self, phonetic, samples):
         continuant = phonetic not in STOPS
         voiced = phonetic in VOICED
+        formants = [
+            {'amp': 0, 'freq': 100},
+            {'amp': 0, 'freq': 500},
+            {'amp': 0, 'freq': 1000},
+            {'amp': 0, 'freq': 2500},
+        ]
         if voiced and continuant:
             # track formants movement from unstressed vowel to phonetic
             stride = int(0.1 * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
             start = int((RECORD_DURATION_UNSTRESSED_VOWEL + RECORD_DURATION_TRANSITION + 1) * self.sample_rate / self.run_size)  # in speech samples (not audio samples)
-            formants = [
-                {'amp': 0, 'freq': 100},
-                {'amp': 0, 'freq': 500},
-                {'amp': 0, 'freq': 1000},
-                {'amp': 0, 'freq': 2500},
-            ]
             plot_data = []
             for i_sample in range(0, start, stride):
                 paramses = [self.parameterize(*i, phonetic, formants) for i in samples[i_sample:i_sample+stride]]
@@ -343,17 +411,43 @@ class Model:
             self.formant_path_plot_data[phonetic] = plot_data
             paramses = [self.parameterize(*i, phonetic, formants) for i in samples[start:]]
             frames = self.frames_from_paramses(paramses, continuant)
-        else:
+        elif voiced and not continuant:
             paramses = [self.parameterize(*i, phonetic) for i in samples]
             frames = self.frames_from_paramses(paramses, continuant)
-            if not continuant:
-                i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
-                frames = frames[i_start:]
-                try:
-                    i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
-                except StopIteration:
-                    i_end = None
-                frames = frames[:i_end]
+            # find the isolated rendition of the stop at the end of the recording
+            i_start = len(frames) // 2
+            while frames[i_start]['amp'] > 0.3:  # skip unstressed vowel
+                i_start += 1
+            while frames[i_start]['amp'] < 0.6:  # skip silence before stop
+                i_start += 1
+            i_end = i_start
+            while frames[i_end]['amp'] > 0.1:  # capture stop
+                i_end += 1
+            frames = self.frames_from_paramses(paramses[i_start:i_end], continuant)  # make sure subset of frames are normalized correctly
+            # improve accuracy of initial formants by tracking from middle of unstressed vowel back to initial rendition of stop
+            max_amp_noise = 0
+            for spectrum, amp_tone, amp_noise in samples[(len(samples) // 2):0:-1]:
+                params = self.parameterize(spectrum, amp_tone, amp_noise, formants_prev=formants)
+                max_amp_noise = max(amp_noise, max_amp_noise)
+                if amp_noise < 0.5 * max_amp_noise:
+                    break
+                if amp_noise > 0.75 * max_amp_noise:
+                    formants = params['tone']['formants']
+            frames[0]['formants'] = formants
+        elif not voiced and continuant:
+            paramses = [self.parameterize(*i, phonetic) for i in samples]
+            frames = self.frames_from_paramses(paramses, continuant)
+        elif not voiced and not continuant:
+            paramses = [self.parameterize(*i, phonetic) for i in samples]
+            frames = self.frames_from_paramses(paramses, continuant)
+            # take only the first rendition of the stop as frames
+            i_start = next(i for i, frame in enumerate(frames) if frame['amp'] > 0.9)
+            frames = frames[i_start:]
+            try:
+                i_end = next(i for i, frame in enumerate(frames) if frame['amp'] < 0.1)
+            except StopIteration:
+                i_end = None
+            frames = frames[:i_end]
         self.phonetics[phonetic] = {
             'type': 'continuant' if continuant else 'stop',
             'voiced': voiced,
@@ -461,8 +555,6 @@ class Utterance:
     def from_str(s, *args, **kwargs):
         self = Utterance(*args, **kwargs)
         self.phonetics = Utterance.phonetics_from_str(s.replace(' ', '0'))
-        if self.phonetics[-1] != '0':
-            self.phonetics.append('0')
         self.infer()
         self.add_prestop_silence()
         return self
@@ -486,6 +578,90 @@ class Utterance:
         self.add_prestop_silence()
         return self
 
+    def from_textgrid(path, model, *args, **kwargs):
+        import textgrid
+        self = Utterance(*args, **kwargs)
+        tg = textgrid.TextGrid.fromFile(path)
+        tg_phones = tg.getList('phones')[0]
+        tg_words = (i for i in tg.getList('words')[0])
+        translations = {
+            'B' : 'b'   , 'AA': 'a'        , 'spn': '0',
+            'CH': 'ch'  , 'AE': 'ae'       , 'sil': '0',
+            'D' : 'd'   , 'AH': 'u'        , ''   : '0',
+            'DH': 'th_v', 'AO': 'o'        ,
+            'DX': 'd'   , 'AW': ['ae', 'w'],
+            'EL': 'l'   , 'AX': 'u'        ,
+            'EM': 'm'   , 'AXR': 'r'       ,
+            'EN': 'n'   , 'AY': ['u', 'y'] ,
+            'F' : 'f'   , 'EH': 'e'        ,
+            'G' : 'g'   , 'ER': 'r'        ,
+            'H' : 'h'   , 'EY': ['ay', 'y'],
+            'HH': 'h'   , 'IH': 'i'        ,
+            'JH': 'j'   , 'IX': 'i'        ,
+            'K' : 'k'   , 'IY': 'y'        ,
+            'L' : 'l'   , 'OW': ['o', 'w'] ,
+            'M' : 'm'   , 'OY': ['o', 'y'] ,
+            'N' : 'n'   , 'UH': 'uu'       ,
+            'NX': 'ng'  , 'UW': 'w'        ,
+            'NG': 'ng'  , 'UX': 'w'        ,
+            'P' : 'p'   ,
+            'Q' : '0'   ,
+            'R' : 'r'   ,
+            'S' : 's'   ,
+            'T' : 't'   ,
+            'TH': 'th'  ,
+            'V' : 'v'   ,
+            'W' : 'w'   ,
+            'Y' : 'y'   ,
+            'Z' : 'z'   ,
+            'ZH': 'j'   ,
+        }
+        # init state
+        t = 0
+        tg_word = next(tg_words)
+        for tg_phone_i, tg_phone in enumerate(tg_phones):
+            # get phone and word
+            t_i, t_f = tg_phone.bounds()
+            while True:
+                t_wi, t_wf = tg_word.bounds()
+                if t_wi <= t_i < t_wf:
+                    break
+                try:
+                    tg_word = next(tg_words)
+                except StopIteration:
+                    break
+            # add silence
+            if t_i - t > 0.001:
+                self.phones.append('0')
+                self.waits.append(t_i - t)
+            # translate
+            translation = translations[_re.sub(f'\d', '', tg_phone.mark)]
+            if translation in STOPS and abs(t_i - t_wi) < 0.001 and tg_phone_i + 1 < len(tg_phones):
+                # special case for stops at beginning of word
+                # aligner seems to collapse silence and stop together
+                # so we put the stop just before the next phone
+                tg_phone_next = tg_phones[tg_phone_i + 1]
+                t_ni, _ = tg_phone_next.bounds()
+                t_i = max(t_i, t_ni - model.duration(translation, None))
+                self.phonetics.append('0')
+                self.waits.append(t_i - t)
+                self.phonetics.append(translation)
+                self.waits.append(t_f - t_i)
+            elif type(translation) == str:
+                self.phonetics.append(translation)
+                self.waits.append(t_f - t_i)
+            elif type(translation) == list:
+                self.phonetics.extend(translation)
+                l = len(translation)
+                self.waits.extend([(t_f - t_i) / l] * l)
+            else:
+                raise Exception(f'Bad translation: {translation}')
+            # update state
+            t = t_f
+        # finish
+        self.infer()
+        return self
+
     def phonetics_from_str(s):
         phonetics = []
         bracketed_phonetic = None
@@ -502,6 +678,8 @@ class Utterance:
         return phonetics
 
     def infer(self):
+        if self.phonetics[-1] != '0':
+            self.phonetics.append('0')
         while len(self.waits) < len(self.phonetics):
             wait = self.default_wait
             if self.model:
@@ -529,12 +707,97 @@ class Utterance:
     def print(self):
         i = 0
         stride = 10
+        t = 0
         while i < len(self.phonetics):
             s = min(stride, len(self.phonetics) - i)
-            for j in range(s): print(f'{self.phonetics[i+j]:>8}', end='')
+            for j in range(s):
+                print(f'{self.phonetics[i+j]:>8}', end='')
             print()
-            for j in range(s): print(f'{self.waits[i+j]:>8.2f}', end='')
+            for j in range(s):
+                t += self.waits[i+j]
+                print(f'{t:>8.2f}', end='')
             print()
-            for j in range(s): print(f'{self.pitches[i+j]:>8}', end='')
+            for j in range(s):
+                print(f'{self.pitches[i+j]:>8}', end='')
+            print()
             print()
             i += stride
+
+class SpeechSynth(Subsystem):
+    def init(self, sample_rate=44100, run_size=64, name=None):
+        freq_per_bin = sample_rate / (8 * 64)
+        Subsystem.init(self,
+            {
+                'comm': ('comm', [1 << 16]),
+                'forman': ('forman', [freq_per_bin]),
+                'tone': ('sinbank', [freq_per_bin, 0.99]),
+                'noise': ('noisebank', [0.8]),
+                'buf_tone': 'buf',
+                'mutt': 'mutt',
+                'buf_noise': 'buf',
+                'buf_out': 'buf',
+            },
+            name=name,
+        )
+        self.tone.zero()
+        _connect(
+            self.forman,
+            self.tone,
+            [self.buf_tone, '+>', self.mutt],
+            self.buf_out,
+            [],
+            self.noise,
+            [self.buf_noise, '<+', self.mutt],
+            self.buf_out,
+            [],
+            self.buf_noise,
+        )
+        self.outputs = [self.buf_out]
+        self.sample_rate = sample_rate
+        self.run_size = run_size
+
+    def post_add_init(self):
+        self.tone.midi([0x90, 42, 127])
+
+    def synthesize(
+        self,
+        toniness=None,
+        tone_spectrum=None,
+        tone_formants=None,
+        noise_spectrum=None,
+        noise_pieces=None,
+        wait=None,
+    ):
+        with Detach():
+            with self.comm:
+                if tone_spectrum:
+                    self.tone.spectrum(tone_spectrum)
+                elif tone_formants:
+                    if all(i['amp'] < 1e-2 for i in tone_formants):
+                        self.forman.zero()
+                    else:
+                        self.forman.formants(tone_formants)
+                if noise_spectrum:
+                    self.noise.spectrum(noise_spectrum)
+                elif noise_pieces:
+                    self.noise.piecewise([0] + NOISE_PIECES + [20000], [0] + noise_pieces + [0])
+                self.comm.wait(wait)
+
+    def say(self, phonetic, model, wait=0):
+        info = model.phonetics[phonetic]
+        frames = info['frames']
+        if info['type'] == 'stop':
+            w = self.run_size / self.sample_rate
+        else:
+            w = wait
+        for i_frame, frame in enumerate(frames):
+            self.synthesize(
+                toniness=frame['toniness'],
+                tone_formants=frame['tone']['formants'],
+                noise_spectrum=frame['noise']['spectrum'],
+                wait=int(w * self.sample_rate),
+            )
+            wait -= w
+            if wait < 1e-4: return
+        self.say('0', model, wait)
+

@@ -4,7 +4,12 @@ const SENTINEL: u8 = 0xff;
 
 component!(
     {"in": ["midi"], "out": ["midi", "audio"]},
-    ["run_size", "sample_rate", "multi"],
+    [
+        "run_size",
+        "sample_rate",
+        "multi",
+        {"name": "field_helpers", "fields": ["pitch"], "kinds": ["rw"]}
+    ],
     {
         /*
         We have three states, with transitions as follows.

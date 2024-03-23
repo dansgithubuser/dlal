@@ -10,10 +10,13 @@ class Sound:
     def to_flac(self, file_path):
         sf.write(file_path, self.samples, self.sample_rate, format='FLAC')
 
-    def split(self, threshold=None, window_backward=400, window_forward=400):
-        if threshold == None:
-            threshold = max(self.samples) / 20
-        silence = [{True: 1, False: 0}[abs(i) < threshold] for i in self.samples]
+    def split(self, threshold=0, window_backward=400, window_forward=400):
+        '''
+        Split sound at each sample where window is entirely below threshold (discard the quiet parts).
+        Yielded sounds will have start_sample and start_time set.
+        '''
+        # find where the window is below threshold
+        silence = [{True: 1, False: 0}[abs(i) <= threshold] for i in self.samples]
         windowed_silence = []
         w = sum(silence[:window_forward-1]) + window_backward
         for i, v in enumerate(silence):
@@ -26,19 +29,22 @@ class Sound:
             else:
                 w -= 1
             windowed_silence.append(w == window_backward + window_forward - 1)
-        result = []
+        # yield sounds
         sound = None
         for i, v in enumerate(self.samples):
             if not windowed_silence[i]:
+                # sound
                 if not sound:
                     sound = Sound([], self.sample_rate)
+                    sound.start_sample = i
+                    sound.start_time = i / self.sample_rate
                 sound.samples.append(v)
             elif sound:
-                result.append(sound)
+                # silence, sound until now
+                yield sound
                 sound = None
         if sound:
-            result.append(sound)
-        return result
+            yield sound
 
     def copy(self, start=0, end=-1):
         start *= self.sample_rate
@@ -51,7 +57,7 @@ class Sound:
         return Sound(self.samples[start:end], self.sample_rate)
 
 def read(file_path, channel=0):
-    data, sample_rate = sf.read(file_path)
+    data, sample_rate = sf.read(file_path, always_2d=True)
     return Sound([float(i[channel]) for i in data], sample_rate)
 
 def i16le_to_flac(i16le_file_path, flac_file_path=None):

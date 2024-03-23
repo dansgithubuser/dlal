@@ -5,7 +5,7 @@ import dlal
 audio = dlal.Audio(driver=True)
 liner = dlal.Liner()
 porta = dlal.subsystem.Portamento()
-synth = dlal.subsystem.SpeechSynth()
+synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape(1 << 16)
 
 # connect
@@ -47,6 +47,8 @@ u = dlal.speech.Utterance.from_syllables_and_notes(syllables, liner.get_notes(5)
 u.print()
 for phonetic, wait, pitch in u:
     synth.say(phonetic, model, wait)
+
+porta.rhymel.pitch(43 / 128)
 
 # run
 runs = int(240 * audio.sample_rate() / audio.run_size())

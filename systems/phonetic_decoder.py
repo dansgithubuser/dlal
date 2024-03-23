@@ -8,12 +8,13 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--utter', '-u')
 parser.add_argument('--recite', '-r', choices=['fusion', 'cat'])
+parser.add_argument('--textgrid', '--tg', '-t')
 args = parser.parse_args()
 
 #===== system =====#
 audio = dlal.Audio(driver=True)
 comm = dlal.Comm()
-synth = dlal.subsystem.SpeechSynth()
+synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape(44100*5)
 
 dlal.connect(
@@ -101,6 +102,9 @@ if args.utter:
 
 if args.recite:
     w = recite(args.recite)
+
+if args.textgrid:
+    w = say_utterance(dlal.speech.Utterance.from_textgrid(args.textgrid, model))
 
 dlal.typical_setup()
 time.sleep(w)

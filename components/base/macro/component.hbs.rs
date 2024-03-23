@@ -223,7 +223,7 @@ pub unsafe extern "C" fn construct(name: *const std::os::raw::c_char) -> *mut Co
 
 #[no_mangle]
 pub unsafe extern "C" fn destruct(component: *mut Component) {
-    unsafe { Box::from_raw(component) };
+    drop(unsafe { Box::from_raw(component) });
 }
 
 #[no_mangle]
