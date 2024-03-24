@@ -1,4 +1,4 @@
-use dlal_component_base::{component, json, serde_json, Body, CmdResult};
+use dlal_component_base::{component, serde_json, Body, CmdResult};
 
 const MODE_F32: u8 = 0;
 const MODE_I32: u8 = 1;
@@ -9,9 +9,12 @@ component!(
     [
         "multi",
         {"name": "join_info", "kwargs": ["run_size"]},
+        {"name": "field_helpers", "fields": ["format", "mode", "m", "b", "cv_i"], "kinds": ["rw", "json"]},
+        {"name": "field_helpers", "fields": ["last_error"], "kinds": ["r"]},
     ],
     {
         cv: Vec<f32>,
+        cv_i: f32,
         m: f32,
         b: f32,
         mode: u8,
@@ -23,6 +26,7 @@ component!(
         "mode": {"args": [{"name": "mode", "default": "f32"}]},
         "m": {"args": [{"name": "m", "default": 1}]},
         "b": {"args": [{"name": "b", "default": 0}]},
+        "cv_i": {"args": [{"name": "cv_i", "default": 0}]},
         "last_error": {},
     },
 );
@@ -69,55 +73,11 @@ impl ComponentTrait for Component {
             }
         }
         for i in &mut self.cv {
-            *i = 0.0;
+            *i = self.cv_i;
         }
     }
 
     fn audio(&mut self) -> Option<&mut [f32]> {
         Some(self.cv.as_mut_slice())
-    }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!({
-            "m": self.m,
-            "b": self.b,
-            "mode": self.mode,
-            "format": self.format,
-        })))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let j = body.arg::<serde_json::Value>(0)?;
-        self.m = j.at("m")?;
-        self.b = j.at("b")?;
-        self.mode = j.at("mode")?;
-        self.format = j.at("format")?;
-        Ok(None)
-    }
-}
-
-impl Component {
-    fn format_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.format = body.arg(0)?;
-        Ok(Some(json!(self.format)))
-    }
-
-    fn mode_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.mode = body.arg(0)?;
-        Ok(Some(json!(self.mode)))
-    }
-
-    fn m_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.m = body.arg(0)?;
-        Ok(Some(json!(self.m)))
-    }
-
-    fn b_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.b = body.arg(0)?;
-        Ok(Some(json!(self.b)))
-    }
-
-    fn last_error_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.last_error)))
     }
 }

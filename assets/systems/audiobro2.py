@@ -8,6 +8,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--live', '-l', action='store_true')
 parser.add_argument('--start', '-s')
+parser.add_argument('--run-size', type=int)
 args = parser.parse_args()
 
 class Voice:
@@ -39,6 +40,7 @@ class Subsystem:
 
 # init
 audio = dlal.Audio()
+if args.run_size: audio.run_size(args.run_size)
 comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('shaker1', 'buf')
@@ -55,17 +57,17 @@ m = 440 / (sample_rate/2) / (1-b) * 2 * math.pi
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
-    'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%')}),
+    'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%'), 'cv_i': 1}),
     'adsr': ('adsr', [1/4/sample_rate, 1, 1, 1e-5], {}),
     'midman': ('midman', [], {'directives': [([{'nibble': 0x90}], 0, 'set', '%1*0.08')]}),
     'gain': ('gain', [], {}),
     'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
-    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('pole_pairs_bandpass', '%', 0.02, 6)}),
+    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('pole_pairs_bandpass', '%', 0.02, 6), 'cv_i': 1}),
     'train': ('osc', ['saw'], {}),
     'train2': ('osc', ['saw'], {'bend': 1.0081}),
     'train_adsr': ('adsr', [5e-8, 1, 1, 5e-5], {}),
-    'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', '%')}),
+    'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', '%'), 'cv_i': 1}),
     'train_gain': ('gain', [], {}),
     'iir1': ('iir', [], {}),
     'iir2': ('iir', [], {}),
@@ -75,15 +77,21 @@ Subsystem('sweep', {
     'buf': ('buf', [], {}),
 })
 midman = dlal.Midman([
+    # C
     ([{'nibble': 0x90}, 0x3c], 0, 'freq', 0),  # harp1.osc
     ([{'nibble': 0x90}, 0x3c], 1, 'freq', 0),  # harp2.osc
     ([{'nibble': 0x90}, 0x3c], 0, 'phase', 0),
     ([{'nibble': 0x90}, 0x3c], 1, 'phase', 0),
+    # D
     ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
     ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
+    # E
     ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),  # delay
+    # F
     ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
+    # G
     ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),  # arp.osc
+    # A
     ([{'nibble': 0x90}, 0x45], 4, 'm', -28*m),  # sweep.oracle
     ([{'nibble': 0x90}, 0x45], 4, 'b', 16000 / (sample_rate/2)),
     ([{'nibble': 0x90}, 0x45], 5, 'gain_x', 0),  # sweep.delay
@@ -91,6 +99,7 @@ midman = dlal.Midman([
     ([{'nibble': 0x90}, 0x45], 6, 'r', 1e-3),
     ([{'nibble': 0x90}, 0x45], 7, 'm', 0.0005),  # sweep.train_oracle
     ([{'nibble': 0x90}, 0x45], 8, 'r', 1),  # sweep.adsr
+    # B
     ([{'nibble': 0x90}, 0x47], 4, 'm', m),  # sweep.oracle
     ([{'nibble': 0x90}, 0x47], 4, 'b', b),
     ([{'nibble': 0x90}, 0x47], 5, 'gain_x', 1),  # sweep.delay

@@ -13,7 +13,7 @@ class Mode:
 MODE = Mode('f32', 'i32', 'pitch_wheel')
 
 class Oracle(Component):
-    def __init__(self, mode=None, m=None, b=None, format=None, **kwargs):
+    def __init__(self, mode=None, m=None, b=None, format=None, cv_i=None, **kwargs):
         Component.__init__(self, 'oracle', **kwargs)
         from ._skeleton import Immediate
         with Immediate():
@@ -21,6 +21,7 @@ class Oracle(Component):
             if m != None: self.m(m)
             if b != None: self.b(b)
             if format != None: self.format(*format)
+            if cv_i != None: self.cv_i(cv_i)
 
     def mode(self, mode=None):
         '''choices: ['f32', 'i32', 'pitch_wheel']'''
