@@ -52,8 +52,8 @@ Voice('harp1', 'osc', 'oracle', 'sonic', input=['sonic'])
 Voice('harp2', 'osc', 'oracle', 'sonic', input=['sonic'])
 sample_rate = 44100
 sweep = 48 / 12
-b = 0 / (sample_rate/2)
-m = 440 / (sample_rate/2) / (1-b) * 2 * math.pi
+m = 220 / (sample_rate/2) * 2 * math.pi
+b = -1 * m
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
@@ -147,8 +147,6 @@ audio.add(tape)
 
 # commands
 liner.load('assets/midis/audiobro2.mid', immediate=True)
-if args.start:
-    liner.advance(float(args.start))
 
 # cowbell
 drum.buf.load('assets/sounds/drum/cowbell.wav', 56)
@@ -314,9 +312,9 @@ dlal.connect(
     ],
     sweep.adsr,
     [sweep.oracle,
+        '<+', sweep.gain,
         '<+', sweep.unary2,
         '<+', sweep.unary,
-        '<+', sweep.gain,
     ],
     [sweep.iir1, sweep.iir2, sweep.iir3, sweep.iir4],
     [sweep.buf,
@@ -345,6 +343,8 @@ buf.connect(tape)
 buf.connect(audio)
 
 # setup
+if args.start:
+    liner.advance(float(args.start))
 if args.live:
     dlal.typical_setup()
 else:
