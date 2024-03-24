@@ -7,6 +7,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--live', '-l', action='store_true')
 parser.add_argument('--start', '-s')
+parser.add_argument('--run-size', type=int)
 args = parser.parse_args()
 
 class Voice:
@@ -48,6 +49,7 @@ class Lforacle:
 
 # init
 driver = dlal.Audio()
+if args.run_size: driver.run_size(int(args.run_size))
 comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('piano', 'sonic', 'lfo', 'mul', 'buf_1', 'buf_2')
@@ -287,4 +289,4 @@ buf.connect(driver)
 if args.live:
     dlal.typical_setup()
 else:
-    dlal.typical_setup(live=False, duration=212)
+    dlal.typical_setup(live=False, duration=216)
