@@ -271,6 +271,8 @@ def typical_setup(*, live=True, duration=None, out_path='out.i16le'):
     comm = component('comm', None)
     tape = component('tape', None)
     if live:
+        import sys
+        assert sys.flags.interactive, 'For live audio, please run python interactively.'
         if audio:
             audio.start()
             atexit.register(lambda: audio.stop())

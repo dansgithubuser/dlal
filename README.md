@@ -140,7 +140,7 @@ The `audio` component is the driver component for interactive audio.
 
 ## todo
 - audiobro1 why ghost drops to C?
-- fix live audio on linux
+- audiobro2 sweeps missing?
 - stereo
 
 - audiobro
