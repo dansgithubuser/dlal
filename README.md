@@ -139,12 +139,11 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- audiobro2 sweeps missing?
-- stereo
-
 - audiobro
 	- review existing tracks
 	- bassindaface / funky funky bass
+	- stereo
 
 - be able to open audio callback in more situations for demonstrating on skype
 - change verbiage to connector/connectee instead of input/output
+	- pads and sinks like gstreamer?

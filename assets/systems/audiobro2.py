@@ -153,15 +153,18 @@ drum.buf.load('assets/sounds/drum/cowbell.wav', 56)
 drum.buf.amplify(2, 56)
 # kick
 drum.buf.load('assets/sounds/drum/kick.wav', 36)
-drum.buf.resample(4, 36)
+drum.buf.resample(1.5, 36)
 # ride
 drum.buf.load('assets/sounds/drum/ride-bell.wav', 53)
-drum.buf.resample(0.465, 53)
+drum.buf.resample(0.455, 53)
 drum.buf.amplify(0.3, 53)
 # tom
 drum.buf.load('assets/sounds/drum/floor-tom.wav', 50)
 drum.buf.crop(0, 0.05, 50)
 drum.buf.resample(3, 50)
+# clap
+drum.buf.load('assets/sounds/drum/clap.wav', 52)
+drum.buf.resample(1.48, 52)
 # snare
 drum.buf.load('assets/sounds/drum/snare.wav', 40)
 drum.buf.crop(0, 0.1, 40)
