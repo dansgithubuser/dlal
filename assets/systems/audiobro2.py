@@ -47,7 +47,7 @@ Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
 Voice('burgers', 'buf')
 Voice('bass', 'sonic')
-Voice('arp', 'arp', 'sonic', 'osc', 'unary', 'oracle', output=['sonic'])
+Voice('arp', 'arp', 'sonic')
 Voice('harp1', 'osc', 'oracle', 'sonic', input=['sonic'])
 Voice('harp2', 'osc', 'oracle', 'sonic', input=['sonic'])
 sample_rate = 44100
@@ -76,37 +76,43 @@ Subsystem('sweep', {
     'delay': ('delay', [22050], {'gain_i': 1}),
     'buf': ('buf', [], {}),
 })
+mm_harp1_osc = 0
+mm_harp2_osc = 1
+mm_delay = 2
+mm_sweep_oracle = 3
+mm_sweep_delay = 4
+mm_sweep_train_adsr = 5
+mm_sweep_train_oracle = 6
+mm_sweep_adsr = 7
 midman = dlal.Midman([
     # C
-    ([{'nibble': 0x90}, 0x3c], 0, 'freq', 0),  # harp1.osc
-    ([{'nibble': 0x90}, 0x3c], 1, 'freq', 0),  # harp2.osc
-    ([{'nibble': 0x90}, 0x3c], 0, 'phase', 0),
-    ([{'nibble': 0x90}, 0x3c], 1, 'phase', 0),
+    ([{'nibble': 0x90}, 0x3c], mm_harp1_osc, 'freq', 0),
+    ([{'nibble': 0x90}, 0x3c], mm_harp2_osc, 'freq', 0),
+    ([{'nibble': 0x90}, 0x3c], mm_harp1_osc, 'phase', 0),
+    ([{'nibble': 0x90}, 0x3c], mm_harp2_osc, 'phase', 0),
     # D
-    ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
-    ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
+    ([{'nibble': 0x90}, 0x3e], mm_harp1_osc, 'freq', 1/16),
+    ([{'nibble': 0x90}, 0x3e], mm_harp2_osc, 'freq', 1/16),
     # E
-    ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),  # delay
+    ([{'nibble': 0x90}, 0x40], mm_delay, 'gain_x', 1),
     # F
-    ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
-    # G
-    ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),  # arp.osc
+    ([{'nibble': 0x90}, 0x41], mm_delay, 'gain_x', 0),
     # A
-    ([{'nibble': 0x90}, 0x45], 4, 'm', -28*m),  # sweep.oracle
-    ([{'nibble': 0x90}, 0x45], 4, 'b', 16000 / (sample_rate/2)),
-    ([{'nibble': 0x90}, 0x45], 5, 'gain_x', 0),  # sweep.delay
-    ([{'nibble': 0x90}, 0x45], 6, 'a', 1e-3),  # sweep.train_adsr
-    ([{'nibble': 0x90}, 0x45], 6, 'r', 1e-3),
-    ([{'nibble': 0x90}, 0x45], 7, 'm', 0.0005),  # sweep.train_oracle
-    ([{'nibble': 0x90}, 0x45], 8, 'r', 1),  # sweep.adsr
+    ([{'nibble': 0x90}, 0x45], mm_sweep_oracle, 'm', -28*m),
+    ([{'nibble': 0x90}, 0x45], mm_sweep_oracle, 'b', 16000 / (sample_rate/2)),
+    ([{'nibble': 0x90}, 0x45], mm_sweep_delay, 'gain_x', 0),
+    ([{'nibble': 0x90}, 0x45], mm_sweep_train_adsr, 'a', 1e-3),
+    ([{'nibble': 0x90}, 0x45], mm_sweep_train_adsr, 'r', 1e-3),
+    ([{'nibble': 0x90}, 0x45], mm_sweep_train_oracle, 'm', 0.0005),
+    ([{'nibble': 0x90}, 0x45], mm_sweep_adsr, 'r', 1),
     # B
-    ([{'nibble': 0x90}, 0x47], 4, 'm', m),  # sweep.oracle
-    ([{'nibble': 0x90}, 0x47], 4, 'b', b),
-    ([{'nibble': 0x90}, 0x47], 5, 'gain_x', 1),  # sweep.delay
-    ([{'nibble': 0x90}, 0x47], 6, 'a', 5e-8),  # sweep.train_adsr
-    ([{'nibble': 0x90}, 0x47], 6, 'r', 5e-5),
-    ([{'nibble': 0x90}, 0x47], 7, 'm', 0.2),  # sweep.train_oracle
-    ([{'nibble': 0x90}, 0x47], 8, 'r', 1e-5),  # sweep.adsr
+    ([{'nibble': 0x90}, 0x47], mm_sweep_oracle, 'm', m),
+    ([{'nibble': 0x90}, 0x47], mm_sweep_oracle, 'b', b),
+    ([{'nibble': 0x90}, 0x47], mm_sweep_delay, 'gain_x', 1),
+    ([{'nibble': 0x90}, 0x47], mm_sweep_train_adsr, 'a', 5e-8),
+    ([{'nibble': 0x90}, 0x47], mm_sweep_train_adsr, 'r', 5e-5),
+    ([{'nibble': 0x90}, 0x47], mm_sweep_train_oracle, 'm', 0.2),
+    ([{'nibble': 0x90}, 0x47], mm_sweep_adsr, 'r', 1e-5),
 ])
 harp1.oracle.m(1/12)
 harp2.oracle.m(0/4)
@@ -226,11 +232,11 @@ bass.sonic.from_json({
 
 arp.sonic.from_json({
     "0": {
-        "a": 0.01, "d": 2e-4, "s": 0, "r": 2e-4, "m": 1,
-        "i0": 0, "i1": 0.1, "i2": 0.5, "i3": 0, "o": 0.1,
+        "a": 4e-3, "d": 5e-5, "s": 0, "r": 2e-3, "m": 1,
+        "i0": 0, "i1": 0.06, "i2": 0, "i3": 0, "o": 0.25,
     },
     "1": {
-        "a": 1e-3, "d": 4e-4, "s": 0, "r": 4e-4, "m": 1.99,
+        "a": 0.025, "d": 6e-5, "s": 0, "r": 3e-4, "m": 1,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
@@ -242,10 +248,6 @@ arp.sonic.from_json({
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
-arp.osc.freq(1/8)
-arp.oracle.m(0.1)
-arp.oracle.format('i0', 0, '%')
-arp.unary.mode('exp2')
 
 harp1.sonic.from_json({
     "0": {
@@ -292,9 +294,6 @@ reverb.set(0.3)
 
 # connect
 arp.arp.connect(arp.sonic)
-arp.osc.connect(arp.oracle)
-arp.unary.connect(arp.oracle)
-arp.oracle.connect(arp.sonic)
 for voice in voices:
     for i in voice.input:
         liner.connect(i)
@@ -332,7 +331,6 @@ liner.connect(midman)
 midman.connect(harp1.osc)
 midman.connect(harp2.osc)
 midman.connect(delay)
-midman.connect(arp.osc)
 midman.connect(sweep.oracle)
 midman.connect(sweep.delay)
 midman.connect(sweep.train_adsr)
