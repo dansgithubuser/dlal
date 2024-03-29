@@ -18,6 +18,7 @@ component!(
                 "options": ["norm"]
             }
         },
+        {"name": "join_info", "kwargs": ["run_size"]},
         {"name": "field_helpers", "fields": ["last_error"], "kinds": ["r"]},
         {"name": "field_helpers", "fields": ["smooth"], "kinds": ["rw", "json"]},
     ],
@@ -53,8 +54,14 @@ impl Component {
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.set_window_size(64);
         self.smooth = 0.5;
+    }
+
+    fn join(&mut self, body: serde_json::Value) -> CmdResult {
+        if self.input.is_empty() {
+            self.set_window_size(body.kwarg("run_size")?);
+        }
+        Ok(None)
     }
 
     fn run(&mut self) {

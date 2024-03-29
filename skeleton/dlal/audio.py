@@ -1,13 +1,15 @@
 from ._component import Component
 
 class Audio(Component):
-    def __init__(self, driver=False, **kwargs):
+    def __init__(self, *, driver=False, run_size=None, mic=False, **kwargs):
         from ._skeleton import driver_set
         Component.__init__(self, 'audio', **kwargs)
         self.components = []
         self.slots = {}
         self.with_components = None
         if driver: driver_set(self)
+        if run_size: self.run_size(run_size)
+        if mic: self.add(self)
 
     def __enter__(self):
         from ._skeleton import driver_set

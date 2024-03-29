@@ -20,7 +20,7 @@ members = [
     "lpf",
     "mgain",
     "midi",
-    "midman",
+    "midman", "monitor",
     "mul",
     "mutt",
     "noisebank",
