@@ -5,11 +5,23 @@ component!(
     [
         "run_size",
         "sample_rate",
-        //{"name": "field_helpers", "fields": ["value1"], "kinds": ["rw", "json"]},
+        {
+            "name": "field_helpers",
+            "fields": [
+                "register_count",
+                "register_distance_factor",
+                "register_width_factor",
+                "smoothness"
+            ],
+            "kinds": ["rw", "json"]
+        },
     ],
     {
-        //value1: f32,
-        //value2: f32,
+        registers: Vec<f32>,
+        register_count: usize,
+        register_distance_factor: f32,
+        register_width_factor: f32,
+        smoothness: f32,
     },
     {
         "stft": {
@@ -23,8 +35,10 @@ component!(
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        //self.value1 = 1.0;
-        //self.value2 = 2.0;
+        self.register_count = 30;
+        self.register_distance_factor = 1.2;
+        self.register_width_factor = 1.5;
+        self.smoothness = 0.9;
     }
 }
 
@@ -33,13 +47,21 @@ impl Component {
         let data = json_to_ptr!(body.arg::<serde_json::Value>(0)?, *const f32);
         let len = body.arg(1)?;
         let stft = unsafe { std::slice::from_raw_parts(data, len) };
-        println!(
-            "{:.5} {:.5} {:.5} {:.5}",
-            stft[   1..1024].iter().sum::<f32>(),
-            stft[1024..2048].iter().sum::<f32>(),
-            stft[2049..3073].iter().sum::<f32>(),
-            stft[3073..4096].iter().sum::<f32>(),
-        );
+        if self.register_count != self.registers.len() {
+            self.registers.resize(self.register_count, 0.0);
+        }
+        let mut freq_max = self.sample_rate as f32 / 2.0;
+        for i in (0..self.registers.len()).rev() {
+            let freq_min = freq_max / self.register_width_factor;
+            let s = stft.len() as f32 / self.sample_rate as f32;
+            let a = (s * freq_min) as usize;
+            let b = (s * freq_max) as usize;
+            let v = stft[a..b].iter().sum::<f32>().log(10.0);
+            self.registers[i] = self.smoothness * self.registers[i] + (1.0 - self.smoothness) * v;
+            freq_max /= self.register_distance_factor;
+            print!("{:.1} ", self.registers[i]);
+        }
+        println!("");
         Ok(None)
     }
 }
