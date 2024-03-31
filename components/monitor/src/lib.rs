@@ -2,20 +2,34 @@ use dlal_component_base::{component, err, json_to_ptr, serde_json, Body, CmdResu
 
 use std::collections::{hash_map, HashMap};
 
-type Category = Vec<Vec<f32>>;
+//===== Registers =====//
+type Registers = Vec<f32>;
 
-fn category_avg(category: Category) -> Category {
+fn registers_distance(a: &Registers, b: &Registers) -> f32 {
+    if a.len() != b.len() {
+        panic!("Different register lengths: {} vs {}", a.len(), b.len());
+    }
+    let mut d = 0.0;
+    for i in 0..a.len() {
+        d += (a[i] - b[i]).abs()
+    }
+    d
+}
+
+//===== Category =====//
+type Category = Vec<Registers>;
+
+fn category_avg(category: &Category) -> Registers {
     if category.is_empty() {
-        return Category::new();
+        return Registers::new();
     }
     let mut sum = vec![0.0; category[0].len()];
-    for registers in &category {
+    for registers in category {
         for (i, register) in registers.iter().enumerate() {
             sum[i] += register;
         }
     }
-    let avg = sum.iter().map(|i| i / category.len() as f32).collect();
-    vec![avg]
+    sum.iter().map(|i| i / category.len() as f32).collect()
 }
 
 fn category_exclude(category: &mut Category, duration: f32, sample_rate: u32, run_size: usize) {
@@ -25,6 +39,18 @@ fn category_exclude(category: &mut Category, duration: f32, sample_rate: u32, ru
     }
 }
 
+fn category_distance(category: &Category, registers: &Registers) -> f32 {
+    let mut min: f32 = f32::MAX;
+    for i in category {
+        let d = registers_distance(i, registers);
+        if d < min {
+            min = d;
+        }
+    }
+    min
+}
+
+//===== Component =====//
 component!(
     {"in": ["cmd"], "out": []},
     [
@@ -41,15 +67,26 @@ component!(
             ],
             "kinds": ["rw", "json"]
         },
+        {
+            "name": "field_helpers",
+            "fields": [
+                "registers",
+                "category_detected",
+                "category_distances"
+            ],
+            "kinds": ["r"]
+        },
     ],
     {
-        registers: Vec<f32>,
+        registers: Registers,
         register_count: usize,
         register_distance_factor: f32,
         register_width_factor: f32,
         smoothness: f32,
         categories: HashMap<String, Category>,
         category_sampling: Option<Category>,
+        category_detected: Option<String>,
+        category_distances: HashMap<String, f32>,
     },
     {
         "stft": {
@@ -97,6 +134,7 @@ impl ComponentTrait for Component {
 
 impl Component {
     fn stft_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        // stft to registers
         let data = json_to_ptr!(body.arg::<serde_json::Value>(0)?, *const f32);
         let len = body.arg(1)?;
         let stft = unsafe { std::slice::from_raw_parts(data, len) };
@@ -113,9 +151,61 @@ impl Component {
             self.registers[i] = self.smoothness * self.registers[i] + (1.0 - self.smoothness) * v;
             freq_max /= self.register_distance_factor;
         }
+        // sample
         if let Some(category_sampling) = self.category_sampling.as_mut() {
             category_sampling.push(self.registers.clone());
         }
+        // detect
+        let mut distance_silence: Option<f32> = None;
+        let mut distance_min: Option<f32> = None;
+        let mut category_min: Option<&String> = None;
+        for (name, category) in self.categories.iter() {
+            let distance = category_distance(category, &self.registers);
+            match self.category_distances.get_mut(name) {
+                Some(d) => {
+                    *d = distance;
+                }
+                None => {
+                    self.category_distances.insert(name.clone(), distance);
+                }
+            }
+            if name == "silence" {
+                distance_silence = Some(distance);
+                continue;
+            }
+            match distance_min {
+                None => {
+                    distance_min = Some(distance);
+                    category_min = Some(&name);
+                }
+                Some(distance_min_curr) => {
+                    if distance < distance_min_curr {
+                        distance_min = Some(distance);
+                        category_min = Some(&name);
+                    }
+                }
+            }
+        }
+        let distance_min = match distance_min {
+            Some(distance_min) => distance_min,
+            None => {
+                self.category_detected = None;
+                return Ok(None);
+            }
+        };
+        let distance_silence = match distance_silence {
+            Some(distance_silence) => distance_silence,
+            None => {
+                self.category_detected = category_min.cloned();
+                return Ok(None);
+            }
+        };
+        if distance_min * 3.0 < distance_silence {
+            self.category_detected = category_min.cloned();
+        } else {
+            self.category_detected = None;
+        }
+        //
         Ok(None)
     }
 
@@ -145,11 +235,14 @@ impl Component {
         let name: String = body.arg(0)?;
         let duration: f32 = body.arg(1).unwrap_or(1.0);
         category_exclude(&mut category_sampling, duration, self.sample_rate, self.run_size);
+        let registers = category_avg(&category_sampling);
         match self.categories.entry(name) {
             hash_map::Entry::Vacant(i) => {
-                i.insert(category_avg(category_sampling));
+                i.insert(vec![registers]);
             }
-            hash_map::Entry::Occupied(_) => {}
+            hash_map::Entry::Occupied(mut i) => {
+                i.get_mut().push(registers);
+            }
         }
         Ok(None)
     }
