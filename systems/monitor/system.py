@@ -2,7 +2,7 @@ import dlal
 
 import atexit
 
-class Monitor(dlal.subsystem.Subsystem):
+class MonitorSys(dlal.subsystem.Subsystem):
     def init(self, name=None):
         dlal.subsystem.Subsystem.init(self,
             {
