@@ -16,6 +16,10 @@ fn registers_distance(a: &Registers, b: &Registers) -> f32 {
     d
 }
 
+fn registers_amp(registers: &Registers) -> f32 {
+    registers.iter().sum()
+}
+
 //===== Category =====//
 type Category = Vec<Registers>;
 
@@ -40,14 +44,19 @@ fn category_exclude(category: &mut Category, duration: f32, sample_rate: u32, ru
 }
 
 fn category_distance(category: &Category, registers: &Registers) -> f32 {
-    let mut min: f32 = f32::MAX;
+    let mut distance: f32 = f32::MAX;
     for i in category {
-        let d = registers_distance(i, registers);
-        if d < min {
-            min = d;
-        }
+        distance = distance.min(registers_distance(i, registers));
     }
-    min
+    distance
+}
+
+fn category_amp(category: &Category) -> f32 {
+    let mut amp: f32 = f32::MIN;
+    for registers in category {
+        amp = amp.max(registers_amp(registers));
+    }
+    amp
 }
 
 //===== Component =====//
@@ -120,6 +129,10 @@ component!(
             ],
             "desc": "End sample, and give it a name. Exclude specified past duration from sample.",
         },
+        "merge": {
+            "args": ["src", "dst"],
+            "desc": "src category will be merged into dst category. src category will be removed.",
+        },
     },
 );
 
@@ -139,7 +152,7 @@ impl Component {
         let len = body.arg(1)?;
         let stft = unsafe { std::slice::from_raw_parts(data, len) };
         if self.register_count != self.registers.len() {
-            self.registers.resize(self.register_count, 0.0);
+            self.registers.resize(self.register_count, -10.0);
         }
         let mut freq_max = self.sample_rate as f32 / 2.0;
         for i in (0..self.registers.len()).rev() {
@@ -156,55 +169,8 @@ impl Component {
             category_sampling.push(self.registers.clone());
         }
         // detect
-        let mut distance_silence: Option<f32> = None;
-        let mut distance_min: Option<f32> = None;
-        let mut category_min: Option<&String> = None;
-        for (name, category) in self.categories.iter() {
-            let distance = category_distance(category, &self.registers);
-            match self.category_distances.get_mut(name) {
-                Some(d) => {
-                    *d = distance;
-                }
-                None => {
-                    self.category_distances.insert(name.clone(), distance);
-                }
-            }
-            if name == "silence" {
-                distance_silence = Some(distance);
-                continue;
-            }
-            match distance_min {
-                None => {
-                    distance_min = Some(distance);
-                    category_min = Some(&name);
-                }
-                Some(distance_min_curr) => {
-                    if distance < distance_min_curr {
-                        distance_min = Some(distance);
-                        category_min = Some(&name);
-                    }
-                }
-            }
-        }
-        let distance_min = match distance_min {
-            Some(distance_min) => distance_min,
-            None => {
-                self.category_detected = None;
-                return Ok(None);
-            }
-        };
-        let distance_silence = match distance_silence {
-            Some(distance_silence) => distance_silence,
-            None => {
-                self.category_detected = category_min.cloned();
-                return Ok(None);
-            }
-        };
-        if distance_min * 3.0 < distance_silence {
-            self.category_detected = category_min.cloned();
-        } else {
-            self.category_detected = None;
-        }
+        self.detect_known_category();
+        self.detect_unknown_category();
         //
         Ok(None)
     }
@@ -245,5 +211,92 @@ impl Component {
             }
         }
         Ok(None)
+    }
+
+    fn merge_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let src: String = body.arg(0)?;
+        let dst: String = body.arg(1)?;
+        {
+            let src = self.categories.get(&src).ok_or_else(|| err!("no such src category \"{}\"", src))?.clone();
+            let dst = self.categories.get_mut(&dst).ok_or_else(|| err!("no such dst category \"{}\"", dst))?;
+            dst.extend_from_slice(&src);
+        }
+        self.categories.remove(&src);
+        Ok(None)
+    }
+
+    fn detect_known_category(&mut self) {
+        let mut distance_silence: Option<f32> = None;
+        let mut distance_min: Option<f32> = None;
+        let mut category_min: Option<&String> = None;
+        for (name, category) in self.categories.iter() {
+            let distance = category_distance(category, &self.registers);
+            match self.category_distances.get_mut(name) {
+                Some(d) => {
+                    *d = distance;
+                }
+                None => {
+                    self.category_distances.insert(name.clone(), distance);
+                }
+            }
+            if name == "silence" {
+                distance_silence = Some(distance);
+                continue;
+            }
+            match distance_min {
+                None => {
+                    distance_min = Some(distance);
+                    category_min = Some(&name);
+                }
+                Some(distance_min_curr) => {
+                    if distance < distance_min_curr {
+                        distance_min = Some(distance);
+                        category_min = Some(&name);
+                    }
+                }
+            }
+        }
+        let distance_min = match distance_min {
+            Some(distance_min) => distance_min,
+            None => {
+                self.category_detected = None;
+                return;
+            }
+        };
+        let distance_silence = match distance_silence {
+            Some(distance_silence) => distance_silence,
+            None => {
+                self.category_detected = category_min.cloned();
+                return;
+            }
+        };
+        if distance_min * 3.0 < distance_silence {
+            self.category_detected = category_min.cloned();
+        } else {
+            self.category_detected = None;
+        }
+    }
+
+    fn detect_unknown_category(&mut self) {
+        // Assert we aren't near a known category.
+        if self.category_detected.is_some() {
+            return;
+        }
+        // Assert we're not near silence.
+        let amp_silence = match self.categories.get("silence") {
+            Some(silence) => category_amp(silence),
+            None => return, // Can't decide there's sound without knowing silence.
+        };
+        if registers_amp(&self.registers) < amp_silence + 1.0 {
+            return;
+        }
+        // There's an unknown sound. Make a category.
+        let name = format!("unknown-{}", self.categories.len());
+        self.categories.insert(
+            name.clone(),
+            vec![self.registers.clone()],
+        );
+        self.category_detected = Some(name);
+        // TODO: issue a cmd saying a category was detected
     }
 }
