@@ -10,6 +10,7 @@ members = [
     "digitar",
     "filea",
     "fir",
+    "flaco",
     "forman",
     "gain",
     "hpf",
