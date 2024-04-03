@@ -1,6 +1,6 @@
-use dlal_component_base::{component, err, json_to_ptr, serde_json, Body, CmdResult};
+use dlal_component_base::{component, err, json, json_to_ptr, serde_json, Body, CmdResult};
 
-use std::collections::{hash_map, HashMap};
+use std::collections::{hash_map, HashMap, HashSet};
 
 //===== Registers =====//
 type Registers = Vec<f32>;
@@ -96,6 +96,7 @@ component!(
         category_sampling: Option<Category>,
         category_detected: Option<String>,
         category_distances: HashMap<String, f32>,
+        categories_recent: HashSet<String>,
     },
     {
         "stft": {
@@ -132,6 +133,10 @@ component!(
         "merge": {
             "args": ["src", "dst"],
             "desc": "src category will be merged into dst category. src category will be removed.",
+        },
+        "take_recent_categories": {
+            "args": [],
+            "desc": "Return categories detected since this was last called.",
         },
     },
 );
@@ -171,8 +176,17 @@ impl Component {
         // detect
         self.detect_known_category();
         self.detect_unknown_category();
+        if let Some(category) = &self.category_detected {
+            self.categories_recent.insert(category.clone());
+        }
         //
         Ok(None)
+    }
+
+    fn take_recent_categories_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let j = json!(self.categories_recent);
+        self.categories_recent.clear();
+        Ok(Some(j))
     }
 
     fn sample_start_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
