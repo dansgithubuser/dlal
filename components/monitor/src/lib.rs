@@ -61,10 +61,11 @@ fn category_amp(category: &Category) -> f32 {
 
 //===== Component =====//
 component!(
-    {"in": ["cmd"], "out": []},
+    {"in": ["cmd"], "out": ["cmd"]},
     [
         "run_size",
         "sample_rate",
+        "multi",
         {
             "name": "field_helpers",
             "fields": [
@@ -72,7 +73,8 @@ component!(
                 "register_distance_factor",
                 "register_width_factor",
                 "smoothness",
-                "categories"
+                "categories",
+                "format"
             ],
             "kinds": ["rw", "json"]
         },
@@ -81,7 +83,8 @@ component!(
             "fields": [
                 "registers",
                 "category_detected",
-                "category_distances"
+                "category_distances",
+                "last_error"
             ],
             "kinds": ["r"]
         },
@@ -97,6 +100,8 @@ component!(
         category_detected: Option<String>,
         category_distances: HashMap<String, f32>,
         categories_recent: HashSet<String>,
+        format: String,
+        last_error: String,
     },
     {
         "stft": {
@@ -310,7 +315,17 @@ impl Component {
             name.clone(),
             vec![self.registers.clone()],
         );
-        self.category_detected = Some(name);
-        // TODO: issue a cmd saying a category was detected
+        self.category_detected = Some(name.clone());
+        // tell outputs a new category was detected
+        let text = self.format.replace("%", &name);
+        if let Ok(body) = serde_json::from_str(&text) {
+            for output in &self.outputs {
+                if let Some(result) = output.command(&body) {
+                    if let Some(error) = result.get("error") {
+                        self.last_error = error.as_str().unwrap_or(&error.to_string()).into();
+                    }
+                }
+            }
+        }
     }
 }
