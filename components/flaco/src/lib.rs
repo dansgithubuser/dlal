@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::fs;
 use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 //===== Block =====//
 const BLOCK_SIZE: usize = 4096;
@@ -23,19 +23,38 @@ impl Default for Block {
 }
 
 //===== Flacker =====//
+struct Write {
+    path: String,
+    duration: Option<Duration>,
+}
+
+impl Write {
+    fn end() -> Self {
+        Self {
+            path: String::from(""),
+            duration: None,
+        }
+    }
+
+    fn is_end(&self) -> bool {
+        self.path.is_empty()
+    }
+}
+
 struct Flacker {
     block_tx: SyncSender<Block>,
-    write_tx: SyncSender<String>,
+    write_tx: SyncSender<Write>,
 }
 
 impl Flacker {
     fn new(sample_rate: u32, context_duration: Duration) -> Self {
         let (block_tx, block_rx) = sync_channel::<Block>(16);
-        let (write_tx, write_rx) = sync_channel::<String>(16);
+        let (write_tx, write_rx) = sync_channel::<Write>(16);
         let context_len_max = (context_duration.as_secs_f32() * sample_rate as f32 / BLOCK_SIZE as f32) as usize + 1;
         thread::spawn(move || {
             let mut context = VecDeque::<Block>::new();
             let mut file: Option<std::fs::File> = None;
+            let mut end_at: Option<Instant> = None;
             loop {
                 // audio
                 let block = match block_rx.recv() {
@@ -46,14 +65,18 @@ impl Flacker {
                 if context.len() > context_len_max {
                     context.pop_front();
                 }
-                // write start & stop
+                // write start & end
                 loop {
                     match write_rx.try_recv() {
-                        Ok(name) => {
-                            if !name.is_empty() {
-                                file = Some(fs::File::open(&name).unwrap());
+                        Ok(write) => {
+                            if !write.is_end() {
+                                file = Some(fs::File::open(&write.path).unwrap());
+                                if let Some(duration) = write.duration {
+                                    end_at = Some(Instant::now() + duration);
+                                }
                             } else {
                                 file = None;
+                                end_at = None;
                             }
                         }
                         Err(_) => break,
@@ -66,6 +89,13 @@ impl Flacker {
                             Some(block) => Self::write(&block, sample_rate, file),
                             None => break,
                         }
+                    }
+                }
+                // end automatically
+                if let Some(t) = end_at {
+                    if t < Instant::now() {
+                        file = None;
+                        end_at = None;
                     }
                 }
             }
@@ -126,7 +156,10 @@ component!(
     },
     {
         "write_start": {
-            "args": ["path"],
+            "args": [
+                "path",
+                {"name": "duration", "optional": true},
+            ],
         },
         "write_end": {
             "args": [],
@@ -163,13 +196,16 @@ impl ComponentTrait for Component {
 
 impl Component {
     fn write_start_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let path: String = body.arg(0)?;
-        self.flacker.as_ref().ok_or(err!("Not joined."))?.write_tx.send(path)?;
+        let write = Write {
+            path: body.arg(0)?,
+            duration: body.arg(1).ok().map(|s| Duration::from_secs_f32(s)),
+        };
+        self.flacker.as_ref().ok_or(err!("Not joined."))?.write_tx.send(write)?;
         Ok(None)
     }
 
     fn write_end_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        self.flacker.as_ref().ok_or(err!("Not joined."))?.write_tx.send(String::from(""))?;
+        self.flacker.as_ref().ok_or(err!("Not joined."))?.write_tx.send(Write::end())?;
         Ok(None)
     }
 }
