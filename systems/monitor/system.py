@@ -13,18 +13,29 @@ class MonitorSys(dlal.subsystem.Subsystem):
         dlal.subsystem.Subsystem.init(self,
             {
                 'audio': ('audio', [], {'driver': True, 'run_size': 4096, 'mic': True}),
-                'tape': ('tape', [], {'size': 1 << 16}),
+                'flaco': ('flaco', [], {'context_duration': 5}),
                 'stft': 'stft',
-                'monitor': 'monitor',
+                'monitor': (
+                    'monitor',
+                    [],
+                    {
+                        'format': (
+                            'write_start',
+                            ['%.flac', 5],
+                            {},
+                        ),
+                        'known_category_cmd_rate': 0.01,
+                    },
+                ),
             },
             name=name,
         )
         dlal.connect(
-            [self.audio, '+>', self.tape],
+            [self.audio, '+>', self.flaco],
             self.stft,
-            self.monitor,
+            [self.monitor, '+>', self.flaco],
         )
-    
+
     def start(self):
         self.audio.start()
         atexit.register(lambda: self.audio.stop())

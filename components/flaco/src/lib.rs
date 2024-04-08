@@ -52,7 +52,7 @@ impl Flacker {
         let (write_tx, write_rx) = sync_channel::<Write>(16);
         let context_len_max = (context_duration.as_secs_f32() * sample_rate as f32 / BLOCK_SIZE as f32) as usize + 1;
         thread::spawn(move || {
-            let mut context = VecDeque::<Block>::new();
+            let mut context = VecDeque::<Block>::with_capacity(context_len_max + 1);
             let mut file: Option<std::fs::File> = None;
             let mut end_at: Option<Instant> = None;
             loop {
@@ -70,7 +70,13 @@ impl Flacker {
                     match write_rx.try_recv() {
                         Ok(write) => {
                             if !write.is_end() {
-                                file = Some(fs::File::open(&write.path).unwrap());
+                                if file.is_some() {
+                                    continue;
+                                }
+                                match fs::File::create(&write.path) {
+                                    Ok(f) => file = Some(f),
+                                    Err(_) => continue,
+                                }
                                 if let Some(duration) = write.duration {
                                     end_at = Some(Instant::now() + duration);
                                 }

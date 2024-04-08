@@ -7,4 +7,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+chrono = "0.4.37"
 dlal-component-base = { path = "../base" }
+rand = "0.8.5"

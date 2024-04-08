@@ -74,6 +74,7 @@ component!(
                 "register_width_factor",
                 "smoothness",
                 "categories",
+                "known_category_cmd_rate",
                 "format"
             ],
             "kinds": ["rw", "json"]
@@ -100,6 +101,7 @@ component!(
         category_detected: Option<String>,
         category_distances: HashMap<String, f32>,
         categories_recent: HashSet<String>,
+        known_category_cmd_rate: f32,
         format: String,
         last_error: String,
     },
@@ -291,6 +293,9 @@ impl Component {
         };
         if distance_min * 3.0 < distance_silence {
             self.category_detected = category_min.cloned();
+            if rand::random::<f32>() < self.known_category_cmd_rate {
+                self.output();
+            }
         } else {
             self.category_detected = None;
         }
@@ -317,7 +322,22 @@ impl Component {
         );
         self.category_detected = Some(name.clone());
         // tell outputs a new category was detected
-        let text = self.format.replace("%", &name);
+        self.output();
+    }
+
+    fn output(&mut self) {
+        let category_detected = match &self.category_detected {
+            Some(v) => v,
+            None => return,
+        };
+        let text = self.format.replace(
+            "%",
+            &format!(
+                "{}-{}",
+                chrono::Utc::now().format("%Y-%m-%d_%H-%M-%SZ"),
+                category_detected,
+            ),
+        );
         if let Ok(body) = serde_json::from_str(&text) {
             for output in &self.outputs {
                 if let Some(result) = output.command(&body) {

@@ -42,7 +42,7 @@ class Component:
     _comm = None
     _detach = False
 
-    def __init__(self, kind, name=None, slot=0):
+    def __init__(self, kind, name=None, slot=0, preadd=None):
         # tracking
         if name == None:
             name = kind
@@ -71,7 +71,9 @@ class Component:
                 item['name'],
                 make_typical_command(item['name']),
             )
-        if Component._driver: Component._driver.add(self, slot)
+        if Component._driver:
+            if preadd: preadd()
+            Component._driver.add(self, slot)
 
     def __del__(self):
         if hasattr(self, 'deleted'):
