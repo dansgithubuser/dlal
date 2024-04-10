@@ -21,7 +21,7 @@ class MonitorSys(dlal.subsystem.Subsystem):
                     {
                         'format': (
                             'write_start',
-                            ['%.flac', 5],
+                            ['%.wav', 5],
                             {},
                         ),
                         'known_category_cmd_rate': 0.01,

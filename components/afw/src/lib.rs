@@ -1,7 +1,6 @@
 use dlal_component_base::{component, err, serde_json, Body, CmdResult};
 
 use std::collections::VecDeque;
-use std::fs;
 use std::sync::mpsc::{sync_channel, SyncSender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -22,7 +21,7 @@ impl Default for Block {
     }
 }
 
-//===== Flacker =====//
+//===== Writer =====//
 struct Write {
     path: String,
     duration: Option<Duration>,
@@ -41,19 +40,25 @@ impl Write {
     }
 }
 
-struct Flacker {
+struct Writer {
     block_tx: SyncSender<Block>,
     write_tx: SyncSender<Write>,
 }
 
-impl Flacker {
+impl Writer {
     fn new(sample_rate: u32, context_duration: Duration) -> Self {
         let (block_tx, block_rx) = sync_channel::<Block>(16);
         let (write_tx, write_rx) = sync_channel::<Write>(16);
         let context_len_max = (context_duration.as_secs_f32() * sample_rate as f32 / BLOCK_SIZE as f32) as usize + 1;
         thread::spawn(move || {
+            let spec = hound::WavSpec {
+                channels: 1,
+                sample_rate,
+                bits_per_sample: 32,
+                sample_format: hound::SampleFormat::Float,
+            };
             let mut context = VecDeque::<Block>::with_capacity(context_len_max + 1);
-            let mut file: Option<std::fs::File> = None;
+            let mut writer: Option<hound::WavWriter<std::io::BufWriter<std::fs::File>>> = None;
             let mut end_at: Option<Instant> = None;
             loop {
                 // audio
@@ -70,18 +75,18 @@ impl Flacker {
                     match write_rx.try_recv() {
                         Ok(write) => {
                             if !write.is_end() {
-                                if file.is_some() {
+                                if writer.is_some() {
                                     continue;
                                 }
-                                match fs::File::create(&write.path) {
-                                    Ok(f) => file = Some(f),
+                                match hound::WavWriter::create(&write.path, spec) {
+                                    Ok(w) => writer = Some(w),
                                     Err(_) => continue,
                                 }
                                 if let Some(duration) = write.duration {
                                     end_at = Some(Instant::now() + duration);
                                 }
                             } else {
-                                file = None;
+                                writer = None;
                                 end_at = None;
                             }
                         }
@@ -89,10 +94,12 @@ impl Flacker {
                     }
                 }
                 // write
-                if let Some(file) = file.as_mut() {
+                if let Some(writer) = writer.as_mut() {
                     loop {
                         match context.pop_front() {
-                            Some(block) => Self::write(&block, sample_rate, file),
+                            Some(block) => for i in block.audio {
+                                writer.write_sample(i).ok();
+                            }
                             None => break,
                         }
                     }
@@ -100,7 +107,7 @@ impl Flacker {
                 // end automatically
                 if let Some(t) = end_at {
                     if t < Instant::now() {
-                        file = None;
+                        writer = None;
                         end_at = None;
                     }
                 }
@@ -109,40 +116,6 @@ impl Flacker {
         Self {
             block_tx,
             write_tx,
-        }
-    }
-
-    fn write(block: &Block, sample_rate: u32, file: &mut fs::File) {
-        let block = {
-            let mut i32s = [0; BLOCK_SIZE];
-            for i in 0..BLOCK_SIZE {
-                i32s[i] = (block.audio[i] * 32767.0) as i32;
-            }
-            i32s
-        };
-        let encoder = flacenc::config::Encoder::default();
-        let encoder = {
-            use flacenc::error::Verify;
-            encoder.into_verified().unwrap()
-        };
-        let flac_stream = flacenc::encode_with_fixed_block_size(
-            &encoder,
-            flacenc::source::MemSource::from_samples(
-                &block,
-                1, // channels
-                16, // bit depth
-                sample_rate as usize,
-            ),
-            BLOCK_SIZE,
-        ).unwrap();
-        let mut flac_sink = flacenc::bitsink::ByteSink::new();
-        {
-            use flacenc::component::BitRepr;
-            flac_stream.write(&mut flac_sink).unwrap();
-        }
-        {
-            use std::io::Write;
-            file.write(flac_sink.as_slice()).unwrap();
         }
     }
 }
@@ -158,7 +131,7 @@ component!(
         context_duration: f32,
         block: Block,
         block_i: usize,
-        flacker: Option<Flacker>,
+        writer: Option<Writer>,
     },
     {
         "write_start": {
@@ -180,7 +153,7 @@ impl ComponentTrait for Component {
 
     fn join(&mut self, body: serde_json::Value) -> CmdResult {
         let sample_rate: u32 = body.kwarg("sample_rate")?;
-        self.flacker = Some(Flacker::new(
+        self.writer = Some(Writer::new(
             sample_rate,
             Duration::from_secs_f32(self.context_duration),
         ));
@@ -193,7 +166,7 @@ impl ComponentTrait for Component {
             *i = 0.0;
             self.block_i += 1;
             if self.block_i >= BLOCK_SIZE {
-                self.flacker.as_ref().unwrap().block_tx.try_send(self.block.clone()).ok();
+                self.writer.as_ref().unwrap().block_tx.try_send(self.block.clone()).ok();
                 self.block_i = 0;
             }
         }
@@ -206,12 +179,12 @@ impl Component {
             path: body.arg(0)?,
             duration: body.arg(1).ok().map(|s| Duration::from_secs_f32(s)),
         };
-        self.flacker.as_ref().ok_or(err!("Not joined."))?.write_tx.send(write)?;
+        self.writer.as_ref().ok_or(err!("Not joined."))?.write_tx.send(write)?;
         Ok(None)
     }
 
     fn write_end_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        self.flacker.as_ref().ok_or(err!("Not joined."))?.write_tx.send(Write::end())?;
+        self.writer.as_ref().ok_or(err!("Not joined."))?.write_tx.send(Write::end())?;
         Ok(None)
     }
 }
