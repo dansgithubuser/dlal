@@ -33,7 +33,7 @@ accordion2 = dlal.Buf('melodica', name='accordion2')
 # drum
 drum = dlal.Buf(name='drum')
 # voice
-voice = dlal.Filea('assets/local/audiobro3_voice.flac')
+voice = dlal.Afr('assets/local/audiobro3_voice.flac')
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')

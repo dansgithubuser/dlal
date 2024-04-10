@@ -18,12 +18,12 @@ MODEL_PATH = 'assets/local/phonetic-model.json'
 
 # components
 audio = dlal.Audio(driver=True)
-filea = dlal.Filea()
+afr = dlal.Afr()
 sampler = dlal.speech.SpeechSampler()
 
 # connect
 dlal.connect(
-    filea,
+    afr,
     sampler,
 )
 
@@ -37,7 +37,7 @@ assert audio.run_size() == model.run_size
 
 # run
 print('===== SAMPLING =====')
-sampleses = sampler.sampleses(args.recordings_path, filea, audio, args.only)
+sampleses = sampler.sampleses(args.recordings_path, afr, audio, args.only)
 
 print('===== MODELING =====')
 for k, samples in sampleses.items():

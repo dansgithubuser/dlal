@@ -8,7 +8,7 @@ members = [
     "comm",
     "delay",
     "digitar",
-    "filea",
+    "afr",
     "fir",
     "flaco",
     "forman",
