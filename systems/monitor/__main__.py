@@ -34,3 +34,4 @@ def plot():
 if Path('monitor.json').exists():
     load('monitor.json')
 monitor_sys.start()
+monitor_sys.start_db()
