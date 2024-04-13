@@ -171,6 +171,9 @@ async function componentContext(name) {
     case 'midi':
       await contextOptionPage('webboard', 'webboard.html');
       break;
+    case 'monitor':
+      await contextOptionPage('monitor', 'monitor.html');
+      break;
     case 'osc':
       await contextOptionPage('webboard', 'webboard.html');
       break;
@@ -302,7 +305,8 @@ function enterFunction(id, f) {
 }
 
 window.onload = function() {
-  e('ws-url').value = `ws://${location.hostname}:9121`;
+  const params = new URLSearchParams(window.location.search);
+  e('ws-url').value = `ws://${window.location.hostname}:9121`;
   enterFunction('addKind', add);
   enterFunction('invokePath'  , invoke);
   enterFunction('invokeArgs'  , invoke);
@@ -320,6 +324,9 @@ window.onload = function() {
       }
       contextDismiss();
     }
+  }
+  if (params.get('connect') == true) {
+    socketConnect({ url: v('ws-url'), onOpen: onSocketConnect });
   }
 }
 

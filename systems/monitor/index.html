@@ -1,0 +1,109 @@
+<style>
+
+div {
+  margin-bottom: 2em;
+}
+
+.m2l {
+  margin-left: 2em;
+}
+
+.m2r {
+  margin-right: 2em;
+}
+
+</style>
+
+<script type='module'>
+
+import {
+  e,
+  v,
+} from './../../deps/obvious/obvious.js';
+import {
+  getComponent,
+  socketConnect,
+  socketSend,
+} from './../../web/common.js';
+
+var gSystemInfo;
+
+async function update() {
+  const categories = (await socketSend('monitor_sys.monitor.category_list')).result;
+  categories.sort();
+  const categoriesHTML = [];
+  for (const category of categories) {
+    categoriesHTML.push(`
+      <tr>
+        <td>${category}</td>
+        <td>
+          <button title="merge take"      onclick="e('merge_src').value = '${category}'" class="m2l">take</button>
+          <button title="merge into"      onclick="e('merge_dst').value = '${category}'" class="m2r">into</button>
+          <button title="list recordings" onclick="listWavsForCategory('${category}')"              >+   </button>
+        </td>
+        <td id="wavs-${category}" />
+      </tr>
+    `);
+  }
+  e('categories').innerHTML = categoriesHTML.join('');
+}
+
+async function onSocketConnect() {
+  gSystemInfo = (await socketSend('system_info')).result;
+  await update();
+}
+
+async function monitorCmd(name, args) {
+  const rsp = await socketSend(`monitor_sys.monitor.${name}`, { args });
+  console.log(rsp);
+}
+
+window.onload = function() {
+  socketConnect({ url: `ws://${window.location.hostname}:9121`, onOpen: onSocketConnect });
+}
+
+window.listWavsForCategory = async (name) => {
+  const rsp = await socketSend('monitor_sys.list_wavs_for_category', { args: [name] });
+  const categoriesHTML = [];
+  for (const wav of rsp.result) {
+    categoriesHTML.push(`
+      <audio controls>
+        <source src="/${wav}" type="audio/wav">
+      </audio>
+    `);
+  }
+  e(`wavs-${name}`).innerHTML = categoriesHTML.join('');
+}
+
+window.merge = async () => {
+  const src = v('merge_src');
+  const dst = v('merge_dst');
+  if (!src || !dst) return;
+  await monitorCmd('category_merge', [src, dst]);
+  await update();
+}
+
+window.e = e;
+window.v = v;
+window.update = update;
+window.monitorCmd = monitorCmd;
+
+</script>
+
+<body>
+  <div>
+    <input id="category_name" placeholder="category name" />
+    <button onclick="v('category_name') && monitorCmd('sample_start')">start sample</button>
+    <button onclick="monitorCmd('sample_end', [v('category_name')])">end sample</button>
+    <button onclick="monitorCmd('category_create', [v('category_name')])">create category</button>
+  </div>
+  <div>
+    <input id="merge_src" placeholder="take" />
+    <input id="merge_dst" placeholder="into" />
+    <button onclick="merge()">merge</button>
+  </div>
+  <div>
+    <button onclick="update()">update</button>
+    <table id='categories' />
+  </div>
+</body>

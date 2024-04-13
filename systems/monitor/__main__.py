@@ -3,10 +3,11 @@ from system import MonitorSys
 
 import dlal
 
-import dansplotcore as dpc
-
+import http.server
 import json
 from pathlib import Path
+import socketserver
+import sys
 
 #===== init =====#
 monitor_sys = MonitorSys()
@@ -24,6 +25,7 @@ def load(path='monitor.json'):
     monitor_sys.monitor.from_json(j)
 
 def plot():
+    import dansplotcore as dpc
     plot = dpc.Plot(primitive=dpc.p.Line())
     categories = monitor_sys.monitor.categories()
     for name, category in categories.items():
@@ -33,5 +35,7 @@ def plot():
 #===== run =====#
 if Path('monitor.json').exists():
     load('monitor.json')
-monitor_sys.start()
-monitor_sys.start_db()
+monitor_sys.start_all()
+if not sys.flags.interactive:
+    print('Press enter to quit.')
+    input()

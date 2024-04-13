@@ -1,8 +1,10 @@
 from . import _logging
-from ._utils import snake_to_upper_camel_case
+from ._utils import network_ip, snake_to_upper_camel_case
 
+import http
 import json
 import pprint
+import socketserver
 import threading
 import time
 import traceback
@@ -11,9 +13,9 @@ import weakref
 log = _logging.get_log(__name__)
 
 class Server:
-    def __init__(self, root):
+    def __init__(self, root, *, store={}):
         self.root = root
-        self.store = {}
+        self.store = store
 
     def handle_request(self, request):
         request = json.loads(request)
@@ -68,7 +70,13 @@ def pack_for_broadcast(topic, message):
         'message': message,
     })
 
-def serve(url=None):
+def serve(
+    url=None,
+    *,
+    http_port=8000,
+    home_page='web/index.html',
+    store={},
+):
     'serve locally or through websocket specified by `url`'
     if Server.server: raise Exception('already serving')
     # root
@@ -85,10 +93,21 @@ def serve(url=None):
     # server
     if url:
         from ._websocket_client import WsClient
-        Server.server = WsClient(root, url)
+        Server.server = WsClient(root, url, store=store)
     else:
         from ._websocket_server import WsServer
-        Server.server = WsServer(root)
+        Server.server = WsServer(root, store=store)
+    # HTTP
+    if http_port != None:
+        class Reuser(socketserver.TCPServer):
+            allow_reuse_address = True
+        def f():
+            with Reuser(('0.0.0.0', http_port), http.server.SimpleHTTPRequestHandler) as server:
+                server.serve_forever()
+        thread = threading.Thread(target=f)
+        thread.daemon = True
+        print(f'starting HTTP server at http://{network_ip()}:{http_port}/{home_page}')
+        thread.start()
 
 class AudioBroadcast:
     def __init__(self, tape, size, thread):

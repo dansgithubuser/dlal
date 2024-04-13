@@ -137,13 +137,22 @@ component!(
             ],
             "desc": "End sample, and give it a name. Exclude specified past duration from sample.",
         },
-        "merge": {
+        "category_create": {
+            "args": ["name"],
+        },
+        "category_merge": {
             "args": ["src", "dst"],
             "desc": "src category will be merged into dst category. src category will be removed.",
         },
-        "take_recent_categories": {
+        "category_remove": {
+            "args": ["name"],
+        },
+        "category_take_recent": {
             "args": [],
             "desc": "Return categories detected since this was last called.",
+        },
+        "category_list": {
+            "args": [],
         },
     },
 );
@@ -190,7 +199,7 @@ impl Component {
         Ok(None)
     }
 
-    fn take_recent_categories_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+    fn category_take_recent_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         let j = json!(self.categories_recent);
         self.categories_recent.clear();
         Ok(Some(j))
@@ -234,7 +243,18 @@ impl Component {
         Ok(None)
     }
 
-    fn merge_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+    fn category_list_cmd(&self, _body: serde_json::Value) -> CmdResult {
+        let list = self.categories.keys().collect::<Vec<_>>();
+        Ok(Some(json!(list)))
+    }
+
+    fn category_create_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let name: String = body.arg(0)?;
+        self.categories.insert(name, Vec::new());
+        Ok(None)
+    }
+
+    fn category_merge_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let src: String = body.arg(0)?;
         let dst: String = body.arg(1)?;
         {
@@ -243,6 +263,12 @@ impl Component {
             dst.extend_from_slice(&src);
         }
         self.categories.remove(&src);
+        Ok(None)
+    }
+
+    fn category_remove_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let name: String = body.arg(0)?;
+        self.categories.remove(&name);
         Ok(None)
     }
 
@@ -315,7 +341,7 @@ impl Component {
             return;
         }
         // There's an unknown sound. Make a category.
-        let name = format!("unknown-{}", self.categories.len());
+        let name = format!("unknown_{}", chrono::Utc::now().format("%Y-%m-%d_%H-%M-%SZ"));
         self.categories.insert(
             name.clone(),
             vec![self.registers.clone()],

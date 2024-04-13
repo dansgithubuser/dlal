@@ -54,8 +54,8 @@ impl Writer {
             let spec = hound::WavSpec {
                 channels: 1,
                 sample_rate,
-                bits_per_sample: 32,
-                sample_format: hound::SampleFormat::Float,
+                bits_per_sample: 16,
+                sample_format: hound::SampleFormat::Int,
             };
             let mut context = VecDeque::<Block>::with_capacity(context_len_max + 1);
             let mut writer: Option<hound::WavWriter<std::io::BufWriter<std::fs::File>>> = None;
@@ -98,7 +98,7 @@ impl Writer {
                     loop {
                         match context.pop_front() {
                             Some(block) => for i in block.audio {
-                                writer.write_sample(i).ok();
+                                writer.write_sample((i * 32767.0) as i16).ok();
                             }
                             None => break,
                         }

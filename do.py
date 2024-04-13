@@ -4,13 +4,11 @@ import argparse
 import collections
 import datetime
 import glob
-import http.server
 import os
 import pprint
 import re
 import shutil
 import signal
-import socketserver
 import subprocess
 import sys
 import webbrowser
@@ -36,9 +34,6 @@ parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'
 parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
 parser.add_argument('--run', '-r', nargs=argparse.REMAINDER, help='run specified system, optionally with args')
 parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
-parser.add_argument('--web', '-w', action='store_true',
-    help='open web interface and run web server'
-)
 parser.add_argument('--style-check', '--style', action='store_true')
 parser.add_argument('--style-rust-fix', action='store_true')
 args = parser.parse_args()
@@ -413,16 +408,6 @@ if args.interact or args.run:
     p = subprocess.Popen(invocation, shell=True)
     signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
     p.wait()
-
-# ===== web ===== #
-if args.web:
-    os.chdir(DIR)
-    webbrowser.open_new_tab('http://localhost:8000/web/index.html')
-    with socketserver.TCPServer(
-        ('', 8000),
-        http.server.SimpleHTTPRequestHandler
-    ) as httpd:
-        httpd.serve_forever()
 
 # ===== style ===== #
 if args.style_check or args.style_rust_fix:

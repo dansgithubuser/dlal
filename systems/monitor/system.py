@@ -13,10 +13,11 @@ def timestamp():
     return datetime.now().astimezone().isoformat(' ', 'seconds')
 
 class MonitorSys(dlal.subsystem.Subsystem):
-    def init(self, name=None):
+    def init(self, *, name=None, driver=True):
         dlal.subsystem.Subsystem.init(self,
             {
-                'audio': ('audio', [], {'driver': True, 'run_size': 4096, 'mic': True}),
+                'audio': ('audio', [], {'driver': driver, 'run_size': 4096, 'mic': True}),
+                'comm': 'comm',
                 'afw': ('afw', [], {'context_duration': 5}),
                 'stft': 'stft',
                 'monitor': (
@@ -45,7 +46,6 @@ class MonitorSys(dlal.subsystem.Subsystem):
         atexit.register(lambda: self.audio.stop())
 
     def start_db(self):
-        self.db_thread_quit = False
         weak_self = weakref.proxy(self)
         def f():
             need_schema = not Path('monitor.db').exists()
@@ -61,7 +61,7 @@ class MonitorSys(dlal.subsystem.Subsystem):
             alive_h = int(time.time()) // 3600
             while True:
                 categories = ' '.join(
-                    i for i in weak_self.monitor.take_recent_categories()
+                    i for i in weak_self.monitor.category_take_recent()
                     if not i.startswith('unknown')
                 )
                 if categories:
@@ -70,7 +70,6 @@ class MonitorSys(dlal.subsystem.Subsystem):
                 m = int(time.time()) // 60
                 while m == int(time.time()) // 60:
                     time.sleep(1)
-                    if self.db_thread_quit: return
                 h = int(time.time()) // 3600
                 if h != alive_h:
                     con.execute(f'''INSERT INTO lifeline VALUES ({time.time()})''')
@@ -80,9 +79,32 @@ class MonitorSys(dlal.subsystem.Subsystem):
         self.db_thread.daemon = True
         self.db_thread.start()
 
-    def stop_db(self):
-        self.db_thread_quit = True
-        self.db_thread.join()
+    def start_cleaner(self):
+        def f():
+            while True:
+                now = time.time()
+                for path in Path('.').glob('*.wav'):
+                    if now - path.stat().st_ctime > 15 * 24 * 3600:
+                        path.unlink()
+                time.sleep(600)
+        self.cleaner_thread = threading.Thread(target=f)
+        self.cleaner_thread.daemon = True
+        self.cleaner_thread.start()
+
+    def start_server(self):
+        dlal.serve(
+            home_page='systems/monitor/index.html',
+            store={'monitor_sys': self},
+        )
+
+    def start_all(self):
+        self.start()
+        self.start_db()
+        self.start_cleaner()
+        self.start_server()
+
+    def list_wavs_for_category(self, name):
+        return [str(i) for i in Path('.').glob(f'*-{name}.wav')]
 
     def print_category_changes(self):
         category = None

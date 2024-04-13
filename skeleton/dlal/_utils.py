@@ -2,6 +2,7 @@ from collections.abc import Iterable
 import os
 import random
 import re
+import socket
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 REPO_DIR = os.path.dirname(os.path.dirname(DIR))
@@ -45,3 +46,14 @@ def minimize(f, x, heat=0.05, anneal=0.8, iterations=10):
                 e = e_n
         heat *= anneal
     return x
+
+def network_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    for host in ['8.8.8.8', '0.0.0.0']:
+        try:
+            s.connect((host, 80))
+        except OSError as e:
+            if e.errno != 101 or host == '0.0.0.0': raise
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
