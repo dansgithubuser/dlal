@@ -1,6 +1,7 @@
 use dlal_component_base::{component, err, json, json_to_ptr, serde_json, Body, CmdResult};
 
 use std::collections::{hash_map, HashMap, HashSet};
+use std::time::{Duration, Instant};
 
 //===== Registers =====//
 type Registers = Vec<f32>;
@@ -75,6 +76,7 @@ component!(
                 "smoothness",
                 "categories",
                 "known_category_cmd_rate",
+                "unknown_category_cooldown",
                 "format"
             ],
             "kinds": ["rw", "json"]
@@ -100,8 +102,10 @@ component!(
         category_sampling: Option<Category>,
         category_detected: Option<String>,
         category_distances: HashMap<String, f32>,
+        category_detected_unknown_at: Option<Instant>,
         categories_recent: HashSet<String>,
         known_category_cmd_rate: f32,
+        unknown_category_cooldown: f32,
         format: String,
         last_error: String,
     },
@@ -163,6 +167,7 @@ impl ComponentTrait for Component {
         self.register_distance_factor = 1.2;
         self.register_width_factor = 1.5;
         self.smoothness = 0.9;
+        self.unknown_category_cooldown = 10.0;
     }
 }
 
@@ -328,6 +333,14 @@ impl Component {
     }
 
     fn detect_unknown_category(&mut self) {
+        // Cooldown
+        if let Some(t) = self.category_detected_unknown_at {
+            if t.elapsed() > Duration::from_secs_f32(self.unknown_category_cooldown) {
+                self.category_detected_unknown_at = None;
+            } else {
+                return;
+            }
+        }
         // Assert we aren't near a known category.
         if self.category_detected.is_some() {
             return;
@@ -347,6 +360,7 @@ impl Component {
             vec![self.registers.clone()],
         );
         self.category_detected = Some(name.clone());
+        self.category_detected_unknown_at = Some(Instant::now());
         // tell outputs a new category was detected
         self.output();
     }
