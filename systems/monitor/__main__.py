@@ -4,7 +4,6 @@ from system import MonitorSys
 import dlal
 
 import http.server
-import json
 from pathlib import Path
 import socketserver
 import sys
@@ -17,12 +16,10 @@ def sample(name):
     monitor_sys.monitor.sample(name)
 
 def save(path='monitor.json'):
-    j = monitor_sys.monitor.to_json()
-    with open(path, 'w') as f: json.dump(j, f, indent=2)
+    monitor_sys.save(path)
 
 def load(path='monitor.json'):
-    with open(path) as f: j = json.load(f)
-    monitor_sys.monitor.from_json(j)
+    monitor_sys.load(path)
 
 def plot():
     import dansplotcore as dpc

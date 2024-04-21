@@ -2,6 +2,7 @@ import dlal
 
 import atexit
 from datetime import datetime
+import json
 from pathlib import Path
 import pprint
 import sqlite3
@@ -102,6 +103,14 @@ class MonitorSys(dlal.subsystem.Subsystem):
         self.start_db()
         self.start_cleaner()
         self.start_server()
+
+    def save(self, path='monitor.json'):
+        j = self.monitor.to_json()
+        with open(path, 'w') as f: json.dump(j, f, indent=2)
+
+    def load(self, path='monitor.json'):
+        with open(path) as f: j = json.load(f)
+        self.monitor.from_json(j)
 
     def list_wavs_for_category(self, name):
         return [str(i) for i in Path('.').glob(f'*-{name}.wav')]
