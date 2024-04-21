@@ -112,6 +112,17 @@ class MonitorSys(dlal.subsystem.Subsystem):
         with open(path) as f: j = json.load(f)
         self.monitor.from_json(j)
 
+    def db_categories(self, since, until):
+        since = datetime.fromisoformat(since).timestamp()
+        until = datetime.fromisoformat(until).timestamp()
+        con = sqlite3.connect('monitor.db')
+        cur = con.execute(f'''
+            SELECT time, categories
+            FROM categories
+            WHERE time BETWEEN {since} and {until}
+        ''')
+        return cur.fetchall()
+
     def list_wavs_for_category(self, name):
         return [str(i) for i in Path('.').glob(f'*-{name}.wav')]
 
