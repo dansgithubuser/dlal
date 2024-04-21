@@ -68,8 +68,8 @@ class MonitorSys(dlal.subsystem.Subsystem):
                 if categories:
                     con.execute(f'''INSERT INTO categories VALUES ({time.time()}, '{categories}')''')
                     con.commit()
-                m = int(time.time()) // 60
-                while m == int(time.time()) // 60:
+                q = int(time.time()) // (60 * 15)
+                while q == int(time.time()) // (60 * 15):
                     time.sleep(1)
                 h = int(time.time()) // 3600
                 if h != alive_h:
