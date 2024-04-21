@@ -32,8 +32,5 @@ class _Socket(swss.WebSocket):
             traceback.print_exc()
 
 def _serve(ws_server):
-    try:
-        while True:
-            ws_server().serveonce()
-    except:
-        traceback.print_exc()
+    while True:
+        ws_server().serveonce()

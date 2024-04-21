@@ -18,42 +18,53 @@ class Server:
         self.store = store
 
     def handle_request(self, request):
-        request = json.loads(request)
-        if 'result' in request: return
-        if request.get('op') == 'broadcast': return
-        log('debug', lambda: 'request '+pprint.pformat(request))
-        value = self.root
-        if request.get('op') != 'free':
-            for i, v in enumerate(request['path']):
-                if i == 0 and v in self.store:
-                    value = self.store[v]
-                else:
-                    try:
+        try:
+            request = json.loads(request)
+        except Exception as e:
+            response = {
+                'result': None,
+                'error': traceback.format_exc(),
+            }
+            log(
+                'debug',
+                lambda: 'response '+pprint.pformat(response),
+            )
+            return json.dumps(response)
+        try:
+            if 'result' in request: return
+            if request.get('op') == 'broadcast': return
+            log('debug', lambda: 'request '+pprint.pformat(request))
+            value = self.root
+            if request.get('op') != 'free':
+                for i, v in enumerate(request['path']):
+                    if i == 0 and v in self.store:
+                        value = self.store[v]
+                    else:
                         value = getattr(value, v)
-                    except AttributeError:
-                        request['result'] = None
-                        request['error'] = traceback.format_exc()
-                        log(
-                            'debug',
-                            lambda: 'response '+pprint.pformat(request),
-                        )
-                        return json.dumps(request)
-        args = [self.sub(i) for i in request.get('args', [])]
-        kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
-        if callable(value):
-            result = value(*args, **kwargs)
-        else:
-            result = value
-        if request.get('op') == 'store':
-            self.store[request['uuid']] = result
-            request['result'] = True
-        elif request.get('op') == 'free':
-            del self.store[request['path']]
-            request['result'] = True
-        else:
-            request['result'] = result
-        log('debug', lambda: 'response '+pprint.pformat(request))
-        return json.dumps(request)
+            args = [self.sub(i) for i in request.get('args', [])]
+            kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
+            if callable(value):
+                result = value(*args, **kwargs)
+            else:
+                result = value
+            if request.get('op') == 'store':
+                self.store[request['uuid']] = result
+                request['result'] = True
+            elif request.get('op') == 'free':
+                del self.store[request['path']]
+                request['result'] = True
+            else:
+                request['result'] = result
+            log('debug', lambda: 'response '+pprint.pformat(request))
+            return json.dumps(request)
+        except Exception as e:
+            request['result'] = None
+            request['error'] = traceback.format_exc()
+            log(
+                'debug',
+                lambda: 'response '+pprint.pformat(request),
+            )
+            return json.dumps(request)
 
     def sub(self, arg):
         if type(arg) != str: return arg
