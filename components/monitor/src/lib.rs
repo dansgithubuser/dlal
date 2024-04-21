@@ -84,6 +84,13 @@ component!(
         {
             "name": "field_helpers",
             "fields": [
+                "category_detect_count"
+            ],
+            "kinds": ["r", "json"]
+        },
+        {
+            "name": "field_helpers",
+            "fields": [
                 "registers",
                 "category_detected",
                 "category_distances",
@@ -99,6 +106,7 @@ component!(
         register_width_factor: f32,
         smoothness: f32,
         categories: HashMap<String, Category>,
+        category_detect_count: HashMap<String, u32>,
         category_sampling: Option<Category>,
         category_detected: Option<String>,
         category_distances: HashMap<String, f32>,
@@ -249,7 +257,11 @@ impl Component {
     }
 
     fn category_list_cmd(&self, _body: serde_json::Value) -> CmdResult {
-        let list = self.categories.keys().collect::<Vec<_>>();
+        let mut list = self.categories
+            .keys()
+            .map(|i| (i, self.category_detect_count.get(i).unwrap_or(&0)))
+            .collect::<Vec<_>>();
+        list.sort_by_key(|i| u32::MAX - i.1);
         Ok(Some(json!(list)))
     }
 
@@ -319,11 +331,13 @@ impl Component {
             Some(distance_silence) => distance_silence,
             None => {
                 self.category_detected = category_min.cloned();
+                *self.category_detect_count.entry(category_min.unwrap().to_string()).or_insert(0) += 1;
                 return;
             }
         };
         if distance_min * 3.0 < distance_silence {
             self.category_detected = category_min.cloned();
+            *self.category_detect_count.entry(category_min.unwrap().to_string()).or_insert(0) += 1;
             if rand::random::<f32>() < self.known_category_cmd_rate {
                 self.output();
             }
@@ -360,6 +374,7 @@ impl Component {
             vec![self.registers.clone()],
         );
         self.category_detected = Some(name.clone());
+        *self.category_detect_count.entry(name.clone()).or_insert(0) += 1;
         self.category_detected_unknown_at = Some(Instant::now());
         // tell outputs a new category was detected
         self.output();

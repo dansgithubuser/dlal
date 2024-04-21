@@ -30,12 +30,12 @@ var gSystemInfo;
 
 async function update() {
   const categories = (await socketSend('monitor_sys.monitor.category_list')).result;
-  categories.sort();
   const categoriesHTML = [];
-  for (const category of categories) {
+  for (const [category, count] of categories) {
     categoriesHTML.push(`
       <tr>
         <td>${category}</td>
+        <td>${count}</td>
         <td>
           <button title="merge take"      onclick="e('merge_src').value = '${category}'" class="m2l">take</button>
           <button title="merge into"      onclick="e('merge_dst').value = '${category}'" class="m2r">into</button>
