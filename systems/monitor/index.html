@@ -37,9 +37,10 @@ async function update() {
         <td>${category}</td>
         <td>${count}</td>
         <td>
-          <button title="merge take"      onclick="e('merge_src').value = '${category}'" class="m2l">take</button>
-          <button title="merge into"      onclick="e('merge_dst').value = '${category}'" class="m2r">into</button>
-          <button title="list recordings" onclick="listWavsForCategory('${category}')"              >+   </button>
+          <button title="merge take"      onclick="e('merge_src').value = '${category}'" class="m2l">take  </button>
+          <button title="merge into"      onclick="e('merge_dst').value = '${category}'" class="m2r">into  </button>
+          <button title="remove category" onclick="remove('${category}')"                class="m2r">remove</button>
+          <button title="list recordings" onclick="listWavsForCategory('${category}')"              >recs  </button>
         </td>
         <td id="wavs-${category}" />
       </tr>
@@ -80,6 +81,12 @@ window.merge = async () => {
   const dst = v('merge_dst');
   if (!src || !dst) return;
   await monitorCmd('category_merge', [src, dst]);
+  await update();
+}
+
+window.remove = async (category) => {
+  if (!confirm(`Confirm remove ${category}?`)) return;
+  await monitorCmd('category_remove', [category]);
   await update();
 }
 
