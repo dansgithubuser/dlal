@@ -24,19 +24,21 @@
 
 </style>
 
+<script type='text/javascript' src='plot.js'></script>
+
 <script type='module'>
 
 import {
   e,
   v,
+  dateFormat,
+  dateStartOfDay,
 } from './../../deps/obvious/obvious.js';
 import {
   getComponent,
   socketConnect,
   socketSend,
 } from './../../web/common.js';
-
-var gSystemInfo;
 
 async function monitorCmd(name, args) {
   const rsp = await socketSend(`monitor_sys.monitor.${name}`, { args });
@@ -47,7 +49,30 @@ async function monitorCmd(name, args) {
   return rsp;
 }
 
-async function update() {
+async function plotCategoryHistory() {
+  const history = (await socketSend('monitor_sys.db_categories', { args: [v('since'), v('until')] })).result;
+  if (history.length == 0) return;
+  const since = new Date(v('since'));
+  const t0 = dateStartOfDay(new Date(v('until')));
+  const vertices = [];
+  for (let [t, categories] of history) {
+    t = new Date(t * 1000);
+    const y = t.getHours() + t.getMinutes() / 60;
+    const sod = dateStartOfDay(t);
+    const x = Math.floor((sod - t0) / (24 * 3600e3));
+    rect(vertices, x, y, x + 1, y + 0.25);
+  }
+  window.plot.enter({
+    name: 'history',
+    usage: 'static',
+    mode: 'triangles',
+    vertices,
+  });
+  window.plot.center();
+  window.plot.draw();
+}
+
+async function categoryList() {
   const categories = (await monitorCmd('category_list')).result;
   const categoriesHTML = [];
   for (const [category, count] of categories) {
@@ -69,11 +94,17 @@ async function update() {
 }
 
 async function onSocketConnect() {
-  gSystemInfo = (await socketSend('system_info')).result;
-  await update();
+  await plotCategoryHistory();
+  await categoryList();
 }
 
 window.onload = function() {
+  const sod = dateStartOfDay(new Date());
+  const until = new Date(sod.getTime() + 24 * 3600e3 - 1e4);
+  const since = new Date(sod.getTime() - 14 * 24 * 3600e3);
+  e('since').value = dateFormat(since);
+  e('until').value = dateFormat(until);
+  window.plot = new Plot('canvas');
   socketConnect({ url: `ws://${window.location.hostname}:9121`, onOpen: onSocketConnect });
 }
 
@@ -95,13 +126,13 @@ window.merge = async () => {
   const dst = v('merge_dst');
   if (!src || !dst) return;
   await monitorCmd('category_merge', [src, dst]);
-  await update();
+  await categoryList();
 }
 
 window.remove = async (category) => {
   if (!confirm(`Confirm remove ${category}?`)) return;
   await monitorCmd('category_remove', [category]);
-  await update();
+  await categoryList();
 }
 
 window.save = async () => {
@@ -112,13 +143,20 @@ window.save = async () => {
 
 window.e = e;
 window.v = v;
-window.update = update;
+window.categoryList = categoryList;
 window.monitorCmd = monitorCmd;
 
 </script>
 
 <body>
-  <div class="row">
+  <div>
+    <input id="since" title="since" placeholder="since" />
+    <input id="until" title="until" placeholder="until" />
+  </div>
+  <div>
+    <canvas id="canvas" tabindex="1" style="width: 100%; height: 40vh" />
+  </div>
+  <div class="row m2t">
     <div>
       <input id="category_name" placeholder="category name" />
       <button onclick="v('category_name') && monitorCmd('sample_start')">start sample</button>
@@ -135,7 +173,7 @@ window.monitorCmd = monitorCmd;
     <button onclick="merge()">merge</button>
   </div>
   <div class="m2t">
-    <button onclick="update()">update</button>
+    <button onclick="categoryList()">list categories</button>
     <table id='categories' />
   </div>
 </body>

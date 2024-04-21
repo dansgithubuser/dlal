@@ -120,6 +120,7 @@ class MonitorSys(dlal.subsystem.Subsystem):
             SELECT time, categories
             FROM categories
             WHERE time BETWEEN {since} and {until}
+            ORDER BY time
         ''')
         return cur.fetchall()
 
