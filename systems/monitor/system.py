@@ -55,7 +55,7 @@ class MonitorSys(dlal.subsystem.Subsystem):
                 CREATE TABLE categories(time REAL, categories TEXT);
                 CREATE INDEX categories_time ON categories(time);
                 CREATE TABLE lifeline(time REAL);
-                CREATE INDEX lineline_time ON lifeline(time);
+                CREATE INDEX lifeline_time ON lifeline(time);
             ''')
             con.execute(f'''INSERT INTO lifeline VALUES ({time.time()})''')
             con.commit()
