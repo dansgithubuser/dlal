@@ -34,6 +34,7 @@ parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'
 parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
 parser.add_argument('--run', '-r', nargs=argparse.REMAINDER, help='run specified system, optionally with args')
 parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
+parser.add_argument('--deploy', nargs=3, metavar=('user', 'host', 'path'), help="rsync what's needed to run to specified destination")
 parser.add_argument('--style-check', '--style', action='store_true')
 parser.add_argument('--style-rust-fix', action='store_true')
 args = parser.parse_args()
@@ -408,6 +409,33 @@ if args.interact or args.run:
     p = subprocess.Popen(invocation, shell=True)
     signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
     p.wait()
+
+# ===== deploy ===== #
+if args.deploy:
+    os.chdir(DIR)
+    user, host, dst = args.deploy
+    globs = [
+        'assets',
+        'components/target/release/*.so',
+        'deps',
+        'do.py',
+        'requirements.txt',
+        'skeleton',
+        'systems',
+        'venv-on',
+        'venv-off',
+        'web',
+    ]
+    print('Invocations will look like:')
+    print(f'rsync -r assets {user}@{host}:{dst}/assets')
+    print('Does this seem right? Enter to continue, ctrl-c to abort.')
+    input()
+    for i in globs:
+        for path in glob.glob(i):
+            if os.path.isdir(path):
+                path = f'{path}/'
+            invoke(f'ssh {user}@{host} mkdir -p {dst}/{os.path.dirname(path)}', quiet=True)
+            invoke(f'rsync -r {path} {user}@{host}:{dst}/{path}')
 
 # ===== style ===== #
 if args.style_check or args.style_rust_fix:
