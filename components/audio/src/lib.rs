@@ -20,6 +20,16 @@ impl Default for Audio {
     }
 }
 
+enum Stream {
+    None,
+    Duplex(pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>),
+    Input(pa::Stream<pa::NonBlocking, pa::Input<f32>>),
+}
+
+impl Default for Stream {
+    fn default() -> Self { Stream::None }
+}
+
 component!(
     {"in": ["audio**"], "out": ["audio**"]},
     [
@@ -31,13 +41,14 @@ component!(
     ],
     {
         addees: Vec<Vec<View>>,
-        stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
+        stream: Stream,
         audio: Audio,
     },
     {
         "add": {"args": ["component", "command", "audio", "midi", "run"]},
         "remove": {"args": ["component", "command", "audio", "midi", "run"]},
         "start": {},
+        "start_input_only": {},
         "stop": {},
         "run": {},
         "run_explain": {},
@@ -156,35 +167,68 @@ impl Component {
         );
         pa.is_duplex_format_supported(input_params, output_params, self.sample_rate.into())?;
         let self_scoped = unsafe { std::mem::transmute::<&mut Component, &mut Component>(self) };
-        self.stream = Some(pa.open_non_blocking_stream(
-            pa::DuplexStreamSettings::new(
-                input_params,
-                output_params,
-                self.sample_rate.into(),
-                self.run_size as u32,
-            ),
-            move |args| {
-                assert!(args.frames == self_scoped.run_size);
-                for output_sample in args.out_buffer.iter_mut() {
-                    *output_sample = 0.0;
-                }
-                self_scoped.audio.i = args.in_buffer.as_ptr();
-                self_scoped.audio.o = args.out_buffer.as_mut_ptr();
-                self_scoped.run_addees();
-                pa::Continue
-            },
-        )?);
-        match &mut self.stream {
-            Some(stream) => stream.start()?,
-            None => (),
-        }
+        self.stream = Stream::Duplex({
+            let mut stream = pa.open_non_blocking_stream(
+                pa::DuplexStreamSettings::new(
+                    input_params,
+                    output_params,
+                    self.sample_rate.into(),
+                    self.run_size as u32,
+                ),
+                move |args| {
+                    assert!(args.frames == self_scoped.run_size);
+                    for output_sample in args.out_buffer.iter_mut() {
+                        *output_sample = 0.0;
+                    }
+                    self_scoped.audio.i = args.in_buffer.as_ptr();
+                    self_scoped.audio.o = args.out_buffer.as_mut_ptr();
+                    self_scoped.run_addees();
+                    pa::Continue
+                },
+            )?;
+            stream.start()?;
+            stream
+        });
+        Ok(None)
+    }
+
+    fn start_input_only_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        const CHANNELS: i32 = 1;
+        const INTERLEAVED: bool = true;
+        let pa = pa::PortAudio::new()?;
+        let input_device = pa.default_input_device()?;
+        let input_params = pa::StreamParameters::<f32>::new(
+            input_device,
+            CHANNELS,
+            INTERLEAVED,
+            pa.device_info(input_device)?.default_low_input_latency,
+        );
+        let self_scoped = unsafe { std::mem::transmute::<&mut Component, &mut Component>(self) };
+        self.stream = Stream::Input({
+            let mut stream = pa.open_non_blocking_stream(
+                pa::InputStreamSettings::new(
+                    input_params,
+                    self.sample_rate.into(),
+                    self.run_size as u32,
+                ),
+                move |args| {
+                    assert!(args.frames == self_scoped.run_size);
+                    self_scoped.audio.i = args.buffer.as_ptr();
+                    self_scoped.run_addees();
+                    pa::Continue
+                },
+            )?;
+            stream.start()?;
+            stream
+        });
         Ok(None)
     }
 
     fn stop_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         match &mut self.stream {
-            Some(stream) => stream.stop()?,
-            None => (),
+            Stream::Duplex(stream) => stream.stop()?,
+            Stream::Input(stream) => stream.stop()?,
+            Stream::None => (),
         }
         Ok(None)
     }

@@ -43,7 +43,7 @@ class MonitorSys(dlal.subsystem.Subsystem):
         )
 
     def start(self):
-        self.audio.start()
+        self.audio.start_input_only()
         atexit.register(lambda: self.audio.stop())
 
     def start_db(self):
