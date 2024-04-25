@@ -53,6 +53,7 @@ component!(
         "run": {},
         "run_explain": {},
         "addee_order": {},
+        "version": {},
     },
 );
 
@@ -263,5 +264,9 @@ impl Component {
             }
         }
         Ok(Some(json!(result)))
+    }
+
+    fn version_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(pa::version_text()?)))
     }
 }
