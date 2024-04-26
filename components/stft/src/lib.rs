@@ -25,7 +25,7 @@ component!(
     {
         outputs_norm: Vec<View>,
         input: Vec<f32>,
-        fft: Option<Arc<Fft<f32>>>,
+        fft: Option<Arc<dyn Fft<f32>>>,
         buffer: Vec<Complex<f32>>,
         scratch: Vec<Complex<f32>>,
         output_norm: Vec<f32>,

@@ -2,7 +2,7 @@
 name = "dlal-component-base"
 version = "1.0.0"
 authors = ["Dan <dansonlinepresence@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 dlal-component-macro = { path = "macro" }

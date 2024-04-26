@@ -41,3 +41,4 @@ members = [
     "unary",
     "vocoder",
 ]
+resolver = "2"
