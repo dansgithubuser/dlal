@@ -387,7 +387,7 @@ if args.build:
     for i in args.build_snoop:
         os.environ[f'DLAL_SNOOP_{i.upper()}'] = '1'
     os.chdir(os.path.join(DIR, 'components'))
-    invoke('cargo', 'build', '--release')
+    invoke('cargo build --release', env_add={'PORTAUDIO_ONLY_STATIC': '1'})
 
 # ===== interact & run ===== #
 if args.interact or args.run:
