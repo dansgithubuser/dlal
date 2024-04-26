@@ -62,9 +62,10 @@ async function plotCategoryHistory() {
     const x = Math.floor((sod - t0) / (24 * 3600e3));
     rect(vertices, x, y, x + 1, y + 0.25);
   }
+  window.plot.clear();
   window.plot.enter({
     name: 'history',
-    usage: 'static',
+    usage: 'dynamic',
     mode: 'triangles',
     vertices,
   });
@@ -84,6 +85,7 @@ async function categoryList() {
           <button title="merge take"      onclick="e('merge_src').value = '${category}'" class="m2l">take  </button>
           <button title="merge into"      onclick="e('merge_dst').value = '${category}'" class="m2r">into  </button>
           <button title="remove category" onclick="remove('${category}')"                class="m2r">remove</button>
+          <button title="plot category"   onclick="plotRegisterses('${category}')"                  >plot  </button>
           <button title="list recordings" onclick="listWavsForCategory('${category}')"              >recs  </button>
         </td>
         <td id="wavs-${category}" />
@@ -121,10 +123,32 @@ window.listWavsForCategory = async (name) => {
   e(`wavs-${name}`).innerHTML = categoriesHTML.join('');
 }
 
+window.plotRegisterses = async (category) => {
+  const registerses = (await monitorCmd('categories')).result[category];
+  window.plot.clear();
+  let i = 1;
+  for (const registers of registerses) {
+    const vertices = [];
+    for (const register of registers) {
+      point(vertices, vertices.length, register);
+    }
+    window.plot.enter({
+      name: `registers-${i}`,
+      usage: 'dynamic',
+      mode: 'line_strip',
+      vertices,
+    });
+    i += 1;
+  }
+  window.plot.center();
+  window.plot.draw();
+}
+
 window.merge = async () => {
   const src = v('merge_src');
   const dst = v('merge_dst');
   if (!src || !dst) return;
+  if (!confirm(`Confirm merge ${src} into ${dst}?`)) return;
   await monitorCmd('category_merge', [src, dst]);
   await categoryList();
 }
@@ -145,6 +169,7 @@ window.e = e;
 window.v = v;
 window.categoryList = categoryList;
 window.monitorCmd = monitorCmd;
+window.plotCategoryHistory = plotCategoryHistory;
 
 </script>
 
@@ -152,6 +177,7 @@ window.monitorCmd = monitorCmd;
   <div>
     <input id="since" title="since" placeholder="since" />
     <input id="until" title="until" placeholder="until" />
+    <button onclick="plotCategoryHistory()">update</button>
   </div>
   <div>
     <canvas id="canvas" tabindex="1" style="width: 100%; height: 40vh" />

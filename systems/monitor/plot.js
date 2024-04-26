@@ -568,6 +568,10 @@ class Plot {
     this.buffers.dynamic.clear();
   }
 
+  clear() {
+    this.entries = {};
+  }
+
   move(dx, dy) {
     this.origin.x += dx / this.zoom.x;
     this.origin.y += dy / this.zoom.y;
@@ -661,6 +665,24 @@ class Texter {
       }
     }
   }
+}
+
+function point(
+  vertices,
+  x,
+  y,
+  options = {
+    r: 1,
+    g: 1,
+    b: 1,
+    a: 1,
+  },
+) {
+  const r = options.r || 0;
+  const g = options.g || 0;
+  const b = options.b || 0;
+  const a = options.a || 1;
+  vertices.push({ x, y, r, g, b, a });
 }
 
 function rect(
