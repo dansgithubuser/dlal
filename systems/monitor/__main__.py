@@ -5,6 +5,7 @@ import dlal
 
 import http.server
 from pathlib import Path
+import signal
 import socketserver
 import sys
 
@@ -34,5 +35,5 @@ if Path('monitor.json').exists():
     load('monitor.json')
 monitor_sys.start_all()
 if not sys.flags.interactive:
-    print('Press enter to quit.')
-    input()
+    print('ctrl-c to quit.')
+    signal.pause()
