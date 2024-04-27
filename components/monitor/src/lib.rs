@@ -76,6 +76,7 @@ component!(
                 "smoothness",
                 "categories",
                 "known_category_cmd_rate",
+                "unknown_category_threshold",
                 "unknown_category_cooldown",
                 "format"
             ],
@@ -113,6 +114,7 @@ component!(
         category_detected_unknown_at: Option<Instant>,
         categories_recent: HashSet<String>,
         known_category_cmd_rate: f32,
+        unknown_category_threshold: f32,
         unknown_category_cooldown: f32,
         format: String,
         last_error: String,
@@ -175,6 +177,7 @@ impl ComponentTrait for Component {
         self.register_distance_factor = 1.2;
         self.register_width_factor = 1.5;
         self.smoothness = 0.9;
+        self.unknown_category_threshold = 10.0;
         self.unknown_category_cooldown = 10.0;
     }
 }
