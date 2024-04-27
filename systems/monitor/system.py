@@ -132,6 +132,15 @@ class MonitorSys(dlal.subsystem.Subsystem):
     def list_wavs_for_category(self, name):
         return [str(i) for i in Path('.').glob(f'*-{name}.wav')]
 
+    def remove_quiet_unknown(self, threshold=10):
+        categories = self.monitor.category_list()
+        if not categories: return
+        quiet = min(categories, key=lambda i: i[2])[2] + threshold
+        for name, _, amp in categories:
+            if not name.startswith('unknown'): continue
+            if amp > quiet: continue
+            self.monitor.category_remove(name)
+
     def print_category_changes(self):
         category = None
         while True:

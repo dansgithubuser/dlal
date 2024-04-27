@@ -167,6 +167,7 @@ component!(
         },
         "category_list": {
             "args": [],
+            "type": "[(name, count, amp), ...]",
         },
     },
 );
@@ -177,7 +178,7 @@ impl ComponentTrait for Component {
         self.register_distance_factor = 1.2;
         self.register_width_factor = 1.5;
         self.smoothness = 0.9;
-        self.unknown_category_threshold = 10.0;
+        self.unknown_category_threshold = 20.0;
         self.unknown_category_cooldown = 10.0;
     }
 }
@@ -261,10 +262,14 @@ impl Component {
 
     fn category_list_cmd(&self, _body: serde_json::Value) -> CmdResult {
         let mut list = self.categories
-            .keys()
-            .map(|i| (i, self.category_detect_count.get(i).unwrap_or(&0)))
+            .iter()
+            .map(|(k, v)| (
+                k,
+                self.category_detect_count.get(k).unwrap_or(&0),
+                category_amp(v),
+            ))
             .collect::<Vec<_>>();
-        list.sort_by_key(|i| u32::MAX - i.1);
+        list.sort_by_key(|i| i.0);
         Ok(Some(json!(list)))
     }
 
@@ -326,6 +331,7 @@ impl Component {
         let distance_min = match distance_min {
             Some(distance_min) => distance_min,
             None => {
+                // no category to detect
                 self.category_detected = None;
                 return;
             }
@@ -333,18 +339,22 @@ impl Component {
         let distance_silence = match distance_silence {
             Some(distance_silence) => distance_silence,
             None => {
+                // no silence to compare against, take closest category
                 self.category_detected = category_min.cloned();
                 *self.category_detect_count.entry(category_min.unwrap().to_string()).or_insert(0) += 1;
                 return;
             }
         };
         if distance_min * 3.0 < distance_silence {
+            // we're much farther from silence than we are from the closest known category
+            // so we've detected the closest known category
             self.category_detected = category_min.cloned();
             *self.category_detect_count.entry(category_min.unwrap().to_string()).or_insert(0) += 1;
             if rand::random::<f32>() < self.known_category_cmd_rate {
                 self.output();
             }
         } else {
+            // not near a known category
             self.category_detected = None;
         }
     }
@@ -367,7 +377,7 @@ impl Component {
             Some(silence) => category_amp(silence),
             None => return, // Can't decide there's sound without knowing silence.
         };
-        if registers_amp(&self.registers) < amp_silence + 1.0 {
+        if registers_amp(&self.registers) < amp_silence + self.unknown_category_threshold {
             return;
         }
         // There's an unknown sound. Make a category.

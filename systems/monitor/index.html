@@ -84,11 +84,12 @@ async function plotCategoryHistory(category) {
 async function categoryList() {
   const categories = (await monitorCmd('category_list')).result;
   const categoriesHTML = [];
-  for (const [category, count] of categories) {
+  for (const [category, count, amp] of categories) {
     categoriesHTML.push(`
       <tr>
         <td>${category}</td>
         <td>${count}</td>
+        <td>${amp.toFixed(1)}</td>
         <td>
           <button title="merge take"       onclick="e('merge_src').value = '${category}'" class="m2l">take       </button>
           <button title="merge into"       onclick="e('merge_dst').value = '${category}'" class="m2r">into       </button>
@@ -162,6 +163,14 @@ window.merge = async () => {
   await categoryList();
 }
 
+window.removeQuietUnknown = async() => {
+  if (!confirm('Confirm remove quiet unknown categories?')) {
+    return;
+  }
+  const rsp = await socketSend('monitor_sys.remove_quiet_unknown');
+  console.log(rsp);
+}
+
 window.remove = async (category) => {
   if (!confirm(`Confirm remove ${category}?`)) return;
   await monitorCmd('category_remove', [category]);
@@ -216,6 +225,7 @@ window.plotCategoryHistory = plotCategoryHistory;
     <input id="merge_src" placeholder="take" />
     <input id="merge_dst" placeholder="into" />
     <button onclick="merge()">merge</button>
+    <button onclick="removeQuietUnknown()" class="m2l">remove quiet unknown</button>
   </div>
   <div class="m2t">
     <button onclick="categoryList()">list categories</button>
