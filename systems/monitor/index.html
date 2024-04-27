@@ -50,7 +50,9 @@ async function monitorCmd(name, args) {
 }
 
 async function plotCategoryHistory() {
-  const history = (await socketSend('monitor_sys.db_categories', { args: [v('since'), v('until')] })).result;
+  const rsp = await socketSend('monitor_sys.db_categories', { args: [v('since'), v('until')] });
+  console.log(rsp);
+  const history = rsp.result;
   if (history.length == 0) return;
   const since = new Date(v('since'));
   const t0 = dateStartOfDay(new Date(v('until')));
