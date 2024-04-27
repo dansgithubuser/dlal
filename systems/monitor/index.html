@@ -49,7 +49,10 @@ async function monitorCmd(name, args) {
   return rsp;
 }
 
-async function plotCategoryHistory() {
+async function plotCategoryHistory(category) {
+  if (category) {
+    e('history_category').value = category;
+  }
   const rsp = await socketSend('monitor_sys.db_categories', { args: [v('since'), v('until')] });
   console.log(rsp);
   const history = rsp.result;
@@ -58,11 +61,14 @@ async function plotCategoryHistory() {
   const t0 = dateStartOfDay(new Date(v('until')));
   const vertices = [];
   for (let [t, categories] of history) {
+    const count = categories[v('history_category')];
+    if (!count) continue;
     t = new Date(t * 1000);
     const y = t.getHours() + t.getMinutes() / 60;
     const sod = dateStartOfDay(t);
     const x = Math.floor((sod - t0) / (24 * 3600e3));
-    rect(vertices, x, y, x + 1, y + 0.25);
+    const w = Math.log10(count / (24 * 3600 * 44100 / 4096)) / 6 + 1;
+    rect(vertices, x, y, x + w, y + 0.25);
   }
   window.plot.clear();
   window.plot.enter({
@@ -84,11 +90,12 @@ async function categoryList() {
         <td>${category}</td>
         <td>${count}</td>
         <td>
-          <button title="merge take"      onclick="e('merge_src').value = '${category}'" class="m2l">take  </button>
-          <button title="merge into"      onclick="e('merge_dst').value = '${category}'" class="m2r">into  </button>
-          <button title="remove category" onclick="remove('${category}')"                class="m2r">remove</button>
-          <button title="plot category"   onclick="plotRegisterses('${category}')"                  >plot  </button>
-          <button title="list recordings" onclick="listWavsForCategory('${category}')"              >recs  </button>
+          <button title="merge take"       onclick="e('merge_src').value = '${category}'" class="m2l">take       </button>
+          <button title="merge into"       onclick="e('merge_dst').value = '${category}'" class="m2r">into       </button>
+          <button title="remove category"  onclick="remove('${category}')"                class="m2r">remove     </button>
+          <button title="plot registerses" onclick="plotRegisterses('${category}')"                  >registerses</button>
+          <button title="plot history"     onclick="plotCategoryHistory('${category}')"              >history    </button>
+          <button title="list recordings"  onclick="listWavsForCategory('${category}')"              >recs       </button>
         </td>
         <td id="wavs-${category}" />
       </tr>
@@ -185,6 +192,7 @@ window.plotCategoryHistory = plotCategoryHistory;
 
 <body>
   <div>
+    <input id="history_category" title="category" placeholder="category" />
     <input id="since" title="since" placeholder="since" />
     <input id="until" title="until" placeholder="until" />
     <button onclick="plotCategoryHistory()">update</button>

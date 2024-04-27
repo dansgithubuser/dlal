@@ -61,11 +61,13 @@ class MonitorSys(dlal.subsystem.Subsystem):
             con.commit()
             alive_h = int(time.time()) // 3600
             while True:
-                categories = ' '.join(
-                    i for i in weak_self.monitor.category_take_recent()
-                    if not i.startswith('unknown')
-                )
+                categories = {
+                    k: v
+                    for k, v in weak_self.monitor.category_take_recent().items()
+                    if not k.startswith('unknown')
+                }
                 if categories:
+                    categories = json.dumps(categories)
                     con.execute(f'''INSERT INTO categories VALUES ({time.time()}, '{categories}')''')
                     con.commit()
                 q = int(time.time()) // (60 * 15)
@@ -122,7 +124,10 @@ class MonitorSys(dlal.subsystem.Subsystem):
             WHERE time BETWEEN {since} and {until}
             ORDER BY time
         ''')
-        return cur.fetchall()
+        return [
+            (time, json.loads(categories))
+            for time, categories in cur.fetchall()
+        ]
 
     def list_wavs_for_category(self, name):
         return [str(i) for i in Path('.').glob(f'*-{name}.wav')]

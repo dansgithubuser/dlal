@@ -1,6 +1,6 @@
 use dlal_component_base::{component, err, json, json_to_ptr, serde_json, Body, CmdResult};
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::{hash_map, HashMap};
 use std::time::{Duration, Instant};
 
 //===== Registers =====//
@@ -112,7 +112,7 @@ component!(
         category_detected: Option<String>,
         category_distances: HashMap<String, f32>,
         category_detected_unknown_at: Option<Instant>,
-        categories_recent: HashSet<String>,
+        categories_recent: HashMap<String, u32>,
         known_category_cmd_rate: f32,
         unknown_category_threshold: f32,
         unknown_category_cooldown: f32,
@@ -209,7 +209,7 @@ impl Component {
         self.detect_known_category();
         self.detect_unknown_category();
         if let Some(category) = &self.category_detected {
-            self.categories_recent.insert(category.clone());
+            *self.categories_recent.entry(category.clone()).or_insert(0) += 1;
         }
         //
         Ok(None)
