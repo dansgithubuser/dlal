@@ -54,6 +54,7 @@ component!(
         "run_explain": {},
         "addee_order": {},
         "version": {},
+        "list_devices": {},
     },
 );
 
@@ -268,5 +269,20 @@ impl Component {
 
     fn version_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(Some(json!(pa::version_text()?)))
+    }
+
+    fn list_devices_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let p = pa::PortAudio::new()?;
+        let device_count = p.device_count()?;
+        let mut device_infos = Vec::<pa::DeviceInfo>::new();
+        for device_index in 0..device_count {
+            device_infos.push(p.device_info(pa::DeviceIndex(device_index))?);
+        }
+        let device_infos = device_infos.iter().enumerate().map(|(index, info)| json!({
+            "index": index,
+            "host_api": info.host_api,
+            "name": info.name,
+        })).collect::<Vec<_>>();
+        Ok(Some(json!(device_infos)))
     }
 }
