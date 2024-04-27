@@ -159,6 +159,14 @@ window.remove = async (category) => {
   await categoryList();
 }
 
+window.makeRecording = async () => {
+  const timestamp = (new Date()).toISOString().replace(/[:.T]/g, '-');
+  const rsp = await socketSend('monitor_sys.afw.write_start', {
+    args: [`manual-recording-${timestamp}.wav`, 5],
+  });
+  console.log(rsp);
+}
+
 window.save = async () => {
   const rsp = await socketSend('monitor_sys.save');
   console.log(rsp);
@@ -188,6 +196,7 @@ window.plotCategoryHistory = plotCategoryHistory;
       <button onclick="v('category_name') && monitorCmd('sample_start')">start sample</button>
       <button onclick="monitorCmd('sample_end', [v('category_name')])">end sample</button>
       <button onclick="monitorCmd('category_create', [v('category_name')])">create category</button>
+      <button onclick="makeRecording()" class="m2l">make recording</button>
     </div>
     <div>
       <button onclick="save()">save</button>
