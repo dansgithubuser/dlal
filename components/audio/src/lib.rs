@@ -3,6 +3,7 @@ use dlal_component_base::{component, err, json, serde_json, Body, CmdResult, Vie
 use colored::*;
 use portaudio as pa;
 
+use std::env;
 use std::ptr::{null, null_mut};
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 
@@ -153,14 +154,20 @@ impl Component {
         const CHANNELS: i32 = 1;
         const INTERLEAVED: bool = true;
         let pa = pa::PortAudio::new()?;
-        let input_device = pa.default_input_device()?;
+        let input_device = match env::var("DLAL_AUDIO_INPUT_DEVICE") {
+            Ok(v) => pa::DeviceIndex(v.parse()?),
+            Err(_) => pa.default_input_device()?,
+        };
         let input_params = pa::StreamParameters::<f32>::new(
             input_device,
             CHANNELS,
             INTERLEAVED,
             pa.device_info(input_device)?.default_low_input_latency,
         );
-        let output_device = pa.default_output_device()?;
+        let output_device = match env::var("DLAL_AUDIO_OUTPUT_DEVICE") {
+            Ok(v) => pa::DeviceIndex(v.parse()?),
+            Err(_) => pa.default_output_device()?,
+        };
         let output_params = pa::StreamParameters::<f32>::new(
             output_device,
             CHANNELS,
@@ -198,7 +205,10 @@ impl Component {
         const CHANNELS: i32 = 1;
         const INTERLEAVED: bool = true;
         let pa = pa::PortAudio::new()?;
-        let input_device = pa.default_input_device()?;
+        let input_device = match env::var("DLAL_AUDIO_INPUT_DEVICE") {
+            Ok(v) => pa::DeviceIndex(v.parse()?),
+            Err(_) => pa.default_input_device()?,
+        };
         let input_params = pa::StreamParameters::<f32>::new(
             input_device,
             CHANNELS,
