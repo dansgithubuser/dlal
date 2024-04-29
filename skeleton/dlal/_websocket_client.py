@@ -7,8 +7,8 @@ import traceback
 import weakref
 
 class WsClient:
-    def __init__(self, root, url):
-        self.server = Server(root)
+    def __init__(self, root, url, **kwargs):
+        self.server = Server(root, **kwargs)
         proxy = weakref.proxy(self)
         def on_message(ws, message):
             try:

@@ -34,10 +34,13 @@ class Subsystem:
             elif type(spec) == tuple:
                 if len(spec) >= 1:
                     kind = spec[0]
+                    assert type(kind) == str
                 if len(spec) >= 2:
                     args = spec[1]
+                    assert type(args) == list
                 if len(spec) >= 3:
                     kwargs = spec[2]
+                    assert type(kwargs) == dict
             self.add(name, kind, args, kwargs)
         self.inputs.extend(self.components[i] for i in inputs)
         self.outputs.extend(self.components[i] for i in outputs)

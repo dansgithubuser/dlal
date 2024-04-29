@@ -8,8 +8,9 @@ members = [
     "comm",
     "delay",
     "digitar",
-    "filea",
+    "afr",
     "fir",
+    "afw",
     "forman",
     "gain",
     "hpf",
@@ -20,7 +21,7 @@ members = [
     "lpf",
     "mgain",
     "midi",
-    "midman",
+    "midman", "monitor",
     "mul",
     "mutt",
     "noisebank",
@@ -40,3 +41,4 @@ members = [
     "unary",
     "vocoder",
 ]
+resolver = "2"

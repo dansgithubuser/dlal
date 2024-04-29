@@ -17,14 +17,14 @@ args = parser.parse_args()
 
 # components
 audio = dlal.Audio(driver=True)
-filea = dlal.Filea(args.recording_path)
+afr = dlal.Afr(args.recording_path)
 sampler = dlal.speech.SpeechSampler()
 synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape()
 
 # connect
 dlal.connect(
-    filea,
+    afr,
     sampler,
     [],
     synth,
@@ -32,7 +32,7 @@ dlal.connect(
 )
 
 # commands
-duration = filea.duration()
+duration = afr.duration()
 run_size = audio.run_size()
 
 # model

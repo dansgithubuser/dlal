@@ -1,12 +1,12 @@
 [package]
-name = "filea"
+name = "monitor"
 version = "1.0.0"
-authors = ["Dan <dansonlinepresence@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
+chrono = "0.4.37"
 dlal-component-base = { path = "../base" }
-claxon = "0.4.3"
+rand = "0.8.5"

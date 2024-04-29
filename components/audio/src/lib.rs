@@ -3,6 +3,7 @@ use dlal_component_base::{component, err, json, serde_json, Body, CmdResult, Vie
 use colored::*;
 use portaudio as pa;
 
+use std::env;
 use std::ptr::{null, null_mut};
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 
@@ -20,6 +21,16 @@ impl Default for Audio {
     }
 }
 
+enum Stream {
+    None,
+    Duplex(pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>),
+    Input(pa::Stream<pa::NonBlocking, pa::Input<f32>>),
+}
+
+impl Default for Stream {
+    fn default() -> Self { Stream::None }
+}
+
 component!(
     {"in": ["audio**"], "out": ["audio**"]},
     [
@@ -31,17 +42,20 @@ component!(
     ],
     {
         addees: Vec<Vec<View>>,
-        stream: Option<pa::Stream<pa::NonBlocking, pa::Duplex<f32, f32>>>,
+        stream: Stream,
         audio: Audio,
     },
     {
         "add": {"args": ["component", "command", "audio", "midi", "run"]},
         "remove": {"args": ["component", "command", "audio", "midi", "run"]},
         "start": {},
+        "start_input_only": {},
         "stop": {},
         "run": {},
         "run_explain": {},
         "addee_order": {},
+        "version": {},
+        "list_devices": {},
     },
 );
 
@@ -140,14 +154,20 @@ impl Component {
         const CHANNELS: i32 = 1;
         const INTERLEAVED: bool = true;
         let pa = pa::PortAudio::new()?;
-        let input_device = pa.default_input_device()?;
+        let input_device = match env::var("DLAL_AUDIO_INPUT_DEVICE") {
+            Ok(v) => pa::DeviceIndex(v.parse()?),
+            Err(_) => pa.default_input_device()?,
+        };
         let input_params = pa::StreamParameters::<f32>::new(
             input_device,
             CHANNELS,
             INTERLEAVED,
             pa.device_info(input_device)?.default_low_input_latency,
         );
-        let output_device = pa.default_output_device()?;
+        let output_device = match env::var("DLAL_AUDIO_OUTPUT_DEVICE") {
+            Ok(v) => pa::DeviceIndex(v.parse()?),
+            Err(_) => pa.default_output_device()?,
+        };
         let output_params = pa::StreamParameters::<f32>::new(
             output_device,
             CHANNELS,
@@ -156,35 +176,71 @@ impl Component {
         );
         pa.is_duplex_format_supported(input_params, output_params, self.sample_rate.into())?;
         let self_scoped = unsafe { std::mem::transmute::<&mut Component, &mut Component>(self) };
-        self.stream = Some(pa.open_non_blocking_stream(
-            pa::DuplexStreamSettings::new(
-                input_params,
-                output_params,
-                self.sample_rate.into(),
-                self.run_size as u32,
-            ),
-            move |args| {
-                assert!(args.frames == self_scoped.run_size);
-                for output_sample in args.out_buffer.iter_mut() {
-                    *output_sample = 0.0;
-                }
-                self_scoped.audio.i = args.in_buffer.as_ptr();
-                self_scoped.audio.o = args.out_buffer.as_mut_ptr();
-                self_scoped.run_addees();
-                pa::Continue
-            },
-        )?);
-        match &mut self.stream {
-            Some(stream) => stream.start()?,
-            None => (),
-        }
+        self.stream = Stream::Duplex({
+            let mut stream = pa.open_non_blocking_stream(
+                pa::DuplexStreamSettings::new(
+                    input_params,
+                    output_params,
+                    self.sample_rate.into(),
+                    self.run_size as u32,
+                ),
+                move |args| {
+                    assert!(args.frames == self_scoped.run_size);
+                    for output_sample in args.out_buffer.iter_mut() {
+                        *output_sample = 0.0;
+                    }
+                    self_scoped.audio.i = args.in_buffer.as_ptr();
+                    self_scoped.audio.o = args.out_buffer.as_mut_ptr();
+                    self_scoped.run_addees();
+                    pa::Continue
+                },
+            )?;
+            stream.start()?;
+            stream
+        });
+        Ok(None)
+    }
+
+    fn start_input_only_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        const CHANNELS: i32 = 1;
+        const INTERLEAVED: bool = true;
+        let pa = pa::PortAudio::new()?;
+        let input_device = match env::var("DLAL_AUDIO_INPUT_DEVICE") {
+            Ok(v) => pa::DeviceIndex(v.parse()?),
+            Err(_) => pa.default_input_device()?,
+        };
+        let input_params = pa::StreamParameters::<f32>::new(
+            input_device,
+            CHANNELS,
+            INTERLEAVED,
+            pa.device_info(input_device)?.default_low_input_latency,
+        );
+        let self_scoped = unsafe { std::mem::transmute::<&mut Component, &mut Component>(self) };
+        self.stream = Stream::Input({
+            let mut stream = pa.open_non_blocking_stream(
+                pa::InputStreamSettings::new(
+                    input_params,
+                    self.sample_rate.into(),
+                    self.run_size as u32,
+                ),
+                move |args| {
+                    assert!(args.frames == self_scoped.run_size);
+                    self_scoped.audio.i = args.buffer.as_ptr();
+                    self_scoped.run_addees();
+                    pa::Continue
+                },
+            )?;
+            stream.start()?;
+            stream
+        });
         Ok(None)
     }
 
     fn stop_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         match &mut self.stream {
-            Some(stream) => stream.stop()?,
-            None => (),
+            Stream::Duplex(stream) => stream.stop()?,
+            Stream::Input(stream) => stream.stop()?,
+            Stream::None => (),
         }
         Ok(None)
     }
@@ -219,5 +275,24 @@ impl Component {
             }
         }
         Ok(Some(json!(result)))
+    }
+
+    fn version_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(pa::version_text()?)))
+    }
+
+    fn list_devices_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        let p = pa::PortAudio::new()?;
+        let device_count = p.device_count()?;
+        let mut device_infos = Vec::<pa::DeviceInfo>::new();
+        for device_index in 0..device_count {
+            device_infos.push(p.device_info(pa::DeviceIndex(device_index))?);
+        }
+        let device_infos = device_infos.iter().enumerate().map(|(index, info)| json!({
+            "index": index,
+            "host_api": info.host_api,
+            "name": info.name,
+        })).collect::<Vec<_>>();
+        Ok(Some(json!(device_infos)))
     }
 }

@@ -1,8 +1,10 @@
 from . import _logging
-from ._utils import snake_to_upper_camel_case
+from ._utils import network_ip, snake_to_upper_camel_case
 
+import http
 import json
 import pprint
+import socketserver
 import threading
 import time
 import traceback
@@ -11,47 +13,58 @@ import weakref
 log = _logging.get_log(__name__)
 
 class Server:
-    def __init__(self, root):
+    def __init__(self, root, *, store={}):
         self.root = root
-        self.store = {}
+        self.store = store
 
     def handle_request(self, request):
-        request = json.loads(request)
-        if 'result' in request: return
-        if request.get('op') == 'broadcast': return
-        log('debug', lambda: 'request '+pprint.pformat(request))
-        value = self.root
-        if request.get('op') != 'free':
-            for i, v in enumerate(request['path']):
-                if i == 0 and v in self.store:
-                    value = self.store[v]
-                else:
-                    try:
+        try:
+            request = json.loads(request)
+        except Exception as e:
+            response = {
+                'result': None,
+                'error': traceback.format_exc(),
+            }
+            log(
+                'debug',
+                lambda: 'response '+pprint.pformat(response),
+            )
+            return json.dumps(response)
+        try:
+            if 'result' in request: return
+            if request.get('op') == 'broadcast': return
+            log('debug', lambda: 'request '+pprint.pformat(request))
+            value = self.root
+            if request.get('op') != 'free':
+                for i, v in enumerate(request['path']):
+                    if i == 0 and v in self.store:
+                        value = self.store[v]
+                    else:
                         value = getattr(value, v)
-                    except AttributeError:
-                        request['result'] = None
-                        request['error'] = traceback.format_exc()
-                        log(
-                            'debug',
-                            lambda: 'response '+pprint.pformat(request),
-                        )
-                        return json.dumps(request)
-        args = [self.sub(i) for i in request.get('args', [])]
-        kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
-        if callable(value):
-            result = value(*args, **kwargs)
-        else:
-            result = value
-        if request.get('op') == 'store':
-            self.store[request['uuid']] = result
-            request['result'] = True
-        elif request.get('op') == 'free':
-            del self.store[request['path']]
-            request['result'] = True
-        else:
-            request['result'] = result
-        log('debug', lambda: 'response '+pprint.pformat(request))
-        return json.dumps(request)
+            args = [self.sub(i) for i in request.get('args', [])]
+            kwargs = {k: self.sub(v) for k, v in request.get('kwargs', {}).items()}
+            if callable(value):
+                result = value(*args, **kwargs)
+            else:
+                result = value
+            if request.get('op') == 'store':
+                self.store[request['uuid']] = result
+                request['result'] = True
+            elif request.get('op') == 'free':
+                del self.store[request['path']]
+                request['result'] = True
+            else:
+                request['result'] = result
+            log('debug', lambda: 'response '+pprint.pformat(request))
+            return json.dumps(request)
+        except Exception as e:
+            request['result'] = None
+            request['error'] = traceback.format_exc()
+            log(
+                'debug',
+                lambda: 'response '+pprint.pformat(request),
+            )
+            return json.dumps(request)
 
     def sub(self, arg):
         if type(arg) != str: return arg
@@ -68,7 +81,13 @@ def pack_for_broadcast(topic, message):
         'message': message,
     })
 
-def serve(url=None):
+def serve(
+    url=None,
+    *,
+    http_port=8000,
+    home_page='web/index.html',
+    store={},
+):
     'serve locally or through websocket specified by `url`'
     if Server.server: raise Exception('already serving')
     # root
@@ -85,10 +104,21 @@ def serve(url=None):
     # server
     if url:
         from ._websocket_client import WsClient
-        Server.server = WsClient(root, url)
+        Server.server = WsClient(root, url, store=store)
     else:
         from ._websocket_server import WsServer
-        Server.server = WsServer(root)
+        Server.server = WsServer(root, store=store)
+    # HTTP
+    if http_port != None:
+        class Reuser(socketserver.TCPServer):
+            allow_reuse_address = True
+        def f():
+            with Reuser(('0.0.0.0', http_port), http.server.SimpleHTTPRequestHandler) as server:
+                server.serve_forever()
+        thread = threading.Thread(target=f)
+        thread.daemon = True
+        print(f'starting HTTP server at http://{network_ip()}:{http_port}/{home_page}')
+        thread.start()
 
 class AudioBroadcast:
     def __init__(self, tape, size, thread):

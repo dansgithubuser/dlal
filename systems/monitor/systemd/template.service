@@ -1,0 +1,12 @@
+[Unit]
+Description={description}
+
+[Service]
+Type=simple
+Environment="PYTHONPATH={python_path}"
+ExecStart={exec_start}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

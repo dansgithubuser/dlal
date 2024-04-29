@@ -1,0 +1,234 @@
+<style>
+
+.m2l {
+  margin-left: 2em;
+}
+
+.m2r {
+  margin-right: 2em;
+}
+
+.m2t {
+  margin-top: 2em;
+}
+
+.m2b {
+  margin-bottom: 2em;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+</style>
+
+<script type='text/javascript' src='plot.js'></script>
+
+<script type='module'>
+
+import {
+  e,
+  v,
+  dateFormat,
+  dateStartOfDay,
+} from './../../deps/obvious/obvious.js';
+import {
+  getComponent,
+  socketConnect,
+  socketSend,
+} from './../../web/common.js';
+
+async function monitorCmd(name, args) {
+  const rsp = await socketSend(`monitor_sys.monitor.${name}`, { args });
+  console.log(rsp);
+  if (rsp.error) {
+    alert(rsp.error);
+  }
+  return rsp;
+}
+
+async function plotCategoryHistory(category) {
+  if (category) {
+    e('history_category').value = category;
+  }
+  const rsp = await socketSend('monitor_sys.db_categories', { args: [v('since'), v('until')] });
+  console.log(rsp);
+  const history = rsp.result;
+  if (history.length == 0) return;
+  const since = new Date(v('since'));
+  const t0 = dateStartOfDay(new Date(v('until')));
+  const vertices = [];
+  for (let [t, categories] of history) {
+    const count = categories[v('history_category')];
+    if (!count) continue;
+    t = new Date(t * 1000);
+    const y = t.getHours() + t.getMinutes() / 60;
+    const sod = dateStartOfDay(t);
+    const x = Math.floor((sod - t0) / (24 * 3600e3));
+    const w = Math.log10(count / (24 * 3600 * 44100 / 4096)) / 6 + 1;
+    rect(vertices, x, y, x + w, y + 0.25);
+  }
+  window.plot.clear();
+  window.plot.enter({
+    name: 'history',
+    usage: 'dynamic',
+    mode: 'triangles',
+    vertices,
+  });
+  window.plot.center();
+  window.plot.draw();
+}
+
+async function categoryList() {
+  const categories = (await monitorCmd('category_list')).result;
+  const categoriesHTML = [];
+  for (const [category, count, amp] of categories) {
+    categoriesHTML.push(`
+      <tr>
+        <td>${category}</td>
+        <td>${count}</td>
+        <td>${amp.toFixed(1)}</td>
+        <td>
+          <button title="merge take"       onclick="e('merge_src').value = '${category}'" class="m2l">take       </button>
+          <button title="merge into"       onclick="e('merge_dst').value = '${category}'" class="m2r">into       </button>
+          <button title="remove category"  onclick="remove('${category}')"                class="m2r">remove     </button>
+          <button title="plot registerses" onclick="plotRegisterses('${category}')"                  >registerses</button>
+          <button title="plot history"     onclick="plotCategoryHistory('${category}')"              >history    </button>
+          <button title="list recordings"  onclick="listWavsForCategory('${category}')"              >recs       </button>
+        </td>
+        <td id="wavs-${category}" />
+      </tr>
+    `);
+  }
+  e('categories').innerHTML = categoriesHTML.join('');
+}
+
+async function onSocketConnect() {
+  await plotCategoryHistory();
+  await categoryList();
+}
+
+window.onload = function() {
+  const sod = dateStartOfDay(new Date());
+  const until = new Date(sod.getTime() + 24 * 3600e3 - 1e4);
+  const since = new Date(sod.getTime() - 14 * 24 * 3600e3);
+  e('since').value = dateFormat(since);
+  e('until').value = dateFormat(until);
+  window.plot = new Plot('canvas');
+  socketConnect({ url: `ws://${window.location.hostname}:9121`, onOpen: onSocketConnect });
+}
+
+window.listWavsForCategory = async (name) => {
+  const rsp = await socketSend('monitor_sys.list_wavs_for_category', { args: [name] });
+  const categoriesHTML = [];
+  for (const wav of rsp.result) {
+    categoriesHTML.push(`
+      <audio controls>
+        <source src="/${wav}" type="audio/wav">
+      </audio>
+    `);
+  }
+  e(`wavs-${name}`).innerHTML = categoriesHTML.join('');
+}
+
+window.plotRegisterses = async (category) => {
+  const registerses = (await monitorCmd('categories')).result[category];
+  window.plot.clear();
+  let i = 1;
+  for (const registers of registerses) {
+    const vertices = [];
+    for (const register of registers) {
+      point(vertices, vertices.length, register);
+    }
+    window.plot.enter({
+      name: `registers-${i}`,
+      usage: 'dynamic',
+      mode: 'line_strip',
+      vertices,
+    });
+    i += 1;
+  }
+  window.plot.center();
+  window.plot.draw();
+}
+
+window.merge = async () => {
+  const src = v('merge_src');
+  const dst = v('merge_dst');
+  if (!src || !dst) return;
+  if (!confirm(`Confirm merge ${src} into ${dst}?`)) return;
+  await monitorCmd('category_merge', [src, dst]);
+  await categoryList();
+}
+
+window.removeQuietUnknown = async() => {
+  if (!confirm('Confirm remove quiet unknown categories?')) {
+    return;
+  }
+  const rsp = await socketSend('monitor_sys.remove_quiet_unknown');
+  console.log(rsp);
+}
+
+window.remove = async (category) => {
+  if (!confirm(`Confirm remove ${category}?`)) return;
+  await monitorCmd('category_remove', [category]);
+  await categoryList();
+}
+
+window.makeRecording = async () => {
+  const timestamp = (new Date()).toISOString().replace(/[:.T]/g, '-');
+  const rsp = await socketSend('monitor_sys.afw.write_start', {
+    args: [`manual-recording-${timestamp}.wav`, 5],
+  });
+  console.log(rsp);
+}
+
+window.save = async () => {
+  const rsp = await socketSend('monitor_sys.save');
+  console.log(rsp);
+  if (!rsp.error) alert('Saved!');
+}
+
+window.e = e;
+window.v = v;
+window.categoryList = categoryList;
+window.monitorCmd = monitorCmd;
+window.plotCategoryHistory = plotCategoryHistory;
+
+</script>
+
+<body>
+  <div>
+    <input id="history_category" title="category" placeholder="category" />
+    <input id="since" title="since" placeholder="since" />
+    <input id="until" title="until" placeholder="until" />
+    <button onclick="plotCategoryHistory()">update</button>
+  </div>
+  <div>
+    <canvas id="canvas" tabindex="1" style="width: 100%; height: 40vh" />
+  </div>
+  <div class="row m2t">
+    <div>
+      <input id="category_name" placeholder="category name" />
+      <button onclick="v('category_name') && monitorCmd('sample_start')">start sample</button>
+      <button onclick="monitorCmd('sample_end', [v('category_name')])">end sample</button>
+      <button onclick="monitorCmd('category_create', [v('category_name')])">create category</button>
+      <button onclick="makeRecording()" class="m2l">make recording</button>
+    </div>
+    <div>
+      <button onclick="save()">save</button>
+    </div>
+  </div>
+  <div class="m2t">
+    <input id="merge_src" placeholder="take" />
+    <input id="merge_dst" placeholder="into" />
+    <button onclick="merge()">merge</button>
+    <button onclick="removeQuietUnknown()" class="m2l">remove quiet unknown</button>
+  </div>
+  <div class="m2t">
+    <button onclick="categoryList()">list categories</button>
+    <table id='categories' />
+  </div>
+</body>

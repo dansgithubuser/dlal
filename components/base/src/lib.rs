@@ -4,6 +4,7 @@ pub use serde_json;
 pub use serde_json::json;
 
 use std::any::type_name;
+use std::collections::HashMap;
 use std::error::Error as StdError;
 pub use std::ffi::{CStr, CString};
 use std::fmt;
@@ -133,7 +134,19 @@ impl Arg for bool {
 impl<T: Arg> Arg for Vec<T> {
     fn from_value(value: &serde_json::Value) -> Option<Self> {
         match value.as_array() {
-            Some(v) => v.clone().vec().ok(),
+            Some(v) => v.iter().map(|i| Arg::from_value(i)).collect(),
+            None => None,
+        }
+    }
+}
+
+impl<T: Arg> Arg for HashMap<String, T> {
+    fn from_value(value: &serde_json::Value) -> Option<Self> {
+        match value.as_object() {
+            Some(v) => v
+                .iter()
+                .map(|i| Arg::from_value(i.1).map(|v| (i.0.into(), v)))
+                .collect(),
             None => None,
         }
     }

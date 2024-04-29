@@ -18,13 +18,14 @@ component!(
                 "options": ["norm"]
             }
         },
+        {"name": "join_info", "kwargs": ["run_size"]},
         {"name": "field_helpers", "fields": ["last_error"], "kinds": ["r"]},
         {"name": "field_helpers", "fields": ["smooth"], "kinds": ["rw", "json"]},
     ],
     {
         outputs_norm: Vec<View>,
         input: Vec<f32>,
-        fft: Option<Arc<Fft<f32>>>,
+        fft: Option<Arc<dyn Fft<f32>>>,
         buffer: Vec<Complex<f32>>,
         scratch: Vec<Complex<f32>>,
         output_norm: Vec<f32>,
@@ -53,8 +54,14 @@ impl Component {
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.set_window_size(64);
         self.smooth = 0.5;
+    }
+
+    fn join(&mut self, body: serde_json::Value) -> CmdResult {
+        if self.input.is_empty() {
+            self.set_window_size(body.kwarg("run_size")?);
+        }
+        Ok(None)
     }
 
     fn run(&mut self) {

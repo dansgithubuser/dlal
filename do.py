@@ -4,13 +4,11 @@ import argparse
 import collections
 import datetime
 import glob
-import http.server
 import os
 import pprint
 import re
 import shutil
 import signal
-import socketserver
 import subprocess
 import sys
 import webbrowser
@@ -27,7 +25,7 @@ parser.add_argument('--venv-update', '--vu', action='store_true', help=(
 parser.add_argument('--venv-install', '--vi', action='store_true',
     help="install what's specified in requirements.txt"
 )
-parser.add_argument('--component-new', '--cn', nargs='+')
+parser.add_argument('--component-new', '--cn', nargs='+', metavar=('name', 'readme'))
 parser.add_argument('--component-info', '--ci')
 parser.add_argument('--component-base-docs', '--cbd', action='store_true')
 parser.add_argument('--component-matrix', '--cm', action='store_true')
@@ -36,9 +34,7 @@ parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'
 parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
 parser.add_argument('--run', '-r', nargs=argparse.REMAINDER, help='run specified system, optionally with args')
 parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
-parser.add_argument('--web', '-w', action='store_true',
-    help='open web interface and run web server'
-)
+parser.add_argument('--deploy', nargs=3, metavar=('user', 'host', 'path'), help="rsync what's needed to run to specified destination")
 parser.add_argument('--style-check', '--style', action='store_true')
 parser.add_argument('--style-rust-fix', action='store_true')
 args = parser.parse_args()
@@ -391,7 +387,7 @@ if args.build:
     for i in args.build_snoop:
         os.environ[f'DLAL_SNOOP_{i.upper()}'] = '1'
     os.chdir(os.path.join(DIR, 'components'))
-    invoke('cargo', 'build', '--release')
+    invoke('cargo build --release', env_add={'PORTAUDIO_ONLY_STATIC': '1'})
 
 # ===== interact & run ===== #
 if args.interact or args.run:
@@ -414,15 +410,32 @@ if args.interact or args.run:
     signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
     p.wait()
 
-# ===== web ===== #
-if args.web:
+# ===== deploy ===== #
+if args.deploy:
     os.chdir(DIR)
-    webbrowser.open_new_tab('http://localhost:8000/web/index.html')
-    with socketserver.TCPServer(
-        ('', 8000),
-        http.server.SimpleHTTPRequestHandler
-    ) as httpd:
-        httpd.serve_forever()
+    user, host, dst = args.deploy
+    globs = [
+        'assets',
+        'components/target/release/*.so',
+        'deps',
+        'do.py',
+        'requirements.txt',
+        'skeleton',
+        'systems',
+        'venv-on',
+        'venv-off',
+        'web',
+    ]
+    print('Invocations will look like:')
+    print(f'rsync -r assets {user}@{host}:{dst}/assets')
+    print('Does this seem right? Enter to continue, ctrl-c to abort.')
+    input()
+    for i in globs:
+        for path in glob.glob(i):
+            if os.path.isdir(path):
+                path = f'{path}/'
+            invoke(f'ssh {user}@{host} mkdir -p {dst}/{os.path.dirname(path)}', quiet=True)
+            invoke(f'rsync -r {path} {user}@{host}:{dst}/{path}')
 
 # ===== style ===== #
 if args.style_check or args.style_rust_fix:

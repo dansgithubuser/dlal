@@ -132,14 +132,14 @@ class SpeechSampler(Subsystem):
             self.noise_factor * _math.sqrt(sum(i ** 2 for i in spectrum[self.noise_bins[0]:self.noise_bins[1]])),
         )
 
-    def sampleses(self, path, filea, driver, only=None):
+    def sampleses(self, path, afr, driver, only=None):
         sampleses = {}
         for k in PHONETICS:
             if only and k not in only: continue
             print(k)
-            filea.open(_os.path.join(path, f'{k}.flac'))
+            afr.open(_os.path.join(path, f'{k}.flac'))
             samples = []
-            while filea.playing():
+            while afr.playing():
                 driver.run()
                 samples.append(self.sample())
             sampleses[k] = samples
