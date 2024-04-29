@@ -53,6 +53,7 @@ async function plotCategoryHistory(category) {
   if (category) {
     e('history_category').value = category;
   }
+  if (!v('history_category')) return;
   const rsp = await socketSend('monitor_sys.db_categories', { args: [v('since'), v('until')] });
   console.log(rsp);
   const history = rsp.result;
@@ -111,6 +112,11 @@ async function onSocketConnect() {
 }
 
 window.onload = function() {
+  const params = new URLSearchParams(window.location.search);
+  {
+    const category = params.get('category');
+    if (category) e('history_category').value = category;
+  }
   const sod = dateStartOfDay(new Date());
   const until = new Date(sod.getTime() + 24 * 3600e3 - 1e4);
   const since = new Date(sod.getTime() - 14 * 24 * 3600e3);
