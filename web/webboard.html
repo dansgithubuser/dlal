@@ -117,7 +117,7 @@ function key(evt, down) {
                       '8': 22,
                        i : 23,
   }[evt.key];
-  if (!note) return;
+  if (typeof note !== 'number') return;
   send(parseInt(v('lowestNote')) + note, down);
 }
 
