@@ -129,9 +129,10 @@ window.onload = function() {
 window.listWavsForCategory = async (name) => {
   const rsp = await socketSend('monitor_sys.list_wavs_for_category', { args: [name] });
   const categoriesHTML = [];
+  rsp.result.sort().reverse();
   for (const wav of rsp.result) {
     categoriesHTML.push(`
-      <audio controls>
+      <audio controls title=${wav}>
         <source src="/${wav}" type="audio/wav">
       </audio>
     `);
