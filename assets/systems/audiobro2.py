@@ -46,10 +46,11 @@ Voice('drum', 'buf')
 Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
 Voice('burgers', 'buf')
+Voice('ghost', 'sonic')
 Voice('bass', 'sonic')
 Voice('arp', 'arp', 'sonic')
-Voice('harp1', 'sonic', input=['sonic'])
-Voice('harp2', 'sonic', input=['sonic'])
+Voice('harp1', 'sonic')
+Voice('harp2', 'sonic')
 sample_rate = 44100
 sweep = 48 / 12
 m = 220 / (sample_rate/2) * 2 * math.pi
@@ -77,11 +78,16 @@ Subsystem('sweep', {
     'buf': ('buf', [], {}),
 })
 mm_delay = 0
+mm_bass = 1
 midman = dlal.Midman([
     # E - echo on
     ([{'nibble': 0x90}, 0x40], mm_delay, 'gain_x', 1),
     # F - echo off
     ([{'nibble': 0x90}, 0x41], mm_delay, 'gain_x', 0),
+    # G - loud bass
+    ([{'nibble': 0x90}, 0x43], mm_bass, 'o', 0, 0.5),
+    # A - quiet bass
+    ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.2),
 ])
 liner = dlal.Liner()
 lpf = dlal.Lpf()
@@ -96,6 +102,7 @@ voices = [
     shaker1,
     shaker2,
     burgers,
+    ghost,
     bass,
     arp,
     harp1,
@@ -178,10 +185,29 @@ for i in range(60, 72):
     burgers.buf.amplify(5, i)
     burgers.buf.clip(0.25, i)
 
+ghost.sonic.from_json({
+    "0": {
+        "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
+        "i0": 0, "i1": 1, "i2": 0.3, "i3": 0.1, "o": 0.3,
+    },
+    "1": {
+        "a": 5e-3, "d": 3e-4, "s": 0.2, "r": 1, "m": 0.988,
+        "i0": 0.05, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+    "2": {
+        "a": 1e-5, "d": 3e-5, "s": 1, "r": 6e-5, "m": 1.007,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+    "3": {
+        "a": 4e-6, "d": 1e-5, "s": 1, "r": 6e-5, "m": 2.015,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0.1, "o": 0,
+    },
+})
+
 bass.sonic.from_json({
     "0": {
         "a": 5e-3, "d": 3e-4, "s": 0.5, "r": 0.01, "m": 1,
-        "i0": 0.3, "i1": 0.5, "i2": 0.4, "i3": 0.3, "o": 0.5,
+        "i0": 0.3, "i1": 0.5, "i2": 0.4, "i3": 0.3, "o": 0,  # set by midman
     },
     "1": {
         "a": 5e-3, "d": 1e-4, "s": 0.5, "r": 0.01, "m": 1.99,
@@ -290,6 +316,7 @@ dlal.connect(
 )
 liner.connect(midman)
 midman.connect(delay)
+midman.connect(bass.sonic)
 lpf.connect(buf)
 reverb.connect(buf)
 delay.connect(buf)
