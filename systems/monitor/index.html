@@ -132,9 +132,9 @@ window.listWavsForCategory = async (name) => {
   rsp.result.sort().reverse();
   for (const wav of rsp.result) {
     categoriesHTML.push(`
-      <audio controls title=${wav}>
-        <source src="/${wav}" type="audio/wav">
-      </audio>
+      <button id="${wav}" onclick="new Audio('/${wav}').play()">
+        ${wav}
+      </button>
     `);
   }
   e(`wavs-${name}`).innerHTML = categoriesHTML.join('');
