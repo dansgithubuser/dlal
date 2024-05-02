@@ -145,11 +145,12 @@ drum.buf.resample(3, 50)
 # clap
 drum.buf.load('assets/sounds/drum/clap.wav', 52)
 drum.buf.resample(1.48, 52)
+drum.buf.amplify(2, 52)
 # snare
 drum.buf.load('assets/sounds/drum/snare.wav', 40)
 drum.buf.crop(0, 0.1, 40)
-drum.buf.amplify(2, 40)
-drum.buf.clip(1.0, 40)
+drum.buf.amplify(4, 40)
+drum.buf.clip(2.0, 40)
 # ride
 drum.buf.load('assets/sounds/drum/ride.wav', 46)
 drum.buf.resample(0.45, 46)
@@ -168,6 +169,8 @@ drum.buf.load('assets/sounds/drum/low-tom.wav', 41)
 drum.buf.resample(0.45, 41)
 drum.buf.amplify(5, 41)
 drum.buf.clip(0.4, 41)
+# crash
+drum.buf.load('assets/sounds/drum/crash.wav', 49)
 
 shaker1.buf.load('assets/sounds/drum/shaker1.wav', 82)
 
@@ -181,9 +184,17 @@ burgers.buf.load('assets/local/burgers/plate2.wav', 63)
 burgers.buf.load('assets/local/burgers/mm.wav', 65)
 burgers.buf.load('assets/local/burgers/think.wav', 67)
 burgers.buf.load('assets/local/burgers/legs.wav', 69)
-for i in range(60, 72):
-    burgers.buf.amplify(5, i)
-    burgers.buf.clip(0.25, i)
+burgers.buf.load('assets/local/burgers/do-people-think-burgers-have-legs.wav', 72)
+burgers.buf.load('assets/local/burgers/no.wav', 74)
+burgers.buf.load('assets/local/burgers/but-pickle.wav', 76)
+burgers.buf.load('assets/local/burgers/think-on-my-pickle.wav', 77)
+burgers.buf.load('assets/local/burgers/next-burger-its-people.wav', 79)
+burgers.buf.load('assets/local/burgers/did-you-want-my-but.wav', 81)
+burgers.buf.load('assets/local/burgers/well-find-you-on-a-plate.wav', 83)
+burgers.buf.load('assets/local/burgers/its-burger-time.wav', 84)
+for i in range(0, 128):
+    burgers.buf.amplify(10, i)
+    burgers.buf.clip(0.5, i)
 
 ghost.sonic.from_json({
     "0": {
@@ -330,4 +341,4 @@ if args.start:
 if args.live:
     dlal.typical_setup()
 else:
-    dlal.typical_setup(live=False, duration=92)
+    dlal.typical_setup(live=False, duration=177)
