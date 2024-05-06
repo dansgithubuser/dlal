@@ -46,10 +46,11 @@ Voice('drum', 'buf')
 Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
 Voice('burgers', 'buf')
+Voice('ghost', 'sonic')
 Voice('bass', 'sonic')
-Voice('arp', 'arp', 'sonic', 'osc', 'unary', 'oracle', output=['sonic'])
-Voice('harp1', 'osc', 'oracle', 'sonic', input=['sonic'])
-Voice('harp2', 'osc', 'oracle', 'sonic', input=['sonic'])
+Voice('arp', 'arp', 'sonic')
+Voice('harp1', 'sonic')
+Voice('harp2', 'sonic')
 sample_rate = 44100
 sweep = 48 / 12
 m = 220 / (sample_rate/2) * 2 * math.pi
@@ -76,40 +77,18 @@ Subsystem('sweep', {
     'delay': ('delay', [22050], {'gain_i': 1}),
     'buf': ('buf', [], {}),
 })
+mm_delay = 0
+mm_bass = 1
 midman = dlal.Midman([
-    # C
-    ([{'nibble': 0x90}, 0x3c], 0, 'freq', 0),  # harp1.osc
-    ([{'nibble': 0x90}, 0x3c], 1, 'freq', 0),  # harp2.osc
-    ([{'nibble': 0x90}, 0x3c], 0, 'phase', 0),
-    ([{'nibble': 0x90}, 0x3c], 1, 'phase', 0),
-    # D
-    ([{'nibble': 0x90}, 0x3e], 0, 'freq', 1/16),
-    ([{'nibble': 0x90}, 0x3e], 1, 'freq', 1/16),
-    # E
-    ([{'nibble': 0x90}, 0x40], 2, 'gain_x', 1),  # delay
-    # F
-    ([{'nibble': 0x90}, 0x41], 2, 'gain_x', 0),
-    # G
-    ([{'nibble': 0x90}, 0x43], 3, 'phase', 0.75),  # arp.osc
-    # A
-    ([{'nibble': 0x90}, 0x45], 4, 'm', -28*m),  # sweep.oracle
-    ([{'nibble': 0x90}, 0x45], 4, 'b', 16000 / (sample_rate/2)),
-    ([{'nibble': 0x90}, 0x45], 5, 'gain_x', 0),  # sweep.delay
-    ([{'nibble': 0x90}, 0x45], 6, 'a', 1e-3),  # sweep.train_adsr
-    ([{'nibble': 0x90}, 0x45], 6, 'r', 1e-3),
-    ([{'nibble': 0x90}, 0x45], 7, 'm', 0.0005),  # sweep.train_oracle
-    ([{'nibble': 0x90}, 0x45], 8, 'r', 1),  # sweep.adsr
-    # B
-    ([{'nibble': 0x90}, 0x47], 4, 'm', m),  # sweep.oracle
-    ([{'nibble': 0x90}, 0x47], 4, 'b', b),
-    ([{'nibble': 0x90}, 0x47], 5, 'gain_x', 1),  # sweep.delay
-    ([{'nibble': 0x90}, 0x47], 6, 'a', 5e-8),  # sweep.train_adsr
-    ([{'nibble': 0x90}, 0x47], 6, 'r', 5e-5),
-    ([{'nibble': 0x90}, 0x47], 7, 'm', 0.2),  # sweep.train_oracle
-    ([{'nibble': 0x90}, 0x47], 8, 'r', 1e-5),  # sweep.adsr
+    # E - echo on
+    ([{'nibble': 0x90}, 0x40], mm_delay, 'gain_x', 1),
+    # F - echo off
+    ([{'nibble': 0x90}, 0x41], mm_delay, 'gain_x', 0),
+    # G - loud bass
+    ([{'nibble': 0x90}, 0x43], mm_bass, 'o', 0, 0.5),
+    # A - quiet bass
+    ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.2),
 ])
-harp1.oracle.m(1/12)
-harp2.oracle.m(0/4)
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
@@ -123,6 +102,7 @@ voices = [
     shaker1,
     shaker2,
     burgers,
+    ghost,
     bass,
     arp,
     harp1,
@@ -165,11 +145,12 @@ drum.buf.resample(3, 50)
 # clap
 drum.buf.load('assets/sounds/drum/clap.wav', 52)
 drum.buf.resample(1.48, 52)
+drum.buf.amplify(2, 52)
 # snare
 drum.buf.load('assets/sounds/drum/snare.wav', 40)
 drum.buf.crop(0, 0.1, 40)
-drum.buf.amplify(2, 40)
-drum.buf.clip(1.0, 40)
+drum.buf.amplify(4, 40)
+drum.buf.clip(2.0, 40)
 # ride
 drum.buf.load('assets/sounds/drum/ride.wav', 46)
 drum.buf.resample(0.45, 46)
@@ -188,6 +169,8 @@ drum.buf.load('assets/sounds/drum/low-tom.wav', 41)
 drum.buf.resample(0.45, 41)
 drum.buf.amplify(5, 41)
 drum.buf.clip(0.4, 41)
+# crash
+drum.buf.load('assets/sounds/drum/crash.wav', 49)
 
 shaker1.buf.load('assets/sounds/drum/shaker1.wav', 82)
 
@@ -201,14 +184,41 @@ burgers.buf.load('assets/local/burgers/plate2.wav', 63)
 burgers.buf.load('assets/local/burgers/mm.wav', 65)
 burgers.buf.load('assets/local/burgers/think.wav', 67)
 burgers.buf.load('assets/local/burgers/legs.wav', 69)
-for i in range(60, 72):
-    burgers.buf.amplify(5, i)
-    burgers.buf.clip(0.25, i)
+burgers.buf.load('assets/local/burgers/do-people-think-burgers-have-legs.wav', 72)
+burgers.buf.load('assets/local/burgers/no.wav', 74)
+burgers.buf.load('assets/local/burgers/but-pickle.wav', 76)
+burgers.buf.load('assets/local/burgers/think-on-my-pickle.wav', 77)
+burgers.buf.load('assets/local/burgers/next-burger-its-people.wav', 79)
+burgers.buf.load('assets/local/burgers/did-you-want-my-but.wav', 81)
+burgers.buf.load('assets/local/burgers/well-find-you-on-a-plate.wav', 83)
+burgers.buf.load('assets/local/burgers/its-burger-time.wav', 84)
+for i in range(0, 128):
+    burgers.buf.amplify(10, i)
+    burgers.buf.clip(0.5, i)
+
+ghost.sonic.from_json({
+    "0": {
+        "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
+        "i0": 0, "i1": 1, "i2": 0.3, "i3": 0.1, "o": 0.3,
+    },
+    "1": {
+        "a": 5e-3, "d": 3e-4, "s": 0.2, "r": 1, "m": 0.988,
+        "i0": 0.05, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+    "2": {
+        "a": 1e-5, "d": 3e-5, "s": 1, "r": 6e-5, "m": 1.007,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+    "3": {
+        "a": 4e-6, "d": 1e-5, "s": 1, "r": 6e-5, "m": 2.015,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0.1, "o": 0,
+    },
+})
 
 bass.sonic.from_json({
     "0": {
         "a": 5e-3, "d": 3e-4, "s": 0.5, "r": 0.01, "m": 1,
-        "i0": 0.3, "i1": 0.5, "i2": 0.4, "i3": 0.3, "o": 0.25,
+        "i0": 0.3, "i1": 0.5, "i2": 0.4, "i3": 0.3, "o": 0,  # set by midman
     },
     "1": {
         "a": 5e-3, "d": 1e-4, "s": 0.5, "r": 0.01, "m": 1.99,
@@ -226,11 +236,11 @@ bass.sonic.from_json({
 
 arp.sonic.from_json({
     "0": {
-        "a": 0.01, "d": 2e-4, "s": 0, "r": 2e-4, "m": 1,
-        "i0": 0, "i1": 0.1, "i2": 0.5, "i3": 0, "o": 0.1,
+        "a": 4e-3, "d": 5e-5, "s": 0, "r": 2e-3, "m": 1,
+        "i0": 0, "i1": 0.06, "i2": 0, "i3": 0, "o": 0.25,
     },
     "1": {
-        "a": 1e-3, "d": 4e-4, "s": 0, "r": 4e-4, "m": 1.99,
+        "a": 0.025, "d": 6e-5, "s": 0, "r": 3e-4, "m": 1,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
@@ -242,18 +252,14 @@ arp.sonic.from_json({
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
-arp.osc.freq(1/8)
-arp.oracle.m(0.1)
-arp.oracle.format('i0', 0, '%')
-arp.unary.mode('exp2')
 
 harp1.sonic.from_json({
     "0": {
-        "a": 0.01, "d": 2e-5, "s": 0, "r": 2e-5, "m": 1,
-        "i0": 0, "i1": 0.1, "i2": 0, "i3": 0, "o": 0.1,
+        "a": 4e-3, "d": 5e-5, "s": 0.2, "r": 2e-4, "m": 1,
+        "i0": 0, "i1": 0.06, "i2": 0, "i3": 0, "o": 0.25,
     },
     "1": {
-        "a": 0.01, "d": 4e-5, "s": 0.5, "r": 2e-5, "m": 3,
+        "a": 0.025, "d": 6e-5, "s": 0.2, "r": 3e-5, "m": 1,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
@@ -265,15 +271,14 @@ harp1.sonic.from_json({
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
-harp1.oracle.format('offset', 6, '%')
 
 harp2.sonic.from_json({
     "0": {
-        "a": 0.01, "d": 2e-5, "s": 0, "r": 2e-5, "m": 1,
-        "i0": 0, "i1": 0.1, "i2": 0, "i3": 0, "o": 0.1,
+        "a": 4e-3, "d": 5e-5, "s": 0.2, "r": 2e-4, "m": 1,
+        "i0": 0, "i1": 0.06, "i2": 0, "i3": 0, "o": 0.25,
     },
     "1": {
-        "a": 0.01, "d": 4e-5, "s": 0.5, "r": 2e-5, "m": 3,
+        "a": 0.025, "d": 6e-5, "s": 0.2, "r": 3e-5, "m": 1,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
@@ -285,25 +290,17 @@ harp2.sonic.from_json({
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
-harp2.oracle.format('offset', 7, '%')
 
 lpf.set(0.9)
 reverb.set(0.3)
 
 # connect
 arp.arp.connect(arp.sonic)
-arp.osc.connect(arp.oracle)
-arp.unary.connect(arp.oracle)
-arp.oracle.connect(arp.sonic)
 for voice in voices:
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
         i.connect(buf)
-harp1.osc.connect(harp1.oracle)
-harp2.osc.connect(harp2.oracle)
-harp1.oracle.connect(liner)
-harp2.oracle.connect(liner)
 dlal.connect(
     liner,
     [sweep.midi,
@@ -329,15 +326,8 @@ dlal.connect(
     buf,
 )
 liner.connect(midman)
-midman.connect(harp1.osc)
-midman.connect(harp2.osc)
 midman.connect(delay)
-midman.connect(arp.osc)
-midman.connect(sweep.oracle)
-midman.connect(sweep.delay)
-midman.connect(sweep.train_adsr)
-midman.connect(sweep.train_oracle)
-midman.connect(sweep.adsr)
+midman.connect(bass.sonic)
 lpf.connect(buf)
 reverb.connect(buf)
 delay.connect(buf)
@@ -351,4 +341,4 @@ if args.start:
 if args.live:
     dlal.typical_setup()
 else:
-    dlal.typical_setup(live=False, duration=164)
+    dlal.typical_setup(live=False, duration=177)
