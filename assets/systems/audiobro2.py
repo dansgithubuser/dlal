@@ -58,17 +58,17 @@ b = -1 * m
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
     'gate_adsr': ('adsr', [1, 1, 1, 7e-6], {}),
-    'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', '%'), 'cv_i': 1}),
+    'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', ['%']), 'cv_i': 1}),
     'adsr': ('adsr', [1/4/sample_rate, 1, 1, 1e-5], {}),
     'midman': ('midman', [], {'directives': [([{'nibble': 0x90}], 0, 'set', '%1*0.08')]}),
     'gain': ('gain', [], {}),
     'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
-    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('pole_pairs_bandpass', '%', 0.02, 6), 'cv_i': 1}),
+    'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('pole_pairs_bandpass', ['%', 0.02, 6]), 'cv_i': 1}),
     'train': ('osc', ['saw'], {}),
     'train2': ('osc', ['saw'], {'bend': 1.0081}),
     'train_adsr': ('adsr', [5e-8, 1, 1, 5e-5], {}),
-    'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', '%'), 'cv_i': 1}),
+    'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', ['%']), 'cv_i': 1}),
     'train_gain': ('gain', [], {}),
     'iir1': ('iir', [], {}),
     'iir2': ('iir', [], {}),
@@ -87,7 +87,7 @@ midman = dlal.Midman([
     # G - loud bass
     ([{'nibble': 0x90}, 0x43], mm_bass, 'o', 0, 0.5),
     # A - quiet bass
-    ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.2),
+    ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.4),
 ])
 liner = dlal.Liner()
 lpf = dlal.Lpf()
@@ -198,20 +198,20 @@ for i in range(0, 128):
 
 ghost.sonic.from_json({
     "0": {
-        "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
-        "i0": 0, "i1": 1, "i2": 0.3, "i3": 0.1, "o": 0.3,
+        "a": 1e-2, "d": 2e-6, "s": 0, "r": 1e-3, "m": 0.99,
+        "i0": 0, "i1": 0.4, "i2": 0, "i3": 0, "o": 0.2,
     },
     "1": {
-        "a": 5e-3, "d": 3e-4, "s": 0.2, "r": 1, "m": 0.988,
-        "i0": 0.05, "i1": 0, "i2": 0, "i3": 0, "o": 0,
-    },
-    "2": {
-        "a": 1e-5, "d": 3e-5, "s": 1, "r": 6e-5, "m": 1.007,
+        "a": 1e-2, "d": 1e-4, "s": 0, "r": 1e-3, "m": 1.99,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
+    "2": {
+        "a": 1e-2, "d": 2e-6, "s": 0, "r": 1e-3, "m": 1.007,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0.8, "o": 0.2,
+    },
     "3": {
-        "a": 4e-6, "d": 1e-5, "s": 1, "r": 6e-5, "m": 2.015,
-        "i0": 0, "i1": 0, "i2": 0, "i3": 0.1, "o": 0,
+        "a": 1e-2, "d": 8e-6, "s": 0, "r": 1e-3, "m": 0.992,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
 
@@ -222,15 +222,15 @@ bass.sonic.from_json({
     },
     "1": {
         "a": 5e-3, "d": 1e-4, "s": 0.5, "r": 0.01, "m": 1.99,
-        "i0": 0.04, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+        "i0": 0.01, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
         "a": 4e-3, "d": 3e-4, "s": 0.5, "r": 0.01, "m": 3.00013,
-        "i0": 0.03, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+        "i0": 0.01, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "3": {
         "a": 3e-3, "d": 1e-4, "s": 0.5, "r": 0.01, "m": 4.0001,
-        "i0": 0.02, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+        "i0": 0.01, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
 })
 

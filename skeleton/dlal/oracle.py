@@ -20,7 +20,12 @@ class Oracle(Component):
             if mode != None: self.mode(mode)
             if m != None: self.m(m)
             if b != None: self.b(b)
-            if format != None: self.format(format[0], *format[1], **format[2])
+            if format != None:
+                if len(format) == 1:
+                    format = (format[0], [], {})
+                if len(format) == 2:
+                    format = (format[0], format[1], {})
+                self.format(format[0], *format[1], **format[2])
             if cv_i != None: self.cv_i(cv_i)
 
     def mode(self, mode=None):
