@@ -184,17 +184,11 @@ burgers.buf.load('assets/local/burgers/plate2.wav', 63)
 burgers.buf.load('assets/local/burgers/mm.wav', 65)
 burgers.buf.load('assets/local/burgers/think.wav', 67)
 burgers.buf.load('assets/local/burgers/legs.wav', 69)
-burgers.buf.load('assets/local/burgers/do-people-think-burgers-have-legs.wav', 72)
-burgers.buf.load('assets/local/burgers/no.wav', 74)
-burgers.buf.load('assets/local/burgers/but-pickle.wav', 76)
-burgers.buf.load('assets/local/burgers/think-on-my-pickle.wav', 77)
-burgers.buf.load('assets/local/burgers/next-burger-its-people.wav', 79)
-burgers.buf.load('assets/local/burgers/did-you-want-my-but.wav', 81)
-burgers.buf.load('assets/local/burgers/well-find-you-on-a-plate.wav', 83)
-burgers.buf.load('assets/local/burgers/its-burger-time.wav', 84)
 for i in range(0, 128):
-    burgers.buf.amplify(10, i)
-    burgers.buf.clip(0.5, i)
+    if i == 67:
+        burgers.buf.amplify(4, i)
+    else:
+        burgers.buf.amplify(8, i)
 
 ghost.sonic.from_json({
     "0": {
