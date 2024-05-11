@@ -68,10 +68,6 @@ component!(
 );
 
 impl ComponentTrait for Component {
-    fn init(&mut self) {
-        self.sounds.resize(128, Default::default());
-    }
-
     fn join(&mut self, body: serde_json::Value) -> CmdResult {
         self.audio
             .resize(body.kwarg("run_size")?, 0.0);
@@ -103,6 +99,9 @@ impl ComponentTrait for Component {
 
     fn midi(&mut self, msg: &[u8]) {
         if msg.len() < 3 {
+            return;
+        }
+        if self.sounds.is_empty() {
             return;
         }
         match msg[0] & 0xf0 {
@@ -146,14 +145,16 @@ impl ComponentTrait for Component {
 
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let j = field_helper_from_json!(self, body);
-        self.sounds = vec![Sound::default(); 128];
         let sounds: serde_json::Map<String, serde_json::Value> = j.at("sounds")?;
-        for (note, sound) in sounds.iter() {
-            self.sounds[note.parse::<usize>()?] = Sound {
-                sample_rate: sound.at("sample_rate")?,
-                samples: sound.at("samples")?,
-                ..Sound::default()
-            };
+        if !sounds.is_empty() {
+            self.sounds = vec![Sound::default(); 128];
+            for (note, sound) in sounds.iter() {
+                self.sounds[note.parse::<usize>()?] = Sound {
+                    sample_rate: sound.at("sample_rate")?,
+                    samples: sound.at("samples")?,
+                    ..Sound::default()
+                };
+            }
         }
         Ok(None)
     }
@@ -169,6 +170,9 @@ impl Component {
     }
 
     fn load_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        if self.sounds.is_empty() {
+            self.sounds.resize(128, Default::default());
+        }
         let file_path: String = body.arg(0)?;
         let note: usize = body.arg(1)?;
         if note >= 128 {
@@ -213,7 +217,7 @@ impl Component {
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
-        let samples = &mut self.sounds[note].samples;
+        let samples = &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples;
         let mut resamples = Vec::<f32>::new();
         let mut index = 0.0;
         while (index as usize) < samples.len() {
@@ -234,7 +238,7 @@ impl Component {
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
-        let samples = &mut self.sounds[note].samples;
+        let samples = &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples;
         if start >= samples.len() {
             return Err(err!("start is too late").into());
         }
@@ -251,7 +255,7 @@ impl Component {
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
-        for i in &mut self.sounds[note].samples {
+        for i in &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples {
             if *i > amplitude {
                 *i = amplitude;
             } else if *i < -amplitude {
@@ -267,7 +271,7 @@ impl Component {
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
-        for sample in &mut self.sounds[note].samples {
+        for sample in &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples {
             *sample *= amount;
         }
         Ok(None)
@@ -275,11 +279,11 @@ impl Component {
 
     fn add_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let note_augend: usize = body.arg(0)?;
-        if note_augend >= 128 {
+        if note_augend >= self.sounds.len() {
             return Err(err!("invalid note_augend").into());
         }
         let note_addend: usize = body.arg(1)?;
-        if note_addend >= 128 {
+        if note_addend >= self.sounds.len() {
             return Err(err!("invalid note_addend").into());
         }
         if self.sounds[note_addend].samples.len() > self.sounds[note_augend].samples.len() {
@@ -294,11 +298,11 @@ impl Component {
 
     fn mul_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let note_multiplicand: usize = body.arg(0)?;
-        if note_multiplicand >= 128 {
+        if note_multiplicand >= self.sounds.len() {
             return Err(err!("invalid note_multiplicand").into());
         }
         let note_multiplier: usize = body.arg(1)?;
-        if note_multiplier >= 128 {
+        if note_multiplier >= self.sounds.len() {
             return Err(err!("invalid note_multiplicand").into());
         }
         if self.sounds[note_multiplier].samples.len() < self.sounds[note_multiplicand].samples.len() {
@@ -317,7 +321,7 @@ impl Component {
         let offset: f32 = body.arg(2)?;
         let duration: f32 = body.arg(3)?;
         let note: usize = body.arg(4)?;
-        if note >= 128 {
+        if note >= self.sounds.len() {
             return Err(err!("invalid note").into());
         }
         let len = (duration * self.sample_rate as f32) as usize;
