@@ -88,11 +88,15 @@ midman = dlal.Midman([
     ([{'nibble': 0x90}, 0x43], mm_bass, 'o', 0, 0.5),
     # A - quiet bass
     ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.4),
+    # B - short echo
+    ([{'nibble': 0x90}, 0x47], mm_delay, 'resize', 11025),
+    # C - long echo
+    ([{'nibble': 0x90}, 0x48], mm_delay, 'resize', 13230),
 ])
 liner = dlal.Liner()
 lpf = dlal.Lpf()
 reverb = dlal.Reverb()
-delay = dlal.Delay(11025, gain_y=0.3, gain_i=1)
+delay = dlal.Delay(13230, gain_y=0.3, gain_i=1)
 lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -199,27 +203,27 @@ burgers.buf.sound_params(72, repeat=True, accel=1.2, cresc=0.8)
 burgers.buf.load('assets/local/burgers/people.wav', 74)  # think
 burgers.buf.crop(0.9103, 1.2137, 74)
 burgers.buf.amplify(8, 74)
-burgers.buf.sound_params(74, repeat=True, accel=0.99, cresc=0.9)
+burgers.buf.sound_params(74, repeat=True, accel=0.99, cresc=0.8)
 burgers.buf.load('assets/local/burgers/people.wav', 76)  # burgers
 burgers.buf.crop(1.581, 1.997, 76)
 burgers.buf.amplify(8, 76)
-burgers.buf.sound_params(76, repeat=True, accel=0.8, cresc=0.9)
+burgers.buf.sound_params(76, repeat=True, accel=0.5, cresc=0.9)
 burgers.buf.load('assets/local/burgers/pickle.wav', 77)  # pickle
 burgers.buf.crop(0.3377, 0.5736, 77)
 burgers.buf.amplify(8, 77)
-burgers.buf.sound_params(77, repeat=True, accel=8.0, cresc=0.7)
+burgers.buf.sound_params(77, repeat=True, accel=9.0, cresc=0.9)
 burgers.buf.load('assets/local/burgers/people.wav', 79)  # people
 burgers.buf.crop(0.4540, 0.7968, 79)
 burgers.buf.amplify(8, 79)
-burgers.buf.sound_params(79, repeat=True, accel=0.9, cresc=0.9)
+burgers.buf.sound_params(79, repeat=True, accel=0.6, cresc=0.9)
 burgers.buf.load('assets/local/burgers/people.wav', 81)  # think
 burgers.buf.crop(0.9103, 1.2137, 81)
 burgers.buf.amplify(8, 81)
-burgers.buf.sound_params(81, repeat=True, accel=1.1, cresc=0.9)
+burgers.buf.sound_params(81, repeat=True, accel=4.0, cresc=0.9)
 burgers.buf.load('assets/local/burgers/people.wav', 83)  # burgers
 burgers.buf.crop(1.581, 1.997, 83)
 burgers.buf.amplify(8, 83)
-burgers.buf.sound_params(83, repeat=True, accel=1.2, cresc=0.9)
+burgers.buf.sound_params(83, repeat=True, accel=0.9, cresc=0.9)
 burgers.buf.load('assets/local/burgers/people.wav', 84)  # they haven't been here
 burgers.buf.crop(2.3, 3.2, 84)
 burgers.buf.amplify(8, 84)
