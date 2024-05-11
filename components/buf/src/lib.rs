@@ -3,12 +3,32 @@ use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 use std::cmp::min;
 use std::collections::HashMap;
 
-#[derive(Clone, Default)]
+//===== Sound =====//
+#[derive(Clone)]
 struct Sound {
     samples: Vec<f32>,
     sample_rate: u32,
+    cresc: f32,
+    accel: f32,
+    repeat: bool,
     play_index: f32,
     play_vol: f32,
+    play_speed: f32,
+}
+
+impl Default for Sound {
+    fn default() -> Self {
+        Self {
+            samples: Vec::new(),
+            sample_rate: 0,
+            cresc: 1.0,
+            accel: 1.0,
+            repeat: false,
+            play_index: 0.0,
+            play_vol: 0.0,
+            play_speed: 1.0,
+        }
+    }
 }
 
 impl Sound {
@@ -23,14 +43,38 @@ impl Sound {
     fn stop(&mut self) {
         self.play_vol = 0.0;
     }
+
+    fn playing(&self) -> bool {
+        self.play_vol != 0.0
+    }
+
+    fn run_update(&mut self, sample_rate: u32, run_size: usize) {
+        self.play_vol *= self.cresc.powf(run_size as f32 / sample_rate as f32);
+        self.play_speed *= self.accel.powf(run_size as f32 / sample_rate as f32);
+    }
+
+    fn next(&mut self, sample_rate: u32) -> f32 {
+        if self.play_index as usize >= self.samples.len() {
+            if self.repeat {
+                self.play_index = 0.0;
+            } else {
+                self.play_vol = 0.0;
+                return 0.0;
+            }
+        }
+        let ret = self.samples[self.play_index as usize] * self.play_vol;
+        self.play_index += self.sample_rate as f32 / sample_rate as f32 * self.play_speed;
+        ret
+    }
 }
 
+//===== component =====//
 component!(
     {"in": ["audio*", "midi"], "out": ["audio"]},
     [
         "sample_rate",
+        "run_size",
         "multi",
-        {"name": "join_info", "kwargs": ["run_size"]},
         {"name": "field_helpers", "fields": ["repeat", "repeat_start", "repeat_end"], "kinds": []},
     ],
     {
@@ -43,6 +87,7 @@ component!(
     {
         "set": {"args": ["samples"]},
         "load": {"args": ["file_path", "note"]},
+        "sound_params": {"args": ["note"], "kwargs": ["cresc", "accel", "repeat"]},
         "resample": {"args": ["ratio", "note"]},
         "crop": {"args": ["start", "end", "note"]},
         "clip": {"args": ["amplitude", "note"]},
@@ -68,31 +113,22 @@ component!(
 );
 
 impl ComponentTrait for Component {
-    fn init(&mut self) {
-        self.sounds.resize(128, Default::default());
-    }
-
-    fn join(&mut self, body: serde_json::Value) -> CmdResult {
-        self.audio
-            .resize(body.kwarg("run_size")?, 0.0);
+    fn join(&mut self, _body: serde_json::Value) -> CmdResult {
+        self.audio.resize(self.run_size, 0.0);
         Ok(None)
     }
 
     fn run(&mut self) {
         for sound in &mut self.sounds {
-            if sound.play_vol == 0.0 {
+            if !sound.playing() {
                 continue;
             }
-            if self.repeat && sound.play_index + self.repeat_end > sound.samples.len() as f32 {
+            if self.repeat && sound.play_index > sound.samples.len() as f32 - self.repeat_end {
                 sound.play_index = self.repeat_start;
             }
+            sound.run_update(self.sample_rate, self.run_size);
             for i in 0..self.audio.len() {
-                if sound.play_index as usize >= sound.samples.len() {
-                    sound.play_vol = 0.0;
-                } else {
-                    self.audio[i] += sound.samples[sound.play_index as usize] * sound.play_vol;
-                    sound.play_index += sound.sample_rate as f32 / self.sample_rate as f32;
-                }
+                self.audio[i] += sound.next(self.sample_rate);
             }
         }
         self.multi_audio(&self.audio);
@@ -103,6 +139,9 @@ impl ComponentTrait for Component {
 
     fn midi(&mut self, msg: &[u8]) {
         if msg.len() < 3 {
+            return;
+        }
+        if self.sounds.is_empty() {
             return;
         }
         match msg[0] & 0xf0 {
@@ -135,6 +174,9 @@ impl ComponentTrait for Component {
                 json!({
                     "samples": sound.samples,
                     "sample_rate": sound.sample_rate,
+                    "cresc": sound.cresc,
+                    "accel": sound.accel,
+                    "repeat": sound.repeat,
                 }),
             );
         }
@@ -146,19 +188,34 @@ impl ComponentTrait for Component {
 
     fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let j = field_helper_from_json!(self, body);
-        self.sounds = vec![Sound::default(); 128];
         let sounds: serde_json::Map<String, serde_json::Value> = j.at("sounds")?;
-        for (note, sound) in sounds.iter() {
-            self.sounds[note.parse::<usize>()?] = Sound {
-                sample_rate: sound.at("sample_rate")?,
-                samples: sound.at("samples")?,
-                ..Sound::default()
-            };
+        if !sounds.is_empty() {
+            self.ensure_sounds();
+            for (note, sound) in sounds.iter() {
+                self.sounds[note.parse::<usize>()?] = Sound {
+                    sample_rate: sound.at("sample_rate")?,
+                    samples: sound.at("samples")?,
+                    cresc: sound.at("cresc")?,
+                    accel: sound.at("accel")?,
+                    repeat: sound.at("repeat")?,
+                    ..Sound::default()
+                };
+            }
         }
         Ok(None)
     }
 }
 
+//----- helpers -----//
+impl Component {
+    fn ensure_sounds(&mut self) {
+        if self.sounds.is_empty() {
+            self.sounds.resize(128, Default::default());
+        }
+    }
+}
+
+//----- cmds -----//
 impl Component {
     fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let samples = body.arg::<Vec<_>>(0)?;
@@ -169,6 +226,7 @@ impl Component {
     }
 
     fn load_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        self.ensure_sounds();
         let file_path: String = body.arg(0)?;
         let note: usize = body.arg(1)?;
         if note >= 128 {
@@ -207,13 +265,29 @@ impl Component {
         Ok(None)
     }
 
+    fn sound_params_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let note: usize = body.arg(0)?;
+        let sound = &mut self.sounds.get_mut(note).ok_or("invalid note")?;
+        if let Ok(cresc) = body.kwarg("cresc") {
+            sound.cresc = cresc;
+        }
+        if let Ok(accel) = body.kwarg("accel") {
+            sound.accel = accel;
+        }
+        if let Ok(repeat) = body.kwarg("repeat") {
+            sound.repeat = repeat;
+        }
+        Ok(Some(json!({
+            "cresc": sound.cresc,
+            "accel": sound.accel,
+            "repeat": sound.repeat,
+        })))
+    }
+
     fn resample_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let ratio: f32 = body.arg(0)?;
         let note: usize = body.arg(1)?;
-        if note >= 128 {
-            return Err(err!("invalid note").into());
-        }
-        let samples = &mut self.sounds[note].samples;
+        let samples = &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples;
         let mut resamples = Vec::<f32>::new();
         let mut index = 0.0;
         while (index as usize) < samples.len() {
@@ -231,10 +305,7 @@ impl Component {
             return Err(err!("end is before start").into());
         }
         let note: usize = body.arg(2)?;
-        if note >= 128 {
-            return Err(err!("invalid note").into());
-        }
-        let samples = &mut self.sounds[note].samples;
+        let samples = &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples;
         if start >= samples.len() {
             return Err(err!("start is too late").into());
         }
@@ -248,10 +319,7 @@ impl Component {
     fn clip_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let amplitude = body.arg(0)?;
         let note: usize = body.arg(1)?;
-        if note >= 128 {
-            return Err(err!("invalid note").into());
-        }
-        for i in &mut self.sounds[note].samples {
+        for i in &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples {
             if *i > amplitude {
                 *i = amplitude;
             } else if *i < -amplitude {
@@ -264,10 +332,7 @@ impl Component {
     fn amplify_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let amount: f32 = body.arg(0)?;
         let note: usize = body.arg(1)?;
-        if note >= 128 {
-            return Err(err!("invalid note").into());
-        }
-        for sample in &mut self.sounds[note].samples {
+        for sample in &mut self.sounds.get_mut(note).ok_or("invalid note")?.samples {
             *sample *= amount;
         }
         Ok(None)
@@ -275,11 +340,11 @@ impl Component {
 
     fn add_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let note_augend: usize = body.arg(0)?;
-        if note_augend >= 128 {
+        if note_augend >= self.sounds.len() {
             return Err(err!("invalid note_augend").into());
         }
         let note_addend: usize = body.arg(1)?;
-        if note_addend >= 128 {
+        if note_addend >= self.sounds.len() {
             return Err(err!("invalid note_addend").into());
         }
         if self.sounds[note_addend].samples.len() > self.sounds[note_augend].samples.len() {
@@ -294,11 +359,11 @@ impl Component {
 
     fn mul_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let note_multiplicand: usize = body.arg(0)?;
-        if note_multiplicand >= 128 {
+        if note_multiplicand >= self.sounds.len() {
             return Err(err!("invalid note_multiplicand").into());
         }
         let note_multiplier: usize = body.arg(1)?;
-        if note_multiplier >= 128 {
+        if note_multiplier >= self.sounds.len() {
             return Err(err!("invalid note_multiplicand").into());
         }
         if self.sounds[note_multiplier].samples.len() < self.sounds[note_multiplicand].samples.len() {
@@ -317,7 +382,8 @@ impl Component {
         let offset: f32 = body.arg(2)?;
         let duration: f32 = body.arg(3)?;
         let note: usize = body.arg(4)?;
-        if note >= 128 {
+        self.ensure_sounds();
+        if note >= self.sounds.len() {
             return Err(err!("invalid note").into());
         }
         let len = (duration * self.sample_rate as f32) as usize;
@@ -326,7 +392,9 @@ impl Component {
             let phase =  i as f32 / self.sample_rate as f32 * freq * std::f32::consts::TAU;
             sin[i] = amp * phase.sin() + offset;
         }
+        self.sounds[note] = Sound::default();
         self.sounds[note].samples = sin;
+        self.sounds[note].sample_rate = self.sample_rate;
         Ok(None)
     }
 
