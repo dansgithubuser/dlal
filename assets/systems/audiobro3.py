@@ -2,14 +2,17 @@ import dlal
 
 import midi
 
+import argparse
 import datetime
 import os
 import subprocess
 import sys
 
-def sys_arg(i):
-    if len(sys.argv) > i:
-        return sys.argv[i]
+parser = argparse.ArgumentParser()
+parser.add_argument('--live', '-l', action='store_true')
+parser.add_argument('--start', '-s')
+parser.add_argument('--run-size', type=int)
+args = parser.parse_args()
 
 #===== init =====#
 if os.path.exists('assets/local/audiobro3_voice.flac'):
@@ -22,6 +25,7 @@ else:
     sys.exit()
 
 audio = dlal.Audio(driver=True)
+if args.run_size: audio.run_size(args.run_size)
 comm = dlal.Comm()
 
 # bassoons
@@ -106,7 +110,8 @@ shaker2.amplify(0.25, 82)
 
 #----- liner -----#
 liner.load('assets/midis/audiobro3.mid', immediate=True)
-liner.advance(float(sys_arg(1) or 0))
+if args.start:
+    liner.advance(float(args.start))
 
 #===== connect =====#
 dlal.connect(
@@ -131,4 +136,7 @@ dlal.connect(
 )
 
 #===== start =====#
-dlal.typical_setup()
+if args.live:
+    dlal.typical_setup()
+else:
+    dlal.typical_setup(live=False, duration=240)

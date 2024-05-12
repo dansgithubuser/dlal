@@ -106,7 +106,7 @@ class Portamento(Subsystem):
                 'oracle': ('oracle', [], {
                     'mode': 'pitch_wheel',
                     'm': 0x4000,
-                    'format': ('midi', [0xe0, '%l', '%h']),
+                    'format': ('midi', [[0xe0, '%l', '%h']]),
                 }),
             },
             ['rhymel'],
