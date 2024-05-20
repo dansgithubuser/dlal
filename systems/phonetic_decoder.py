@@ -106,5 +106,5 @@ if args.recite:
 if args.textgrid:
     w = say_utterance(dlal.speech.Utterance.from_textgrid(args.textgrid, model))
 
-dlal.typical_setup()
+dlal.typical_setup(duration=10)
 time.sleep(w)

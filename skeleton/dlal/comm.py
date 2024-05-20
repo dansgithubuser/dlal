@@ -29,7 +29,7 @@ class Comm(Component):
     def __exit__(self, *args):
         Component._comm = self.component_comm
 
-    def queue(self, component, name, args, kwargs, timeout_ms=20, detach=False):
+    def queue(self, component, name, args=[], kwargs={}, timeout_ms=20, detach=False):
         return self.command_immediate(
             'queue',
             [

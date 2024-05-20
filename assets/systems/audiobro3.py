@@ -136,7 +136,4 @@ dlal.connect(
 )
 
 #===== start =====#
-if args.live:
-    dlal.typical_setup()
-else:
-    dlal.typical_setup(live=False, duration=240)
+dlal.typical_setup(duration=240)

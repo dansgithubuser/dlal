@@ -71,8 +71,8 @@ class Component:
                 item['name'],
                 make_typical_command(item['name']),
             )
+        if preadd: preadd()
         if Component._driver:
-            if preadd: preadd()
             Component._driver.add(self, slot)
 
     def __del__(self):
