@@ -408,7 +408,10 @@ if args.interact or args.run:
         invocation = ['python3']
         if args.interact:
             invocation.append('-i')
-        invocation.extend(args.run)
+        invocation.extend([
+            f'"{i}"' if ' ' in i else i
+            for i in args.run
+        ])
         invocation = ' '.join(invocation)
     else:
         invocation = 'python3 -i -c "import dlal"'
