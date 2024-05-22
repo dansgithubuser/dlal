@@ -7,7 +7,7 @@
 '''
 
 from . import _utils
-from ._skeleton import connect as _connect, Detach
+from ._skeleton import connect as _connect, Detach as _Detach
 from ._subsystem import Subsystem
 
 import json as _json
@@ -144,6 +144,28 @@ class SpeechSampler(Subsystem):
                 samples.append(self.sample())
             sampleses[k] = samples
         return sampleses
+
+    def frames(self, afr, driver, model=None):
+        if model == None:
+            model = Model()
+        assert driver.sample_rate() == model.sample_rate
+        assert driver.run_size() == model.run_size
+        afr.connect(self.buf)
+        duration = afr.duration()
+        run_size = driver.run_size()
+        samples = 0
+        frames = []
+        while afr.playing():
+            driver.run()
+            sample = self.sample()
+            params = model.parameterize(*sample)
+            frame = model.frames_from_paramses([params])[0]
+            frames.append(frame)
+            samples += run_size
+            print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
+        print()
+        afr.disconnect(self.buf)
+        return frames
 
 class Model:
     def mean(l):
@@ -768,7 +790,7 @@ class SpeechSynth(Subsystem):
         noise_pieces=None,
         wait=None,
     ):
-        with Detach():
+        with _Detach():
             with self.comm:
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
@@ -801,3 +823,22 @@ class SpeechSynth(Subsystem):
             if wait < 1e-4: return
         self.say('0', model, wait)
 
+def file_to_frames(path):
+    from . import Afr, Audio
+    driver = Audio(driver=True)
+    afr = Afr(path)
+    return SpeechSampler().frames(afr, driver)
+
+def split_frames(frames, min_size=32, toniness_thresh=0.5):
+    if len(frames) == 0: return [[]]
+    toniness = [i['toniness'] for i in frames]
+    toniness_thresh = toniness_thresh * max(toniness) + (1 - toniness_thresh) * min(toniness)
+    toniness_low_prev = toniness[0] < toniness_thresh
+    split = [[]]
+    for frame in frames:
+        toniness_low = frame['toniness'] < toniness_thresh
+        if toniness_low != toniness_low_prev and len(split[-1]) >= min_size:
+            split.append([])
+        split[-1].append(frame)
+        toniness_low_prev = toniness_low
+    return split
