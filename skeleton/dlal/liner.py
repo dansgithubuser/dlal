@@ -3,12 +3,14 @@ from ._component import Component
 import midi
 
 class Liner(Component):
-    def __init__(self, name=None):
-        Component.__init__(self, 'liner', name)
+    def __init__(self, midi_path=None, **kwargs):
+        Component.__init__(self, 'liner', **kwargs)
+        if midi_path:
+            self.load(midi_path)
 
     def load(self, file_path, immediate=False):
-        song = midi.Song().load(file_path)
-        tempos = song.collect(['tempo'])
+        song = midi.Song(file_path)
+        tempos = song.filterleave(lambda i: i.type() == 'tempo')
         for i in range(len(song.tracks())):
             deltamsgs = [
                 {
@@ -16,7 +18,7 @@ class Liner(Component):
                     'msg': i.msg(),
                 }
                 for i in midi.interleave(
-                    song.tracks(i).extract([
+                    song.tracks(i).filter(lambda i: i.type() in [
                         'note_on',
                         'note_off',
                         'control_change',
