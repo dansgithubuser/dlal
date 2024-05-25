@@ -567,6 +567,7 @@ class Utterance:
         default_pitch=42,
     ):
         self.phonetics = []
+        self.frames = []
         self.waits = []
         self.pitches = []
         self.model = model
@@ -574,6 +575,8 @@ class Utterance:
         self.default_pitch = default_pitch
 
     def __iter__(self):
+        if self.frames:
+            return iter(zip(self.frames, self.waits, self.pitches))
         return iter(zip(self.phonetics, self.waits, self.pitches))
 
     def from_str(s, *args, **kwargs):
@@ -686,8 +689,20 @@ class Utterance:
         self.infer()
         return self
 
-    def from_frameses_and_deltamsgs(frameses, deltamsgs):
+    def from_frameses_and_notes(frameses, notes):
         self = Utterance()
+        for i, (frames, note) in enumerate(zip(frameses, notes)):
+            if i + 1 < len(notes):
+                wait_total = notes[i+1]['on'] - note['on']
+            else:
+                wait_total = note['off'] - note['on']
+            for j, frame in enumerate(frames):
+                wait = int(wait_total / len(frames))
+                if j == len(notes) - 1:
+                    wait = wait_total - wait * (len(frames) - 1)
+                self.frames.append(frame)
+                self.waits.append(wait)
+                self.pitches.append(note['number'])
         return self
 
     def phonetics_from_str(s):
@@ -795,6 +810,7 @@ class SpeechSynth(Subsystem):
         noise_spectrum=None,
         noise_pieces=None,
         wait=None,
+        pitch=None,
     ):
         with _Detach():
             with self.comm:
@@ -809,9 +825,11 @@ class SpeechSynth(Subsystem):
                     self.noise.spectrum(noise_spectrum)
                 elif noise_pieces:
                     self.noise.piecewise([0] + NOISE_PIECES + [20000], [0] + noise_pieces + [0])
+                if pitch != None:
+                    self.tone.midi([0x90, pitch, 127])
                 self.comm.wait(wait)
 
-    def say(self, phonetic, model, wait=0):
+    def say(self, phonetic, model, wait=0, pitch=None):
         info = model.phonetics[phonetic]
         frames = info['frames']
         if info['type'] == 'stop':
@@ -824,10 +842,25 @@ class SpeechSynth(Subsystem):
                 tone_formants=frame['tone']['formants'],
                 noise_spectrum=frame['noise']['spectrum'],
                 wait=int(w * self.sample_rate),
+                pitch=pitch,
             )
             wait -= w
             if wait < 1e-4: return
         self.say('0', model, wait)
+
+    def utter(self, utterance, model=None):
+        if model:
+            for phonetic, wait, pitch in utterance:
+                self.say(phonetic, model, wait, pitch)
+        else:
+            for frame, wait, pitch in utterance:
+                self.synthesize(
+                    toniness=frame['toniness'],
+                    tone_spectrum=frame['tone']['spectrum'],
+                    noise_spectrum=frame['noise']['spectrum'],
+                    wait=wait,
+                    pitch=pitch,
+                )
 
 def file_to_frames(path, quiet=False):
     from . import Afr, Audio
