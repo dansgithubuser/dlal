@@ -19,6 +19,10 @@ class Subsystem:
             _skeleton.driver_set(driver)
         self.post_add_init()
 
+    def __del__(self):
+        for i in self.components.values():
+            i.__del__()
+
     def init(self, components={}, inputs=[], outputs=[], name=None):
         if not hasattr(self, 'name'):
             if name == None: name = _utils.upper_camel_to_snake_case(self.__class__.__name__)

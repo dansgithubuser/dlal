@@ -145,7 +145,7 @@ class SpeechSampler(Subsystem):
             sampleses[k] = samples
         return sampleses
 
-    def frames(self, afr, driver, model=None):
+    def frames(self, afr, driver, model=None, quiet=False):
         if model == None:
             model = Model()
         assert driver.sample_rate() == model.sample_rate
@@ -162,8 +162,10 @@ class SpeechSampler(Subsystem):
             frame = model.frames_from_paramses([params])[0]
             frames.append(frame)
             samples += run_size
-            print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
-        print()
+            if not quiet:
+                print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
+        if not quiet:
+            print()
         afr.disconnect(self.buf)
         return frames
 
@@ -684,6 +686,10 @@ class Utterance:
         self.infer()
         return self
 
+    def from_frameses_and_deltamsgs(frameses, deltamsgs):
+        self = Utterance()
+        return self
+
     def phonetics_from_str(s):
         phonetics = []
         bracketed_phonetic = None
@@ -823,11 +829,14 @@ class SpeechSynth(Subsystem):
             if wait < 1e-4: return
         self.say('0', model, wait)
 
-def file_to_frames(path):
+def file_to_frames(path, quiet=False):
     from . import Afr, Audio
     driver = Audio(driver=True)
     afr = Afr(path)
-    return SpeechSampler().frames(afr, driver)
+    speech_sampler = SpeechSampler()
+    frames = speech_sampler.frames(afr, driver, quiet=quiet)
+    speech_sampler.__del__()
+    return frames
 
 def split_frames(frames, min_size=32, toniness_thresh=0.5):
     if len(frames) == 0: return [[]]
