@@ -3,6 +3,7 @@ import dlal
 
 import json
 import os
+import pickle
 
 #===== deep speech =====#
 text = '''\
@@ -57,7 +58,7 @@ noteses = dlal.Liner.split_notes(liner.get_notes(5))
 for i in range(len(text.splitlines())):
     alignment_path = f'assets/local/audiobro3_deep_speech_{i:02}.json'
     if not os.path.exists(alignment_path):
-        raise Exception(f'missing {alignment_path}, make it with systems/phonetic_aligner.py')
+        raise Exception(f'missing {alignment_path}, make it with:\n./do.py -r systems/phonetic_aligner.py -m assets/midis/audiobro3.mid 5 -a assets/local/audiobro3_deep_speech_*.wav')
 
 utterance = dlal.speech.Utterance()
 l = len(text.splitlines())
@@ -65,7 +66,14 @@ for i in range(l):
     print(f'making utterance {i+1} / {l}')
     with open(f'assets/local/audiobro3_deep_speech_{i:02}.json') as f:
         frame_indices = json.load(f)
-    frames = dlal.speech.file_to_frames(f'assets/local/audiobro3_deep_speech_{i:02}.wav', quiet=True)
+    pickle_path = f'assets/local/audiobro3_deep_speech_{i:02}.pickle'
+    if os.path.exists(pickle_path):
+        with open(pickle_path, 'rb') as f:
+            frames = pickle.load(f)
+    else:
+        frames = dlal.speech.file_to_frames(f'assets/local/audiobro3_deep_speech_{i:02}.wav', quiet=True)
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(frames, f)
     frameses = [frames[a:b] for a, b in frame_indices]
     u = dlal.speech.Utterance.from_frameses_and_notes(frameses, noteses[i])
     if i == 0:
@@ -76,6 +84,7 @@ for i in range(l):
         pitch = None
     utterance.append_silence('frame', noteses[i][0]['on'] - t, pitch)
     utterance.extend(u)
+utterance.append_silence('frame', 1, None)
 
 #===== render =====#
 audio = dlal.Audio(driver=True)

@@ -38,6 +38,8 @@ accordion2 = dlal.Buf('melodica', name='accordion2')
 drum = dlal.Buf(name='drum')
 # voice
 voice = dlal.Afr('assets/local/audiobro3_voice.flac')
+voice_gain = dlal.Gain(1.5)
+voice_buf = dlal.Buf()
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')
@@ -46,7 +48,8 @@ shaker1 = dlal.Buf(name='shaker1')
 shaker2 = dlal.Buf(name='shaker2')
 
 liner = dlal.Liner()
-reverb = dlal.Reverb(0.1)
+reverb = dlal.Reverb(0.2)
+master_gain = dlal.Gain(2.0)
 lim = dlal.Lim(1, 0.9, 0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -114,6 +117,8 @@ if args.start:
     liner.advance(float(args.start))
 
 #===== connect =====#
+voice_gain.connect(voice_buf)
+master_gain.connect(buf)
 dlal.connect(
     liner,
     [
@@ -122,7 +127,7 @@ dlal.connect(
         accordion1,
         accordion2,
         drum,
-        voice,
+        [voice, '>', voice_buf],
         [guitar_strummer, '>', guitar],
         shaker1,
         shaker2,
@@ -131,6 +136,7 @@ dlal.connect(
         '<+', guitar,
         '<+', reverb,
         '<+', lim,
+        '<+', voice_buf,
     ],
     [audio, tape],
 )

@@ -803,6 +803,7 @@ class SpeechSynth(Subsystem):
             name=name,
         )
         self.tone.zero()
+        self.mutt.decay(0.9999)
         _connect(
             self.forman,
             self.tone,

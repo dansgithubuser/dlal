@@ -44,8 +44,8 @@ impl ComponentTrait for Component {
         };
         for (i, j) in zip(&self.audio, y) {
             self.value *= self.decay;
-            if self.value < i.abs() {
-                self.value = i.abs();
+            if self.value < *i {
+                self.value = *i;
             }
             if self.value > self.e {
                 *j *= i / self.value;
