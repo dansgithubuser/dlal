@@ -2,14 +2,17 @@ import dlal
 
 import midi
 
+import argparse
 import datetime
 import os
 import subprocess
 import sys
 
-def sys_arg(i):
-    if len(sys.argv) > i:
-        return sys.argv[i]
+parser = argparse.ArgumentParser()
+parser.add_argument('--live', '-l', action='store_true')
+parser.add_argument('--start', '-s')
+parser.add_argument('--run-size', type=int)
+args = parser.parse_args()
 
 #===== init =====#
 if os.path.exists('assets/local/audiobro3_voice.flac'):
@@ -22,6 +25,7 @@ else:
     sys.exit()
 
 audio = dlal.Audio(driver=True)
+if args.run_size: audio.run_size(args.run_size)
 comm = dlal.Comm()
 
 # bassoons
@@ -34,6 +38,8 @@ accordion2 = dlal.Buf('melodica', name='accordion2')
 drum = dlal.Buf(name='drum')
 # voice
 voice = dlal.Afr('assets/local/audiobro3_voice.flac')
+voice_gain = dlal.Gain(1.5)
+voice_buf = dlal.Buf()
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
 guitar = dlal.Buf('guitar', name='guitar')
@@ -42,7 +48,8 @@ shaker1 = dlal.Buf(name='shaker1')
 shaker2 = dlal.Buf(name='shaker2')
 
 liner = dlal.Liner()
-reverb = dlal.Reverb(0.1)
+reverb = dlal.Reverb(0.2)
+master_gain = dlal.Gain(2.0)
 lim = dlal.Lim(1, 0.9, 0.3)
 buf = dlal.Buf()
 tape = dlal.Tape(1 << 17)
@@ -106,9 +113,12 @@ shaker2.amplify(0.25, 82)
 
 #----- liner -----#
 liner.load('assets/midis/audiobro3.mid', immediate=True)
-liner.advance(float(sys_arg(1) or 0))
+if args.start:
+    liner.advance(float(args.start))
 
 #===== connect =====#
+voice_gain.connect(voice_buf)
+master_gain.connect(buf)
 dlal.connect(
     liner,
     [
@@ -117,7 +127,7 @@ dlal.connect(
         accordion1,
         accordion2,
         drum,
-        voice,
+        [voice, '>', voice_buf],
         [guitar_strummer, '>', guitar],
         shaker1,
         shaker2,
@@ -126,9 +136,10 @@ dlal.connect(
         '<+', guitar,
         '<+', reverb,
         '<+', lim,
+        '<+', voice_buf,
     ],
     [audio, tape],
 )
 
 #===== start =====#
-dlal.typical_setup()
+dlal.typical_setup(duration=240)

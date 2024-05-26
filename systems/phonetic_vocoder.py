@@ -2,22 +2,27 @@ import dlal
 
 import argparse
 import collections
+import glob
 import json
 import math
 import os
+from pathlib import Path
 
 parser = argparse.ArgumentParser()
-parser.add_argument('recording_path')
+parser.add_argument('recording_glob')
 parser.add_argument('--visualize', '-v', action='store_true')
 parser.add_argument('--noise-only', action='store_true')
 parser.add_argument('--amp-plot', action='store_true')
-parser.add_argument('--formants', action='store_true')
+parser.add_argument('--formants', '-f', action='store_true')
 parser.add_argument('--noise-pieces', action='store_true')
+parser.add_argument('--output-dir', '-o')
 args = parser.parse_args()
+
+recording_paths = sorted(glob.glob(args.recording_glob))
 
 # components
 audio = dlal.Audio(driver=True)
-afr = dlal.Afr(args.recording_path)
+afr = dlal.Afr()
 sampler = dlal.speech.SpeechSampler()
 synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape()
@@ -32,7 +37,6 @@ dlal.connect(
 )
 
 # commands
-duration = afr.duration()
 run_size = audio.run_size()
 
 # model
@@ -115,48 +119,57 @@ if args.amp_plot:
         return sum(spectrum[1:])
 
 # run
-samples = 0
-file = open('phonetic_vocoder.i16le', 'wb')
-formants_prev = None
-while samples < duration:
-    audio.run()
-    sample = sampler.sample()
-    params = model.parameterize(*sample, 's' if args.noise_only else None, formants_prev=formants_prev)
-    formants_prev = params['tone']['formants']
-    frame = model.frames_from_paramses([params])[0]
-    visualizer.add(sample, params)
-    if args.formants:
-        tone_params = {'tone_formants': frame['tone']['formants']}
-    else:
-        tone_params = {'tone_spectrum': frame['tone']['spectrum']}
-    if args.noise_pieces:
-        noise_params = {'noise_pieces': frame['noise']['pieces']}
-    else:
-        noise_params = {'noise_spectrum': frame['noise']['spectrum']}
-    synth.synthesize(
-        toniness=frame['toniness'],
-        wait=0,
-        **tone_params,
-        **noise_params,
-    )
-    tape.to_file_i16le(file)
-    samples += run_size
-    print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
-    if args.amp_plot:
-        amps['rec'].append(peak_rec.value())
-        amps['stft'].append(amp_spectrum(sample[0]))
-        amps['tone'].append(amp_spectrum(params['tone']['spectrum']))
-        amps['noise'].append(amp_spectrum(params['noise']['spectrum']))
-        amps['synth_tone'].append(peak_synth_tone.value())
-        amps['synth_noise'].append(peak_synth_noise.value())
-        amps['synth_full'].append(peak_synth_full.value())
-print()
-visualizer.show()
+for recording_path in recording_paths:
+    print(recording_path)
+    afr.open(recording_path)
+    duration = afr.duration()
+    samples = 0
+    file = open('phonetic_vocoder.i16le', 'wb')
+    formants_prev = None
+    while samples < duration:
+        audio.run()
+        sample = sampler.sample()
+        params = model.parameterize(*sample, 's' if args.noise_only else None, formants_prev=formants_prev)
+        formants_prev = params['tone']['formants']
+        frame = model.frames_from_paramses([params])[0]
+        visualizer.add(sample, params)
+        if args.formants:
+            tone_params = {'tone_formants': frame['tone']['formants']}
+        else:
+            tone_params = {'tone_spectrum': frame['tone']['spectrum']}
+        if args.noise_pieces:
+            noise_params = {'noise_pieces': frame['noise']['pieces']}
+        else:
+            noise_params = {'noise_spectrum': frame['noise']['spectrum']}
+        synth.synthesize(
+            toniness=frame['toniness'],
+            wait=0,
+            **tone_params,
+            **noise_params,
+        )
+        tape.to_file_i16le(file)
+        samples += run_size
+        print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
+        if args.amp_plot:
+            amps['rec'].append(peak_rec.value())
+            amps['stft'].append(amp_spectrum(sample[0]))
+            amps['tone'].append(amp_spectrum(params['tone']['spectrum']))
+            amps['noise'].append(amp_spectrum(params['noise']['spectrum']))
+            amps['synth_tone'].append(peak_synth_tone.value())
+            amps['synth_noise'].append(peak_synth_noise.value())
+            amps['synth_full'].append(peak_synth_full.value())
+    print()
+    visualizer.show()
 
-if args.amp_plot:
-    import dansplotcore as dpc
-    plot = dpc.Plot(primitive=dpc.primitives.Line())
-    for i, (k, v) in enumerate(amps.items()):
-        plot.text(k, **plot.transform(0, -(i+1)/5, i, plot.series))
-        plot.plot(v)
-    plot.show()
+    file.close()
+    if args.output_dir:
+        path = Path(args.output_dir) / Path(recording_path).with_suffix('.flac').name
+        dlal.sound.i16le_to_flac(file.name, path)
+
+    if args.amp_plot:
+        import dansplotcore as dpc
+        plot = dpc.Plot(primitive=dpc.primitives.Line())
+        for i, (k, v) in enumerate(amps.items()):
+            plot.text(k, **plot.transform(0, -(i+1)/5, i, plot.series))
+            plot.plot(v)
+        plot.show()

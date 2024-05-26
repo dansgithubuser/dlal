@@ -264,15 +264,15 @@ def disconnect(*args):
     Useful for agnostic disconnection more than for disconnecting complex structures.'''
     connect(*args, _dis=True)
 
-def typical_setup(*, live=True, duration=None, out_path='out.i16le'):
+def typical_setup(*, duration=None, out_path='out.i16le'):
     import atexit
     import os
+    import sys
+    import time
     audio = component('audio', None)
     comm = component('comm', None)
     tape = component('tape', None)
-    if live:
-        import sys
-        assert sys.flags.interactive, 'For live audio, please run python interactively.'
+    if sys.flags.interactive:
         if audio:
             audio.start()
             atexit.register(lambda: audio.stop())

@@ -7,7 +7,7 @@
 '''
 
 from . import _utils
-from ._skeleton import connect as _connect, Detach
+from ._skeleton import connect as _connect, Detach as _Detach
 from ._subsystem import Subsystem
 
 import json as _json
@@ -144,6 +144,30 @@ class SpeechSampler(Subsystem):
                 samples.append(self.sample())
             sampleses[k] = samples
         return sampleses
+
+    def frames(self, afr, driver, model=None, quiet=False):
+        if model == None:
+            model = Model()
+        assert driver.sample_rate() == model.sample_rate
+        assert driver.run_size() == model.run_size
+        afr.connect(self.buf)
+        duration = afr.duration()
+        run_size = driver.run_size()
+        samples = 0
+        frames = []
+        while afr.playing():
+            driver.run()
+            sample = self.sample()
+            params = model.parameterize(*sample)
+            frame = model.frames_from_paramses([params])[0]
+            frames.append(frame)
+            samples += run_size
+            if not quiet:
+                print('{:>6.2f}%'.format(100 * samples / duration), end='\r')
+        if not quiet:
+            print()
+        afr.disconnect(self.buf)
+        return frames
 
 class Model:
     def mean(l):
@@ -543,6 +567,7 @@ class Utterance:
         default_pitch=42,
     ):
         self.phonetics = []
+        self.frames = []
         self.waits = []
         self.pitches = []
         self.model = model
@@ -550,6 +575,8 @@ class Utterance:
         self.default_pitch = default_pitch
 
     def __iter__(self):
+        if self.frames:
+            return iter(zip(self.frames, self.waits, self.pitches))
         return iter(zip(self.phonetics, self.waits, self.pitches))
 
     def from_str(s, *args, **kwargs):
@@ -662,6 +689,42 @@ class Utterance:
         self.infer()
         return self
 
+    def from_frameses_and_notes(frameses, notes):
+        self = Utterance()
+        for i, (frames, note) in enumerate(zip(frameses, notes)):
+            if i + 1 < len(notes):
+                wait_total = notes[i+1]['on'] - note['on']
+            else:
+                wait_total = note['off'] - note['on']
+            for j, frame in enumerate(frames):
+                wait = int(wait_total / len(frames))
+                if j == len(notes) - 1:
+                    wait = wait_total - wait * (len(frames) - 1)
+                self.frames.append(frame)
+                self.waits.append(wait)
+                self.pitches.append(note['number'])
+        return self
+
+    def append_silence(self, kind, wait, pitch=None):
+        if kind == 'phonetic':
+            self.phonetics.append('0')
+        elif kind == 'frame':
+            self.frames.append({
+                'toniness': 0.0,
+                'tone': {'spectrum': [0.0] * 64},
+                'noise': {'spectrum': [0.0] * 64},
+            })
+        self.waits.append(wait)
+        if pitch == None:
+            pitch = self.pitches[-1]
+        self.pitches.append(pitch)
+
+    def extend(self, utterance):
+        self.phonetics.extend(utterance.phonetics)
+        self.frames.extend(utterance.frames)
+        self.waits.extend(utterance.waits)
+        self.pitches.extend(utterance.pitches)
+
     def phonetics_from_str(s):
         phonetics = []
         bracketed_phonetic = None
@@ -731,7 +794,7 @@ class SpeechSynth(Subsystem):
                 'comm': ('comm', [1 << 16]),
                 'forman': ('forman', [freq_per_bin]),
                 'tone': ('sinbank', [freq_per_bin, 0.99]),
-                'noise': ('noisebank', [0.8]),
+                'noise': ('noisebank', [], {'smooth': 0.8}),
                 'buf_tone': 'buf',
                 'mutt': 'mutt',
                 'buf_noise': 'buf',
@@ -740,6 +803,7 @@ class SpeechSynth(Subsystem):
             name=name,
         )
         self.tone.zero()
+        self.mutt.decay(0.9999)
         _connect(
             self.forman,
             self.tone,
@@ -767,8 +831,9 @@ class SpeechSynth(Subsystem):
         noise_spectrum=None,
         noise_pieces=None,
         wait=None,
+        pitch=None,
     ):
-        with Detach():
+        with _Detach():
             with self.comm:
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
@@ -781,9 +846,11 @@ class SpeechSynth(Subsystem):
                     self.noise.spectrum(noise_spectrum)
                 elif noise_pieces:
                     self.noise.piecewise([0] + NOISE_PIECES + [20000], [0] + noise_pieces + [0])
+                if pitch != None:
+                    self.tone.midi([0x90, pitch, 127])
                 self.comm.wait(wait)
 
-    def say(self, phonetic, model, wait=0):
+    def say(self, phonetic, model, wait=0, pitch=None):
         info = model.phonetics[phonetic]
         frames = info['frames']
         if info['type'] == 'stop':
@@ -796,8 +863,47 @@ class SpeechSynth(Subsystem):
                 tone_formants=frame['tone']['formants'],
                 noise_spectrum=frame['noise']['spectrum'],
                 wait=int(w * self.sample_rate),
+                pitch=pitch,
             )
             wait -= w
             if wait < 1e-4: return
         self.say('0', model, wait)
 
+    def utter(self, utterance, model=None, *, no_pitch=False):
+        if model:
+            for phonetic, wait, pitch in utterance:
+                if no_pitch: pitch = None
+                self.say(phonetic, model, wait, pitch)
+        else:
+            for frame, wait, pitch in utterance:
+                if no_pitch: pitch = None
+                self.synthesize(
+                    toniness=frame['toniness'],
+                    tone_spectrum=frame['tone']['spectrum'],
+                    noise_spectrum=frame['noise']['spectrum'],
+                    wait=wait,
+                    pitch=pitch,
+                )
+
+def file_to_frames(path, quiet=False):
+    from . import Afr, Audio
+    driver = Audio(driver=True)
+    afr = Afr(path)
+    speech_sampler = SpeechSampler()
+    frames = speech_sampler.frames(afr, driver, quiet=quiet)
+    speech_sampler.__del__()
+    return frames
+
+def split_frames(frames, min_size=32, toniness_thresh=0.5):
+    if len(frames) == 0: return [[]]
+    toniness = [i['toniness'] for i in frames]
+    toniness_thresh = toniness_thresh * max(toniness) + (1 - toniness_thresh) * min(toniness)
+    toniness_low_prev = toniness[0] < toniness_thresh
+    split = [[]]
+    for frame in frames:
+        toniness_low = frame['toniness'] < toniness_thresh
+        if toniness_low != toniness_low_prev and len(split[-1]) >= min_size:
+            split.append([])
+        split[-1].append(frame)
+        toniness_low_prev = toniness_low
+    return split

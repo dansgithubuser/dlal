@@ -1,14 +1,98 @@
-# imports
+#===== imports =====#
 import dlal
 
-# components
+import json
+import os
+import pickle
+
+#===== deep speech =====#
+text = '''\
+Oh shit,
+it's gettin' serious.
+And through smoke, he appeared.
+Base man.
+The town had been without base for over forty years.
+There was no dancing.
+There was no rump-shaking.
+There had been no laughter.
+And death
+was nearing
+everybody.
+We can survive without food,
+but not without base.
+Well,
+not very long anyway.
+The color had drained from everyone's faces.
+Every day,
+the townspeople went to the church and prayed for base.
+And base man looked upon the town,
+and he smiled,
+for he knew.
+'''
+
+tts = None
+while True:
+    something_synthesized = False
+    for i, line in enumerate(text.splitlines()):
+        deep_speech_path = f'assets/local/audiobro3_deep_speech_{i:02}.wav'
+        if not os.path.exists(deep_speech_path):
+            print('synthesizing:', line)
+            something_synthesized = True
+            if not tts:
+                from TTS.api import TTS
+                tts = TTS('tts_models/multilingual/multi-dataset/xtts_v2').to('cpu')
+            tts.tts_to_file(
+                text=line,
+                speaker='Aaron Dreschner',
+                language='en',
+                file_path=deep_speech_path,
+            )
+    if not something_synthesized: break
+    print('All good? Enter q to quit. Otherwise delete files and enter to redo those.')
+    if input() == 'q': break
+
+#===== alignment =====#
+liner = dlal.Liner('assets/midis/audiobro3.mid')
+noteses = dlal.Liner.split_notes(liner.get_notes(5))
+
+for i in range(len(text.splitlines())):
+    alignment_path = f'assets/local/audiobro3_deep_speech_{i:02}.json'
+    if not os.path.exists(alignment_path):
+        raise Exception(f'missing {alignment_path}, make it with:\n./do.py -r systems/phonetic_aligner.py -m assets/midis/audiobro3.mid 5 -a assets/local/audiobro3_deep_speech_*.wav')
+
+utterance = dlal.speech.Utterance()
+l = len(text.splitlines())
+for i in range(l):
+    print(f'making utterance {i+1} / {l}')
+    with open(f'assets/local/audiobro3_deep_speech_{i:02}.json') as f:
+        frame_indices = json.load(f)
+    pickle_path = f'assets/local/audiobro3_deep_speech_{i:02}.pickle'
+    if os.path.exists(pickle_path):
+        with open(pickle_path, 'rb') as f:
+            frames = pickle.load(f)
+    else:
+        frames = dlal.speech.file_to_frames(f'assets/local/audiobro3_deep_speech_{i:02}.wav', quiet=True)
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(frames, f)
+    frameses = [frames[a:b] for a, b in frame_indices]
+    u = dlal.speech.Utterance.from_frameses_and_notes(frameses, noteses[i])
+    if i == 0:
+        t = 0
+        pitch = 43
+    else:
+        t = noteses[i - 1][-1]['off']
+        pitch = None
+    utterance.append_silence('frame', noteses[i][0]['on'] - t, pitch)
+    utterance.extend(u)
+utterance.append_silence('frame', 1, None)
+
+#===== render =====#
 audio = dlal.Audio(driver=True)
-liner = dlal.Liner()
+audio.add(liner)
 porta = dlal.subsystem.Portamento()
 synth = dlal.speech.SpeechSynth()
 tape = dlal.Tape(1 << 16)
 
-# connect
 liner.skip_line(5)
 dlal.connect(
     liner,
@@ -19,34 +103,7 @@ dlal.connect(
     tape,
 )
 
-# command
-syllables = '''
-    o.w [sh].i.t .i.ts g.e t.ns s.y r.y us
-
-    .[ae].nd [th]r.w sm.ow.k h.y a p.y .[uu].d
-    b.[ay]y.s m.[ae].n
-    [th_v].u t.[ae]w.n h.[ae].d b.y.n .wi.[th_v] .aw.t b.[ay]y.s f.o[uu] o v.[uu] f.o[uu] t.y.0 y.i .[uu].z
-    [th_v].eu w.u.z n.o.d [ae].n s.y.[ng]g
-    [th_v].eu w.u.z n.o.0 rr.u.mp0 [sh].[ay]y k.y.[ng]g
-    [th_v].eu h.[ae].d b.y.n n.o l.a.f t.u
-    .[ae].nd 0d.e .e.[th]
-    w.u.z n.y r.y.[ng]
-    .e.v r.y b.a d.y
-    .w.y k.[ae].n s.u[uu] v.a ay.v w.i [th_v].aw.t f.w .w.d
-    b.u.t n.a.t w.i [th].aw.t b.[ay]y.s
-    w.e.l n.a.t v.e r.y l.a.[ng]g .e n.y .wey
-    [th_v].u.0 k.u l.u h.[ae].d jr.[ay]y.nd fr.u.m .e.v r.y w.u.nz f.[ay]y s.e.z
-    .e.v r.y d.ey [th_v].u t.[ae]w.nz p.y p.l w.e.nt t.w [th_v].u [ch].[uu].[ch] .[ae].nd pr.[ay]y.d f.o[uu] b.[ay]y.s
-    .[ae].nd b.[ay]y.s m.[ae].n l.[uu].kd .u p.a.n [th_v].u t.[ae]w.n .[ae].nd h.y sm.ay.ld f.o[uu] h.y ny.w
-'''
-
-model = dlal.speech.Model('assets/local/phonetic-model.json')
-
-liner.load('assets/midis/audiobro3.mid', immediate=True)
-u = dlal.speech.Utterance.from_syllables_and_notes(syllables, liner.get_notes(5), model)
-u.print()
-for phonetic, wait, pitch in u:
-    synth.say(phonetic, model, wait)
+synth.utter(utterance, no_pitch=True)
 
 porta.rhymel.pitch(43 / 128)
 

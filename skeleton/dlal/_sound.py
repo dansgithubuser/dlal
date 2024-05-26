@@ -63,7 +63,7 @@ def read(file_path, channel=0):
 def i16le_to_flac(i16le_file_path, flac_file_path=None):
     if flac_file_path == None:
         flac_file_path = _re.sub(r'\.i16le$', '', i16le_file_path) + '.flac'
-    data, sample_rate = sf.read(
+    i16le_file = sf.SoundFile(
         i16le_file_path,
         samplerate=44100,
         channels=1,
@@ -71,4 +71,14 @@ def i16le_to_flac(i16le_file_path, flac_file_path=None):
         subtype='PCM_16',
         endian='LITTLE',
     )
-    sf.write(flac_file_path, data, sample_rate, format='FLAC')
+    flac_file = sf.SoundFile(
+        flac_file_path,
+        mode='w',
+        samplerate=44100,
+        channels=1,
+        format='FLAC',
+    )
+    while True:
+        data = i16le_file.read(frames=4096, always_2d=True)
+        if data.size == 0: break
+        flac_file.write(data)

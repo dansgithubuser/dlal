@@ -6,7 +6,6 @@ import math
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--live', '-l', action='store_true')
 parser.add_argument('--start', '-s')
 parser.add_argument('--run-size', type=int)
 args = parser.parse_args()
@@ -370,7 +369,4 @@ buf.connect(audio)
 # setup
 if args.start:
     liner.advance(float(args.start))
-if args.live:
-    dlal.typical_setup()
-else:
-    dlal.typical_setup(live=False, duration=177)
+dlal.typical_setup(duration=177)
