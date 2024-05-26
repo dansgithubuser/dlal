@@ -163,8 +163,8 @@ class Component:
         return result
 
     def midi(self, msg):
-        if isinstance(msg, list) and isinstance(msg[0], list):
-            return [self.command('midi', [i]) for i in msg]
+        if isinstance(msg, list) and len(msg) and hasattr(msg[0], '__iter__'):
+            return [self.command('midi', [list(i)]) for i in msg]
         return self.command('midi', [msg])
 
     def _load_lib(kind):

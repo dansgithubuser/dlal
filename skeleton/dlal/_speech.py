@@ -705,6 +705,26 @@ class Utterance:
                 self.pitches.append(note['number'])
         return self
 
+    def append_silence(self, kind, wait, pitch=None):
+        if kind == 'phonetic':
+            self.phonetics.append('0')
+        elif kind == 'frame':
+            self.frames.append({
+                'toniness': 0.0,
+                'tone': {'spectrum': [0.0] * 64},
+                'noise': {'spectrum': [0.0] * 64},
+            })
+        self.waits.append(wait)
+        if pitch == None:
+            pitch = self.pitches[-1]
+        self.pitches.append(pitch)
+
+    def extend(self, utterance):
+        self.phonetics.extend(utterance.phonetics)
+        self.frames.extend(utterance.frames)
+        self.waits.extend(utterance.waits)
+        self.pitches.extend(utterance.pitches)
+
     def phonetics_from_str(s):
         phonetics = []
         bracketed_phonetic = None
@@ -848,12 +868,14 @@ class SpeechSynth(Subsystem):
             if wait < 1e-4: return
         self.say('0', model, wait)
 
-    def utter(self, utterance, model=None):
+    def utter(self, utterance, model=None, *, no_pitch=False):
         if model:
             for phonetic, wait, pitch in utterance:
+                if no_pitch: pitch = None
                 self.say(phonetic, model, wait, pitch)
         else:
             for frame, wait, pitch in utterance:
+                if no_pitch: pitch = None
                 self.synthesize(
                     toniness=frame['toniness'],
                     tone_spectrum=frame['tone']['spectrum'],
