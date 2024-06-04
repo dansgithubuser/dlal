@@ -4,6 +4,70 @@ from ._utils import ASSETS_DIR
 import glob
 import os
 
+midi_drums = {
+    #27: 'high-q.wav',
+    #28: 'slap.wav',
+    #29: 'scratch-push.wav',
+    #30: 'scratch-pull.wav',
+    #31: 'sticks.wav',
+    #32: 'square-click.wav',
+    #33: 'metronome-click.wav',
+    #34: 'metronome-bell.wav',
+    35: 'bass.wav',
+    36: 'bass.wav',
+    37: 'side-stick.wav',
+    38: 'snare.wav',
+    39: 'clap.wav',
+    40: 'snare.wav',
+    41: 'low-tom.wav',
+    42: 'hat.wav',
+    43: 'low-tom.wav',
+    44: 'hat.wav',
+    #45: 'mid-tom.wav',
+    #46: 'open-hat.wav',
+    #47: 'mid-tom.wav',
+    #48: 'high-tom.wav',
+    49: 'crash.wav',
+    #50: 'high-tom.wav',
+    51: 'ride.wav',
+    #52: 'chinese-cymbal.wav',
+    53: 'ride-bell.wav',
+    #54: 'tambourine.wav',
+    #55: 'splash-cymbal.wav',
+    56: 'cowbell.wav',
+    57: 'crash.wav',
+    #58: 'Vibra Slap',
+    59: 'ride.wav',
+    60: 'bongo-hi.wav',
+    61: 'bongo-lo.wav',
+    #62: 'Mute High Conga',
+    #63: 'Open High Conga',
+    #64: 'Low Conga',
+    #65: 'High Timbale',
+    #66: 'Low Timbale',
+    #67: 'High Agogo',
+    #68: 'Low Agogo',
+    #69: 'Cabasa',
+    #70: 'Maracas',
+    #71: 'Short Whistle',
+    #72: 'Long Whistle',
+    #73: 'Short Guiro',
+    74: 'guiro.wav',
+    #75: 'Claves',
+    #76: 'High Wood Block',
+    #77: 'Low Wood Block',
+    78: 'cuica.wav',  # mute
+    #79: 'Open Cuica',
+    #80: 'Mute Triangle',
+    #81: 'Open Triangle',
+    82: 'shaker1.wav',
+    #83: 'Jingle Bell',
+    #84: 'Belltree',
+    #85: 'Castanets',
+    #86: 'Mute Surdo',
+    #87: 'Open Surdo',
+}
+
 class Buf(Component):
     def __init__(self, instrument=None, **kwargs):
         Component.__init__(self, 'buf', **kwargs)
@@ -25,6 +89,10 @@ class Buf(Component):
         path = os.path.join(pitched_path, instrument)
         for i in os.listdir(path):
             self.load(os.path.join(path, i), int(i.split('.')[0]))
+
+    def load_drums(self):
+        for note, file_path in midi_drums.items():
+            self.load(os.path.join(ASSETS_DIR, 'sounds', 'drum', file_path), note)
 
     def plot(self, note):
         samples = self.to_json()['_extra']['sounds'][str(note)]['samples']

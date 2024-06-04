@@ -2,6 +2,7 @@ use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 
 use std::cmp::min;
 use std::collections::HashMap;
+use std::path::Path;
 
 //===== Sound =====//
 #[derive(Clone)]
@@ -229,6 +230,9 @@ impl Component {
         self.ensure_sounds();
         let file_path: String = body.arg(0)?;
         let note: usize = body.arg(1)?;
+        if !Path::new(&file_path).exists() {
+            return Err(err!("no such file {}", file_path).into());
+        }
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
