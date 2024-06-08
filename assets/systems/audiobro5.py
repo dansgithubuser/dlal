@@ -9,7 +9,12 @@ args = parser.parse_args()
 
 class Piano(dlal.subsystem.Voices):
     def init(self, name=None):
-        super().init(('digitar', [], {}), name=name)
+        super().init(
+            ('digitar', [], {'lowness': 0.3, 'feedback': 0.9999, 'release': 0.1}),
+            vol=0.1,
+            per_voice_init=lambda voice, i: voice.hammer(offset=(3 + i) / 10),
+            name=name,
+        )
 
 #===== init =====#
 audio = dlal.Audio(driver=True, run_size=args.run_size)

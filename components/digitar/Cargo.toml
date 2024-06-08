@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlal-component-base = { path = "../base" }
+serde = "1.0.203"

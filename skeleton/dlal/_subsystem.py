@@ -145,7 +145,7 @@ class Vibrato(Subsystem):
         _connect(self.lfo, self.oracle)
 
 class Voices(Subsystem):
-    def init(self, spec, n=3, cents=0.1, vol=0.25, randomize_phase=None, name=None):
+    def init(self, spec, n=3, cents=0.1, vol=0.25, per_voice_init=None, name=None):
         Subsystem.init(
             self,
             dict(
@@ -165,11 +165,11 @@ class Voices(Subsystem):
                 '<+', self.components['gain'],
             ],
         )
-        if n == 1: return
         for i in range(n):
-            synth = self.components[f'voice{i}']
-            if randomize_phase: randomize_phase(synth)
-            bend = 0x2000 + int(0x500 * cents * (2*i/(n-1) - 1))
-            l = bend & 0x7f
-            h = bend >> 7
-            synth.midi([0xe1, l, h])
+            voice = self.components[f'voice{i}']
+            if per_voice_init: per_voice_init(voice, i)
+            if n > 1:
+                bend = 0x2000 + int(0x500 * cents * (2*i/(n-1) - 1))
+                l = bend & 0x7f
+                h = bend >> 7
+                voice.midi([0xe1, l, h])
