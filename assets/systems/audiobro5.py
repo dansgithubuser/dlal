@@ -20,16 +20,36 @@ class Piano(dlal.subsystem.Voices):
 audio = dlal.Audio(driver=True, run_size=args.run_size)
 liner = dlal.Liner('assets/midis/audiobro5.mid')
 
-piano = Piano('piano1')
+piano = dlal.Sonic()
 bass = dlal.Sonic()
 drums = dlal.Buf()
 
+lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
 buf = dlal.Buf()
 tape = dlal.Tape()
 
 #===== commands =====#
 if args.start:
     liner.advance(args.start)
+
+piano.from_json({
+    "0": {
+        "a": 4e-3, "d": 5e-5, "s": 0.2, "r": 2e-4, "m": 1,
+        "i0": 0, "i1": 0.06, "i2": 0.02, "i3": 0, "o": 0.5,
+    },
+    "1": {
+        "a": 0.025, "d": 6e-5, "s": 0.2, "r": 3e-5, "m": 1,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+    "2": {
+        "a": 0.025, "d": 0.01, "s": 1.0, "r": 0.01, "m": 4,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+    "3": {
+        "a": 0, "d": 0, "s": 0, "r": 0, "m": 0,
+        "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+    },
+})
 
 bass.from_json({
     "0": {
@@ -61,7 +81,7 @@ dlal.connect(
         bass,
         drums,
     ],
-    buf,
+    [buf, '<+', lim],
     [audio, tape],
 )
 
