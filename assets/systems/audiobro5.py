@@ -24,6 +24,7 @@ piano = dlal.Sonic()
 bass = dlal.Sonic()
 drums = dlal.Buf()
 
+reverb = dlal.Reverb(0.3)
 lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
 buf = dlal.Buf()
 tape = dlal.Tape()
@@ -81,7 +82,10 @@ dlal.connect(
         bass,
         drums,
     ],
-    [buf, '<+', lim],
+    [buf,
+        '<+', lim,
+        '<+', reverb,
+    ],
     [audio, tape],
 )
 
