@@ -19,16 +19,16 @@ midi_drums = {
     38: 'snare.wav',
     39: 'clap.wav',
     40: 'snare.wav',
-    41: 'low-tom.wav',
+    41: 'floor-tom.wav',
     42: 'hat.wav',
-    43: 'low-tom.wav',
-    44: 'hat.wav',
-    #45: 'mid-tom.wav',
+    43: 'floor-tom.wav',
+    #44: 'pedal-hat.wav',
+    45: 'low-tom.wav',
     #46: 'open-hat.wav',
-    #47: 'mid-tom.wav',
-    #48: 'high-tom.wav',
+    47: 'mid-tom.wav',
+    48: 'mid-tom.wav',
     49: 'crash.wav',
-    #50: 'high-tom.wav',
+    50: 'high-tom.wav',
     51: 'ride.wav',
     #52: 'chinese-cymbal.wav',
     53: 'ride-bell.wav',
@@ -56,8 +56,8 @@ midi_drums = {
     #75: 'Claves',
     #76: 'High Wood Block',
     #77: 'Low Wood Block',
-    78: 'cuica.wav',  # mute
-    #79: 'Open Cuica',
+    78: 'cuica.wav',
+    79: 'cuica-open.wav',
     #80: 'Mute Triangle',
     #81: 'Open Triangle',
     82: 'shaker1.wav',
@@ -69,6 +69,33 @@ midi_drums = {
 }
 
 class Buf(Component):
+    class Drum:
+        bass = 35
+        bass_1 = 36
+        side_stick = 37
+        snare = 38
+        clap = 39
+        electric_snare = 40
+        low_floor_tom = 41
+        closed_hat = 42
+        high_floor_tom = 43
+        low_tom = 45
+        low_mid_tom = 47
+        high_mid_tom = 48
+        crash = 49
+        high_tom = 50
+        ride = 51
+        ride_bell = 53
+        cowbell = 56
+        crash_2 = 57
+        ride_2 = 59
+        high_bongo = 60
+        low_bongo = 61
+        long_guiro = 74
+        mute_cuica = 78
+        open_cuica = 79
+        shaker = 82
+
     def __init__(self, instrument=None, **kwargs):
         Component.__init__(self, 'buf', **kwargs)
         if instrument:
