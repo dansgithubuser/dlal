@@ -37,6 +37,7 @@ struct Note {
     hammer_offset: usize,
     hammer_vol: f32,
     hammer_displacement: u32,
+    bend: f32,
 }
 
 impl Note {
@@ -52,7 +53,7 @@ impl Note {
         }
     }
 
-    fn on(&mut self, vol: f32, lowness: f32, feedback: f32, excitation: &Excitation) {
+    fn on(&mut self, vol: f32, lowness: f32, feedback: f32, excitation: &Excitation, bend: f32) {
         self.on = true;
         self.done = false;
         let size = self.wavetable.len();
@@ -76,6 +77,7 @@ impl Note {
         self.index = 0.0;
         self.lowness = lowness.powf(self.freq / 440.0); // high freq, low lowness
         self.feedback = feedback.powf(440.0 / self.freq); // high freq, high feedback
+        self.bend = bend;
     }
 
     fn off(&mut self, release: f32) {
@@ -109,7 +111,7 @@ impl Note {
             (1.0 - t) * a + t * b
         };
         // update index and wavetable
-        self.index += self.step;
+        self.index += self.step * self.bend;
         let next = self.index as usize;
         for i in index..next {
             let i = i % size;
@@ -163,6 +165,9 @@ component!(
         notes: Vec<Note>,
         excitation: Excitation,
         release: f32,
+        rpn: u16,              //registered parameter number
+        pitch_bend_range: f32, //MIDI RPN 0x0000
+        bend: f32,
     },
     {
         "lowness": {
@@ -225,6 +230,8 @@ impl ComponentTrait for Component {
         self.lowness = 0.5;
         self.feedback = 0.98;
         self.release = 1.0;
+        self.bend = 1.0;
+        self.pitch_bend_range = 2.0;
     }
 
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
@@ -277,8 +284,30 @@ impl ComponentTrait for Component {
                         self.lowness,
                         self.feedback,
                         &self.excitation,
+                        self.bend,
                     );
                 }
+            }
+            0xb0 => {
+                match msg[1] {
+                    0x65 => self.rpn = (msg[2] << 7) as u16,
+                    0x64 => self.rpn += msg[2] as u16,
+                    0x06 => match self.rpn {
+                        0x0000 => self.pitch_bend_range = msg[2] as f32,
+                        _ => (),
+                    },
+                    0x26 => match self.rpn {
+                        0x0000 => self.pitch_bend_range += msg[2] as f32 / 100.0,
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
+            0xe0 => {
+                const CENTER: f32 = 0x2000 as f32;
+                let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
+                let octaves = self.pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
+                self.bend = (2.0 as f32).powf(octaves);
             }
             _ => {}
         }

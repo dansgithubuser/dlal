@@ -7,41 +7,15 @@ parser.add_argument('--start', '-s', type=float)
 parser.add_argument('--run-size', type=int)
 args = parser.parse_args()
 
-class Piano(dlal.subsystem.Subsystem):
+class Piano(dlal.subsystem.Voices):
     def init(self, name=None):
-        dlal.subsystem.Subsystem.init(
-            self,
-            {
-                'sonic': 'sonic',
-                'lim': ('lim', [0.5, 0.25, 0.3]),
-                'buf': 'buf',
-            },
-            ['sonic'],
-            ['buf'],
+        super().init(
+            ('digitar', [], {'lowness': 0.1, 'feedback': 0.9999, 'release': 0.2}),
+            cents=0.3,
+            vol=0.2,
+            per_voice_init=lambda voice, i: voice.hammer(offset=1 + (3 + i) / 10),
             name=name,
         )
-        dlal.connect(
-            self.sonic,
-            [self.buf, '<+', self.lim],
-        )
-        self.sonic.from_json({
-            "0": {
-                "a": 4e-3, "d": 2e-4, "s": 0.5, "r": 2e-4, "m": 1,
-                "i0": 0, "i1": 0.06, "i2": 0.02, "i3": 0, "o": 0.5,
-            },
-            "1": {
-                "a": 0.025, "d": 6e-5, "s": 0.2, "r": 3e-5, "m": 1,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
-            },
-            "2": {
-                "a": 0.025, "d": 0.01, "s": 1.0, "r": 0.01, "m": 4,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
-            },
-            "3": {
-                "a": 0, "d": 0, "s": 0, "r": 0, "m": 0,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
-            },
-        })
 
 class Drums(dlal.subsystem.Subsystem):
     def init(self, name=None):
