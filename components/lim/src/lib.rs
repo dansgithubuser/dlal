@@ -60,6 +60,15 @@ impl ComponentTrait for Component {
                         *i = -self.hard;
                     }
                 }
+                //let over = i.abs() - self.soft;
+                //if over > 0.0 {
+                //    let y = self.soft + (self.hard - self.soft) * (1.0 - 1.0 / (over + 1.0));
+                //    if *i > 0.0 {
+                //        *i = y;
+                //    } else {
+                //        *i = -y;
+                //    }
+                //}
             }
         }
     }
