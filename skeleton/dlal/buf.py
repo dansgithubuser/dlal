@@ -104,6 +104,9 @@ class Buf(Component):
     def load(self, file_path, note):
         return self.command_immediate('load', [file_path, note])
 
+    def load_asset(self, asset_path, note):
+        return self.load(os.path.join(ASSETS_DIR, 'sounds', asset_path), note)
+
     def load_all(self):
         pattern = os.path.join(ASSETS_DIR, 'sounds', '*', '*.wav')
         for i, file_path in enumerate(glob.glob(pattern)):

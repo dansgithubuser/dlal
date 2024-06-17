@@ -134,6 +134,7 @@ class Component:
         for k, v in inspect.getmembers(self):
             if k.startswith('_') and k != '__init__': continue
             if not callable(v): continue
+            if type(v) == type: continue
             if k in covered: continue
             if v.__func__ == getattr(Component, k, None): continue
             py_only.append({
