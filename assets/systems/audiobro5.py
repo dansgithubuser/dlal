@@ -164,4 +164,4 @@ dlal.connect(
 )
 
 #===== start =====#
-dlal.typical_setup(duration=60)
+dlal.typical_setup(duration=80)
