@@ -68,7 +68,7 @@ impl Note {
             }
             Excitation::Hammer { contact, offset } => {
                 let length = 2093.00 / self.freq;
-                self.hammer_offset = (offset / length * size as f32) as usize;
+                self.hammer_offset = ((offset / length * size as f32) as usize).min(size);
                 self.hammer_contact = (contact * self.sample_rate as f32) as u32;
                 self.hammer_vol = vol;
                 self.hammer_displacement = 0;

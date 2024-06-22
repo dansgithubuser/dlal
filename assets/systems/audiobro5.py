@@ -141,6 +141,9 @@ drums.drums.amplify(0.5, dlal.Buf.Drum.high_tom)
 drums.drums.amplify(0.5, dlal.Buf.Drum.mute_cuica)
 drums.drums.amplify(0.5, dlal.Buf.Drum.open_cuica)
 
+drums.drums.resample(0.465, dlal.Buf.Drum.ride_bell)
+drums.drums.amplify(0.3, dlal.Buf.Drum.ride_bell)
+
 crow.load_asset('animal/crow.wav', 78)
 
 #===== connect =====#

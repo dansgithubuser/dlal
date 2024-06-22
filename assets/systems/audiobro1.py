@@ -126,9 +126,8 @@ drum.buf.amplify(0.8, 38)
 drum.buf.mul(38, 1)
 # ride
 drum.buf.load('assets/sounds/drum/ride-bell.wav', 46)
-drum.buf.resample(0.465, 53)
-drum.buf.amplify(0.3, 53)
-drum.buf.mul(53, 1)
+drum.buf.resample(0.455, 46)
+drum.buf.amplify(0.3, 46)
 
 bass.sonic.from_json({
     "0": {
