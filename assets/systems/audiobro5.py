@@ -158,6 +158,8 @@ dlal.connect(
         piano,
         bass,
         drums,
+        drums,
+        drums,
     ],
     [buf,
         '<+', lim,
