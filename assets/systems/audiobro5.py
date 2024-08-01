@@ -13,7 +13,7 @@ class Piano(dlal.subsystem.Voices):
         super().init(
             ('digitar', [], {'lowness': 0.1, 'feedback': 0.9999, 'release': 0.2}),
             cents=0.3,
-            vol=0.2,
+            vol=0.12,
             per_voice_init=lambda voice, i: voice.hammer(offset=1 + (3 + i) / 10),
             name=name,
         )
@@ -24,7 +24,7 @@ class Drums(dlal.subsystem.Subsystem):
             self,
             {
                 'drums': 'buf',
-                'lim': ('lim', [1.0, 0.8, 0.2]),
+                'lim': ('lim', [1.0, 0.7, 0.01]),
                 'buf': 'buf',
             },
             ['drums'],
@@ -130,14 +130,7 @@ bass.from_json({
 })
 
 drums.drums.load_drums()
-drums.drums.amplify(0.5, dlal.Buf.Drum.bass)
-drums.drums.amplify(0.5, dlal.Buf.Drum.snare)
-drums.drums.amplify(0.5, dlal.Buf.Drum.low_floor_tom)
-drums.drums.amplify(0.5, dlal.Buf.Drum.high_floor_tom)
-drums.drums.amplify(0.5, dlal.Buf.Drum.low_tom)
-drums.drums.amplify(0.5, dlal.Buf.Drum.low_mid_tom)
-drums.drums.amplify(0.5, dlal.Buf.Drum.high_mid_tom)
-drums.drums.amplify(0.5, dlal.Buf.Drum.high_tom)
+drums.drums.amplify(0.3)
 drums.drums.amplify(0.5, dlal.Buf.Drum.mute_cuica)
 drums.drums.amplify(0.5, dlal.Buf.Drum.open_cuica)
 
@@ -169,4 +162,4 @@ dlal.connect(
 )
 
 #===== start =====#
-dlal.typical_setup(duration=80)
+dlal.typical_setup(duration=120)

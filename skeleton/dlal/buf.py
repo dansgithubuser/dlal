@@ -124,6 +124,13 @@ class Buf(Component):
         for note, file_path in midi_drums.items():
             self.load(os.path.join(ASSETS_DIR, 'sounds', 'drum', file_path), note)
 
+    def amplify(self, amount, note=None):
+        if note != None:
+            return self.command('amplify', [amount, note])
+        else:
+            for note in range(128):
+                self.command('amplify', [amount, note])
+
     def plot(self, note):
         samples = self.to_json()['_extra']['sounds'][str(note)]['samples']
         import dansplotcore as dpc
