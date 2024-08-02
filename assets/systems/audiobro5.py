@@ -200,4 +200,4 @@ dlal.connect(
 print(dlal.system_diagram())
 for i in audio.addee_order(): print(i)
 print()
-dlal.typical_setup(duration=120)
+dlal.typical_setup(duration=180)
