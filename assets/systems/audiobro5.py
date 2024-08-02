@@ -132,14 +132,36 @@ bass.from_json({
     },
 })
 
+#----- drums -----#
 drums.drums.load_drums()
+drums.drums.load('assets/sounds/drum/kick.wav', dlal.Buf.Drum.bass)
 drums.drums.amplify(1.5)
 drums.drums.amplify(0.5, dlal.Buf.Drum.mute_cuica)
 drums.drums.amplify(0.5, dlal.Buf.Drum.open_cuica)
 
-drums.drums.resample(0.465, dlal.Buf.Drum.ride_bell)
+# burgers ride
+drums.drums.resample(0.455, dlal.Buf.Drum.ride_bell)
 drums.drums.amplify(0.3, dlal.Buf.Drum.ride_bell)
 
+# math kick
+class Kick(dlal.maths.Generator):
+    def init(self):
+        self.duration = 0.25
+        self.phase = self.Phase()
+        self.phase2 = self.Phase()
+
+    def amp(self, t):
+        if t > self.duration: return
+        self.phase += self.ramp(120, 0, t / self.duration)
+        self.phase2 += 60
+        return 0.5 * self.sqr(self.phase) * self.ramp(1, 0, t / self.duration) * self.sin(self.phase2)
+
+drums.drums.set(
+    Kick(audio.sample_rate()).generate(),
+    dlal.Buf.Drum.bass_1,
+)
+
+#----- crow -----#
 crow.load_asset('animal/crow.wav', 78)
 
 #===== connect =====#

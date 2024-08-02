@@ -1,13 +1,23 @@
 import soundfile as sf
 
 import re as _re
+import struct as _struct
+import subprocess as _subprocess
 
 class Sound:
-    def __init__(self, samples, sample_rate):
+    def __init__(self, samples, sample_rate=44100):
         self.samples = samples
         self.sample_rate = sample_rate
 
-    def to_flac(self, file_path):
+    def to_i16le(self, file_path='out.i16le'):
+        with open(file_path, 'wb') as file:
+            for sample in self.samples:
+                i = int(sample * 0x7fff)
+                if i > 0x7fff: i = 0x7fff
+                elif i < -0x8000: i = -0x8000
+                file.write(_struct.pack('<h', i))
+
+    def to_flac(self, file_path='out.flac'):
         sf.write(file_path, self.samples, self.sample_rate, format='FLAC')
 
     def split(self, threshold=0, window_backward=400, window_forward=400):
@@ -55,6 +65,14 @@ class Sound:
         start = int(start)
         end = int(end)
         return Sound(self.samples[start:end], self.sample_rate)
+
+    def play(self):
+        self.to_i16le('tmp.i16le')
+        _subprocess.run(f'aplay tmp.i16le --format=S16_LE --rate={self.sample_rate}'.split())
+
+    def plot(self):
+        import dansplotcore as dpc
+        dpc.plot(self.samples)
 
 def read(file_path, channel=0):
     data, sample_rate = sf.read(file_path, always_2d=True)
