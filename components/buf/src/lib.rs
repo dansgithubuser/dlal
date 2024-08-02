@@ -97,7 +97,15 @@ component!(
         repeat_end: f32,
     },
     {
-        "set": {"args": ["samples"]},
+        "set": {
+            "args": [
+                "samples",
+                {
+                    "name": "note",
+                    "optional": true,
+                },
+            ],
+        },
         "load": {"args": ["file_path", "note"]},
         "notes": {},
         "sound_params": {"args": ["note"], "kwargs": ["cresc", "accel", "repeat"]},
@@ -233,8 +241,14 @@ impl Component {
 impl Component {
     fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let samples = body.arg::<Vec<_>>(0)?;
-        for i in 0..min(samples.len(), self.audio.len()) {
-            self.audio[i] = samples[i];
+        let note: Option<usize> = body.arg(1).ok();
+        if let Some(note) = note {
+            self.sounds[note].samples = samples;
+            self.sounds[note].sample_rate = self.sample_rate;
+        } else {
+            for i in 0..min(samples.len(), self.audio.len()) {
+                self.audio[i] = samples[i];
+            }
         }
         Ok(None)
     }

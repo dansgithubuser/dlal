@@ -51,24 +51,15 @@ impl ComponentTrait for Component {
             for i in audio {
                 if *i > self.soft {
                     *i = self.soft + (*i - self.soft) * self.soft_gain;
-                    if *i > self.hard {
-                        *i = self.hard;
-                    }
                 } else if *i < -self.soft {
                     *i = -self.soft + (*i + self.soft) * self.soft_gain;
-                    if *i < -self.hard {
-                        *i = -self.hard;
-                    }
                 }
-                //let over = i.abs() - self.soft;
-                //if over > 0.0 {
-                //    let y = self.soft + (self.hard - self.soft) * (1.0 - 1.0 / (over + 1.0));
-                //    if *i > 0.0 {
-                //        *i = y;
-                //    } else {
-                //        *i = -y;
-                //    }
-                //}
+                if *i > self.hard {
+                    *i = self.hard;
+                }
+                else if *i < -self.hard {
+                    *i = -self.hard;
+                }
             }
         }
     }

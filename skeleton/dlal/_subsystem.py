@@ -145,13 +145,23 @@ class Vibrato(Subsystem):
         _connect(self.lfo, self.oracle)
 
 class Voices(Subsystem):
-    def init(self, spec, n=3, cents=0.1, vol=0.25, per_voice_init=None, name=None):
+    def init(
+        self,
+        spec,
+        n=3,
+        cents=0.1,
+        vol=0.25,
+        per_voice_init=None,
+        effects={},
+        name=None,
+    ):
         Subsystem.init(
             self,
             dict(
                 midi='midi',
                 **{f'voice{i}': spec for i in range(n)},
                 gain=('gain', [vol/n]),
+                **effects,
                 buf='buf',
             ),
             ['midi'],
@@ -165,6 +175,8 @@ class Voices(Subsystem):
                 '<+', self.components['gain'],
             ],
         )
+        for effect in effects.keys():
+            self.components[effect].connect(self.buf)
         for i in range(n):
             voice = self.components[f'voice{i}']
             if per_voice_init: per_voice_init(voice, i)

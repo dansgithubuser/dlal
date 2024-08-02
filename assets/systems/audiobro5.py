@@ -13,8 +13,11 @@ class Piano(dlal.subsystem.Voices):
         super().init(
             ('digitar', [], {'lowness': 0.1, 'feedback': 0.9999, 'release': 0.2}),
             cents=0.3,
-            vol=0.12,
+            vol=0.5,
             per_voice_init=lambda voice, i: voice.hammer(offset=1 + (3 + i) / 10),
+            effects={
+                'lim': ('lim', [0.9, 0.8, 0.2]),
+            },
             name=name,
         )
 
@@ -24,7 +27,7 @@ class Drums(dlal.subsystem.Subsystem):
             self,
             {
                 'drums': 'buf',
-                'lim': ('lim', [1.0, 0.7, 0.01]),
+                'lim': ('lim', [1.0, 0.9, 0.1]),
                 'buf': 'buf',
             },
             ['drums'],
@@ -97,12 +100,12 @@ liner = dlal.Liner('assets/midis/audiobro5.mid')
 ghost1 = Ghost(name='ghost1')
 ghost2 = Ghost(name='ghost2')
 piano = Piano()
-bass = dlal.Sonic()
-crow = dlal.Buf()
+bass = dlal.Sonic(name='bass')
+crow = dlal.Buf(name='crow')
 drums = Drums()
 
 reverb = dlal.Reverb(0.3)
-lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
+lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
 buf = dlal.Buf()
 tape = dlal.Tape()
 
@@ -130,7 +133,7 @@ bass.from_json({
 })
 
 drums.drums.load_drums()
-drums.drums.amplify(0.3)
+drums.drums.amplify(1.5)
 drums.drums.amplify(0.5, dlal.Buf.Drum.mute_cuica)
 drums.drums.amplify(0.5, dlal.Buf.Drum.open_cuica)
 
@@ -154,6 +157,16 @@ dlal.connect(
         drums,
         drums,
     ],
+)
+dlal.connect(
+    [
+        ghost1,
+        ghost2,
+        drums,
+        crow,
+        piano,
+        bass,
+    ],
     [buf,
         '<+', lim,
         '<+', reverb,
@@ -162,4 +175,7 @@ dlal.connect(
 )
 
 #===== start =====#
+print(dlal.system_diagram())
+for i in audio.addee_order(): print(i)
+print()
 dlal.typical_setup(duration=120)
