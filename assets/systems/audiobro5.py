@@ -103,6 +103,7 @@ piano = Piano()
 bass = dlal.Sonic(name='bass')
 crow = dlal.Buf(name='crow')
 drums = Drums()
+bassoon = dlal.Buf('bassoon')
 
 reverb = dlal.Reverb(0.3)
 lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
@@ -178,6 +179,7 @@ dlal.connect(
         drums,
         drums,
         drums,
+        bassoon,
     ],
 )
 dlal.connect(
@@ -188,6 +190,7 @@ dlal.connect(
         crow,
         piano,
         bass,
+        bassoon,
     ],
     [buf,
         '<+', lim,

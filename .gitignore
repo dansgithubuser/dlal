@@ -1,7 +1,16 @@
+# rust
 target/
+Cargo.lock
+
+# python
 *.pyc
+
+# musescore
+*.mscz~
+*.mscz.autosave
+
+# self
 matrix.html
 assets/local
-Cargo.lock
 *.i16le
-*.mscz~
+out.flac
