@@ -164,6 +164,17 @@ impl Arg for serde_json::Value {
     }
 }
 
+#[macro_export]
+macro_rules! arg {
+    ($t:ty) => {
+        impl $crate::Arg for $t {
+            fn from_value(value: &$crate::serde_json::Value) -> Option<Self> {
+                $crate::serde_json::from_str(&value.to_string()).ok()
+            }
+        }
+    }
+}
+
 // ----- Body ----- //
 pub trait Body {
     fn has_arg(&self, index: usize) -> bool;
