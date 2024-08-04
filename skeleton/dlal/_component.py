@@ -85,7 +85,7 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def command(self, name, args=[], kwargs={}, timeout_ms=20):
+    def command(self, name, args=[], kwargs={}, timeout_ms=40):
         if Component._comm:
             log('debug', f'{self.name} queue {name} {args} {kwargs}')
             return Component._comm.queue(self, name, args, kwargs, timeout_ms=timeout_ms, detach=self._detach)

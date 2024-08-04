@@ -1,6 +1,6 @@
 use dlal_component_base::{component, err, serde_json, Body, CmdResult, View};
 
-use multiqueue2::{MPMCSender, MPMCUniReceiver};
+use std::sync::mpsc::{Receiver, sync_channel, SyncSender};
 
 #[derive(Debug)]
 enum QueuedItem {
@@ -13,21 +13,21 @@ enum QueuedItem {
 }
 
 struct Queues {
-    to_audio_send: MPMCSender<QueuedItem>,
-    to_audio_recv: MPMCUniReceiver<QueuedItem>,
-    fro_audio_send: MPMCSender<Box<Option<serde_json::Value>>>,
-    fro_audio_recv: MPMCUniReceiver<Box<Option<serde_json::Value>>>,
+    to_audio_send: SyncSender<QueuedItem>,
+    to_audio_recv: Receiver<QueuedItem>,
+    fro_audio_send: SyncSender<Box<Option<serde_json::Value>>>,
+    fro_audio_recv: Receiver<Box<Option<serde_json::Value>>>,
 }
 
 impl Queues {
-    fn new(size: u64) -> Self {
-        let (to_audio_send, to_audio_recv) = multiqueue2::mpmc_queue(size);
-        let (fro_audio_send, fro_audio_recv) = multiqueue2::mpmc_queue(size);
+    fn new(size: usize) -> Self {
+        let (to_audio_send, to_audio_recv) = sync_channel(size);
+        let (fro_audio_send, fro_audio_recv) = sync_channel(size);
         Self {
             to_audio_send,
-            to_audio_recv: to_audio_recv.into_single().unwrap(),
+            to_audio_recv,
             fro_audio_send,
-            fro_audio_recv: fro_audio_recv.into_single().unwrap(),
+            fro_audio_recv,
         }
     }
 }
@@ -121,8 +121,8 @@ impl Component {
         if detach {
             return Ok(None);
         }
-        std::thread::sleep(std::time::Duration::from_millis(body.arg(6)?));
-        Ok(*self.queues.fro_audio_recv.try_recv()?)
+        let t = std::time::Duration::from_millis(body.arg(6)?);
+        Ok(*self.queues.fro_audio_recv.recv_timeout(t)?)
     }
 
     fn wait_cmd(&mut self, body: serde_json::Value) -> CmdResult {
