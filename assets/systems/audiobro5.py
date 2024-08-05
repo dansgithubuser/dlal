@@ -104,6 +104,7 @@ bass = dlal.Sonic(name='bass')
 crow = dlal.Buf(name='crow')
 drums = Drums()
 bassoon = dlal.Buf('bassoon')
+bell = dlal.Addsyn().rissets_bell()
 
 reverb = dlal.Reverb(0.3)
 lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
@@ -180,6 +181,7 @@ dlal.connect(
         drums,
         drums,
         bassoon,
+        bell,
     ],
 )
 dlal.connect(
@@ -191,6 +193,7 @@ dlal.connect(
         piano,
         bass,
         bassoon,
+        bell,
     ],
     [buf,
         '<+', lim,
@@ -203,4 +206,4 @@ dlal.connect(
 print(dlal.system_diagram())
 for i in audio.addee_order(): print(i)
 print()
-dlal.typical_setup(duration=180)
+dlal.typical_setup(duration=240)
