@@ -104,7 +104,7 @@ bass = dlal.Sonic(name='bass')
 crow = dlal.Buf(name='crow')
 drums = Drums()
 bassoon = dlal.Buf('bassoon')
-bell = dlal.Addsyn().rissets_bell()
+bell = dlal.Addsyn().tubular_bells()
 
 reverb = dlal.Reverb(0.3)
 lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
@@ -148,7 +148,7 @@ drums.drums.amplify(0.3, dlal.Buf.Drum.ride_bell)
 # math kick
 class Kick(dlal.maths.Generator):
     def init(self):
-        self.duration = 0.25
+        self.duration = 0.2
         self.phase = self.Phase()
         self.phase2 = self.Phase()
 

@@ -12,8 +12,25 @@ struct Partial {
     m: f32,  // freq multiplier
     b: f32,  // freq offset
 }
+
 arg!(Partial);
 
+//===== decay mode =====//
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+enum DecayMode {
+    Linear,
+    Exponential,
+}
+
+impl Default for DecayMode {
+    fn default() -> Self {
+        DecayMode::Linear
+    }
+}
+
+arg!(DecayMode);
+
+//===== runner =====//
 #[derive(Debug, PartialEq)]
 enum Stage {
     A, //attack
@@ -23,42 +40,62 @@ enum Stage {
 }
 
 #[derive(Debug)]
-struct PartialState {
+struct Runner {
     phase: f32,
     stage: Stage,
     vol: f32, // envelope amplitude
-    b: f32,
+    partial: Partial,
+    decay_mode: DecayMode,
 }
 
-impl PartialState {
-    fn new() -> Self {
+impl Runner {
+    fn new(partial: &Partial, decay_mode: DecayMode, sample_rate: f32) -> Self {
         Self {
             phase: 0.0,
             stage: Stage::R,
             vol: 0.0,
-            b: 0.0,
+            partial: Partial {
+                v: partial.v,
+                a: partial.a / sample_rate,
+                d: match decay_mode {
+                    DecayMode::Linear => partial.d / sample_rate,
+                    DecayMode::Exponential => 10.0_f32.powf(-partial.d / sample_rate / 20.0),
+                },
+                s: partial.s,
+                r: partial.r / sample_rate,
+                m: partial.m,
+                b: partial.b / sample_rate,
+            },
+            decay_mode,
         }
     }
 
-    fn advance_envelope(&mut self, partial: &Partial) {
+    fn advance_envelope(&mut self) {
         match self.stage {
             Stage::A => {
-                self.vol += partial.a;
+                self.vol += self.partial.a;
                 if self.vol > 1.0 {
                     self.vol = 1.0;
                     self.stage = Stage::D;
                 }
             }
             Stage::D => {
-                self.vol -= partial.d;
-                if self.vol < partial.s {
-                    self.vol = partial.s;
+                match self.decay_mode {
+                    DecayMode::Linear => {
+                        self.vol -= self.partial.d;
+                    }
+                    DecayMode::Exponential => {
+                        self.vol *= self.partial.d;
+                    }
+                }
+                if self.vol < self.partial.s {
+                    self.vol = self.partial.s;
                     self.stage = Stage::S;
                 }
             }
             Stage::S => (),
             Stage::R => {
-                self.vol -= partial.r;
+                self.vol -= self.partial.r;
                 if self.vol < 0.0 {
                     self.vol = 0.0;
                 }
@@ -69,8 +106,7 @@ impl PartialState {
 
 //===== note =====//
 struct Note {
-    sample_rate: f32,
-    partials: Vec<(Partial, PartialState)>,
+    runners: Vec<Runner>,
     step: f32,
     vel: f32,
 }
@@ -78,8 +114,7 @@ struct Note {
 impl Note {
     fn new(freq: f32, sample_rate: u32) -> Self {
         Note {
-            sample_rate: sample_rate as f32,
-            partials: Vec::new(),
+            runners: Vec::new(),
             step: freq / sample_rate as f32,
             vel: 0.0,
         }
@@ -87,35 +122,34 @@ impl Note {
 
     fn on(&mut self, vel: f32) {
         self.vel = vel;
-        for (partial, state) in self.partials.iter_mut() {
-            state.b = partial.b / self.sample_rate;
-            state.phase = 0.0;
-            state.stage = Stage::A;
+        for runner in self.runners.iter_mut() {
+            runner.phase = 0.0;
+            runner.stage = Stage::A;
         }
     }
 
     fn off(&mut self, _vel: f32) {
-        for (_, state) in self.partials.iter_mut() {
-            state.stage = Stage::R;
+        for runner in self.runners.iter_mut() {
+            runner.stage = Stage::R;
         }
     }
 
     fn advance(&mut self, bend: f32) -> f32 {
         let mut x = 0.0;
-        for (partial, state) in self.partials.iter_mut() {
-            state.advance_envelope(&partial);
-            x += self.vel * partial.v * state.vol * (state.phase * std::f32::consts::TAU).sin();
-            state.phase += self.step * partial.m * bend + state.b;
-            if state.phase > 1.0 {
-                state.phase -= 1.0;
+        for runner in self.runners.iter_mut() {
+            runner.advance_envelope();
+            x += self.vel * runner.partial.v * runner.vol * (runner.phase * std::f32::consts::TAU).sin();
+            runner.phase += self.step * runner.partial.m * bend + runner.partial.b;
+            if runner.phase > 1.0 {
+                runner.phase -= 1.0;
             }
         }
         x
     }
 
     fn done(&self) -> bool {
-        for (_, state) in self.partials.iter() {
-            if state.stage != Stage::R || state.vol > 1e-6{
+        for runner in self.runners.iter() {
+            if runner.stage != Stage::R || runner.vol > 1e-6{
                 return false;
             }
         }
@@ -131,13 +165,14 @@ component!(
         "sample_rate",
         "uni",
         "check_audio",
-        {"name": "field_helpers", "fields": ["partials"], "kinds": ["json"]},
+        {"name": "field_helpers", "fields": ["partials", "decay_mode"], "kinds": ["json"]},
         "midi_rpn",
         "midi_bend",
         "notes",
     ],
     {
         partials: Vec<Partial>,
+        decay_mode: DecayMode,
     },
     {
         "partials": {
@@ -157,14 +192,14 @@ component!(
                             {
                                 "name": "a",
                                 "desc": "attack rate",
-                                "units": "amplitude per sample",
+                                "units": "amplitude per second",
                                 "range": "(0, 1]",
                             },
                             {
                                 "name": "d",
                                 "desc": "decay rate",
-                                "units": "amplitude per sample",
-                                "range": "(0, 1]",
+                                "units": "amplitude per second or dB/s",
+                                "range": "(0, 1] or [0, inf)",
                             },
                             {
                                 "name": "s",
@@ -174,7 +209,7 @@ component!(
                             {
                                 "name": "r",
                                 "desc": "release rate",
-                                "units": "amplitude per sample",
+                                "units": "amplitude per second",
                                 "range": "(0, 1]",
                             },
                             {
@@ -188,6 +223,17 @@ component!(
                             },
                         ],
                     },
+                },
+            ],
+        },
+        "decay_mode": {
+            "args": [
+                {
+                    "name": "mode",
+                    "options": [
+                        "Linear",
+                        "Exponential",
+                    ],
                 },
             ],
         },
@@ -242,14 +288,22 @@ impl Component {
         Ok(Some(json!(self.partials)))
     }
 
+    fn decay_mode_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        match body.arg(0) {
+            Ok(v) => self.decay_mode = v,
+            e => if body.has_arg(0) {
+                e?;
+            }
+        }
+        self.update_note_partials();
+        Ok(Some(json!(self.decay_mode)))
+    }
+
     fn update_note_partials(&mut self) {
         for note in self.notes.iter_mut() {
-            note.partials = self.partials
+            note.runners = self.partials
                 .iter()
-                .map(|i| (
-                    i.clone(),
-                    PartialState::new(),
-                ))
+                .map(|i| Runner::new(i, self.decay_mode, self.sample_rate as f32))
                 .collect();
         }
     }
