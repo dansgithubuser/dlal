@@ -69,3 +69,17 @@ class Audio(Component):
         from ._skeleton import component
         for name in state['components']:
             self.add(component(name), state['slots'][name])
+
+    def profile_print(self):
+        profiles = self.profiles()
+        for profile in profiles:
+            total = 0
+            durs = []
+            for i in profile:
+                dur = i['duration']['secs'] * 1e3 + i['duration']['nanos'] / 1e6
+                durs.append((i['name'], dur))
+                total += dur
+            durs.sort(key=lambda i: -i[1])
+            for name, dur in durs:
+                print(f'{name:7} {dur:7.3f}', end=', ')
+            print(f'total {total: 7.3f} ms')

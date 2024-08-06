@@ -11,4 +11,5 @@ crate-type = ["cdylib"]
 colored = "1.9.3"
 dlal-component-base = { path = "../base" }
 portaudio = { git = "https://github.com/dansgithubuser/rust-portaudio" }
+serde = "1.0.204"
 serde_json = "1.0.48"

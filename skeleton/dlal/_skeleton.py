@@ -283,7 +283,7 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
     else:
         assert tape
         assert audio
-        assert duration
+        assert duration, 'No duration specified. For live audio, run Python interactively.'
         runs = int(duration * audio.sample_rate() / audio.run_size())
         n = tape.size() // audio.run_size()
         with open(out_path, 'wb') as file:
