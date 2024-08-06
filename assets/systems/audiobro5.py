@@ -2,6 +2,7 @@ import dlal
 import midi
 
 import argparse
+import hashlib
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--start', '-s', type=float)
@@ -41,6 +42,9 @@ class Drums(dlal.subsystem.Subsystem):
 
 class Ghost(dlal.subsystem.Subsystem):
     def init(self, name=None):
+        x = hashlib.sha256(name.encode()).digest()
+        r1 = int.from_bytes(x[0:4]) / (1 << 32)
+        r2 = int.from_bytes(x[4:8]) / (1 << 32)
         dlal.subsystem.Subsystem.init(
             self,
             {
@@ -73,11 +77,11 @@ class Ghost(dlal.subsystem.Subsystem):
         self.oracle.format('midi', [0xe0, '%l', '%h'])
         self.sonic.from_json({
             "0": {
-                "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1,
-                "i0": 0, "i1": 0.15, "i2": 0, "i3": 0, "o": 0.95/2,
+                "a": 1e-3, "d": 5e-3, "s": 1, "r": 6e-5, "m": 1 + (r1 - 0.5)/20,
+                "i0": 0, "i1": 0.15 + r1/20, "i2": 0, "i3": 0, "o": 0.95/2,
             },
             "1": {
-                "a": 1, "d": 2e-5, "s": 0, "r": 1, "m": 1,
+                "a": 1, "d": 2e-5, "s": 0, "r": 1, "m": 1 + (r2 - 0.5)/20,
                 "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
             },
             "2": {
