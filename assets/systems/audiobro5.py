@@ -43,8 +43,8 @@ class Drums(dlal.subsystem.Subsystem):
 class Ghost(dlal.subsystem.Subsystem):
     def init(self, name=None):
         x = hashlib.sha256(name.encode()).digest()
-        r1 = int.from_bytes(x[0:4]) / (1 << 32)
-        r2 = int.from_bytes(x[4:8]) / (1 << 32)
+        r1 = int.from_bytes(x[0:4], byteorder='big') / (1 << 32)
+        r2 = int.from_bytes(x[4:8], byteorder='big') / (1 << 32)
         dlal.subsystem.Subsystem.init(
             self,
             {
