@@ -268,6 +268,7 @@ def disconnect(*args):
 def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
     import atexit
     import os
+    from pathlib import Path
     import sys
     import time
     audio = component('audio', None)
@@ -295,7 +296,7 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
             print()
         if flac_path:
             if flac_path == True:
-                flac_path = None
+                flac_path = Path(sys.argv[0]).with_suffix('.flac').name
             print('converting to FLAC')
             _sound.i16le_to_flac(out_path, flac_path)
 
