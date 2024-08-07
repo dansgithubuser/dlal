@@ -97,6 +97,27 @@ class Ghost(dlal.subsystem.Subsystem):
         self.lim.hard(0.25/2)
         self.lim.soft(0.15/2)
 
+class TalkingBassoon(dlal.subsystem.Subsystem):
+    def init(self, name=None):
+        dlal.subsystem.Subsystem.init(
+            self,
+            {
+                'bassoon': ('buf', ['bassoon']),
+                'afr1': ('afr', ['assets/local/bassindaface1.flac']),
+                'afr2': ('afr', ['assets/local/bassindaface2.flac']),
+                'talk': 'buf',
+                'vocoder': 'vocoder',
+                'gain': ('gain', [4.0]),
+                'lim': ('lim', [1.0, 0.9, 0.1]),
+                'buf': 'buf',
+            },
+            ['bassoon'],
+            ['buf'],
+            name=name,
+        )
+        dlal.connect([self.bassoon, self.gain, self.lim], self.buf)
+        dlal.connect([self.afr1, self.afr2], self.talk, self.vocoder, self.buf)
+
 #===== init =====#
 audio = dlal.Audio(driver=True, run_size=args.run_size)
 liner = dlal.Liner('assets/midis/audiobro5.mid')
@@ -107,7 +128,7 @@ piano = Piano()
 bass = dlal.Sonic(name='bass')
 crow = dlal.Buf(name='crow')
 drums = Drums()
-bassoon = dlal.Buf('bassoon')
+talking_bassoon = TalkingBassoon()
 bell = dlal.Addsyn().tubular_bells()
 
 reverb = dlal.Reverb(0.3)
@@ -184,7 +205,7 @@ dlal.connect(
         drums,
         drums,
         drums,
-        bassoon,
+        talking_bassoon,
         bell,
     ],
 )
@@ -196,7 +217,7 @@ dlal.connect(
         crow,
         piano,
         bass,
-        bassoon,
+        talking_bassoon,
         bell,
     ],
     [buf,
