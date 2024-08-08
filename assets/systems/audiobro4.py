@@ -15,7 +15,7 @@ class Violin(dlal.subsystem.Voices):
             self,
             ('osc', ['saw'], {'stay_on': True}),
             vol=1.0,
-            randomize_phase=lambda osc: osc.phase(random.random()),
+            per_voice_init=lambda osc, i: osc.phase(random.random()),
             name=name,
         )
         dlal.subsystem.Subsystem.init(

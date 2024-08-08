@@ -1,7 +1,6 @@
 [package]
-name = "comm"
+name = "addsyn"
 version = "1.0.0"
-authors = ["Dan <dansonlinepresence@gmail.com>"]
 edition = "2021"
 
 [lib]
@@ -9,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 dlal-component-base = { path = "../base" }
+serde = "1.0.204"

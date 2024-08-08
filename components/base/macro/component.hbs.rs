@@ -4,7 +4,7 @@ pub trait ComponentTrait {
     fn run(&mut self) {}
     fn command(&mut self, body: &dlal_component_base::serde_json::Value) {}
     fn midi(&mut self, _msg: &[u8]) {}
-    fn audio(&mut self) -> Option<&mut[f32]> { None }
+    fn audio(&mut self) -> Option<&mut [f32]> { None }
 
     // standard command extensions
     fn join(&mut self, body: dlal_component_base::serde_json::Value) -> dlal_component_base::CmdResult { Ok(None) }
@@ -35,6 +35,17 @@ pub struct Component {
     {{#if features.multi}}
         outputs: Vec<dlal_component_base::View>,
     {{/if}}
+    {{#if features.midi_rpn}}
+        midi_rpn: u16,
+    {{/if}}
+    {{#if features.midi_bend}}
+        midi_pitch_bend_range: f32,
+        midi_bend: f32,
+    {{/if}}
+    {{#if features.notes}}
+        notes: Vec<Note>,
+        notes_playing: Vec<usize>,
+    {{/if}}
     {{fields}}
 }
 
@@ -51,9 +62,22 @@ impl Component {
         {{/if}}
         {{#if features.sample_rate}}
             self.sample_rate = body.kwarg("sample_rate")?;
+            {{#if features.notes}}
+                self.notes = (0..128)
+                    .map(|i| Note::new(
+                        440.0 * (2.0 as f32).powf((i as f32 - 69.0) / 12.0),
+                        self.sample_rate,
+                    ))
+                    .collect();
+                self.notes_playing.reserve(128);
+            {{/if}}
         {{/if}}
         {{#if features.audio}}
             self.audio.resize(self.run_size, 0.0);
+        {{/if}}
+        {{#if features.midi_bend}}
+            self.midi_pitch_bend_range = 2.0;
+            self.midi_bend = 1.0;
         {{/if}}
         self.join(body)
     }
@@ -147,9 +171,79 @@ impl Component {
     {{/if}}
 
     {{#if features.audio}}
-        fn audio(&mut self) -> Option<&mut[f32]> {
+        fn audio(&mut self) -> Option<&mut [f32]> {
             Some(self.audio.as_mut_slice())
         }
+    {{/if}}
+
+    {{#if features.midi_rpn}}
+        fn midi_rpn(&mut self, msg: &[u8]) {
+            match msg[1] {
+                0x65 => self.midi_rpn = (msg[2] << 7) as u16,
+                0x64 => self.midi_rpn += msg[2] as u16,
+                {{#if features.midi_bend}}
+                    0x06 => match self.midi_rpn {
+                        0x0000 => self.midi_pitch_bend_range = msg[2] as f32,
+                        _ => (),
+                    },
+                    0x26 => match self.midi_rpn {
+                        0x0000 => self.midi_pitch_bend_range += msg[2] as f32 / 100.0,
+                        _ => (),
+                    },
+                {{/if}}
+                _ => (),
+            }
+        }
+    {{/if}}
+
+    {{#if features.midi_bend}}
+        fn midi_bend(&mut self, msg: &[u8]) {
+            const CENTER: f32 = 0x2000 as f32;
+            let value = (msg[1] as u16 + ((msg[2] as u16) << 7)) as f32;
+            let octaves = self.midi_pitch_bend_range * (value - CENTER) / (CENTER * 12.0);
+            self.midi_bend = (2.0 as f32).powf(octaves);
+        }
+    {{/if}}
+
+    {{#if features.notes}}
+        fn note_off(&mut self, msg: &[u8]) {
+            self.notes[msg[1] as usize].off(msg[2] as f32 / 127.0);
+        }
+
+        fn note_on(&mut self, msg: &[u8]) {
+            if msg[2] == 0 {
+                self.note_off(msg);
+            } else {
+                let note_num = msg[1] as usize;
+                self.notes[note_num].on(msg[2] as f32 / 127.0);
+                if !self.notes_playing.contains(&note_num) {
+                    self.notes_playing.push(note_num);
+                }
+            }
+        }
+
+        {{#if features.uni}}
+            fn note_run_uni(&mut self) {
+                let audio = match &self.output {
+                    Some(output) => output.audio(self.run_size).unwrap(),
+                    None => return,
+                };
+                self.notes_playing.retain(|note_num| {
+                    let note = &mut self.notes[*note_num];
+                    if note.done() {
+                        return false;
+                    }
+                    for i in audio.iter_mut() {
+                        *i += note.advance(
+                            {{#if features.midi_bend}}
+                                self.midi_bend,
+                            {{/if}}
+                        );
+                    }
+                    true
+                });
+            }
+        {{/if}}
     {{/if}}
 
     {{#if features.field_helpers.json}}

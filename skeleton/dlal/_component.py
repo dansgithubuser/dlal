@@ -85,7 +85,7 @@ class Component:
     def __repr__(self):
         return self.name
 
-    def command(self, name, args=[], kwargs={}, timeout_ms=20):
+    def command(self, name, args=[], kwargs={}, timeout_ms=40):
         if Component._comm:
             log('debug', f'{self.name} queue {name} {args} {kwargs}')
             return Component._comm.queue(self, name, args, kwargs, timeout_ms=timeout_ms, detach=self._detach)
@@ -134,6 +134,7 @@ class Component:
         for k, v in inspect.getmembers(self):
             if k.startswith('_') and k != '__init__': continue
             if not callable(v): continue
+            if type(v) == type: continue
             if k in covered: continue
             if v.__func__ == getattr(Component, k, None): continue
             py_only.append({

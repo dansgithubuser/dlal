@@ -2,10 +2,12 @@ use dlal_component_base::{component, err, json, serde_json, Body, CmdResult};
 
 use std::cmp::min;
 use std::collections::HashMap;
+use std::path::Path;
 
 //===== Sound =====//
 #[derive(Clone)]
 struct Sound {
+    path: String,
     samples: Vec<f32>,
     sample_rate: u32,
     cresc: f32,
@@ -19,6 +21,7 @@ struct Sound {
 impl Default for Sound {
     fn default() -> Self {
         Self {
+            path: String::new(),
             samples: Vec::new(),
             sample_rate: 0,
             cresc: 1.0,
@@ -75,7 +78,16 @@ component!(
         "sample_rate",
         "run_size",
         "multi",
-        {"name": "field_helpers", "fields": ["repeat", "repeat_start", "repeat_end"], "kinds": []},
+        {
+            "name": "field_helpers",
+            "fields": ["repeat_start", "repeat_end"],
+            "kinds": ["rw", "json"]
+        },
+        {
+            "name": "field_helpers",
+            "fields": ["repeat"],
+            "kinds": ["json"]
+        },
     ],
     {
         audio: Vec<f32>,
@@ -85,8 +97,17 @@ component!(
         repeat_end: f32,
     },
     {
-        "set": {"args": ["samples"]},
+        "set": {
+            "args": [
+                "samples",
+                {
+                    "name": "note",
+                    "optional": true,
+                },
+            ],
+        },
         "load": {"args": ["file_path", "note"]},
+        "notes": {},
         "sound_params": {"args": ["note"], "kwargs": ["cresc", "accel", "repeat"]},
         "resample": {"args": ["ratio", "note"]},
         "crop": {"args": ["start", "end", "note"]},
@@ -172,6 +193,7 @@ impl ComponentTrait for Component {
             sounds.insert(
                 note.to_string(),
                 json!({
+                    "path": sound.path,
                     "samples": sound.samples,
                     "sample_rate": sound.sample_rate,
                     "cresc": sound.cresc,
@@ -180,7 +202,6 @@ impl ComponentTrait for Component {
                 }),
             );
         }
-            
         Ok(Some(field_helper_to_json!(self, {
             "sounds": sounds,
         })))
@@ -193,6 +214,7 @@ impl ComponentTrait for Component {
             self.ensure_sounds();
             for (note, sound) in sounds.iter() {
                 self.sounds[note.parse::<usize>()?] = Sound {
+                    path: sound.at("path")?,
                     sample_rate: sound.at("sample_rate")?,
                     samples: sound.at("samples")?,
                     cresc: sound.at("cresc")?,
@@ -219,8 +241,14 @@ impl Component {
 impl Component {
     fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         let samples = body.arg::<Vec<_>>(0)?;
-        for i in 0..min(samples.len(), self.audio.len()) {
-            self.audio[i] = samples[i];
+        let note: Option<usize> = body.arg(1).ok();
+        if let Some(note) = note {
+            self.sounds[note].samples = samples;
+            self.sounds[note].sample_rate = self.sample_rate;
+        } else {
+            for i in 0..min(samples.len(), self.audio.len()) {
+                self.audio[i] = samples[i];
+            }
         }
         Ok(None)
     }
@@ -229,10 +257,16 @@ impl Component {
         self.ensure_sounds();
         let file_path: String = body.arg(0)?;
         let note: usize = body.arg(1)?;
+        if !Path::new(&file_path).exists() {
+            return Err(err!("no such file {}", file_path).into());
+        }
         if note >= 128 {
             return Err(err!("invalid note").into());
         }
-        let mut sound = Sound { ..Default::default() };
+        let mut sound = Sound {
+            path: file_path.clone(),
+            ..Default::default()
+        };
         if file_path.ends_with(".wav") {
             let mut reader = hound::WavReader::open(file_path)?;
             let spec = reader.spec();
@@ -263,6 +297,21 @@ impl Component {
         }
         self.sounds[note] = sound;
         Ok(None)
+    }
+
+    fn notes_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self
+            .sounds
+            .iter()
+            .enumerate()
+            .filter_map(|(note, sound)| {
+                if sound.samples.is_empty() {
+                    None
+                } else {
+                    Some((note, sound.path.clone()))
+                }
+            })
+            .collect::<Vec<_>>())))
     }
 
     fn sound_params_cmd(&mut self, body: serde_json::Value) -> CmdResult {
@@ -366,7 +415,8 @@ impl Component {
         if note_multiplier >= self.sounds.len() {
             return Err(err!("invalid note_multiplicand").into());
         }
-        if self.sounds[note_multiplier].samples.len() < self.sounds[note_multiplicand].samples.len() {
+        if self.sounds[note_multiplier].samples.len() < self.sounds[note_multiplicand].samples.len()
+        {
             let len = self.sounds[note_multiplier].samples.len();
             self.sounds[note_multiplicand].samples.resize(len, 0.0);
         }
@@ -389,7 +439,7 @@ impl Component {
         let len = (duration * self.sample_rate as f32) as usize;
         let mut sin = vec![0.0; len];
         for i in 0..len {
-            let phase =  i as f32 / self.sample_rate as f32 * freq * std::f32::consts::TAU;
+            let phase = i as f32 / self.sample_rate as f32 * freq * std::f32::consts::TAU;
             sin[i] = amp * phase.sin() + offset;
         }
         self.sounds[note] = Sound::default();
@@ -404,7 +454,7 @@ impl Component {
             self.repeat_start = body.kwarg("start").unwrap_or(0.2) * self.sample_rate as f32;
             self.repeat_end = body.kwarg("end").unwrap_or(0.2) * self.sample_rate as f32;
         }
-        Ok(None)
+        Ok(Some(json!(self.repeat)))
     }
 
     fn normalize_cmd(&mut self, body: serde_json::Value) -> CmdResult {

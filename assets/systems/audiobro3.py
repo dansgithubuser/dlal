@@ -9,7 +9,6 @@ import subprocess
 import sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--live', '-l', action='store_true')
 parser.add_argument('--start', '-s')
 parser.add_argument('--run-size', type=int)
 args = parser.parse_args()

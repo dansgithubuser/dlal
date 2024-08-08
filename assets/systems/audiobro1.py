@@ -5,7 +5,6 @@ import midi
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--live', '-l', action='store_true')
 parser.add_argument('--start', '-s')
 parser.add_argument('--run-size', type=int)
 args = parser.parse_args()
@@ -127,9 +126,8 @@ drum.buf.amplify(0.8, 38)
 drum.buf.mul(38, 1)
 # ride
 drum.buf.load('assets/sounds/drum/ride-bell.wav', 46)
-drum.buf.resample(0.465, 53)
-drum.buf.amplify(0.3, 53)
-drum.buf.mul(53, 1)
+drum.buf.resample(0.455, 46)
+drum.buf.amplify(0.3, 46)
 
 bass.sonic.from_json({
     "0": {
@@ -155,14 +153,14 @@ bass.lim.hard(0.25)
 piano.sonic.from_json({
     "0": {
         "a": 4e-3, "d": 5e-5, "s": 0.2, "r": 2e-4, "m": 1,
-        "i0": 0, "i1": 0.06, "i2": 0, "i3": 0, "o": 0.25,
+        "i0": 0, "i1": 0.06, "i2": 0.02, "i3": 0, "o": 0.25,
     },
     "1": {
         "a": 0.025, "d": 6e-5, "s": 0.2, "r": 3e-5, "m": 1,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "2": {
-        "a": 0, "d": 0, "s": 0, "r": 0, "m": 0,
+        "a": 0.025, "d": 0.01, "s": 1.0, "r": 0.01, "m": 4,
         "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
     },
     "3": {

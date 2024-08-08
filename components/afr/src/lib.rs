@@ -34,6 +34,7 @@ component!(
         reader: Reader,
         reader_sample_rate: f32,
         block: Vec<f32>,
+        block_sample: u64,
         sample_i: usize,
         sample_f64: f64,
         sample: f32,
@@ -46,6 +47,10 @@ component!(
         "duration": {
             "args": [],
             "return": "number of samples",
+        },
+        "elapsed": {
+            "args": [],
+            "return": "seconds of file played",
         },
     },
 );
@@ -63,6 +68,7 @@ impl ComponentTrait for Component {
                 if self.sample_i >= self.block.len() {
                     self.block = match reader.blocks().read_next_or_eof(vec![]) {
                         Ok(Some(block)) => {
+                            self.block_sample = block.time();
                             (0..block.duration())
                                 .map(|i| block.sample(0, i) as f32 / 0x8000 as f32)
                                 .collect()
@@ -139,5 +145,11 @@ impl Component {
             },
             Reader::Wav(_, duration) => Ok(Some(json!(duration))),
         }
+    }
+
+    fn elapsed_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(
+            (self.block_sample as f32 + self.sample_f64 as f32) / self.reader_sample_rate
+        )))
     }
 }
