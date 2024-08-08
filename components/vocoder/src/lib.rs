@@ -3,6 +3,8 @@ use dlal_component_base::{component, json, serde_json, CmdResult};
 use biquad::frequency::ToHertz;
 use biquad::Biquad;
 
+const RUNS_TO_ZERO: u32 = 1024;
+
 struct Band {
     modulator_biquads: Vec<biquad::DirectForm2Transposed<f64>>,
     carrier_biquads: Vec<biquad::DirectForm2Transposed<f64>>,
@@ -92,6 +94,7 @@ component!(
         order: usize,
         cutoff: u32,
         bands: Vec<Band>,
+        zero: u32,
     },
     {
         "commit": { "args": [] },
@@ -129,6 +132,7 @@ impl ComponentTrait for Component {
     fn init(&mut self) {
         self.order = 40;
         self.cutoff = 8000;
+        self.zero = RUNS_TO_ZERO;
     }
 
     fn join(&mut self, _body: serde_json::Value) -> CmdResult {
@@ -142,6 +146,22 @@ impl ComponentTrait for Component {
             Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
+        // if modulator is zero, and our bands are zero, then all we need to do is zero the carrier
+        let zero = match self.audio.iter().max_by(|a, b| a.total_cmp(b)) {
+            Some(x) => *x < 1.0e-6,
+            None => true,
+        };
+        if zero {
+            if self.zero >= RUNS_TO_ZERO {
+                for i in carrier.iter_mut() {
+                    *i = 0.0;
+                }
+                return;
+            }
+            self.zero += 1;
+        } else {
+            self.zero = 0;
+        }
         // find band amplitudes from modulator and apply to carrier
         for (i_mod, i_car) in self.audio.iter().zip(carrier.iter_mut()) {
             let mut y = 0.0;
