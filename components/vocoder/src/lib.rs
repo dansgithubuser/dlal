@@ -1,4 +1,4 @@
-use dlal_component_base::{component, json, serde_json, CmdResult};
+use dlal_component_base::{Body, component, json, serde_json, CmdResult};
 
 use biquad::frequency::ToHertz;
 use biquad::Biquad;
@@ -89,16 +89,27 @@ component!(
             ],
             "kinds": ["rw", "json"]
         },
+        {
+            "name": "field_helpers",
+            "fields": [
+                "freeze"
+            ],
+            "kinds": ["rw"]
+        },
     ],
     {
         order: usize,
         cutoff: u32,
         bands: Vec<Band>,
+        freeze: bool,
         zero: u32,
     },
     {
         "commit": { "args": [] },
         "read_band_amps": {},
+        "freeze_with": {
+            "args": ["samples"],
+        },
     },
 );
 
@@ -146,27 +157,46 @@ impl ComponentTrait for Component {
             Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
-        // if modulator is zero, and our bands are zero, then all we need to do is zero the carrier
-        let zero = match self.audio.iter().max_by(|a, b| a.total_cmp(b)) {
-            Some(x) => *x < 1.0e-6,
-            None => true,
-        };
-        if zero {
-            if self.zero >= RUNS_TO_ZERO {
-                for i in carrier.iter_mut() {
-                    *i = 0.0;
+        // optimizations
+        if !self.freeze {
+            // if modulator is zero, and bands are zero, then all we need to do is zero the carrier
+            let zero = match self.audio.iter().max_by(|a, b| a.total_cmp(b)) {
+                Some(x) => *x < 1.0e-6,
+                None => true,
+            };
+            if zero {
+                if self.zero >= RUNS_TO_ZERO {
+                    for i in carrier.iter_mut() {
+                        *i = 0.0;
+                    }
+                    return;
                 }
-                return;
+                self.zero += 1;
+            } else {
+                self.zero = 0;
             }
-            self.zero += 1;
         } else {
-            self.zero = 0;
+            // if carrier is zero, and filters are zero, then we don't need to run filters
+            let zero = match carrier.iter().max_by(|a, b| a.total_cmp(b)) {
+                Some(x) => *x < 1.0e-6,
+                None => true,
+            };
+            if zero {
+                if self.zero >= RUNS_TO_ZERO {
+                    return;
+                }
+                self.zero += 1;
+            } else {
+                self.zero = 0;
+            }
         }
         // find band amplitudes from modulator and apply to carrier
         for (i_mod, i_car) in self.audio.iter().zip(carrier.iter_mut()) {
             let mut y = 0.0;
             for band in &mut self.bands {
-                band.filter_modulator(*i_mod);
+                if !self.freeze {
+                    band.filter_modulator(*i_mod);
+                }
                 y += band.filter_carrier(*i_car);
             }
             *i_car = y;
@@ -200,5 +230,16 @@ impl Component {
             .map(|band| band.amp)
             .collect::<Vec<_>>()
         )))
+    }
+
+    fn freeze_with_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let x: Vec<f32> = body.arg(0)?;
+        for i_mod in x {
+            for band in &mut self.bands {
+                band.filter_modulator(i_mod);
+            }
+        }
+        self.freeze = true;
+        Ok(None)
     }
 }
