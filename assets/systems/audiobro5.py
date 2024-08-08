@@ -128,7 +128,8 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
         )
 
 class Choirist(dlal.subsystem.Subsystem):
-    def init(self, name=None):
+    def init(self, phonetic_samples, name=None):
+        self.phonetic_samples = phonetic_samples
         x = hashlib.sha256(name.encode()).digest()
         r1 = int.from_bytes(x[0:4], byteorder='big') / (1 << 32)
         r2 = int.from_bytes(x[4:8], byteorder='big') / (1 << 32)
@@ -182,9 +183,12 @@ class Choirist(dlal.subsystem.Subsystem):
         self.sonic.midi(midi.Msg.pitch_bend_range(64))
 
     def post_add_init(self):
-        self.vocoder.freeze_with(dlal.sound.read('assets/phonetics/a.flac').samples[44100:44100+64*1024])
+        self.vocoder.freeze_with(self.phonetic_samples)
 
 #===== init =====#
+a_m = dlal.sound.read('assets/phonetics/a.flac').samples[44100:44100+64*1024]
+a_f = dlal.sound.read('assets/phonetics/a.flac').samples[44100:44100+64*1024]
+
 audio = dlal.Audio(driver=True, run_size=args.run_size)
 liner = dlal.Liner('assets/midis/audiobro5.mid')
 
@@ -196,10 +200,10 @@ crow = dlal.Buf(name='crow')
 drums = Drums()
 talking_bassoon = TalkingBassoon()
 bell = dlal.Addsyn().tubular_bells()
-choir_s = Choirist(name='choir_s')
-choir_a = Choirist(name='choir_a')
-choir_t = Choirist(name='choir_t')
-choir_b = Choirist(name='choir_b')
+choir_s = Choirist(a_f, name='choir_s')
+choir_a = Choirist(a_f, name='choir_a')
+choir_t = Choirist(a_m, name='choir_t')
+choir_b = Choirist(a_m, name='choir_b')
 
 reverb = dlal.Reverb(0.3)
 lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
