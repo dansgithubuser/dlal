@@ -103,20 +103,29 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
             self,
             {
                 'bassoon': ('buf', ['bassoon']),
-                'afr1': ('afr', ['assets/local/bassindaface1.flac']),
                 'afr2': ('afr', ['assets/local/bassindaface2.flac']),
+                'afr2_gain': ('gain', [2/3]),
+                'afr1': ('afr', ['assets/local/bassindaface1.flac']),
                 'talk': 'buf',
                 'vocoder': 'vocoder',
-                'gain': ('gain', [4.0]),
-                'lim': ('lim', [1.0, 0.9, 0.1]),
+                'gain': ('gain', [8]),
+                'lim': ('lim', [1.0, 0.8, 0.1]),
                 'buf': 'buf',
             },
             ['bassoon'],
             ['buf'],
             name=name,
         )
-        dlal.connect([self.bassoon, self.gain, self.lim], self.buf)
-        dlal.connect([self.afr1, self.afr2], self.talk, self.vocoder, self.buf)
+        dlal.connect(
+            [self.bassoon, self.gain, self.lim],
+            self.buf,
+        )
+        dlal.connect(
+            [self.afr2, self.afr2_gain, self.afr1],
+            self.talk,
+            self.vocoder,
+            self.buf,
+        )
 
 #===== init =====#
 audio = dlal.Audio(driver=True, run_size=args.run_size)
