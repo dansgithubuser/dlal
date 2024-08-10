@@ -29,6 +29,7 @@ members = [
     "null",
     "oracle",
     "osc",
+    "pan",
     "peak",
     "printer",
     "reverb",

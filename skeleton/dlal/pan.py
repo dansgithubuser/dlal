@@ -1,0 +1,49 @@
+from ._component import Component
+
+import math
+
+class Pan(Component):
+    def __init__(
+        self,
+        angle=None,
+        distance=None,
+        *,
+        flip=False,
+        ear_offset=0.1,
+        speed_of_sound=343,
+        **kwargs,
+    ):
+        Component.__init__(self, 'pan', **kwargs)
+        from ._skeleton import Immediate
+        with Immediate():
+            if angle != None:
+                self.set(
+                    angle,
+                    distance,
+                    flip=flip,
+                    ear_offset=ear_offset,
+                    speed_of_sound=speed_of_sound,
+                )
+
+    def set(
+        self,
+        angle,
+        distance=None,
+        *,
+        flip=False,
+        ear_offset=0.1,
+        speed_of_sound=343,
+    ):
+        if flip: angle += 180
+        angle *= math.tau / 360
+        power = (math.sin(angle) + 1) / 2
+        gain = math.sqrt(power)
+        self.gain(gain)
+        if distance != None:
+            x_src = distance * math.sin(angle)
+            y_src = distance * math.cos(angle)
+            x_ear = ear_offset  # no flipping - angle already flipped if requested
+            y_ear = 0
+            d = math.sqrt((x_src - x_ear) ** 2 + (y_src - y_ear) ** 2)
+            delay = d / speed_of_sound
+            self.delay(delay)
