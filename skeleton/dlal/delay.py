@@ -8,6 +8,8 @@ class Delay(Component):
         gain_y=None,
         gain_i=None,
         gain_o=None,
+        *,
+        smooth=None,
         **kwargs,
     ):
         Component.__init__(self, 'delay', **kwargs)
@@ -18,3 +20,4 @@ class Delay(Component):
             if gain_y != None: self.gain_y(gain_y)
             if gain_i != None: self.gain_i(gain_i)
             if gain_o != None: self.gain_o(gain_o)
+            if smooth != None: self.smooth(smooth),

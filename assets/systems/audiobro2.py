@@ -76,23 +76,24 @@ Subsystem('sweep', {
     'delay': ('delay', [22050], {'gain_i': 1}),
     'buf': ('buf', [], {}),
 })
-mm_delay = 0
-mm_bass = 1
+mm_delay1 = 0
+mm_delay2 = 1
+mm_bass = 2
 midman = dlal.Midman([
-    # E - echo on
-    ([{'nibble': 0x90}, 0x40], mm_delay, 'gain_x', 1),
-    # F - echo off
-    ([{'nibble': 0x90}, 0x41], mm_delay, 'gain_x', 0),
-    # F# - echo medium
-    ([{'nibble': 0x90}, 0x42], mm_delay, 'gain_x', 0.5),
+    # E - 120 echo on
+    ([{'nibble': 0x90}, 0x40], mm_delay1, 'gain_x', 1),
+    # F - 120 echo off
+    ([{'nibble': 0x90}, 0x41], mm_delay1, 'gain_x', 0),
+    # F# - 120 echo medium
+    ([{'nibble': 0x90}, 0x42], mm_delay1, 'gain_x', 0.5),
     # G - loud bass
     ([{'nibble': 0x90}, 0x43], mm_bass, 'o', 0, 0.5),
     # A - quiet bass
     ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.4),
-    # B - quick echo
-    ([{'nibble': 0x90}, 0x47], mm_delay, 'resize', 11025),
-    # C - slow echo
-    ([{'nibble': 0x90}, 0x48], mm_delay, 'resize', 13230),
+    # B - 100 echo off
+    ([{'nibble': 0x90}, 0x47], mm_delay2, 'gain_x', 0),
+    # C - 100 echo on
+    ([{'nibble': 0x90}, 0x48], mm_delay2, 'gain_x', 1),
 ])
 liner = dlal.Liner()
 mixer = dlal.subsystem.Mixer(
@@ -110,7 +111,8 @@ mixer = dlal.subsystem.Mixer(
     ],
     post_mix_extra={
         'lpf': ('lpf', [0.9]),
-        'delay': ('delay', [13230], {'gain_y': 0.3, 'gain_i': 1}),
+        'delay1': ('delay', [11025], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.95, 'gain_x': 1}),
+        'delay2': ('delay', [13230], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.95, 'gain_x': 0}),
     },
     reverb=0.3,
     lim=[1, 0.9, 0.3],
@@ -370,10 +372,12 @@ dlal.connect(
     mixer.buf,
 )
 liner.connect(midman)
-midman.connect(mixer.delay)
+midman.connect(mixer.delay1)
+midman.connect(mixer.delay2)
 midman.connect(bass.sonic)
 mixer.lpf.connect(mixer.buf)
-mixer.delay.connect(mixer.buf)
+mixer.delay1.connect(mixer.buf)
+mixer.delay2.connect(mixer.buf)
 mixer.buf.connect(tape)
 mixer.buf.connect(audio)
 
