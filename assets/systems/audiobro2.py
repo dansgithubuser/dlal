@@ -51,7 +51,6 @@ Voice('arp', 'arp', 'sonic')
 Voice('harp1', 'sonic')
 Voice('harp2', 'sonic')
 sample_rate = 44100
-sweep = 48 / 12
 m = 220 / (sample_rate/2) * 2 * math.pi
 b = -1 * m
 Subsystem('sweep', {
@@ -67,13 +66,16 @@ Subsystem('sweep', {
     'train': ('osc', ['saw'], {}),
     'train2': ('osc', ['saw'], {'bend': 1.0081}),
     'train_adsr': ('adsr', [5e-8, 1, 1, 5e-5], {}),
-    'train_oracle': ('oracle', [], {'m': 0.2, 'format': ('set', ['%']), 'cv_i': 1}),
+    'train_oracle': ('oracle', [], {'m': 0.3, 'format': ('set', ['%']), 'cv_i': 1}),
     'train_gain': ('gain', [], {}),
     'iir1': ('iir', [], {}),
     'iir2': ('iir', [], {}),
     'iir3': ('iir', [], {}),
     'iir4': ('iir', [], {}),
     'delay': ('delay', [22050], {'gain_i': 1}),
+    'pan_osc': ('osc', ['tri', 1/4], {}),
+    'pan_oracle': ('oracle', [], {'m': 90, 'format': ('set', ['%', 10])}),
+    'pan': ('pan', [], {}),
     'buf': ('buf', [], {}),
 })
 mm_delay1 = 0
@@ -101,18 +103,18 @@ mixer = dlal.subsystem.Mixer(
         {'gain': 1.4, 'pan': [   0, 10]},  # drum
         {'gain': 1.4, 'pan': [   0, 10]},  # shaker1
         {'gain': 1.4, 'pan': [   0, 10]},  # shaker2
-        {'gain': 1.4, 'pan': [  -7, 10]},  # burgers1
-        {'gain': 1.4, 'pan': [   7, 10]},  # burgers2
+        {'gain': 1.4, 'pan': [ -15, 10]},  # burgers1
+        {'gain': 1.4, 'pan': [  15, 10]},  # burgers2
         {'gain': 1.4, 'pan': [ -45, 10]},  # ghost
-        {'gain': 1.4, 'pan': [   8, 10]},  # bass
-        {'gain': 1.4, 'pan': [  10, 10]},  # arp
-        {'gain': 1.4, 'pan': [ -15, 10]},  # harp1
-        {'gain': 1.4, 'pan': [  15, 10]},  # harp2
+        {'gain': 1.4, 'pan': [   0, 10]},  # bass
+        {'gain': 1.4, 'pan': [   0, 10]},  # arp
+        {'gain': 1.4, 'pan': [ -30, 10]},  # harp1
+        {'gain': 1.4, 'pan': [  30, 10]},  # harp2
     ],
     post_mix_extra={
         'lpf': ('lpf', [0.9]),
-        'delay1': ('delay', [11025], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.95, 'gain_x': 1}),
-        'delay2': ('delay', [13230], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.95, 'gain_x': 0}),
+        'delay1': ('delay', [11025], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.8, 'gain_x': 1}),
+        'delay2': ('delay', [13230], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.8, 'gain_x': 0}),
     },
     reverb=0.3,
     lim=[1, 0.9, 0.3],
@@ -368,6 +370,7 @@ dlal.connect(
         '<+', sweep.train,
         '<+', sweep.train2,
         '<+', sweep.train_gain, sweep.train_oracle, sweep.train_adsr,
+        '<+', sweep.pan, sweep.pan_oracle, sweep.pan_osc,
     ],
     mixer.buf,
 )
