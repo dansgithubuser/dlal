@@ -28,6 +28,9 @@ class Pan(Component):
                     speed_of_sound=speed_of_sound,
                 )
 
+    def __str__(self):
+        return f'{self.name}({self.gain():.2f}, {self.delay():.3f})'
+
     def set(
         self,
         angle,

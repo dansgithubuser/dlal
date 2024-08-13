@@ -37,7 +37,7 @@ class Subsystem:
 
     def post_add_init(self): pass
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
     def add(self, name, kind=None, args=[], kwargs={}):
@@ -246,3 +246,9 @@ class Mixer(Subsystem):
 
     def __getitem__(self, i):
         return self.channels[i].buf
+
+    def print_details(self):
+        for i, ch in enumerate(self.channels):
+            print(ch.gain, ch.pan, ch.lim)
+        for i in self.post_mix[:-1]:
+            print(i)

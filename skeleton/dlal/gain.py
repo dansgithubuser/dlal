@@ -6,3 +6,6 @@ class Gain(Component):
         from ._skeleton import Immediate
         with Immediate():
             if gain != None: self.set(gain)
+
+    def __str__(self):
+        return f'{self.name}({self.get():.2f})'

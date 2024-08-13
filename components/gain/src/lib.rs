@@ -10,6 +10,7 @@ component!(
     },
     {
         "set": {"args": ["gain", "smooth"]},
+        "get": {},
     },
 );
 
@@ -46,5 +47,9 @@ impl Component {
             self.amount = self.amount_dst;
         }
         Ok(None)
+    }
+
+    fn get_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.amount)))
     }
 }

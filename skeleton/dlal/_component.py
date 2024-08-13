@@ -82,7 +82,7 @@ class Component:
         self._lib.destruct(self._raw)
         self.deleted = True
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
     def command(self, name, args=[], kwargs={}, timeout_ms=40):
