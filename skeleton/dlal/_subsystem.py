@@ -31,21 +31,7 @@ class Subsystem:
             self.inputs = []
             self.outputs = []
         for name, spec in components.items():
-            args = []
-            kwargs = {}
-            if type(spec) == str:
-                kind = spec
-            elif type(spec) == tuple:
-                if len(spec) >= 1:
-                    kind = spec[0]
-                    assert type(kind) == str
-                if len(spec) >= 2:
-                    args = spec[1]
-                    assert type(args) == list
-                if len(spec) >= 3:
-                    kwargs = spec[2]
-                    assert type(kwargs) == dict
-            self.add(name, kind, args, kwargs)
+            self.add_spec(name, spec)
         self.inputs.extend(self.components[i] for i in inputs)
         self.outputs.extend(self.components[i] for i in outputs)
 
@@ -68,6 +54,24 @@ class Subsystem:
         )
         self.components[name] = component
         setattr(self, name, component)
+        return component
+
+    def add_spec(self, name, spec):
+        args = []
+        kwargs = {}
+        if type(spec) == str:
+            kind = spec
+        elif type(spec) == tuple:
+            if len(spec) >= 1:
+                kind = spec[0]
+                assert type(kind) == str
+            if len(spec) >= 2:
+                args = spec[1]
+                assert type(args) == list
+            if len(spec) >= 3:
+                kwargs = spec[2]
+                assert type(kwargs) == dict
+        return self.add(name, kind, args, kwargs)
 
     def add_to(self, driver):
         for i in self.components.values():
@@ -185,3 +189,60 @@ class Voices(Subsystem):
                 l = bend & 0x7f
                 h = bend >> 7
                 voice.midi([0xe1, l, h])
+
+class Mixer(Subsystem):
+    class Channel:
+        def __init__(self, gain, pan, lim, buf):
+            self.gain = gain
+            self.pan = pan
+            self.lim = lim
+            self.buf = buf
+            _connect(
+                [self.gain, self.pan, self.lim],
+                self.buf,
+            )
+
+        def components(self):
+            return [
+                self.gain,
+                self.pan,
+                self.lim,
+                self.buf,
+            ]
+
+    def init(
+        self,
+        pre_mix_spec,
+        *,
+        post_mix_extra={},
+        reverb=0,
+        lim=[1, 0.99, 0.01],
+        name='mixer',
+    ):
+        self.name = name
+        self.components = {}
+        self.inputs = []
+        self.outputs = []
+        self.channels = []
+        for i, v in enumerate(pre_mix_spec):
+            ch_gain = self.add(f'ch{i}.gain', 'gain', [v.get('gain', 1)])
+            ch_pan = self.add(f'ch{i}.pan', 'pan', v.get('pan', [0, 1]))
+            ch_lim = self.add(f'ch{i}.lim', 'lim', v.get('lim', [1, 0.9, 0.1]))
+            ch_buf = self.add(f'ch{i}.buf', 'buf')
+            channel = Mixer.Channel(ch_gain, ch_pan, ch_lim, ch_buf)
+            self.channels.append(channel)
+        self.post_mix = []
+        for name, spec in post_mix_extra.items():
+            self.post_mix.append(self.add_spec(name, spec))
+        self.post_mix.append(self.add('reverb', args=[reverb]))
+        self.post_mix.append(self.add('lim', args=lim))
+        self.post_mix.append(self.add('buf'))
+        for channel in self.channels:
+            channel.buf.connect(self.buf)
+        _connect(
+            [self.reverb, self.lim],
+            self.buf,
+        )
+
+    def __getitem__(self, i):
+        return self.channels[i].buf

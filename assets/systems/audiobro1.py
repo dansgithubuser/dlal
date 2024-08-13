@@ -63,11 +63,22 @@ Voice('hat', 'buf')
 hat_osc = dlal.Osc(wave='noise', freq='0.12141')
 hat_oracle = dlal.Oracle(m=0.04, b=0.01, format=('offset', [6, '%']))
 liner = dlal.Liner()
-lpf = dlal.Lpf()
-reverb = dlal.Reverb()
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'pan': [0, 1]},
+        {'pan': [0, 1]},
+        {'pan': [0, 1]},
+        {'pan': [0, 1]},
+        {'pan': [0, 1]},
+        {'pan': [0, 1]},
+        {'pan': [0, 1]},
+    ],
+    post_mix_extra={
+        'lpf': ('lpf', [0.9]),
+    },
+    reverb=1,
+)
 tape = dlal.Tape(1 << 17)
-gain = dlal.Gain()
 
 voices = [
     drum,
@@ -90,11 +101,9 @@ ghost_lfo_i03.add_to(driver)
 driver.add(hat_osc)
 driver.add(hat_oracle)
 driver.add(liner)
-driver.add(lpf)
-driver.add(reverb)
-driver.add(buf)
+for i in mixer.components.values():
+    driver.add(i)
 driver.add(tape)
-driver.add(gain)
 
 # commands
 liner.load('assets/midis/audiobro1.mid', immediate=True)
@@ -246,10 +255,6 @@ hat.buf.resample(0.33, 54)
 hat.buf.clip(0.24, 54)
 hat.buf.amplify(0.6, 54)
 
-lpf.set(0.9)
-reverb.set(1)
-gain.set(0)
-
 # connect
 piano.sonic.connect(piano.buf_2)
 piano.lfo.connect(piano.buf_1)
@@ -265,11 +270,11 @@ ghost.lfo.connect(ghost.oracle)
 ghost.oracle.connect(ghost.sonic)
 ghost.sonic.connect(ghost.buf)
 ghost.lim.connect(ghost.buf)
-for voice in voices:
+for i_voice, voice in enumerate(voices):
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
-        i.connect(buf)
+        i.connect(mixer[i_voice])
 liner.connect(ghost.midman)
 ghost.midman.connect(ghost.rhymel)
 #ghost_lfo_i20.connect(ghost.sonic)
@@ -277,11 +282,9 @@ ghost.midman.connect(ghost.rhymel)
 #ghost_lfo_i03.connect(ghost.sonic)
 hat_osc.connect(hat_oracle)
 hat_oracle.connect(liner)
-lpf.connect(buf)
-reverb.connect(buf)
-buf.connect(tape)
-gain.connect(buf)
-buf.connect(driver)
+mixer.lpf.connect(mixer.buf)
+mixer.buf.connect(tape)
+mixer.buf.connect(driver)
 
 # setup
 dlal.typical_setup(duration=216)
