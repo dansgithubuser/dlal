@@ -49,7 +49,6 @@ class Lforacle:
 # init
 driver = dlal.Audio()
 if args.run_size: driver.run_size(int(args.run_size))
-comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('piano', 'sonic', 'lfo', 'mul', 'buf_1', 'buf_2')
 Voice('bass', 'sonic', 'lim', 'buf')
@@ -60,23 +59,24 @@ Lforacle('ghost_lfo_i03', 0.12219, 0.1, 0.1, 'i0', 3, '%')
 Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 Voice('hat', 'buf')
-hat_osc = dlal.Osc(wave='noise', freq='0.12141')
+hat_osc = dlal.Osc(wave='sin', freq='60.12141')
 hat_oracle = dlal.Oracle(m=0.04, b=0.01, format=('offset', [6, '%']))
 liner = dlal.Liner()
 mixer = dlal.subsystem.Mixer(
     [
-        {'pan': [   0, 10]},
-        {'pan': [ -60, 10]},
-        {'pan': [  15, 10]},
-        {'pan': [   0, 10]},
-        {'pan': [  30, 10]},
-        {'pan': [ -45, 10]},
-        {'pan': [   0, 10]},
+        {'gain': 1.4, 'pan': [   0, 10]},  # drum
+        {'gain': 1.2, 'pan': [ -60, 10]},  # piano
+        {'gain': 1.4, 'pan': [  15, 10]},  # bass
+        {'gain': 1.4, 'pan': [   0, 10]},  # ghost
+        {'gain': 1.4, 'pan': [  30, 10]},  # bell
+        {'gain': 1.0, 'pan': [ -45, 10]},  # goon
+        {'gain': 1.4, 'pan': [   0, 10]},  # hat
     ],
     post_mix_extra={
         'lpf': ('lpf', [0.9]),
     },
     reverb=1,
+    sample_rate=44100,
 )
 tape = dlal.Tape(1 << 17)
 
@@ -91,7 +91,6 @@ voices = [
 ]
 
 # add
-driver.add(comm)
 for voice in voices:
     for i in voice.components.values():
         driver.add(i)

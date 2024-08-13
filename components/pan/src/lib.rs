@@ -52,9 +52,14 @@ impl ComponentTrait for Component {
 
 impl Component {
     fn delay_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let sample_rate = if self.sample_rate != 0 {
+            self.sample_rate
+        } else {
+            body.kwarg("sample_rate")?
+        };
         match body.arg::<f32>(0) {
             Ok(v) => {
-                self.delay = (v * self.sample_rate as f32) as usize + 1;
+                self.delay = (v * sample_rate as f32) as usize + 1;
                 self.buf.resize(self.delay, 0.0);
                 if self.buf_i >= self.delay {
                     self.buf_i = 0;

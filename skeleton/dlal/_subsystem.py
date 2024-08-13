@@ -217,6 +217,7 @@ class Mixer(Subsystem):
         post_mix_extra={},
         reverb=0,
         lim=[1, 0.99, 0.01],
+        sample_rate=None,
         name='mixer',
     ):
         self.name = name
@@ -226,7 +227,7 @@ class Mixer(Subsystem):
         self.channels = []
         for i, v in enumerate(pre_mix_spec):
             ch_gain = self.add(f'ch{i}.gain', 'gain', [v.get('gain', 1)])
-            ch_pan = self.add(f'ch{i}.pan', 'pan', v.get('pan', [0, 1]))
+            ch_pan = self.add(f'ch{i}.pan', 'pan', v.get('pan', [0, 1]), {'sample_rate': sample_rate})
             ch_lim = self.add(f'ch{i}.lim', 'lim', v.get('lim', [1, 0.9, 0.1]))
             ch_buf = self.add(f'ch{i}.buf', 'buf')
             channel = Mixer.Channel(ch_gain, ch_pan, ch_lim, ch_buf)

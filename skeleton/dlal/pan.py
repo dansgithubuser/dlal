@@ -12,6 +12,7 @@ class Pan(Component):
         flip=None,
         ear_offset=0.1,
         speed_of_sound=343,
+        sample_rate=None,
         **kwargs,
     ):
         Component.__init__(self, 'pan', **kwargs)
@@ -26,6 +27,7 @@ class Pan(Component):
                     flip=flip,
                     ear_offset=ear_offset,
                     speed_of_sound=speed_of_sound,
+                    sample_rate=sample_rate
                 )
 
     def __str__(self):
@@ -39,6 +41,7 @@ class Pan(Component):
         flip=False,
         ear_offset=0.1,
         speed_of_sound=343,
+        sample_rate=None,
     ):
         if flip: angle += 180
         angle *= math.tau / 360
@@ -52,4 +55,4 @@ class Pan(Component):
             y_ear = 0
             d = math.sqrt((x_src - x_ear) ** 2 + (y_src - y_ear) ** 2)
             delay = d / speed_of_sound
-            self.delay(delay)
+            self.delay(delay, sample_rate=sample_rate)
