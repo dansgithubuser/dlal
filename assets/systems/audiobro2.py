@@ -40,11 +40,11 @@ class Subsystem:
 # init
 audio = dlal.Audio()
 if args.run_size: audio.run_size(args.run_size)
-comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
-Voice('burgers', 'buf')
+Voice('burgers1', 'buf')
+Voice('burgers2', 'buf')
 Voice('ghost', 'sonic')
 Voice('bass', 'sonic')
 Voice('arp', 'arp', 'sonic')
@@ -83,28 +83,47 @@ midman = dlal.Midman([
     ([{'nibble': 0x90}, 0x40], mm_delay, 'gain_x', 1),
     # F - echo off
     ([{'nibble': 0x90}, 0x41], mm_delay, 'gain_x', 0),
+    # F# - echo medium
+    ([{'nibble': 0x90}, 0x42], mm_delay, 'gain_x', 0.5),
     # G - loud bass
     ([{'nibble': 0x90}, 0x43], mm_bass, 'o', 0, 0.5),
     # A - quiet bass
     ([{'nibble': 0x90}, 0x45], mm_bass, 'o', 0, 0.4),
-    # B - short echo
+    # B - quick echo
     ([{'nibble': 0x90}, 0x47], mm_delay, 'resize', 11025),
-    # C - long echo
+    # C - slow echo
     ([{'nibble': 0x90}, 0x48], mm_delay, 'resize', 13230),
 ])
 liner = dlal.Liner()
-lpf = dlal.Lpf()
-reverb = dlal.Reverb()
-delay = dlal.Delay(13230, gain_y=0.3, gain_i=1)
-lim = dlal.Lim(hard=1, soft=0.9, soft_gain=0.3)
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'gain': 1.4, 'pan': [   0, 10]},  # drum
+        {'gain': 1.4, 'pan': [   0, 10]},  # shaker1
+        {'gain': 1.4, 'pan': [   0, 10]},  # shaker2
+        {'gain': 1.4, 'pan': [  -7, 10]},  # burgers1
+        {'gain': 1.4, 'pan': [   7, 10]},  # burgers2
+        {'gain': 1.4, 'pan': [ -45, 10]},  # ghost
+        {'gain': 1.4, 'pan': [   8, 10]},  # bass
+        {'gain': 1.4, 'pan': [  10, 10]},  # arp
+        {'gain': 1.4, 'pan': [ -15, 10]},  # harp1
+        {'gain': 1.4, 'pan': [  15, 10]},  # harp2
+    ],
+    post_mix_extra={
+        'lpf': ('lpf', [0.9]),
+        'delay': ('delay', [13230], {'gain_y': 0.3, 'gain_i': 1}),
+    },
+    reverb=0.3,
+    lim=[1, 0.9, 0.3],
+    sample_rate=44100,
+)
 tape = dlal.Tape(1 << 17)
 
 voices = [
     drum,
     shaker1,
     shaker2,
-    burgers,
+    burgers1,
+    burgers2,
     ghost,
     bass,
     arp,
@@ -113,7 +132,6 @@ voices = [
 ]
 
 # add
-audio.add(comm)
 for voice in voices:
     for i in voice.components.values():
         audio.add(i)
@@ -121,11 +139,8 @@ for i in sweep.components.values():
     audio.add(i)
 audio.add(midman)
 audio.add(liner)
-audio.add(lpf)
-audio.add(reverb)
-audio.add(delay)
-audio.add(lim)
-audio.add(buf)
+for i in mixer.components.values():
+    audio.add(i)
 audio.add(tape)
 
 # commands
@@ -180,52 +195,53 @@ shaker1.buf.load('assets/sounds/drum/shaker1.wav', 82)
 shaker2.buf.load('assets/sounds/drum/shaker2.wav', 82)
 shaker2.buf.amplify(0.5, 82)
 
-burgers.buf.load('assets/local/burgers/people.wav', 60)
-burgers.buf.amplify(8, 60)
-burgers.buf.load('assets/local/burgers/pickle.wav', 62)
-burgers.buf.amplify(8, 62)
-burgers.buf.load('assets/local/burgers/plate.wav', 64)
-burgers.buf.amplify(8, 64)
-burgers.buf.load('assets/local/burgers/plate2.wav', 63)
-burgers.buf.amplify(8, 63)
-burgers.buf.load('assets/local/burgers/mm.wav', 65)
-burgers.buf.amplify(8, 65)
-burgers.buf.load('assets/local/burgers/think.wav', 67)
-burgers.buf.amplify(4, 67)
-burgers.buf.load('assets/local/burgers/legs.wav', 69)
-burgers.buf.amplify(8, 69)
+for burgers in [burgers1, burgers2]:
+    burgers.buf.load('assets/local/burgers/people.wav', 60)
+    burgers.buf.amplify(8, 60)
+    burgers.buf.load('assets/local/burgers/pickle.wav', 62)
+    burgers.buf.amplify(8, 62)
+    burgers.buf.load('assets/local/burgers/plate.wav', 64)
+    burgers.buf.amplify(8, 64)
+    burgers.buf.load('assets/local/burgers/plate2.wav', 63)
+    burgers.buf.amplify(8, 63)
+    burgers.buf.load('assets/local/burgers/mm.wav', 65)
+    burgers.buf.amplify(8, 65)
+    burgers.buf.load('assets/local/burgers/think.wav', 67)
+    burgers.buf.amplify(4, 67)
+    burgers.buf.load('assets/local/burgers/legs.wav', 69)
+    burgers.buf.amplify(8, 69)
 
-burgers.buf.load('assets/local/burgers/people.wav', 72)  # people
-burgers.buf.crop(0.4540, 0.7968, 72)
-burgers.buf.amplify(8, 72)
-burgers.buf.sound_params(72, repeat=True, accel=1.2, cresc=0.8)
-burgers.buf.load('assets/local/burgers/people.wav', 74)  # think
-burgers.buf.crop(0.9103, 1.2137, 74)
-burgers.buf.amplify(8, 74)
-burgers.buf.sound_params(74, repeat=True, accel=0.99, cresc=0.8)
-burgers.buf.load('assets/local/burgers/people.wav', 76)  # burgers
-burgers.buf.crop(1.581, 1.997, 76)
-burgers.buf.amplify(8, 76)
-burgers.buf.sound_params(76, repeat=True, accel=0.5, cresc=0.9)
-burgers.buf.load('assets/local/burgers/pickle.wav', 77)  # pickle
-burgers.buf.crop(0.3377, 0.5736, 77)
-burgers.buf.amplify(8, 77)
-burgers.buf.sound_params(77, repeat=True, accel=9.0, cresc=0.9)
-burgers.buf.load('assets/local/burgers/people.wav', 79)  # people
-burgers.buf.crop(0.4540, 0.7968, 79)
-burgers.buf.amplify(8, 79)
-burgers.buf.sound_params(79, repeat=True, accel=0.6, cresc=0.9)
-burgers.buf.load('assets/local/burgers/people.wav', 81)  # think
-burgers.buf.crop(0.9103, 1.2137, 81)
-burgers.buf.amplify(8, 81)
-burgers.buf.sound_params(81, repeat=True, accel=4.0, cresc=0.9)
-burgers.buf.load('assets/local/burgers/people.wav', 83)  # burgers
-burgers.buf.crop(1.581, 1.997, 83)
-burgers.buf.amplify(8, 83)
-burgers.buf.sound_params(83, repeat=True, accel=0.9, cresc=0.9)
-burgers.buf.load('assets/local/burgers/people.wav', 84)  # they haven't been here
-burgers.buf.crop(2.3, 3.2, 84)
-burgers.buf.amplify(8, 84)
+    burgers.buf.load('assets/local/burgers/people.wav', 72)  # people
+    burgers.buf.crop(0.4540, 0.7968, 72)
+    burgers.buf.amplify(8, 72)
+    burgers.buf.sound_params(72, repeat=True, accel=1.2, cresc=0.8)
+    burgers.buf.load('assets/local/burgers/people.wav', 74)  # think
+    burgers.buf.crop(0.9103, 1.2137, 74)
+    burgers.buf.amplify(8, 74)
+    burgers.buf.sound_params(74, repeat=True, accel=0.99, cresc=0.8)
+    burgers.buf.load('assets/local/burgers/people.wav', 76)  # burgers
+    burgers.buf.crop(1.581, 1.997, 76)
+    burgers.buf.amplify(8, 76)
+    burgers.buf.sound_params(76, repeat=True, accel=0.5, cresc=0.9)
+    burgers.buf.load('assets/local/burgers/pickle.wav', 77)  # pickle
+    burgers.buf.crop(0.3377, 0.5736, 77)
+    burgers.buf.amplify(8, 77)
+    burgers.buf.sound_params(77, repeat=True, accel=9.0, cresc=0.9)
+    burgers.buf.load('assets/local/burgers/people.wav', 79)  # people
+    burgers.buf.crop(0.4540, 0.7968, 79)
+    burgers.buf.amplify(8, 79)
+    burgers.buf.sound_params(79, repeat=True, accel=0.6, cresc=0.9)
+    burgers.buf.load('assets/local/burgers/people.wav', 81)  # think
+    burgers.buf.crop(0.9103, 1.2137, 81)
+    burgers.buf.amplify(8, 81)
+    burgers.buf.sound_params(81, repeat=True, accel=4.0, cresc=0.9)
+    burgers.buf.load('assets/local/burgers/people.wav', 83)  # burgers
+    burgers.buf.crop(1.581, 1.997, 83)
+    burgers.buf.amplify(8, 83)
+    burgers.buf.sound_params(83, repeat=True, accel=0.9, cresc=0.9)
+    burgers.buf.load('assets/local/burgers/people.wav', 84)  # they haven't been here
+    burgers.buf.crop(2.3, 3.2, 84)
+    burgers.buf.amplify(8, 84)
 
 ghost.sonic.from_json({
     "0": {
@@ -322,16 +338,13 @@ harp2.sonic.from_json({
     },
 })
 
-lpf.set(0.9)
-reverb.set(0.3)
-
 # connect
 arp.arp.connect(arp.sonic)
-for voice in voices:
+for i_voice, voice in enumerate(voices):
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
-        i.connect(buf)
+        i.connect(mixer[i_voice])
 dlal.connect(
     liner,
     [sweep.midi,
@@ -354,17 +367,15 @@ dlal.connect(
         '<+', sweep.train2,
         '<+', sweep.train_gain, sweep.train_oracle, sweep.train_adsr,
     ],
-    buf,
+    mixer.buf,
 )
 liner.connect(midman)
-midman.connect(delay)
+midman.connect(mixer.delay)
 midman.connect(bass.sonic)
-lpf.connect(buf)
-reverb.connect(buf)
-delay.connect(buf)
-lim.connect(buf)
-buf.connect(tape)
-buf.connect(audio)
+mixer.lpf.connect(mixer.buf)
+mixer.delay.connect(mixer.buf)
+mixer.buf.connect(tape)
+mixer.buf.connect(audio)
 
 # setup
 if args.start:
