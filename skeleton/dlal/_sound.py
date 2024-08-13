@@ -133,3 +133,20 @@ def i16le_to_flac_stereo(i16le_file_path_l, i16le_file_path_r, flac_file_path):
         if data_l.size == 0 or data_r.size == 0: break
         data = _np.concatenate((data_l, data_r), axis=1)
         flac_file.write(data)
+
+def flac_to_flac_stereo(path_l, path_r, path):
+    file_l = sf.SoundFile(path_l)
+    file_r = sf.SoundFile(path_r)
+    file = sf.SoundFile(
+        path,
+        mode='w',
+        samplerate=44100,
+        channels=2,
+        format='FLAC',
+    )
+    while True:
+        data_l = file_l.read(frames=4096, always_2d=True)
+        data_r = file_r.read(frames=4096, always_2d=True)
+        if data_l.size == 0 or data_r.size == 0: break
+        data = _np.concatenate((data_l, data_r), axis=1)
+        file.write(data)

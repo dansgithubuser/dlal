@@ -65,13 +65,13 @@ hat_oracle = dlal.Oracle(m=0.04, b=0.01, format=('offset', [6, '%']))
 liner = dlal.Liner()
 mixer = dlal.subsystem.Mixer(
     [
-        {'pan': [0, 1]},
-        {'pan': [0, 1]},
-        {'pan': [0, 1]},
-        {'pan': [0, 1]},
-        {'pan': [0, 1]},
-        {'pan': [0, 1]},
-        {'pan': [0, 1]},
+        {'pan': [   0, 10]},
+        {'pan': [ -60, 10]},
+        {'pan': [  15, 10]},
+        {'pan': [   0, 10]},
+        {'pan': [  30, 10]},
+        {'pan': [ -45, 10]},
+        {'pan': [   0, 10]},
     ],
     post_mix_extra={
         'lpf': ('lpf', [0.9]),

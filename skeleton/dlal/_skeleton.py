@@ -288,7 +288,7 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
         runs = int(duration * audio.sample_rate() / audio.run_size())
         n = tape.size() // audio.run_size()
         with open(out_path, 'wb') as file:
-            print('running')
+            print(f'running, outputting to {out_path}')
             for i in range(runs):
                 audio.run()
                 if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
@@ -296,8 +296,16 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
             print()
         if flac_path:
             if flac_path == True:
-                flac_path = Path(sys.argv[0]).with_suffix('.flac').name
-            print('converting to FLAC')
+                flip = os.environ.get('DLAL_PAN_FLIP')
+                if flip != None:
+                    if int(flip):
+                        channel = 'l'
+                    else:
+                        channel = 'r'
+                else:
+                    channel = ''
+                flac_path = Path(sys.argv[0]).stem + channel + '.flac'
+            print(f'converting to FLAC {flac_path}')
             _sound.i16le_to_flac(out_path, flac_path)
 
 def system_info():

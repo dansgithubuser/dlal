@@ -1,6 +1,7 @@
 from ._component import Component
 
 import math
+import os
 
 class Pan(Component):
     def __init__(
@@ -8,7 +9,7 @@ class Pan(Component):
         angle=None,
         distance=None,
         *,
-        flip=False,
+        flip=None,
         ear_offset=0.1,
         speed_of_sound=343,
         **kwargs,
@@ -17,6 +18,8 @@ class Pan(Component):
         from ._skeleton import Immediate
         with Immediate():
             if angle != None:
+                if flip == None:
+                    flip = int(os.environ.get('DLAL_PAN_FLIP', '0'))
                 self.set(
                     angle,
                     distance,
