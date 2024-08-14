@@ -49,6 +49,7 @@ class Lforacle:
 # init
 driver = dlal.Audio()
 if args.run_size: driver.run_size(int(args.run_size))
+comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('piano', 'sonic', 'lfo', 'mul', 'buf_1', 'buf_2')
 Voice('bass', 'sonic', 'lim', 'buf')
@@ -93,6 +94,7 @@ voices = [
 ]
 
 # add
+driver.add(comm)
 for voice in voices:
     for i in voice.components.values():
         driver.add(i)

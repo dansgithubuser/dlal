@@ -40,6 +40,7 @@ class Subsystem:
 # init
 audio = dlal.Audio()
 if args.run_size: audio.run_size(args.run_size)
+comm = dlal.Comm()
 Voice('drum', 'buf')
 Voice('shaker1', 'buf')
 Voice('shaker2', 'buf')
@@ -136,6 +137,7 @@ voices = [
 ]
 
 # add
+audio.add(comm)
 for voice in voices:
     for i in voice.components.values():
         audio.add(i)
