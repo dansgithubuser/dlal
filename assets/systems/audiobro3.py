@@ -47,10 +47,21 @@ shaker1 = dlal.Buf(name='shaker1')
 shaker2 = dlal.Buf(name='shaker2')
 
 liner = dlal.Liner()
-reverb = dlal.Reverb(0.2)
-master_gain = dlal.Gain(2.0)
-lim = dlal.Lim(1, 0.9, 0.3)
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'gain': 2.8, 'pan': [  30, 10]},  # bassoon1
+        {'gain': 2.8, 'pan': [   0, 10]},  # bassoon2
+        {'gain': 2.8, 'pan': [ -30, 10]},  # accordion1
+        {'gain': 2.8, 'pan': [ -30, 10]},  # accordion2
+        {'gain': 2.8, 'pan': [   0, 10]},  # drum
+        {'gain': 2.8, 'pan': [   0, 10]},  # voice
+        {'gain': 2.8, 'pan': [   0, 10]},  # guitar
+        {'gain': 2.8, 'pan': [  30, 10]},  # shaker1
+        {'gain': 2.8, 'pan': [  30, 10]},  # shaker2
+    ],
+    reverb=0.2,
+    lim=[1, 0.9, 0.3],
+)
 tape = dlal.Tape(1 << 17)
 
 #===== commands =====#
@@ -117,26 +128,20 @@ if args.start:
 
 #===== connect =====#
 voice_gain.connect(voice_buf)
-master_gain.connect(buf)
 dlal.connect(
     liner,
-    [
+    (
         bassoon1,
         bassoon2,
         accordion1,
         accordion2,
         drum,
-        [voice, '>', voice_buf],
-        [guitar_strummer, '>', guitar],
+        [voice, '>', voice_buf, '>'],
+        [guitar_strummer, '>', guitar, '>'],
         shaker1,
         shaker2,
-    ],
-    [buf,
-        '<+', guitar,
-        '<+', reverb,
-        '<+', lim,
-        '<+', voice_buf,
-    ],
+    ),
+    mixer,
     [audio, tape],
 )
 
