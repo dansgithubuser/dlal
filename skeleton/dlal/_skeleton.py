@@ -120,6 +120,39 @@ def connect(*args, _dis=False):
     `primary([*a, arrow, *b], x)` is equal to `primary([*a], x)`.
     `primary((*a, arrow, *b), x)` is equal to `primary((*a,), x)`.
 
+    An arrow at the end of a list can help when the connection _order_ is important.
+    `primary([*a, '>', *b, '>'], 'o')` is equal to `[b[-1]]`.
+    `primary((*a, '<', *b, '<'), 'i')` is equal to `[b[-1]]`.
+
+    If we had:
+    ```
+    connect(
+        liner,
+        [
+            a,
+            [b, '>', c],
+            d,
+        ],
+        [mixer, '<+', c],
+    )
+    ```
+    Then we have a middle voice like `connect(liner, b, c, mixer)`.
+    However, the connections from `liner` happened in order `[a, b, d]`,
+    whereas the connections to `mixer` happened in order `[a, d, c]`.
+
+    Instead we can write:
+    ```
+    connect(
+        liner,
+        [
+            a,
+            [b, '>', c, '>'],
+            d,
+        ],
+        mixer,
+    )
+    ```
+
     For example:
     ```
     connect(
@@ -197,10 +230,16 @@ def connect(*args, _dis=False):
     def primary(arg, x=None):
         if type(arg) == list:
             result = []
+            if len(arg) >= 2 and (arg[-1], x) == ('>', 'o'):
+                return [arg[-2]]
+            if len(arg) >= 2 and (arg[-1], x) == ('<', 'i'):
+                return [arg[-2]]
             for i in arg:
                 if type(i) == str:
-                    if (i, x) == ('>', 'o'): return []
-                    if (i, x) == ('<', 'i'): return []
+                    if (i, x) == ('>', 'o'):
+                        return []
+                    if (i, x) == ('<', 'i'):
+                        return []
                     break
                 result.extend(primary(i, x))
             return result
