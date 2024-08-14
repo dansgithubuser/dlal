@@ -65,9 +65,10 @@ def connect(*args, _dis=False):
 
     Arguments can be components or subsystems:
     - `connect(a, b)` is equivalent to `a.connect(b)`
-        - if `a` is a subsystem, `for i in a.outputs: i.connect(b)`
-        - if `b` is a subsystem, `for i in b.inputs: a.connect(i)`
-        - if `a` and `b` are subsystems, `for i in a.outputs: for j in b.inputs: i.connect(j)`
+        - if `a` is a subsystem, `connect(a.outputs, b)`
+        ` if `b` is a subsysten, `connect(a, b.inputs)`
+        - if `a` and `b` are subsystems, `connect(a.outputs, b.inputs)`
+        - see below for how lists and tuples are treated
 
     `primary(a, x)` is like `a` for components and subsystems.
     - `x` is important if `a` contains arrows (explained below)
@@ -128,11 +129,11 @@ def connect(*args, _dis=False):
     ```
     connect(
         liner,
-        [
+        (
             a,
             [b, '>', c],
             d,
-        ],
+        ),
         [mixer, '<+', c],
     )
     ```
@@ -144,16 +145,16 @@ def connect(*args, _dis=False):
     ```
     connect(
         liner,
-        [
+        (
             a,
             [b, '>', c, '>'],
             d,
-        ],
+        ),
         mixer,
     )
     ```
 
-    For example:
+    Detailed example:
     ```
     connect(
         a,
@@ -199,33 +200,6 @@ def connect(*args, _dis=False):
        +-> c -> d -+
     ```
     '''
-
-    def connect_agnostic(a, b):
-        # arguments can be components or subsystems
-        from ._subsystem import Subsystem
-        if not isinstance(a, _Component) and not isinstance(a, Subsystem):
-            if not _dis:
-                raise Exception(f'not sure how to connect {a}')
-            else:
-                raise Exception(f'not sure how to disconnect {a}')
-        if not isinstance(b, _Component) and not isinstance(b, Subsystem):
-            if not _dis:
-                raise Exception(f'not sure how to connect to {b}')
-            else:
-                raise Exception(f'not sure how to disconnect from {b}')
-        if isinstance(a, _Component):
-            if isinstance(b, _Component):
-                if not _dis:
-                    a.connect(b)
-                else:
-                    a.disconnect(b)
-            elif isinstance(b, Subsystem):
-                connect(a, b.inputs, _dis)
-        elif isinstance(a, Subsystem):
-            if isinstance(b, _Component):
-                connect(a.outputs, b, _dis)
-            elif isinstance(b, Subsystem):
-                connect(a.outputs, b.inputs, _dis)
 
     def primary(arg, x=None):
         if type(arg) == list:
@@ -283,9 +257,17 @@ def connect(*args, _dis=False):
             connect(i)
     elif len(args) == 2:
         src, dst = args
+        from ._subsystem import Subsystem
+        if isinstance(src, Subsystem):
+            src = src.outputs
+        if isinstance(dst, Subsystem):
+            dst = dst.inputs
         if not _iterable(src) and not _iterable(dst):
             # base case
-            connect_agnostic(src, dst)
+            if not _dis:
+                src.connect(dst)
+            else:
+                src.disconnect(dst)
         else:
             if type(src) == tuple and type(dst) == tuple:
                 # tuples are connected component-wise

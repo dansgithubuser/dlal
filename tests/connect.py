@@ -23,10 +23,10 @@ mixer = Connector('mixer')
 
 dlal.connect(
     liner,
-    [
+    (
         a,
         [b, '>', c, '>'],
         d,
-    ],
+    ),
     mixer,
 )
