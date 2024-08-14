@@ -56,6 +56,8 @@ Voice('ghost', 'gain', 'midman', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', 'lim
 Lforacle('ghost_lfo_i20', 0.40000, 0.3, 0.3, 'i2', 0, '%')
 Lforacle('ghost_lfo_i30', 0.31221, 0.1, 0.1, 'i3', 0, '%')
 Lforacle('ghost_lfo_i03', 0.12219, 0.1, 0.1, 'i0', 3, '%')
+ghost_pan_osc = dlal.Osc('tri', 1/8)
+ghost_pan_oracle = dlal.Oracle(m=90, format=('set', ['%', 10]))
 Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 Voice('hat', 'buf')
@@ -66,7 +68,7 @@ mixer = dlal.subsystem.Mixer(
     [
         {'gain': 1.4, 'pan': [   0, 10]},  # drum
         {'gain': 1.2, 'pan': [ -60, 10]},  # piano
-        {'gain': 1.4, 'pan': [  15, 10]},  # bass
+        {'gain': 1.4, 'pan': [   0, 10]},  # bass
         {'gain': 1.4, 'pan': [   0, 10]},  # ghost
         {'gain': 1.4, 'pan': [  30, 10]},  # bell
         {'gain': 1.0, 'pan': [ -45, 10]},  # goon
@@ -97,6 +99,8 @@ for voice in voices:
 ghost_lfo_i20.add_to(driver)
 ghost_lfo_i30.add_to(driver)
 ghost_lfo_i03.add_to(driver)
+driver.add(ghost_pan_osc)
+driver.add(ghost_pan_oracle)
 driver.add(hat_osc)
 driver.add(hat_oracle)
 driver.add(liner)
@@ -279,6 +283,8 @@ ghost.midman.connect(ghost.rhymel)
 #ghost_lfo_i20.connect(ghost.sonic)
 #ghost_lfo_i30.connect(ghost.sonic)
 #ghost_lfo_i03.connect(ghost.sonic)
+ghost_pan_osc.connect(ghost_pan_oracle)
+ghost_pan_oracle.connect(mixer.channels[3].pan)
 hat_osc.connect(hat_oracle)
 hat_oracle.connect(liner)
 mixer.lpf.connect(mixer.buf)

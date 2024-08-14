@@ -73,7 +73,7 @@ Subsystem('sweep', {
     'iir3': ('iir', [], {}),
     'iir4': ('iir', [], {}),
     'delay': ('delay', [22050], {'gain_i': 1}),
-    'pan_osc': ('osc', ['tri', 1/4], {}),
+    'pan_osc': ('osc', ['tri', 1/8], {}),
     'pan_oracle': ('oracle', [], {'m': 90, 'format': ('set', ['%', 10])}),
     'pan': ('pan', [], {}),
     'buf': ('buf', [], {}),
