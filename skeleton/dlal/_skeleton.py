@@ -65,14 +65,18 @@ def connect(*args, _dis=False):
 
     Arguments can be components or subsystems:
     - `connect(a, b)` is equivalent to `a.connect(b)`
-        - if `a` is a subsystem, `a.connect_outputs(b)`
-        - if `b` is a subsystem, `b.connect_inputs(a)`
+        - if `a` is a subsystem, `for i in a.outputs: i.connect(b)`
+        - if `b` is a subsystem, `for i in b.inputs: a.connect(i)`
+        - if `a` and `b` are subsystems, `for i in a.outputs: for j in b.inputs: i.connect(j)`
+
+    `primary(a, x)` is like `a` for components and subsystems.
+    - `x` is important if `a` contains arrows (explained below)
+    - `primary(a, x)` is `[a]`, which acts the same as `a`, lists are explained below
 
     Arguments are connected left to right:
     - `connect(*a)` is _like_ `for i, j in zip(a, a[1:]): connect(i, j)`
-        - equivalent to `connect(a[0]); for i, j in zip(a, a[1:]): connect(primary(i, 'o'), j)`
-
-    `primary(a, x)` is equal to `a` for components and subsystems.
+        - equivalent to `connect(a[0]); for i, j in zip(a, a[1:]): connect(*primary(i, 'o'), j)`
+            - `connect(a[0])` is important if `a[0]` contains arrows (explained below)
 
     Lists are fully connected; tuples are connected component-wise:
     - `connect(*a, [*b], *c)` is _like_ `for i in b: connect(*a, i, *c)`
@@ -81,25 +85,29 @@ def connect(*args, _dis=False):
         - equivalent to `connect(*a); connect(*d); for i, j in zip(b, c): connect(primary(a[-1], 'o'), i, j, primary(d[0], 'i'))`
 
     `primary([*a], x)` is equal to `[*primary(i, x) for i in a]`.
-    `primary((*a,), x)` is equal to `tuple(primary([*a], x))`.
+    `primary((*a,), x)` is equal to `tuple(*primary(i, x) for i in a)`.
 
-    Structure can be nested:
-    - `connect(*a, [*b, '+>', *c], *d)` is equivalent to:
-        - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
-        - `connect(*c)` nested structure
-        - `connect(*a, b, *d)` like a list (works with tuples as well)
-    - `connect(*a, [*b, '<+', *c], *d)` is equivalent to:
-        - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
-        - `connect(*c[::-1])` nested structure
-        - `connect(*a, b, *d)` like a list (works with tuples as well)
-    - `connect(*a, [*b, '>', *c], *d)` is equivalent to:
-        - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
-        - `connect(*c)` nested structure
-        - `connect(*a, b, [], *d)` like a list with a break on right (works with tuples as well)
-    - `connect(*a, [*b, '<', *c], *d)` is equivalent to:
-        - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
-        - `connect(*c[::-1])` nested structure
-        - `connect(*a, [], b, *d)` like a list with a break on left (works with tuples as well)
+    Arrows allow nested structures:
+    - `connect(*a, [*b, '+>', *c], *d)` is _like_ `connect(*a, [*b], *c); connect(b[-1], *c)`
+        - equivalent to:
+            - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
+            - `connect(*c)` nested structure
+            - `connect(*a, b, *d)` like a list (works with tuples as well)
+    - `connect(*a, [*b, '<+', *c], *d)` is _like_ `connect(*a, [*b], *d); connect(*reversed(c), b[-1])`
+        - equivalent to:
+            - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
+            - `connect(*reversed(c))` nested structure
+            - `connect(*a, b, *d)` like a list (works with tuples as well)
+    - `connect(*a, [*b, '>', *c], *d)` is _like_ `connect(*a, [*b]); connect(*d); connect(b[-1], *c)`
+        - equivalent to:
+            - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
+            - `connect(*c)` nested structure
+            - `connect(*a, b, [], *d)` like a list with a break on right (works with tuples as well)
+    - `connect(*a, [*b, '<', *c], *d)` is _like_ `connect(*a, [*b]); connect(*d); connect(*reversed(c), b[-1])`
+        - equivalent to:
+            - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
+            - `connect(*reversed(c))` nested structure
+            - `connect(*a, [], b, *d)` like a list with a break on left (works with tuples as well)
 
     Multiple arrows can be used:
     - `connect(*a, [*b, arrow1, *c, arrow2, *d], *e)` is _like_ `connect(*a, [*b, arrow1, *c], *e); connect(*a, [*b, arrow2, *d], *e)`
@@ -160,6 +168,7 @@ def connect(*args, _dis=False):
     '''
 
     def connect_agnostic(a, b):
+        # arguments can be components or subsystems
         from ._subsystem import Subsystem
         if not isinstance(a, _Component) and not isinstance(a, Subsystem):
             if not _dis:
@@ -178,21 +187,12 @@ def connect(*args, _dis=False):
                 else:
                     a.disconnect(b)
             elif isinstance(b, Subsystem):
-                if not _dis:
-                    b.connect_inputs(a)
-                else:
-                    b.disconnect_inputs(a)
+                connect(a, b.inputs, _dis)
         elif isinstance(a, Subsystem):
             if isinstance(b, _Component):
-                if not _dis:
-                    a.connect_outputs(b)
-                else:
-                    a.disconnect_outputs(b)
+                connect(a.outputs, b, _dis)
             elif isinstance(b, Subsystem):
-                if not _dis:
-                    connect(a.outputs, b.inputs)
-                else:
-                    connect(a.outputs, b.inputs, _dis=True)
+                connect(a.outputs, b.inputs, _dis)
 
     def primary(arg, x=None):
         if type(arg) == list:
@@ -207,6 +207,7 @@ def connect(*args, _dis=False):
         elif type(arg) == tuple:
             return tuple(primary(list(arg), x))
         else:
+            # `primary(a, x)` is like `a` for components and subsystems
             return [arg]
 
     def connect_arrow(last_primary, stack, arrow):
@@ -244,18 +245,22 @@ def connect(*args, _dis=False):
     elif len(args) == 2:
         src, dst = args
         if not _iterable(src) and not _iterable(dst):
+            # base case
             connect_agnostic(src, dst)
         else:
             if type(src) == tuple and type(dst) == tuple:
+                # tuples are connected component-wise
                 for i, j in zip(primary(src, 'o'), primary(dst, 'i')):
                     connect(i, j)
             else:
+                # lists are fully connected
                 for i in primary(src, 'o'):
                     for j in primary(dst, 'i'):
                         connect(i, j)
             connect(src)
             connect(dst)
     else:
+        # connect left-to-right
         connect(args[0])
         for i, j in zip(args, args[1:]):
             connect(primary(i, 'o'), j)

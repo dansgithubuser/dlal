@@ -77,18 +77,6 @@ class Subsystem:
         for i in self.components.values():
             driver.add(i)
 
-    def connect_inputs(self, other):
-        _connect(other, self.inputs)
-
-    def connect_outputs(self, other):
-        _connect(self.outputs, other)
-
-    def disconnect_inputs(self, other):
-        _skeleton.disconnect(other, self.inputs)
-
-    def disconnect_outputs(self, other):
-        _skeleton.disconnect(self.outputs, other)
-
 class IirBank(Subsystem):
     def init(self, order, name=None):
         components = {}
