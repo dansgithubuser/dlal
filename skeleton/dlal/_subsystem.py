@@ -180,9 +180,10 @@ class Voices(Subsystem):
 
 class Mixer(Subsystem):
     class Channel:
-        def __init__(self, gain, pan, lim, buf):
+        def __init__(self, gain, pan, pan_spec, lim, buf):
             self.gain = gain
             self.pan = pan
+            self.pan_spec = pan_spec
             self.lim = lim
             self.buf = buf
             _connect(
@@ -210,15 +211,19 @@ class Mixer(Subsystem):
     ):
         self.name = name
         self.components = {}
-        self.inputs = []
-        self.outputs = []
         self.channels = []
         for i, v in enumerate(pre_mix_spec):
             ch_gain = self.add(f'ch{i}.gain', 'gain', [v.get('gain', 1)])
-            ch_pan = self.add(f'ch{i}.pan', 'pan', v.get('pan', [0, 1]), {'sample_rate': sample_rate})
+            ch_pan = self.add(f'ch{i}.pan', 'pan')
             ch_lim = self.add(f'ch{i}.lim', 'lim', v.get('lim', [1, 0.9, 0.1]))
             ch_buf = self.add(f'ch{i}.buf', 'buf')
-            channel = Mixer.Channel(ch_gain, ch_pan, ch_lim, ch_buf)
+            channel = Mixer.Channel(
+                ch_gain,
+                ch_pan,
+                (v.get('pan', [0, 1]), {'sample_rate': sample_rate}),
+                ch_lim,
+                ch_buf,
+            )
             self.channels.append(channel)
         self.post_mix = []
         for name, spec in post_mix_extra.items():
@@ -232,6 +237,12 @@ class Mixer(Subsystem):
             [self.reverb, self.lim],
             self.buf,
         )
+        self.inputs = tuple(i.buf for i in self.channels)
+        self.outputs = [self.buf]
+
+    def post_add_init(self):
+        for channel in self.channels:
+            channel.pan.set(*channel.pan_spec[0], **channel.pan_spec[1])
 
     def __getitem__(self, i):
         return self.channels[i].buf

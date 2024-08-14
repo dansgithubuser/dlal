@@ -118,16 +118,16 @@ impl Component {
         } else {
             None
         };
-        let flip = match body.get("flip") {
-            Some(serde_json::Value::Bool(b)) => *b,
-            None | Some(serde_json::Value::Null) => match env::var("DLAL_PAN_FLIP") {
+        let flip = match body.kwarg("flip") {
+            Ok(serde_json::Value::Bool(b)) => b,
+            Err(_) | Ok(serde_json::Value::Null) => match env::var("DLAL_PAN_FLIP") {
                 Ok(v) => {
                     let u = v.parse::<u8>()?;
                     u == 1
                 }
                 _ => false,
             }
-            Some(v) => return Err(err!("`flip` should be bool or null but got {}", v).into()),
+            Ok(v) => return Err(err!("`flip` should be bool or null but got {}", v).into()),
         };
         let ear_offset: f32 = if body.has_kwarg("ear_offset") {
             body.kwarg("ear_offset")?
@@ -139,13 +139,18 @@ impl Component {
         } else {
             343.0
         };
-        let sample_rate: u32 = if body.has_kwarg("sample_rate") {
-            body.kwarg("sample_rate")?
-        } else {
-            if distance.is_some() && self.sample_rate == 0 {
-                return Err(err!("No sample rate, can't calculate delay.").into());
+        let sample_rate: u32 = match body.kwarg("sample_rate") {
+            Ok(serde_json::Value::Number(n)) => n
+                .as_u64()
+                .ok_or(err!("`sample_rate` isn't a u64 (and needs to be a u32)."))?
+                .try_into()?,
+            Err(_) | Ok(serde_json::Value::Null) => {
+                if distance.is_some() && self.sample_rate == 0 {
+                    return Err(err!("No sample rate, can't calculate delay.").into());
+                }
+                self.sample_rate
             }
-            self.sample_rate
+            Ok(v) => return Err(err!("`sample_rate` should be number or null but got {}", v).into()),
         };
         if flip {
             angle += 180.0;
