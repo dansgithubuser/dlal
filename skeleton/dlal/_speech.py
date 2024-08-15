@@ -800,6 +800,7 @@ class SpeechSynth(Subsystem):
                 'gain_noise': ('gain', [0, 0.9]),
                 'mutt': 'mutt',
                 'buf_noise': 'buf',
+                'compressor': 'compressor',
                 'buf_out': 'buf',
             },
             ['tone'],
@@ -821,7 +822,7 @@ class SpeechSynth(Subsystem):
                 '<+', self.gain_noise,
                 '<+', self.mutt,
             ],
-            self.buf_out,
+            [self.buf_out, '<+', self.compressor],
         )
         self.outputs = [self.buf_out]
         self.sample_rate = sample_rate

@@ -37,7 +37,6 @@ accordion2 = dlal.Buf('melodica', name='accordion2')
 drum = dlal.Buf(name='drum')
 # voice
 voice = dlal.Afr('assets/local/audiobro3_voice.flac')
-voice_gain = dlal.Gain(1.5)
 voice_buf = dlal.Buf()
 # guitar
 guitar_strummer = dlal.Strummer(name='guitar_strummer')
@@ -54,7 +53,7 @@ mixer = dlal.subsystem.Mixer(
         {'gain': 2.8, 'pan': [ -30, 10]},  # accordion1
         {'gain': 2.8, 'pan': [ -30, 10]},  # accordion2
         {'gain': 2.8, 'pan': [   0, 10]},  # drum
-        {'gain': 2.8, 'pan': [   0, 10]},  # voice
+        {'gain': 1.4, 'pan': [   0, 10]},  # voice
         {'gain': 2.8, 'pan': [   0, 10]},  # guitar
         {'gain': 2.8, 'pan': [  30, 10]},  # shaker1
         {'gain': 2.8, 'pan': [  30, 10]},  # shaker2
@@ -127,7 +126,6 @@ if args.start:
     liner.advance(float(args.start))
 
 #===== connect =====#
-voice_gain.connect(voice_buf)
 dlal.connect(
     liner,
     (

@@ -9,33 +9,45 @@ component!(
         {
             "name": "field_helpers",
             "fields": [
-                "smooth_rise",
-                "smooth_fall",
-                "lo",
-                "hi",
+                "peak_smooth_rise",
+                "peak_smooth_fall",
+                "gain_smooth_rise",
+                "gain_smooth_fall",
+                "max_gain",
                 "volume"
             ],
             "kinds": ["rw", "json"]
         },
-        {"name": "field_helpers", "fields": ["value", "peak"], "kinds": ["r"]},
+        {
+            "name": "field_helpers",
+            "fields": [
+                "peak",
+                "peak_smoothed",
+                "gain"
+            ],
+            "kinds": ["r"]
+        },
     ],
     {
-        value: f32, // follows contour of audio
         peak: f32, // peak (absolute)
-        smooth_rise: f32, // how smooth value is when below peak
-        smooth_fall: f32, // how smooth value is when above peak
-        lo: f32, // anything quieter than this is silenced
-        hi: f32, // anything louder than this is made to have specified volume (so there's a smooth region between lo and hi)
+        peak_smoothed: f32,
+        gain: f32,
+        peak_smooth_rise: f32,
+        peak_smooth_fall: f32,
+        gain_smooth_rise: f32,
+        gain_smooth_fall: f32,
+        max_gain: f32,
         volume: f32,
     },
 );
 
 impl ComponentTrait for Component {
     fn init(&mut self) {
-        self.smooth_rise = 0.95;
-        self.smooth_fall = 0.999;
-        self.lo = 0.001;
-        self.hi = 0.01;
+        self.peak_smooth_rise = 0.95;
+        self.peak_smooth_fall = 0.999;
+        self.gain_smooth_rise = 0.9995;
+        self.gain_smooth_fall = 0.9;
+        self.max_gain = 50.0;
         self.volume = 0.5;
     }
 
@@ -50,20 +62,25 @@ impl ComponentTrait for Component {
             if peak < mag {
                 peak = mag;
             }
-            let smooth = if self.value < self.peak {
-                self.smooth_rise
-            } else {
-                self.smooth_fall
-            };
-            self.value = smooth * self.value + (1.0 - smooth) * self.peak;
-            if self.value < self.lo {
-                *i = 0.0;
-            } else if self.value > self.hi {
-                *i *= self.volume / self.value;
-            } else {
-                let t = (self.value - self.lo) / (self.hi - self.lo);
-                *i *= t * self.volume / self.value;
+            macro_rules! smooth {
+                ($smoothed:expr, $raw:expr, $smooth_rise:expr, $smooth_fall:expr) => {
+                    let smooth = if $smoothed < $raw {
+                        $smooth_rise
+                    } else {
+                        $smooth_fall
+                    };
+                    $smoothed = smooth * $smoothed + (1.0 - smooth) * $raw;
+                }
             }
+            let peak = peak.max(self.peak);
+            smooth!(self.peak_smoothed, peak, self.peak_smooth_rise, self.peak_smooth_fall);
+            let peak = peak.max(self.peak_smoothed);
+            let mut gain_f = 1.0 / (peak + 1.0 / self.max_gain);
+            if peak < 1.0 / self.max_gain {
+                gain_f *= peak * self.max_gain;
+            }
+            smooth!(self.gain, gain_f, self.gain_smooth_rise, self.gain_smooth_fall);
+            *i *= self.gain * self.volume;
         }
         self.peak = peak;
     }
