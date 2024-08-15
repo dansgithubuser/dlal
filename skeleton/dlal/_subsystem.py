@@ -113,10 +113,16 @@ class Portamento(Subsystem):
             [self.rhymel, self.lpf],
             self.oracle,
         )
+        self.prepped = False
 
-    def connect_outputs(self, other):
-        other.midi(midi.Msg.pitch_bend_range(64))
-        Subsystem.connect_outputs(self, other)
+    def __del__(self):
+        super().__del__()
+        if not self.prepped:
+            print(f'note: {self} was never prepped')
+
+    def prep_output(self, output):
+        output.midi(midi.Msg.pitch_bend_range(64))
+        self.prepped = True
 
 class Vibrato(Subsystem):
     def init(self, freq=3.5, amp=0.15, name=None):

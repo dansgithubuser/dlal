@@ -97,11 +97,12 @@ liner.skip_line(5)
 dlal.connect(
     liner,
     porta,
-    synth.tone,
+    synth,
     [],
     synth,
     tape,
 )
+porta.prep_output(synth.tone)
 
 synth.utter(utterance, no_pitch=True)
 

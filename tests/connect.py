@@ -14,19 +14,34 @@ class Connector(Component):
     def __repr__(self):
         return str(self)
 
-liner = Connector('liner')
-a = Connector('a')
-b = Connector('b')
-c = Connector('c')
-d = Connector('d')
-mixer = Connector('mixer')
+class Mixer:
+    liner = Connector('liner')
+    a = Connector('a')
+    b = Connector('b')
+    c = Connector('c')
+    d = Connector('d')
+    mixer = Connector('mixer')
+    dlal.connect(
+        liner,
+        (
+            a,
+            [b, '>', c, '>'],
+            d,
+        ),
+        mixer,
+    )
 
-dlal.connect(
-    liner,
-    (
+class DoubleArrow:
+    a = Connector('a')
+    b = Connector('b')
+    c = Connector('c')
+    d = Connector('d')
+    e = Connector('e')
+    dlal.connect(
         a,
-        [b, '>', c, '>'],
-        d,
-    ),
-    mixer,
-)
+        [b,
+            '<+', d,
+            '+>', c,
+        ],
+        e,
+    )

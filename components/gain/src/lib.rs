@@ -2,7 +2,15 @@ use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 component!(
     {"in": [], "out": ["audio"]},
-    ["run_size", "uni"],
+    [
+        "run_size",
+        "uni",
+        {
+            "name": "field_helpers",
+            "fields": ["amount_dst", "smooth"],
+            "kinds": ["rw", "json"]
+        },
+    ],
     {
         amount: f32,
         amount_dst: f32,
@@ -21,21 +29,12 @@ impl ComponentTrait for Component {
     }
 
     fn run(&mut self) {
+        self.amount = self.smooth * self.amount + (1.0 - self.smooth) * self.amount_dst;
         if let Some(output) = &self.output {
             for i in output.audio(self.run_size).unwrap() {
                 *i *= self.amount;
             }
         }
-        self.amount = self.smooth * self.amount + (1.0 - self.smooth) * self.amount_dst;
-    }
-
-    fn to_json_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        Ok(Some(json!(self.amount)))
-    }
-
-    fn from_json_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        self.amount = body.arg(0)?;
-        Ok(None)
     }
 }
 
