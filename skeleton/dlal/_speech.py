@@ -797,6 +797,7 @@ class SpeechSynth(Subsystem):
                 'noise': ('noisebank', [], {'smooth': 0.8}),
                 'gain_tone': ('gain', [0, 0.9]),
                 'buf_tone': 'buf',
+                'gain_noise': ('gain', [0, 0.9]),
                 'mutt': 'mutt',
                 'buf_noise': 'buf',
                 'buf_out': 'buf',
@@ -816,7 +817,10 @@ class SpeechSynth(Subsystem):
             self.buf_out,
             [],
             self.noise,
-            [self.buf_noise, '<+', self.mutt],
+            [self.buf_noise,
+                '<+', self.gain_noise,
+                '<+', self.mutt,
+            ],
             self.buf_out,
         )
         self.outputs = [self.buf_out]
@@ -838,10 +842,12 @@ class SpeechSynth(Subsystem):
     ):
         with _Detach():
             with self.comm:
-                if toniness < 0.1:
-                    self.gain_tone.set(0)
+                if toniness < 0.2:
+                    self.gain_tone.set(toniness)
+                    self.gain_noise.set(1 - toniness)
                 else:
                     self.gain_tone.set(1)
+                    self.gain_noise.set(0)
                 if tone_spectrum:
                     self.tone.spectrum(tone_spectrum)
                 elif tone_formants:
