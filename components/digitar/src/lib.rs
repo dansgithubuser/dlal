@@ -3,13 +3,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 enum Excitation {
-    Saw,
+    Pluck { offset: f32 },
     Hammer { contact: f32, offset: f32 },
 }
 
 impl Default for Excitation {
     fn default() -> Self {
-        Excitation::Saw
+        Excitation::Pluck { offset: 0.0 }
     }
 }
 
@@ -58,12 +58,20 @@ impl Note {
         self.done = false;
         let size = self.wavetable.len();
         match excitation {
-            Excitation::Saw => {
+            Excitation::Pluck { offset } => {
                 for i in 0..size {
-                    self.wavetable[i] = vol * (2 * i) as f32 / size as f32;
-                    if i > size / 2 {
-                        self.wavetable[i] -= 2.0 * vol;
+                    let mut x = i as f32 / size as f32;
+                    if x < offset / 2.0 {
+                        // rise from 0 to 1
+                        x = x / (offset / 2.0);
+                    } else if x > 1.0 - offset / 2.0 {
+                        // rise from -1 to 0
+                        x = -1.0 + (x - (1.0 - offset / 2.0)) / (offset / 2.0);
+                    } else {
+                        // fall from 1 to -1
+                        x = 1.0 - 2.0 * (x - (offset / 2.0)) / (1.0 - offset);
                     }
+                    self.wavetable[i] = vol * x;
                 }
             }
             Excitation::Hammer { contact, offset } => {
@@ -190,8 +198,15 @@ component!(
                 },
             ],
         },
-        "saw": {
-            "desc": "Excite each string like a saw wave.",
+        "pluck": {
+            "desc": "Pluck each string like a guitar or harp.",
+            "kwargs": [
+                {
+                    "name": "offset",
+                    "default": 0.0,
+                    "desc": "Where the string is plucked. 0 is a pure saw wave, 0.5 is a pure triangle wave.",
+                },
+            ],
         },
         "hammer": {
             "desc": "Hammer each string like a piano.",
@@ -212,8 +227,9 @@ component!(
 );
 
 impl Component {
-    fn saw_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
-        self.excitation = Excitation::Saw;
+    fn pluck_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let offset = body.kwarg("offset").unwrap_or(0.0);
+        self.excitation = Excitation::Pluck { offset };
         Ok(None)
     }
 

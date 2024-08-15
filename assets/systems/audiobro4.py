@@ -106,6 +106,10 @@ liner.load('assets/midis/audiobro4.mid', immediate=True)
 if args.start:
     liner.advance(args.start)
 
+#----- harp -----#
+harp1.digitar.pluck(offset=1/4)
+harp2.digitar.pluck(offset=1/8)
+
 #===== connect =====#
 dlal.connect(
     liner,
