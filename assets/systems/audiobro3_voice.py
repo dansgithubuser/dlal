@@ -1,9 +1,15 @@
 #===== imports =====#
 import dlal
 
+import argparse
 import json
 import os
 import pickle
+
+#===== args =====#
+parser = argparse.ArgumentParser()
+parser.add_argument('--plot-compressor', action='store_true')
+args = parser.parse_args()
 
 #===== deep speech =====#
 text = '''\
@@ -109,12 +115,29 @@ synth.utter(utterance, no_pitch=True)
 porta.rhymel.pitch(43 / 128)
 
 # run
-runs = int(240 * audio.sample_rate() / audio.run_size())
-n = tape.size() // audio.run_size()
+sample_rate = audio.sample_rate()
+run_size = audio.run_size()
+runs = int(240 * sample_rate / run_size)
+n = tape.size() // run_size
+data = []
 with open('assets/local/tmp.i16le', 'wb') as file:
     for i in range(runs):
         audio.run()
         if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
         print(f'{i / runs * 100:>6.2f}%', end='\r')
+        gain = synth.compressor.gain()
+        data.append((
+            i * run_size / sample_rate,
+            gain,
+            1 / gain,
+            synth.compressor.peak_smoothed(),
+            synth.compressor.peak(),
+        ))
 print()
 dlal.sound.i16le_to_flac('assets/local/tmp.i16le', 'assets/local/audiobro3_voice.flac')
+if args.plot_compressor:
+    import dansplotcore as dpc
+    plot = dpc.Plot(primitive=dpc.p.Line())
+    for i in range(1, len(data[0])):
+        plot.plot([(j[0], j[i]) for j in data])
+    plot.show()

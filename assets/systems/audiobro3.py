@@ -58,7 +58,7 @@ mixer = dlal.subsystem.Mixer(
         {'gain': 2.8, 'pan': [  30, 10]},  # shaker1
         {'gain': 2.8, 'pan': [  30, 10]},  # shaker2
     ],
-    reverb=0.2,
+    reverb=0.5,
     lim=[1, 0.9, 0.3],
 )
 tape = dlal.Tape(1 << 17)
