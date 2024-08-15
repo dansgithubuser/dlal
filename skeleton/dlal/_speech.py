@@ -844,8 +844,8 @@ class SpeechSynth(Subsystem):
         with _Detach():
             with self.comm:
                 if toniness < 0.2:
-                    self.gain_tone.set(toniness)
-                    self.gain_noise.set(1 - toniness)
+                    self.gain_tone.set(5 * toniness)
+                    self.gain_noise.set(1 - 5 * toniness)
                 else:
                     self.gain_tone.set(1)
                     self.gain_noise.set(0)
