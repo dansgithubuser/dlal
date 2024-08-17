@@ -329,4 +329,4 @@ ghost1.pan_oracle.connect(mixer.channels[0].pan)
 ghost2.pan_oracle.connect(mixer.channels[1].pan)
 
 #===== start =====#
-dlal.typical_setup(duration=240)
+dlal.typical_setup(duration=255)
