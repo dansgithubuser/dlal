@@ -56,6 +56,8 @@ class Ghost(dlal.subsystem.Subsystem):
                 'sonic': 'sonic',
                 'lim': 'lim',
                 'buf': 'buf',
+                'pan_osc': ('osc', ['tri', 1/8]),
+                'pan_oracle': ('oracle', [], {'m': 90, 'format': ('set', ['%', 10])})
             },
             ['rhymel'],
             ['buf'],
@@ -67,6 +69,9 @@ class Ghost(dlal.subsystem.Subsystem):
             [self.oracle, '<+', self.lpf, '<+', self.lfo],
             self.sonic,
             [self.buf, '<+', self.lim],
+            [],
+            self.pan_osc,
+            self.pan_oracle,
         )
         self.midman.directive([{'nibble': 0x90}], 0, 'midi', [0x90, '%1', 0])
         self.lpf.set(0.9992)
@@ -209,10 +214,10 @@ mixer = dlal.subsystem.Mixer(
     [
         {'gain': 1.4, 'pan': [   0, 10]},  # ghost1
         {'gain': 1.4, 'pan': [   0, 10]},  # ghost2
+        {'gain': 1.4, 'pan': [   0, 10]},  # drums
+        {'gain': 1.4, 'pan': [  45, 10]},  # crow
         {'gain': 1.4, 'pan': [   0, 10]},  # piano
         {'gain': 1.4, 'pan': [   0, 10]},  # bass
-        {'gain': 1.4, 'pan': [  45, 10]},  # crow
-        {'gain': 1.4, 'pan': [   0, 10]},  # drums
         {'gain': 1.4, 'pan': [   0, 10]},  # talking bassoon
         {'gain': 1.4, 'pan': [  45, 10]},  # bell
         {'gain': 1.4, 'pan': [   0, 10]},  # s
@@ -320,9 +325,8 @@ dlal.connect(
     mixer,
     [audio, tape],
 )
+ghost1.pan_oracle.connect(mixer.channels[0].pan)
+ghost2.pan_oracle.connect(mixer.channels[1].pan)
 
 #===== start =====#
-print(dlal.system_diagram())
-for i in audio.addee_order(): print(i)
-print()
 dlal.typical_setup(duration=240)
