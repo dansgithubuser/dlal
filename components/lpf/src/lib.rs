@@ -18,6 +18,7 @@ component!(
                 "default": 0.95,
             }],
         },
+        "get": {},
         "freq": {
             "args": [
                 {"name": "freq", "optional": true},
@@ -57,6 +58,10 @@ impl Component {
         if let Ok(lowness) = body.arg::<f32>(0) {
             self.a = 1.0 - lowness;
         }
+        Ok(Some(json!(1.0 - self.a)))
+    }
+
+    fn get_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
         Ok(Some(json!(1.0 - self.a)))
     }
 

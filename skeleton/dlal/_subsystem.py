@@ -31,27 +31,13 @@ class Subsystem:
             self.inputs = []
             self.outputs = []
         for name, spec in components.items():
-            args = []
-            kwargs = {}
-            if type(spec) == str:
-                kind = spec
-            elif type(spec) == tuple:
-                if len(spec) >= 1:
-                    kind = spec[0]
-                    assert type(kind) == str
-                if len(spec) >= 2:
-                    args = spec[1]
-                    assert type(args) == list
-                if len(spec) >= 3:
-                    kwargs = spec[2]
-                    assert type(kwargs) == dict
-            self.add(name, kind, args, kwargs)
+            self.add_spec(name, spec)
         self.inputs.extend(self.components[i] for i in inputs)
         self.outputs.extend(self.components[i] for i in outputs)
 
     def post_add_init(self): pass
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
     def add(self, name, kind=None, args=[], kwargs={}):
@@ -68,22 +54,28 @@ class Subsystem:
         )
         self.components[name] = component
         setattr(self, name, component)
+        return component
+
+    def add_spec(self, name, spec):
+        args = []
+        kwargs = {}
+        if type(spec) == str:
+            kind = spec
+        elif type(spec) == tuple:
+            if len(spec) >= 1:
+                kind = spec[0]
+                assert type(kind) == str
+            if len(spec) >= 2:
+                args = spec[1]
+                assert type(args) == list
+            if len(spec) >= 3:
+                kwargs = spec[2]
+                assert type(kwargs) == dict
+        return self.add(name, kind, args, kwargs)
 
     def add_to(self, driver):
         for i in self.components.values():
             driver.add(i)
-
-    def connect_inputs(self, other):
-        _connect(other, self.inputs)
-
-    def connect_outputs(self, other):
-        _connect(self.outputs, other)
-
-    def disconnect_inputs(self, other):
-        _skeleton.disconnect(other, self.inputs)
-
-    def disconnect_outputs(self, other):
-        _skeleton.disconnect(self.outputs, other)
 
 class IirBank(Subsystem):
     def init(self, order, name=None):
@@ -121,10 +113,16 @@ class Portamento(Subsystem):
             [self.rhymel, self.lpf],
             self.oracle,
         )
+        self.prepped = False
 
-    def connect_outputs(self, other):
-        other.midi(midi.Msg.pitch_bend_range(64))
-        Subsystem.connect_outputs(self, other)
+    def __del__(self):
+        super().__del__()
+        if not self.prepped:
+            print(f'note: {self} was never prepped')
+
+    def prep_output(self, output):
+        output.midi(midi.Msg.pitch_bend_range(64))
+        self.prepped = True
 
 class Vibrato(Subsystem):
     def init(self, freq=3.5, amp=0.15, name=None):
@@ -185,3 +183,78 @@ class Voices(Subsystem):
                 l = bend & 0x7f
                 h = bend >> 7
                 voice.midi([0xe1, l, h])
+
+class Mixer(Subsystem):
+    class Channel:
+        def __init__(self, gain, pan, pan_spec, lim, buf):
+            self.gain = gain
+            self.pan = pan
+            self.pan_spec = pan_spec
+            self.lim = lim
+            self.buf = buf
+            _connect(
+                [self.gain, self.pan, self.lim],
+                self.buf,
+            )
+
+        def components(self):
+            return [
+                self.gain,
+                self.pan,
+                self.lim,
+                self.buf,
+            ]
+
+    def init(
+        self,
+        pre_mix_spec,
+        *,
+        post_mix_extra={},
+        reverb=0,
+        lim=[1, 0.99, 0.01],
+        sample_rate=None,
+        name='mixer',
+    ):
+        self.name = name
+        self.components = {}
+        self.channels = []
+        for i, v in enumerate(pre_mix_spec):
+            ch_gain = self.add(f'ch{i}.gain', 'gain', [v.get('gain', 1)])
+            ch_pan = self.add(f'ch{i}.pan', 'pan')
+            ch_lim = self.add(f'ch{i}.lim', 'lim', v.get('lim', [1, 0.9, 0.1]))
+            ch_buf = self.add(f'ch{i}.buf', 'buf')
+            channel = Mixer.Channel(
+                ch_gain,
+                ch_pan,
+                (v.get('pan', [0, 1]), {'sample_rate': sample_rate}),
+                ch_lim,
+                ch_buf,
+            )
+            self.channels.append(channel)
+        self.post_mix = []
+        for name, spec in post_mix_extra.items():
+            self.post_mix.append(self.add_spec(name, spec))
+        self.post_mix.append(self.add('reverb', args=[reverb]))
+        self.post_mix.append(self.add('lim', args=lim))
+        self.post_mix.append(self.add('buf'))
+        for channel in self.channels:
+            channel.buf.connect(self.buf)
+        _connect(
+            [self.reverb, self.lim],
+            self.buf,
+        )
+        self.inputs = tuple(i.buf for i in self.channels)
+        self.outputs = [self.buf]
+
+    def post_add_init(self):
+        for channel in self.channels:
+            channel.pan.set(*channel.pan_spec[0], **channel.pan_spec[1])
+
+    def __getitem__(self, i):
+        return self.channels[i].buf
+
+    def print_details(self):
+        for i, ch in enumerate(self.channels):
+            print(ch.gain, ch.pan, ch.lim)
+        for i in self.post_mix[:-1]:
+            print(i)

@@ -1,4 +1,4 @@
-use dlal_component_base::{component, serde_json, Body, CmdResult};
+use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 struct Ring {
     vec: Vec<f32>,
@@ -38,6 +38,7 @@ component!(
     },
     {
         "set": { "args": ["amount"] },
+        "get": {},
     },
 );
 
@@ -72,5 +73,9 @@ impl Component {
     fn set_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         self.amount = body.arg(0)?;
         Ok(None)
+    }
+
+    fn get_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.amount)))
     }
 }

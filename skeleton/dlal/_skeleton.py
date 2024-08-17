@@ -65,14 +65,19 @@ def connect(*args, _dis=False):
 
     Arguments can be components or subsystems:
     - `connect(a, b)` is equivalent to `a.connect(b)`
-        - if `a` is a subsystem, `a.connect_outputs(b)`
-        - if `b` is a subsystem, `b.connect_inputs(a)`
+        - if `a` is a subsystem, `connect(a.outputs, b)`
+        ` if `b` is a subsysten, `connect(a, b.inputs)`
+        - if `a` and `b` are subsystems, `connect(a.outputs, b.inputs)`
+        - see below for how lists and tuples are treated
+
+    `primary(a, x)` is like `a` for components and subsystems.
+    - `x` is important if `a` contains arrows (explained below)
+    - `primary(a, x)` is `[a]`, which acts the same as `a`, lists are explained below
 
     Arguments are connected left to right:
     - `connect(*a)` is _like_ `for i, j in zip(a, a[1:]): connect(i, j)`
-        - equivalent to `connect(a[0]); for i, j in zip(a, a[1:]): connect(primary(i, 'o'), j)`
-
-    `primary(a, x)` is equal to `a` for components and subsystems.
+        - equivalent to `connect(a[0]); for i, j in zip(a, a[1:]): connect(*primary(i, 'o'), j)`
+            - `connect(a[0])` is important if `a[0]` contains arrows (explained below)
 
     Lists are fully connected; tuples are connected component-wise:
     - `connect(*a, [*b], *c)` is _like_ `for i in b: connect(*a, i, *c)`
@@ -81,25 +86,29 @@ def connect(*args, _dis=False):
         - equivalent to `connect(*a); connect(*d); for i, j in zip(b, c): connect(primary(a[-1], 'o'), i, j, primary(d[0], 'i'))`
 
     `primary([*a], x)` is equal to `[*primary(i, x) for i in a]`.
-    `primary((*a,), x)` is equal to `tuple(primary([*a], x))`.
+    `primary((*a,), x)` is equal to `tuple(*primary(i, x) for i in a)`.
 
-    Structure can be nested:
-    - `connect(*a, [*b, '+>', *c], *d)` is equivalent to:
-        - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
-        - `connect(*c)` nested structure
-        - `connect(*a, b, *d)` like a list (works with tuples as well)
-    - `connect(*a, [*b, '<+', *c], *d)` is equivalent to:
-        - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
-        - `connect(*c[::-1])` nested structure
-        - `connect(*a, b, *d)` like a list (works with tuples as well)
-    - `connect(*a, [*b, '>', *c], *d)` is equivalent to:
-        - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
-        - `connect(*c)` nested structure
-        - `connect(*a, b, [], *d)` like a list with a break on right (works with tuples as well)
-    - `connect(*a, [*b, '<', *c], *d)` is equivalent to:
-        - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
-        - `connect(*c[::-1])` nested structure
-        - `connect(*a, [], b, *d)` like a list with a break on left (works with tuples as well)
+    Arrows allow nested structures:
+    - `connect(*a, [*b, '+>', *c], *d)` is _like_ `connect(*a, [*b], *c); connect(b[-1], *c)`
+        - equivalent to:
+            - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
+            - `connect(*c)` nested structure
+            - `connect(*a, b, *d)` like a list (works with tuples as well)
+    - `connect(*a, [*b, '<+', *c], *d)` is _like_ `connect(*a, [*b], *d); connect(*reversed(c), b[-1])`
+        - equivalent to:
+            - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
+            - `connect(*reversed(c))` nested structure
+            - `connect(*a, b, *d)` like a list (works with tuples as well)
+    - `connect(*a, [*b, '>', *c], *d)` is _like_ `connect(*a, [*b]); connect(*d); connect(b[-1], *c)`
+        - equivalent to:
+            - `connect(primary(b, 'o')[-1], primary(c, 'i')[0])` arrow
+            - `connect(*c)` nested structure
+            - `connect(*a, b, [], *d)` like a list with a break on right (works with tuples as well)
+    - `connect(*a, [*b, '<', *c], *d)` is _like_ `connect(*a, [*b]); connect(*d); connect(*reversed(c), b[-1])`
+        - equivalent to:
+            - `connect(primary(c, 'o')[0], primary(b, 'i')[-1])` arrow
+            - `connect(*reversed(c))` nested structure
+            - `connect(*a, [], b, *d)` like a list with a break on left (works with tuples as well)
 
     Multiple arrows can be used:
     - `connect(*a, [*b, arrow1, *c, arrow2, *d], *e)` is _like_ `connect(*a, [*b, arrow1, *c], *e); connect(*a, [*b, arrow2, *d], *e)`
@@ -112,7 +121,40 @@ def connect(*args, _dis=False):
     `primary([*a, arrow, *b], x)` is equal to `primary([*a], x)`.
     `primary((*a, arrow, *b), x)` is equal to `primary((*a,), x)`.
 
-    For example:
+    An arrow at the end of a list can help when the connection _order_ is important.
+    `primary([*a, '>', *b, '>'], 'o')` is equal to `[b[-1]]`.
+    `primary((*a, '<', *b, '<'), 'i')` is equal to `[b[-1]]`.
+
+    If we had:
+    ```
+    connect(
+        liner,
+        (
+            a,
+            [b, '>', c],
+            d,
+        ),
+        [mixer, '<+', c],
+    )
+    ```
+    Then we have a middle voice like `connect(liner, b, c, mixer)`.
+    However, the connections from `liner` happened in order `[a, b, d]`,
+    whereas the connections to `mixer` happened in order `[a, d, c]`.
+
+    Instead we can write:
+    ```
+    connect(
+        liner,
+        (
+            a,
+            [b, '>', c, '>'],
+            d,
+        ),
+        mixer,
+    )
+    ```
+
+    Detailed example:
     ```
     connect(
         a,
@@ -159,54 +201,26 @@ def connect(*args, _dis=False):
     ```
     '''
 
-    def connect_agnostic(a, b):
-        from ._subsystem import Subsystem
-        if not isinstance(a, _Component) and not isinstance(a, Subsystem):
-            if not _dis:
-                raise Exception(f'not sure how to connect {a}')
-            else:
-                raise Exception(f'not sure how to disconnect {a}')
-        if not isinstance(b, _Component) and not isinstance(b, Subsystem):
-            if not _dis:
-                raise Exception(f'not sure how to connect to {b}')
-            else:
-                raise Exception(f'not sure how to disconnect from {b}')
-        if isinstance(a, _Component):
-            if isinstance(b, _Component):
-                if not _dis:
-                    a.connect(b)
-                else:
-                    a.disconnect(b)
-            elif isinstance(b, Subsystem):
-                if not _dis:
-                    b.connect_inputs(a)
-                else:
-                    b.disconnect_inputs(a)
-        elif isinstance(a, Subsystem):
-            if isinstance(b, _Component):
-                if not _dis:
-                    a.connect_outputs(b)
-                else:
-                    a.disconnect_outputs(b)
-            elif isinstance(b, Subsystem):
-                if not _dis:
-                    connect(a.outputs, b.inputs)
-                else:
-                    connect(a.outputs, b.inputs, _dis=True)
-
     def primary(arg, x=None):
         if type(arg) == list:
             result = []
+            if len(arg) >= 2 and (arg[-1], x) == ('>', 'o'):
+                return [arg[-2]]
+            if len(arg) >= 2 and (arg[-1], x) == ('<', 'i'):
+                return [arg[-2]]
             for i in arg:
                 if type(i) == str:
-                    if (i, x) == ('>', 'o'): return []
-                    if (i, x) == ('<', 'i'): return []
+                    if (i, x) == ('>', 'o'):
+                        return []
+                    if (i, x) == ('<', 'i'):
+                        return []
                     break
                 result.extend(primary(i, x))
             return result
         elif type(arg) == tuple:
             return tuple(primary(list(arg), x))
         else:
+            # `primary(a, x)` is like `a` for components and subsystems
             return [arg]
 
     def connect_arrow(last_primary, stack, arrow):
@@ -243,19 +257,31 @@ def connect(*args, _dis=False):
             connect(i)
     elif len(args) == 2:
         src, dst = args
+        from ._subsystem import Subsystem
+        if isinstance(src, Subsystem):
+            src = src.outputs
+        if isinstance(dst, Subsystem):
+            dst = dst.inputs
         if not _iterable(src) and not _iterable(dst):
-            connect_agnostic(src, dst)
+            # base case
+            if not _dis:
+                src.connect(dst)
+            else:
+                src.disconnect(dst)
         else:
             if type(src) == tuple and type(dst) == tuple:
+                # tuples are connected component-wise
                 for i, j in zip(primary(src, 'o'), primary(dst, 'i')):
                     connect(i, j)
             else:
+                # lists are fully connected
                 for i in primary(src, 'o'):
                     for j in primary(dst, 'i'):
                         connect(i, j)
             connect(src)
             connect(dst)
     else:
+        # connect left-to-right
         connect(args[0])
         for i, j in zip(args, args[1:]):
             connect(primary(i, 'o'), j)
@@ -288,7 +314,7 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
         runs = int(duration * audio.sample_rate() / audio.run_size())
         n = tape.size() // audio.run_size()
         with open(out_path, 'wb') as file:
-            print('running')
+            print(f'running, outputting to {out_path}')
             for i in range(runs):
                 audio.run()
                 if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
@@ -296,8 +322,16 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
             print()
         if flac_path:
             if flac_path == True:
-                flac_path = Path(sys.argv[0]).with_suffix('.flac').name
-            print('converting to FLAC')
+                flip = os.environ.get('DLAL_PAN_FLIP')
+                if flip != None:
+                    if int(flip):
+                        channel = 'l'
+                    else:
+                        channel = 'r'
+                else:
+                    channel = ''
+                flac_path = Path(sys.argv[0]).stem + channel + '.flac'
+            print(f'converting to FLAC {flac_path}')
             _sound.i16le_to_flac(out_path, flac_path)
 
 def system_info():

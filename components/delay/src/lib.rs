@@ -1,20 +1,48 @@
 use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
+#[derive(Default)]
+struct Smoother {
+    a: f32,
+    b: f32,
+}
+
+impl Smoother {
+    fn smooth(&mut self, dst: f32, smoothness: f32) {
+        self.a = smoothness * self.a + (1.0 - smoothness) * dst;
+        self.b = smoothness * self.b + (1.0 - smoothness) * self.a;
+    }
+}
+
 component!(
     {"in": [], "out": ["audio"]},
     [
         "run_size",
         "uni",
         "check_audio",
-        {"name": "field_helpers", "fields": ["gain_x", "gain_y", "gain_i", "gain_o"], "kinds": ["rw", "json"]},
+        {
+            "name": "field_helpers",
+            "fields": [
+                "gain_x",
+                "gain_y",
+                "gain_i",
+                "gain_o",
+                "smooth"
+            ],
+            "kinds": ["rw", "json"]
+        },
     ],
     {
         gain_x: f32,
         gain_y: f32,
         gain_i: f32,
         gain_o: f32,
+        gain_x_s: Smoother,
+        gain_y_s: Smoother,
+        gain_i_s: Smoother,
+        gain_o_s: Smoother,
         audio: Vec<f32>,
         index: usize,
+        smooth: f32,
     },
     {
         "resize": {
@@ -70,11 +98,15 @@ impl ComponentTrait for Component {
             Some(output) => output.audio(self.run_size).unwrap(),
             None => return,
         };
+        self.gain_x_s.smooth(self.gain_x, self.smooth);
+        self.gain_y_s.smooth(self.gain_y, self.smooth);
+        self.gain_i_s.smooth(self.gain_i, self.smooth);
+        self.gain_o_s.smooth(self.gain_o, self.smooth);
         for i in 0..self.run_size {
             let x = audio[i];
             let y = self.audio[self.index];
-            audio[i] = x * self.gain_i + y * self.gain_o;
-            self.audio[self.index] = x * self.gain_x + y * self.gain_y;
+            audio[i] = x * self.gain_i_s.b + y * self.gain_o_s.b;
+            self.audio[self.index] = x * self.gain_x_s.b + y * self.gain_y_s.b;
             self.index += 1;
             self.index %= self.audio.len();
         }
@@ -97,6 +129,9 @@ impl Component {
     fn resize_cmd(&mut self, body: serde_json::Value) -> CmdResult {
         if let Ok(v) = body.arg(0) {
             self.audio.resize(v, 0.0);
+            if self.index >= self.audio.len() {
+                self.index = 0;
+            }
         }
         Ok(Some(json!(self.audio.len())))
     }

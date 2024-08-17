@@ -1,1 +1,1 @@
-A mutt multiplies sounds together, but preserves the volume of the result. Additionally, if one of the signals is silent, the other is preserved.
+A mutt specially multiplies a carrier (output) by a modulator (input). The modulator's volume does not affect the volume of the output. If the modulator is below some threshold, the carrier is left untouched. This is useful for speech synthesis when a tone sound modulates a noise sound.

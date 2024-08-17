@@ -5,3 +5,6 @@ class Lpf(Component):
         Component.__init__(self, 'lpf', name)
         if lowness != None: self.command_immediate('set', [lowness])
         if freq != None: self.command_immediate('freq', [freq, sample_rate])
+
+    def __str__(self):
+        return f'{self.name}({self.get():.2f})'

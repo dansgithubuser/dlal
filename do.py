@@ -5,6 +5,7 @@ import collections
 import datetime
 import glob
 import os
+from pathlib import Path
 import pprint
 import re
 import shutil
@@ -33,6 +34,7 @@ parser.add_argument('--build', '-b', action='store_true')
 parser.add_argument('--build-snoop', '--bs', choices=['command', 'midi', 'audio'], nargs='+', default=[])
 parser.add_argument('--interact', '-i', action='store_true', help='run interactive Python with dlal imported, can be paired with --run')
 parser.add_argument('--run', '-r', nargs=argparse.REMAINDER, help='run specified system, optionally with args')
+parser.add_argument('--stereo', '-s', action='store_true')
 parser.add_argument('--debug', '-d', action='store_true', help='run with debug logs on')
 parser.add_argument('--deploy', nargs=3, metavar=('user', 'host', 'path'), help="rsync what's needed to run to specified destination")
 parser.add_argument('--style-check', '--style', action='store_true')
@@ -415,9 +417,30 @@ if args.interact or args.run:
         invocation = ' '.join(invocation)
     else:
         invocation = 'python3 -i -c "import dlal"'
-    p = subprocess.Popen(invocation, shell=True)
-    signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
-    p.wait()
+    if args.stereo:
+        channels = '01'
+    else:
+        channels = [None]
+    for channel in channels:
+        if channel:
+            os.environ['DLAL_PAN_FLIP'] = channel
+        p = subprocess.Popen(invocation, shell=True)
+        signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
+        p.wait()
+    if args.stereo:
+        name = Path(args.run[0]).stem
+        l = Path(name + 'l.flac')
+        r = Path(name + 'r.flac')
+        if l.exists() and r.exists():
+            o = name + '.flac'
+            print(f'combining into {o}')
+            subprocess.run([
+                'python3',
+                'systems/lr_combine.py',
+                l,
+                r,
+                o,
+            ])
 
 # ===== deploy ===== #
 if args.deploy:

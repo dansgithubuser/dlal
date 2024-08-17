@@ -56,6 +56,8 @@ class Ghost(dlal.subsystem.Subsystem):
                 'sonic': 'sonic',
                 'lim': 'lim',
                 'buf': 'buf',
+                'pan_osc': ('osc', ['tri', 1/8]),
+                'pan_oracle': ('oracle', [], {'m': 90, 'format': ('set', ['%', 10])})
             },
             ['rhymel'],
             ['buf'],
@@ -67,6 +69,9 @@ class Ghost(dlal.subsystem.Subsystem):
             [self.oracle, '<+', self.lpf, '<+', self.lfo],
             self.sonic,
             [self.buf, '<+', self.lim],
+            [],
+            self.pan_osc,
+            self.pan_oracle,
         )
         self.midman.directive([{'nibble': 0x90}], 0, 'midi', [0x90, '%1', 0])
         self.lpf.set(0.9992)
@@ -103,9 +108,6 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
             self,
             {
                 'bassoon': ('buf', ['bassoon']),
-                'afr2': ('afr', ['assets/local/bassindaface2.flac']),
-                'afr2_gain': ('gain', [2/3]),
-                'afr1': ('afr', ['assets/local/bassindaface1.flac']),
                 'talk': 'buf',
                 'vocoder': 'vocoder',
                 'gain': ('gain', [8]),
@@ -121,11 +123,13 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
             self.buf,
         )
         dlal.connect(
-            [self.afr2, self.afr2_gain, self.afr1],
             self.talk,
             self.vocoder,
             self.buf,
         )
+        self.talk.load('assets/local/bassindaface1.flac', 46)
+        self.talk.load('assets/local/bassindaface2.flac', 49)
+        self.talk.load('assets/local/funkyfunkybass.flac', 43)
 
 class Choirist(dlal.subsystem.Subsystem):
     def init(self, phonetic_samples, name=None):
@@ -205,9 +209,24 @@ choir_a = Choirist(a_f, name='choir_a')
 choir_t = Choirist(a_m, name='choir_t')
 choir_b = Choirist(a_m, name='choir_b')
 
-reverb = dlal.Reverb(0.3)
-lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'gain':  1.4, 'pan': [   0, 10]},  # ghost1
+        {'gain':  1.4, 'pan': [   0, 10]},  # ghost2
+        {'gain':  1.4, 'pan': [   0, 10]},  # drums
+        {'gain':  1.4, 'pan': [  45, 10]},  # crow
+        {'gain':  1.4, 'pan': [   0, 10]},  # piano
+        {'gain':  1.4, 'pan': [   0, 10]},  # bass
+        {'gain': 11.2, 'pan': [   0, 10]},  # talking bassoon
+        {'gain':  1.4, 'pan': [  45, 10]},  # bell
+        {'gain':  1.4, 'pan': [   0, 10]},  # s
+        {'gain':  1.4, 'pan': [  10, 10]},  # a
+        {'gain':  1.4, 'pan': [ -20, 10]},  # t
+        {'gain':  1.4, 'pan': [ -10, 10]},  # b
+    ],
+    reverb=0.3,
+    lim=[1, 0.95, 0.1],
+)
 tape = dlal.Tape()
 
 #===== commands =====#
@@ -280,6 +299,7 @@ dlal.connect(
         drums,
         drums,
         talking_bassoon,
+        talking_bassoon.talk,
         bell,
         choir_s,
         choir_a,
@@ -288,7 +308,7 @@ dlal.connect(
     ],
 )
 dlal.connect(
-    [
+    (
         ghost1,
         ghost2,
         drums,
@@ -301,16 +321,12 @@ dlal.connect(
         choir_a,
         choir_t,
         choir_b,
-    ],
-    [buf,
-        '<+', lim,
-        '<+', reverb,
-    ],
+    ),
+    mixer,
     [audio, tape],
 )
+ghost1.pan_oracle.connect(mixer.channels[0].pan)
+ghost2.pan_oracle.connect(mixer.channels[1].pan)
 
 #===== start =====#
-print(dlal.system_diagram())
-for i in audio.addee_order(): print(i)
-print()
 dlal.typical_setup(duration=240)

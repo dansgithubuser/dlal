@@ -1,5 +1,7 @@
 import soundfile as sf
 
+import numpy as _np
+
 import re as _re
 import struct as _struct
 import subprocess as _subprocess
@@ -100,3 +102,51 @@ def i16le_to_flac(i16le_file_path, flac_file_path=None):
         data = i16le_file.read(frames=4096, always_2d=True)
         if data.size == 0: break
         flac_file.write(data)
+
+def i16le_to_flac_stereo(i16le_file_path_l, i16le_file_path_r, flac_file_path):
+    i16le_file_l = sf.SoundFile(
+        i16le_file_path_l,
+        samplerate=44100,
+        channels=1,
+        format='RAW',
+        subtype='PCM_16',
+        endian='LITTLE',
+    )
+    i16le_file_r = sf.SoundFile(
+        i16le_file_path_r,
+        samplerate=44100,
+        channels=1,
+        format='RAW',
+        subtype='PCM_16',
+        endian='LITTLE',
+    )
+    flac_file = sf.SoundFile(
+        flac_file_path,
+        mode='w',
+        samplerate=44100,
+        channels=2,
+        format='FLAC',
+    )
+    while True:
+        data_l = i16le_file_l.read(frames=4096, always_2d=True)
+        data_r = i16le_file_r.read(frames=4096, always_2d=True)
+        if data_l.size == 0 or data_r.size == 0: break
+        data = _np.concatenate((data_l, data_r), axis=1)
+        flac_file.write(data)
+
+def flac_to_flac_stereo(path_l, path_r, path):
+    file_l = sf.SoundFile(path_l)
+    file_r = sf.SoundFile(path_r)
+    file = sf.SoundFile(
+        path,
+        mode='w',
+        samplerate=44100,
+        channels=2,
+        format='FLAC',
+    )
+    while True:
+        data_l = file_l.read(frames=4096, always_2d=True)
+        data_r = file_r.read(frames=4096, always_2d=True)
+        if data_l.size == 0 or data_r.size == 0: break
+        data = _np.concatenate((data_l, data_r), axis=1)
+        file.write(data)

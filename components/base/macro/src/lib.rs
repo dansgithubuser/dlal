@@ -97,7 +97,11 @@ pub fn component(input: TokenStream) -> TokenStream {
     if tts[5].to_string() != "," {
         panic!("missing a comma after fields");
     }
-    let mut commands = get_commands(inside(&tts[6]));
+    let mut commands = if tts.len() >= 7 {
+        get_commands(inside(&tts[6]))
+    } else {
+        Vec::new()
+    };
     // processing
     {
         let field_helpers = features.get("field_helpers").expect("missing field_helpers");

@@ -57,17 +57,31 @@ Voice('ghost', 'gain', 'midman', 'rhymel', 'lpf', 'lfo', 'oracle', 'sonic', 'lim
 Lforacle('ghost_lfo_i20', 0.40000, 0.3, 0.3, 'i2', 0, '%')
 Lforacle('ghost_lfo_i30', 0.31221, 0.1, 0.1, 'i3', 0, '%')
 Lforacle('ghost_lfo_i03', 0.12219, 0.1, 0.1, 'i0', 3, '%')
+ghost_pan_osc = dlal.Osc('tri', 1/8)
+ghost_pan_oracle = dlal.Oracle(m=90, format=('set', ['%', 10]))
 Voice('bell', 'sonic')
 Voice('goon', 'sonic')
 Voice('hat', 'buf')
-hat_osc = dlal.Osc(wave='noise', freq='0.12141')
+hat_osc = dlal.Osc(wave='sin', freq='60.12141')
 hat_oracle = dlal.Oracle(m=0.04, b=0.01, format=('offset', [6, '%']))
 liner = dlal.Liner()
-lpf = dlal.Lpf()
-reverb = dlal.Reverb()
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'gain': 1.4, 'pan': [   0, 10]},  # drum
+        {'gain': 1.2, 'pan': [ -60, 10]},  # piano
+        {'gain': 1.4, 'pan': [   0, 10]},  # bass
+        {'gain': 1.4, 'pan': [   0, 10]},  # ghost
+        {'gain': 1.4, 'pan': [  30, 10]},  # bell
+        {'gain': 1.0, 'pan': [ -45, 10]},  # goon
+        {'gain': 1.4, 'pan': [   0, 10]},  # hat
+    ],
+    post_mix_extra={
+        'lpf': ('lpf', [0.9]),
+    },
+    reverb=1,
+    sample_rate=44100,
+)
 tape = dlal.Tape(1 << 17)
-gain = dlal.Gain()
 
 voices = [
     drum,
@@ -87,14 +101,14 @@ for voice in voices:
 ghost_lfo_i20.add_to(driver)
 ghost_lfo_i30.add_to(driver)
 ghost_lfo_i03.add_to(driver)
+driver.add(ghost_pan_osc)
+driver.add(ghost_pan_oracle)
 driver.add(hat_osc)
 driver.add(hat_oracle)
 driver.add(liner)
-driver.add(lpf)
-driver.add(reverb)
-driver.add(buf)
+for i in mixer.components.values():
+    driver.add(i)
 driver.add(tape)
-driver.add(gain)
 
 # commands
 liner.load('assets/midis/audiobro1.mid', immediate=True)
@@ -246,10 +260,6 @@ hat.buf.resample(0.33, 54)
 hat.buf.clip(0.24, 54)
 hat.buf.amplify(0.6, 54)
 
-lpf.set(0.9)
-reverb.set(1)
-gain.set(0)
-
 # connect
 piano.sonic.connect(piano.buf_2)
 piano.lfo.connect(piano.buf_1)
@@ -265,23 +275,23 @@ ghost.lfo.connect(ghost.oracle)
 ghost.oracle.connect(ghost.sonic)
 ghost.sonic.connect(ghost.buf)
 ghost.lim.connect(ghost.buf)
-for voice in voices:
+for i_voice, voice in enumerate(voices):
     for i in voice.input:
         liner.connect(i)
     for i in voice.output:
-        i.connect(buf)
+        i.connect(mixer[i_voice])
 liner.connect(ghost.midman)
 ghost.midman.connect(ghost.rhymel)
 #ghost_lfo_i20.connect(ghost.sonic)
 #ghost_lfo_i30.connect(ghost.sonic)
 #ghost_lfo_i03.connect(ghost.sonic)
+ghost_pan_osc.connect(ghost_pan_oracle)
+ghost_pan_oracle.connect(mixer.channels[3].pan)
 hat_osc.connect(hat_oracle)
 hat_oracle.connect(liner)
-lpf.connect(buf)
-reverb.connect(buf)
-buf.connect(tape)
-gain.connect(buf)
-buf.connect(driver)
+mixer.lpf.connect(mixer.buf)
+mixer.buf.connect(tape)
+mixer.buf.connect(driver)
 
 # setup
 dlal.typical_setup(duration=216)

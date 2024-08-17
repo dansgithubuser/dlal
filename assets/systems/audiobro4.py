@@ -23,22 +23,26 @@ class Violin(dlal.subsystem.Voices):
             {
                 'adsr': ('adsr', [3e-5, 1e-5, 0.5, 5e-5]),
                 'lim': ('lim', [0.5, 0.4]),
+                'lpf': ('lpf', [], {'freq': 200}),
             },
             name=None,
         )
         dlal.connect(
             self.midi,
             self.adsr,
-            [self.buf, '<+', self.lim],
+            [self.buf,
+                '<+', self.lim,
+                '<+', self.lpf],
         )
         components = self.components
         self.components = {
             k: v for
             k, v in components.items()
-            if k not in ['adsr', 'lim', 'buf']
+            if k not in ['adsr', 'lim', 'lpf', 'buf']
         }
         self.components['adsr'] = components['adsr']
         self.components['lim'] = components['lim']
+        self.components['lpf'] = components['lpf']
         self.components['buf'] = components['buf']
 
 class Harp(dlal.subsystem.Subsystem):
@@ -75,16 +79,25 @@ bass = Violin('bass')
 harp1 = Harp('harp1')
 harp2 = Harp('harp2')
 
-lpf1 = dlal.Lpf(freq=200)
-bow_buf = dlal.Buf(name='bow_buf')
-
-lpf2 = dlal.Lpf(freq=800)
-hpf = dlal.Hpf(freq=40)
-delay1 = dlal.Delay(15000, gain_y=0.2)
-delay2 = dlal.Delay(21000, gain_y=0.1)
-reverb = dlal.Reverb(0.6)
-lim = dlal.Lim(1, 0.9, 0.3)
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'gain': 1.4, 'pan': [   0, 10]},  # violin1
+        {'gain': 1.4, 'pan': [ -10, 10]},  # violin2
+        {'gain': 1.4, 'pan': [ -20, 10]},  # violin3
+        {'gain': 1.4, 'pan': [  15, 10]},  # cello
+        {'gain': 1.4, 'pan': [   0, 10]},  # bass
+        {'gain': 1.4, 'pan': [  30, 10]},  # harp1
+        {'gain': 1.4, 'pan': [ -30, 10]},  # harp2
+    ],
+    post_mix_extra={
+        'lpf': ('lpf', [], {'freq': 800}),
+        'hpf': ('hpf', [], {'freq': 40}),
+        'delay1': ('delay', [15000], {'gain_y': 0.2}),
+        'delay2': ('delay', [21000], {'gain_y': 0.1}),
+    },
+    reverb=0.6,
+    lim=[1, 0.9, 0.3],
+)
 tape = dlal.Tape(1 << 17)
 
 #===== commands =====#
@@ -93,30 +106,28 @@ liner.load('assets/midis/audiobro4.mid', immediate=True)
 if args.start:
     liner.advance(args.start)
 
+#----- harp -----#
+harp1.digitar.pluck(offset=1/4)
+harp2.digitar.pluck(offset=1/8)
+
 #===== connect =====#
 dlal.connect(
     liner,
-    [
+    (
         violin1,
         violin2,
         violin3,
         cello,
         bass,
-        [harp1, '>', buf],
-        [harp2, '>', buf],
-    ],
-    [bow_buf,
-        '<+', lpf1,
-    ],
-    [buf,
-        '<+', lpf2,
-        '<+', hpf,
-        '<+', delay1,
-        '<+', delay2,
-        '<+', reverb,
-        '<+', lim,
-    ],
+        harp1,
+        harp2,
+    ),
+    mixer,
     [audio, tape],
+)
+dlal.connect(
+    [mixer.lpf, mixer.hpf, mixer.delay1, mixer.delay2],
+    mixer.buf,
 )
 
 #===== start =====#
