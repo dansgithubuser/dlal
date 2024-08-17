@@ -205,9 +205,24 @@ choir_a = Choirist(a_f, name='choir_a')
 choir_t = Choirist(a_m, name='choir_t')
 choir_b = Choirist(a_m, name='choir_b')
 
-reverb = dlal.Reverb(0.3)
-lim = dlal.Lim(hard=1, soft=0.95, soft_gain=0.1)
-buf = dlal.Buf()
+mixer = dlal.subsystem.Mixer(
+    [
+        {'gain': 1.4, 'pan': [   0, 10]},  # ghost1
+        {'gain': 1.4, 'pan': [   0, 10]},  # ghost2
+        {'gain': 1.4, 'pan': [   0, 10]},  # piano
+        {'gain': 1.4, 'pan': [   0, 10]},  # bass
+        {'gain': 1.4, 'pan': [  45, 10]},  # crow
+        {'gain': 1.4, 'pan': [   0, 10]},  # drums
+        {'gain': 1.4, 'pan': [   0, 10]},  # talking bassoon
+        {'gain': 1.4, 'pan': [  45, 10]},  # bell
+        {'gain': 1.4, 'pan': [   0, 10]},  # s
+        {'gain': 1.4, 'pan': [  10, 10]},  # a
+        {'gain': 1.4, 'pan': [ -20, 10]},  # t
+        {'gain': 1.4, 'pan': [ -10, 10]},  # b
+    ],
+    reverb=0.3,
+    lim=[1, 0.95, 0.1],
+)
 tape = dlal.Tape()
 
 #===== commands =====#
@@ -288,7 +303,7 @@ dlal.connect(
     ],
 )
 dlal.connect(
-    [
+    (
         ghost1,
         ghost2,
         drums,
@@ -301,11 +316,8 @@ dlal.connect(
         choir_a,
         choir_t,
         choir_b,
-    ],
-    [buf,
-        '<+', lim,
-        '<+', reverb,
-    ],
+    ),
+    mixer,
     [audio, tape],
 )
 

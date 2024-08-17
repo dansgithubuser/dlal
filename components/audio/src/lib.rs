@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 
 fn default_input_latency(info: pa::DeviceInfo) -> pa::Time {
     let mut ret = info.default_low_input_latency;
-    match env::var("DLAL_DEFAULT_LATENCY") {
+    match env::var("DLAL_AUDIO_DEFAULT_LATENCY") {
         Ok(s) => match s.as_str() {
             "low" => ret = info.default_low_input_latency,
             "high" => ret = info.default_high_input_latency,
@@ -24,7 +24,7 @@ fn default_input_latency(info: pa::DeviceInfo) -> pa::Time {
 
 fn default_output_latency(info: pa::DeviceInfo) -> pa::Time {
     let mut ret = info.default_low_output_latency;
-    match env::var("DLAL_DEFAULT_LATENCY") {
+    match env::var("DLAL_AUDIO_DEFAULT_LATENCY") {
         Ok(s) => match s.as_str() {
             "low" => ret = info.default_low_output_latency,
             "high" => ret = info.default_high_output_latency,
@@ -99,7 +99,7 @@ component!(
 impl ComponentTrait for Component {
     fn init(&mut self) {
         self.run_size = 64;
-        match env::var("DLAL_RUN_SIZE") {
+        match env::var("DLAL_AUDIO_RUN_SIZE") {
             Ok(s) => match s.parse() {
                 Ok(run_size) => self.run_size = run_size,
                 _ => {},
