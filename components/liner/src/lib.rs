@@ -368,13 +368,8 @@ impl Component {
         let line_index: usize = body.arg(0)?;
         let ticks_per_quarter: u32 = body.arg(1)?;
         let deltamsgs = body.arg(2)?;
-        if line_index >= self.lines.len() {
-            return Err(err!(
-                "got line_index {} but number of lines is only {}",
-                line_index,
-                self.lines.len()
-            )
-            .into());
+        while line_index >= self.lines.len() {
+            self.lines.push(Box::new(Line::default()));
         }
         if let Ok(immediate) = body.kwarg("immediate") {
             if immediate {

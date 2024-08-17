@@ -108,9 +108,6 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
             self,
             {
                 'bassoon': ('buf', ['bassoon']),
-                'afr2': ('afr', ['assets/local/bassindaface2.flac']),
-                'afr2_gain': ('gain', [2/3]),
-                'afr1': ('afr', ['assets/local/bassindaface1.flac']),
                 'talk': 'buf',
                 'vocoder': 'vocoder',
                 'gain': ('gain', [8]),
@@ -126,11 +123,13 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
             self.buf,
         )
         dlal.connect(
-            [self.afr2, self.afr2_gain, self.afr1],
             self.talk,
             self.vocoder,
             self.buf,
         )
+        self.talk.load('assets/local/bassindaface1.flac', 46)
+        self.talk.load('assets/local/bassindaface2.flac', 49)
+        self.talk.load('assets/local/funkyfunkybass.flac', 43)
 
 class Choirist(dlal.subsystem.Subsystem):
     def init(self, phonetic_samples, name=None):
@@ -212,18 +211,18 @@ choir_b = Choirist(a_m, name='choir_b')
 
 mixer = dlal.subsystem.Mixer(
     [
-        {'gain': 1.4, 'pan': [   0, 10]},  # ghost1
-        {'gain': 1.4, 'pan': [   0, 10]},  # ghost2
-        {'gain': 1.4, 'pan': [   0, 10]},  # drums
-        {'gain': 1.4, 'pan': [  45, 10]},  # crow
-        {'gain': 1.4, 'pan': [   0, 10]},  # piano
-        {'gain': 1.4, 'pan': [   0, 10]},  # bass
-        {'gain': 1.4, 'pan': [   0, 10]},  # talking bassoon
-        {'gain': 1.4, 'pan': [  45, 10]},  # bell
-        {'gain': 1.4, 'pan': [   0, 10]},  # s
-        {'gain': 1.4, 'pan': [  10, 10]},  # a
-        {'gain': 1.4, 'pan': [ -20, 10]},  # t
-        {'gain': 1.4, 'pan': [ -10, 10]},  # b
+        {'gain':  1.4, 'pan': [   0, 10]},  # ghost1
+        {'gain':  1.4, 'pan': [   0, 10]},  # ghost2
+        {'gain':  1.4, 'pan': [   0, 10]},  # drums
+        {'gain':  1.4, 'pan': [  45, 10]},  # crow
+        {'gain':  1.4, 'pan': [   0, 10]},  # piano
+        {'gain':  1.4, 'pan': [   0, 10]},  # bass
+        {'gain': 11.2, 'pan': [   0, 10]},  # talking bassoon
+        {'gain':  1.4, 'pan': [  45, 10]},  # bell
+        {'gain':  1.4, 'pan': [   0, 10]},  # s
+        {'gain':  1.4, 'pan': [  10, 10]},  # a
+        {'gain':  1.4, 'pan': [ -20, 10]},  # t
+        {'gain':  1.4, 'pan': [ -10, 10]},  # b
     ],
     reverb=0.3,
     lim=[1, 0.95, 0.1],
@@ -300,6 +299,7 @@ dlal.connect(
         drums,
         drums,
         talking_bassoon,
+        talking_bassoon.talk,
         bell,
         choir_s,
         choir_a,
