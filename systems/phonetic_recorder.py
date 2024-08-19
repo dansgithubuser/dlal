@@ -7,6 +7,7 @@ import time
 
 #===== args =====#
 parser = argparse.ArgumentParser()
+parser.add_argument('speaker')
 parser.add_argument('--only-unrecorded', action='store_true')
 args = parser.parse_args()
 
@@ -25,6 +26,7 @@ dur_2 = dlal.speech.RECORD_DURATION_UNSTRESSED_VOWEL
 dur_1 = dlal.speech.RECORD_DURATION_TRANSITION
 dur = dlal.speech.RECORD_DURATION_GO
 
+print()
 print('Make sure you are comfortable so you can record each phonetic in a similar posture, body & mic position, etc.')
 print('Make sure mic volume is good.')
 print('Press enter to continue.')
@@ -32,7 +34,7 @@ input()
 
 print('(1/4) Voiced continuants will be recorded.')
 print('For each phonetic:')
-print('- you will get a 3, 2, 1 countdown, start on 1 in anticipation of the start of the recording')
+print('- you will get a 3, 2, 1 countdown. Start on 1, before the start of the recording.')
 print(f'- start with about {dur_2} seconds of unstressed vowel sound')
 print(f'- slowly change to the phonetic over about {dur_1} seconds')
 print(f'- record about {dur} seconds of the phonetic, wait for "Done!" before stopping.')
@@ -47,7 +49,7 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     if phonetic in dlal.speech.STOPS:
         phonetic_i += 1
         continue
-    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{phonetic}.flac'):
+    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{args.speaker}/{phonetic}.flac'):
         phonetic_i += 1
         continue
     print()
@@ -66,13 +68,13 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     print(f'- record about {dur} seconds of the phonetic, wait for "Done!" before stopping.')
     time.sleep(dur)
     tape.to_file_i16le_stop()
-    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{phonetic}.flac')
+    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{args.speaker}/{phonetic}.flac')
     print('Done!')
     print('Want to repeat this phonetic? Enter y for yes, enter anything else for no.')
     if input() != 'y':
         phonetic_i += 1
     else:
-        os.remove(f'assets/phonetics/{phonetic}.flac')
+        os.remove(f'assets/phonetics/{args.speaker}/{phonetic}.flac')
 
 print('(2/4) Unvoiced continuants will be recorded.')
 print('For each phonetic:')
@@ -89,7 +91,7 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     if phonetic in dlal.speech.STOPS:
         phonetic_i += 1
         continue
-    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{phonetic}.flac'):
+    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{args.speaker}/{phonetic}.flac'):
         phonetic_i += 1
         continue
     print()
@@ -104,13 +106,13 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     print(f'- record about {dur} seconds of the phonetic, wait for "Done!" before stopping.')
     time.sleep(dur)
     tape.to_file_i16le_stop()
-    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{phonetic}.flac')
+    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{args.speaker}/{phonetic}.flac')
     print('Done!')
     print('Want to repeat this phonetic? Enter y for yes, enter anything else for no.')
     if input() != 'y':
         phonetic_i += 1
     else:
-        os.remove(f'assets/phonetics/{phonetic}.flac')
+        os.remove(f'assets/phonetics/{args.speaker}/{phonetic}.flac')
 
 print('(3/4) Unvoiced stops will be recorded.')
 print('For each phonetic:')
@@ -131,7 +133,7 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     if phonetic not in dlal.speech.STOPS:
         phonetic_i += 1
         continue
-    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{phonetic}.flac'):
+    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{args.speaker}/{phonetic}.flac'):
         phonetic_i += 1
         continue
     print()
@@ -146,13 +148,13 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     print(f'- record about {dur} seconds of the phonetic, wait for "Done!" before stopping.')
     time.sleep(dur)
     tape.to_file_i16le_stop()
-    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{phonetic}.flac')
+    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{args.speaker}/{phonetic}.flac')
     print('Done!')
     print('Want to repeat this phonetic? Enter y for yes, enter anything else for no.')
     if input() != 'y':
         phonetic_i += 1
     else:
-        os.remove(f'assets/phonetics/{phonetic}.flac')
+        os.remove(f'assets/phonetics/{args.speaker}/{phonetic}.flac')
 
 print('(4/4) Voiced stops will be recorded.')
 print('For each phonetic:')
@@ -173,7 +175,7 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     if phonetic not in dlal.speech.STOPS:
         phonetic_i += 1
         continue
-    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{phonetic}.flac'):
+    if args.only_unrecorded and os.path.exists(f'assets/phonetics/{args.speaker}/{phonetic}.flac'):
         phonetic_i += 1
         continue
     print()
@@ -190,7 +192,7 @@ while phonetic_i < len(dlal.speech.PHONETICS):
     print('Done!')
     time.sleep(1 * dur_2)
     tape.to_file_i16le_stop()
-    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{phonetic}.flac')
+    dlal.sound.i16le_to_flac('assets/local/tmp.i16le', f'assets/phonetics/{args.speaker}/{phonetic}.flac')
     print('Want to repeat this phonetic? Enter y for yes, enter anything else for no.')
     if input() != 'y':
         phonetic_i += 1
