@@ -52,7 +52,7 @@ Voice('arp', 'arp', 'sonic')
 Voice('harp1', 'sonic')
 Voice('harp2', 'sonic')
 sample_rate = 44100
-m = 220 / (sample_rate/2) * 2 * math.pi
+m = 220 / (sample_rate/2)
 b = -1 * m
 Subsystem('sweep', {
     'midi': ('midi', [], {'port': None}),
