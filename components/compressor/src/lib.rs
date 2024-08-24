@@ -80,14 +80,18 @@ impl ComponentTrait for Component {
             smooth!(self.peak_smoothed, peak, self.peak_smooth_rise, self.peak_smooth_fall);
             let peak = peak.max(self.peak_smoothed);
             let gain_f = if 1.0 > self.gain_max * peak {
+                // too quiet
                 // if 1 / peak is near gain_max, we want gain_f = gain_max
                 // in this case, gain_max * peak is near 1
-                // if 1 / peak is far greater than gain_max, we want gain_f = 0
+                // if 1 / peak is far greater than gain_max, we want gain_f = gain_min
                 // in this case, peak is near 0 and gain_max * peak is near 0
-                (self.gain_max * self.gain_max * peak).max(self.gain_min)
+                let t = self.gain_max * peak;
+                (self.gain_max * t).max(self.gain_min)
             } else if 1.0 < self.gain_min * peak {
+                // too loud - have gain approach gain_min
                 self.gain_min
             } else {
+                // typical case - have gain approach 1 / peak for consistent volume
                 1.0 / peak
             };
             smooth!(self.gain, gain_f, self.gain_smooth_rise, self.gain_smooth_fall);

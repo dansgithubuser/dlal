@@ -12,13 +12,21 @@ iir = dlal.Iir()
 buf = dlal.Buf()
 tape = dlal.Tape()
 
-iir.pole_pairs_bandpass( 800 / audio.sample_rate(), 0.02, pairs=1, add=True)
-iir.pole_pairs_bandpass(1200 / audio.sample_rate(), 0.02, pairs=1, add=True)
-iir.pole_pairs_bandpass(1600 / audio.sample_rate(), 0.02, pairs=1, add=True)
-iir.pole_pairs_bandpass(2200 / audio.sample_rate(), 0.02, pairs=1, add=True)
-iir.pole_pairs_bandpass(2400 / audio.sample_rate(), 0.02, pairs=1, add=True)
-iir.pole_pairs_bandpass(2600 / audio.sample_rate(), 0.02, pairs=1, add=True)
-iir.pole_pairs_bandpass(2000 / audio.sample_rate(), 0.02, pairs=1, add=True)
+pole_pairs = [
+    (1000, 0.02),
+    (1500, 0.03), 
+    (2500, 0.03), 
+    (3000, 0.03), 
+    (3500, 0.03), 
+    (4000, 0.03), 
+    (5000, 0.03), 
+    (6000, 0.03), 
+    (7000, 0.03), 
+    (8000, 0.03), 
+    (2000, 0.03), 
+]
+for freq, width in pole_pairs:
+    iir.pole_pairs_bandpass(freq / audio.sample_rate(), width, add=True)
 
 dlal.connect(
     afr,
