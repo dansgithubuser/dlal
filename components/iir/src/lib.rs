@@ -80,6 +80,11 @@ component!(
                     "name": "pairs",
                     "default": 1,
                 },
+                {
+                    "name": "add",
+                    "desc": "add to existing poles & zeros",
+                    "default": false,
+                },
             ],
         },
         "gain": {
@@ -299,20 +304,28 @@ impl Component {
     }
 
     fn pole_pairs_bandpass_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let w = body.arg::<f64>(0).or(body.kwarg::<f64>("w"))? * f64::consts::TAU;
-        let width = body.arg::<f64>(1).or(body.kwarg("width"))?;
-        let peak = body.arg(2).or(body.kwarg("peak")).unwrap_or(1.0);
-        let smooth = body.arg(3).or(body.kwarg("smooth")).unwrap_or(0.0);
-        let pairs = body.arg(4).or(body.kwarg("pairs")).unwrap_or(1);
+        let w = body.flarg::<f64>(0, "w")? * f64::consts::TAU;
+        let width = body.flarg::<f64>(1, "width")?;
+        let peak = body.flarg(2, "peak").unwrap_or(1.0);
+        let smooth = body.flarg(3, "smooth").unwrap_or(0.0);
+        let pairs = body.flarg(4, "pairs").unwrap_or(1);
+        let add = body.flarg(5, "add").unwrap_or(false);
         let pole = Complex64::from_polar(1.0 - width, w);
-        let z = Complex64::from_polar(1.0, w);
-        let gain = peak * ((z - pole) * (z - pole.conj())).norm().powf(pairs as f64);
-        let mut poles = vec![];
+        let mut poles = if add {
+            self.poles.clone()
+        } else {
+            vec![]
+        };
         for _ in 0..pairs {
             poles.push(pole);
             poles.push(pole.conj());
         }
-        self.smooth_pole_zero(&poles, &[], gain, smooth);
+        let mut gain = peak * Complex64::ONE;
+        let z = Complex64::from_polar(1.0, w);
+        for pole in &poles {
+            gain *= z - pole;
+        }
+        self.smooth_pole_zero(&poles, &[], gain.norm(), smooth);
         Ok(None)
     }
 

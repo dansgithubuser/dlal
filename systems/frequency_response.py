@@ -2,16 +2,17 @@ import dlal
 
 import dansplotcore
 
-from numpy.fft import fft
-
-fr = [1, 0, 0, 0, 0.5, 0, 0, 0, 0.25, 0, 0, 0.5, 0, 0, 0]
-ir = [float(abs(i)) for i in fft(fr)]
-
 audio = dlal.Audio(driver=True)
 iir = dlal.Iir()
 buf = dlal.Buf()
 
-iir.pole_pairs_bandpass(1000 / audio.sample_rate(), 0.01, pairs=4)
+iir.pole_pairs_bandpass( 800 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(1200 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(1600 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(2200 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(2400 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(2600 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(2000 / audio.sample_rate(), 0.02, pairs=1, add=True)
 
 iir.connect(buf)
 
