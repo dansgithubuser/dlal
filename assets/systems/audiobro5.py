@@ -225,7 +225,6 @@ mixer = dlal.subsystem.Mixer(
         {'gain':  1.4, 'pan': [ -10, 10]},  # b
     ],
     reverb=0.3,
-    lim=[1, 0.95, 0.1],
 )
 tape = dlal.Tape()
 

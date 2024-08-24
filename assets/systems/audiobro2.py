@@ -59,12 +59,12 @@ def burgers(name):
         {
             'buf_i': 'buf',
             'gate': ('gate', [0.02]),
-            'iir': 'iir',
             'compressor': ('compressor', [], {
-                'volume': 1,
+                'volume': 3,
                 'gain_min': 10,
                 'gain_max': 160,
             }),
+            'iir': 'iir',
             'buf_o': 'buf',
         },
         ['buf_i'],
@@ -95,7 +95,7 @@ Subsystem('sweep', {
     'gate_oracle': ('oracle', [], {'m': 0.6, 'format': ('gain_y', ['%']), 'cv_i': 1}),
     'adsr': ('adsr', [1/4/sample_rate, 1, 1, 1e-5], {}),
     'midman': ('midman', [], {'directives': [([{'nibble': 0x90}], 0, 'set', '%1*0.08')]}),
-    'gain': ('gain', [], {}),
+    'adsr_gain': ('gain', [], {}),
     'unary2': ('unary', ['none'], {}),
     'unary': ('unary', ['exp2'], {}),
     'oracle': ('oracle', [], {'m': m, 'b': b, 'format': ('pole_pairs_bandpass', ['%', 0.02, 6]), 'cv_i': 1}),
@@ -109,9 +109,10 @@ Subsystem('sweep', {
     'iir3': ('iir', [], {}),
     'iir4': ('iir', [], {}),
     'delay': ('delay', [22050], {'gain_i': 1}),
-    'pan_osc': ('osc', ['tri', 1/8], {}),
+    'pan_osc': ('osc', ['tri', 1/7.5], {}),
     'pan_oracle': ('oracle', [], {'m': 90, 'format': ('set', ['%', 10])}),
     'pan': ('pan', [], {}),
+    'gain': ('gain', [0.7], {}),
     'buf': ('buf', [], {}),
 })
 mm_delay1 = 0
@@ -153,7 +154,6 @@ mixer = dlal.subsystem.Mixer(
         'delay2': ('delay', [8820], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.8, 'gain_x': 0}),
     },
     reverb=0.3,
-    lim=[1, 0.9, 0.3],
     sample_rate=44100,
 )
 tape = dlal.Tape(1 << 17)
@@ -397,7 +397,7 @@ for i_voice, voice in enumerate(voices):
 dlal.connect(
     liner,
     [sweep.midi,
-        '+>', sweep.midman, sweep.gain,
+        '+>', sweep.midman, sweep.adsr_gain,
         '+>', sweep.gate_adsr,
         '+>', sweep.train,
         '+>', sweep.train2,
@@ -405,7 +405,7 @@ dlal.connect(
     ],
     sweep.adsr,
     [sweep.oracle,
-        '<+', sweep.gain,
+        '<+', sweep.adsr_gain,
         '<+', sweep.unary2,
         '<+', sweep.unary,
     ],
@@ -416,6 +416,7 @@ dlal.connect(
         '<+', sweep.train2,
         '<+', sweep.train_gain, sweep.train_oracle, sweep.train_adsr,
         '<+', sweep.pan, sweep.pan_oracle, sweep.pan_osc,
+        '<+', sweep.gain,
     ],
     mixer.buf,
 )
