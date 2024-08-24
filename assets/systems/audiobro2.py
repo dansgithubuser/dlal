@@ -131,7 +131,7 @@ midman = dlal.Midman([
     # B - 100 echo off
     ([{'nibble': 0x90}, 0x47], mm_delay2, 'gain_x', 0),
     # C - 100 echo on
-    ([{'nibble': 0x90}, 0x48], mm_delay2, 'gain_x', 1),
+    ([{'nibble': 0x90}, 0x48], mm_delay2, 'gain_x', 0.5),
 ])
 liner = dlal.Liner()
 mixer = dlal.subsystem.Mixer(
@@ -150,7 +150,7 @@ mixer = dlal.subsystem.Mixer(
     post_mix_extra={
         'lpf': ('lpf', [0.9]),
         'delay1': ('delay', [11025], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.8, 'gain_x': 1}),
-        'delay2': ('delay', [13230], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.8, 'gain_x': 0}),
+        'delay2': ('delay', [8820], {'gain_y': 0.3, 'gain_i': 1, 'smooth': 0.8, 'gain_x': 0}),
     },
     reverb=0.3,
     lim=[1, 0.9, 0.3],
