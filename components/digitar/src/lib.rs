@@ -73,6 +73,7 @@ impl Note {
                     }
                     self.wavetable[i] = vol * x;
                 }
+                self.index = 0.0;
             }
             Excitation::Hammer { contact, offset } => {
                 let length = 2093.00 / self.freq;
@@ -82,7 +83,6 @@ impl Note {
                 self.hammer_displacement = 0;
             }
         }
-        self.index = 0.0;
         self.lowness = lowness.powf(self.freq / 440.0); // high freq, low lowness
         self.feedback = feedback.powf(440.0 / self.freq); // high freq, high feedback
         self.bend = bend;
