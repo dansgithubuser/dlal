@@ -107,25 +107,27 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
         dlal.subsystem.Subsystem.init(
             self,
             {
+                'midi': 'midi',
                 'bassoon': ('buf', ['bassoon']),
                 'talk': 'buf',
                 'vocoder': 'vocoder',
-                'gain': ('gain', [8]),
-                'lim': ('lim', [1.0, 0.8, 0.1]),
+                'compressor': ('compressor', [], {'volume': 1.0, 'gain_min': 10, 'gain_max': 400}),
+                'gain': ('gain', [0]),
                 'buf': 'buf',
             },
-            ['bassoon'],
+            ['midi'],
             ['buf'],
             name=name,
         )
         dlal.connect(
-            [self.bassoon, self.gain, self.lim],
-            self.buf,
-        )
-        dlal.connect(
-            self.talk,
-            self.vocoder,
-            self.buf,
+            [self.midi, '+>', self.gain],
+            self.bassoon,
+            [
+                self.buf,
+                '<+', self.vocoder, self.talk,
+                '<+', self.compressor,
+                '<+', self.gain,
+            ],
         )
         self.talk.load('assets/local/bassindaface1.flac', 46)
         self.talk.load('assets/local/bassindaface2.flac', 49)
@@ -217,7 +219,7 @@ mixer = dlal.subsystem.Mixer(
         {'gain':  1.4, 'pan': [  45, 10]},  # crow
         {'gain':  1.0, 'pan': [   0, 10]},  # piano
         {'gain':  1.4, 'pan': [   0, 10]},  # bass
-        {'gain':  6.0, 'pan': [   0, 10]},  # talking bassoon
+        {'gain':  0.8, 'pan': [   0, 10]},  # talking bassoon
         {'gain':  0.5, 'pan': [  45, 10]},  # bell
         {'gain':  0.5, 'pan': [   0, 10]},  # s
         {'gain':  0.5, 'pan': [  10, 10]},  # a

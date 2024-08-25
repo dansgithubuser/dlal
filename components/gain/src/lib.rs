@@ -42,11 +42,8 @@ impl ComponentTrait for Component {
             return;
         }
         match msg[0] & 0xf0 {
-            0x90 => {
-                self.amount_dst = msg[2] as f32 / 127.0;
-            }
-            0xa0 => {
-                self.amount_dst = msg[2] as f32 / 127.0;
+            0x90 | 0xa0 => {
+                self.amount_dst = 10.0_f32.powf(msg[2] as f32 / 127.0 - 0.5);
             }
             _ => (),
         };
