@@ -12,13 +12,10 @@ args = parser.parse_args()
 class Piano(dlal.subsystem.Voices):
     def init(self, name=None):
         super().init(
-            ('digitar', [], {'lowness': 0.1, 'feedback': 0.9999, 'release': 0.2}),
+            ('digitar', [], {'lowness': 0.2, 'feedback': 0.998, 'release': 0.2}),
             cents=0.3,
             vol=0.5,
             per_voice_init=lambda voice, i: voice.hammer(offset=1 + (3 + i) / 10),
-            effects={
-                'lim': ('lim', [0.9, 0.8, 0.2]),
-            },
             name=name,
         )
 
@@ -213,18 +210,18 @@ choir_b = Choirist(a_m, name='choir_b')
 
 mixer = dlal.subsystem.Mixer(
     [
-        {'gain':  1.4, 'pan': [   0, 10]},  # ghost1
-        {'gain':  1.4, 'pan': [   0, 10]},  # ghost2
-        {'gain':  1.4, 'pan': [   0, 10]},  # drums
-        {'gain':  1.4, 'pan': [  45, 10]},  # crow
+        {'gain':  1.0, 'pan': [   0, 10]},  # ghost1
+        {'gain':  1.0, 'pan': [   0, 10]},  # ghost2
+        {'gain':  1.0, 'pan': [   0, 10]},  # drums
+        {'gain':  1.0, 'pan': [  45, 10]},  # crow
         {'gain':  1.0, 'pan': [   0, 10]},  # piano
-        {'gain':  1.4, 'pan': [   0, 10]},  # bass
+        {'gain':  1.0, 'pan': [   0, 10]},  # bass
         {'gain':  0.8, 'pan': [   0, 10]},  # talking bassoon
         {'gain':  0.5, 'pan': [  45, 10]},  # bell
-        {'gain':  0.5, 'pan': [   0, 10]},  # s
-        {'gain':  0.5, 'pan': [  10, 10]},  # a
-        {'gain':  0.5, 'pan': [ -20, 10]},  # t
-        {'gain':  0.5, 'pan': [ -10, 10]},  # b
+        {'gain':  0.2, 'pan': [   0, 10]},  # s
+        {'gain':  0.2, 'pan': [  10, 10]},  # a
+        {'gain':  0.2, 'pan': [ -20, 10]},  # t
+        {'gain':  0.2, 'pan': [ -10, 10]},  # b
     ],
     reverb=0.3,
 )
@@ -330,4 +327,4 @@ ghost1.pan_oracle.connect(mixer.channels[0].pan)
 ghost2.pan_oracle.connect(mixer.channels[1].pan)
 
 #===== start =====#
-dlal.typical_setup(duration=312)
+dlal.typical_setup(duration=315)
