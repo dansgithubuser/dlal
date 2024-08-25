@@ -22,6 +22,11 @@ class Sound:
     def to_flac(self, file_path='out.flac'):
         sf.write(file_path, self.samples, self.sample_rate, format='FLAC')
 
+    def normalize(self):
+        m = 1 / max(abs(i) for i in self.samples)
+        self.samples = [i * m for i in self.samples]
+        return self
+
     def split(self, threshold=0, window_backward=400, window_forward=400):
         '''
         Split sound at each sample where window is entirely below threshold (discard the quiet parts).
