@@ -228,7 +228,7 @@ mixer = dlal.subsystem.Mixer(
     },
     reverb=0.3,
 )
-flattener_osc = dlal.Osc('saw', 1/318.1)
+flattener_osc = dlal.Osc('saw', 1/319.1)
 flattener_oracle = dlal.Oracle(m=50, b=50, format=('cents', ['%']))
 tape = dlal.Tape()
 
@@ -338,4 +338,4 @@ ghost1.pan_oracle.connect(mixer.channels[0].pan)
 ghost2.pan_oracle.connect(mixer.channels[1].pan)
 
 #===== start =====#
-dlal.typical_setup(duration=318)
+dlal.typical_setup(duration=319)
