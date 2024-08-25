@@ -131,7 +131,7 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
         self.talk.load('assets/local/funkyfunkybass.flac', 43)
 
 class Choirist(dlal.subsystem.Subsystem):
-    def init(self, phonetic_samples, name=None):
+    def init(self, phonetic_samples, harmonics, name=None):
         self.phonetic_samples = phonetic_samples
         x = hashlib.sha256(name.encode()).digest()
         r1 = int.from_bytes(x[0:4], byteorder='big') / (1 << 32)
@@ -168,19 +168,19 @@ class Choirist(dlal.subsystem.Subsystem):
         self.sonic.from_json({
             "0": {
                 "a": 1e-4, "d": 0, "s": 1, "r": 1e-4, "m": 1,
-                "i0": 0, "i1": 0.3, "i2": 0.2, "i3": 0.1, "o": 0.125,
+                "i0": 0, "i1": 2 * harmonics, "i2": 1 * harmonics, "i3": 1 * harmonics, "o": 0.125,
             },
             "1": {
-                "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 1,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+                "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 2,
+                "i0": 0, "i1": 0.3, "i2": 0.3, "i3": 0.3, "o": 0,
             },
             "2": {
                 "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 3,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+                "i0": 0, "i1": 0, "i2": 0.2, "i3": 0.1, "o": 0,
             },
             "3": {
                 "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 5,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+                "i0": 0, "i1": 0, "i2": 0.2, "i3": 0.1, "o": 0,
             },
         })
         self.sonic.midi(midi.Msg.pitch_bend_range(64))
@@ -203,10 +203,10 @@ crow = dlal.Buf(name='crow')
 drums = Drums()
 talking_bassoon = TalkingBassoon()
 bell = dlal.Addsyn().tubular_bells()
-choir_s = Choirist(a_f, name='choir_s')
-choir_a = Choirist(a_f, name='choir_a')
-choir_t = Choirist(a_m, name='choir_t')
-choir_b = Choirist(a_m, name='choir_b')
+choir_s = Choirist(a_f, harmonics=1/200, name='choir_s')
+choir_a = Choirist(a_f, harmonics=1/200, name='choir_a')
+choir_t = Choirist(a_m, harmonics=1/100, name='choir_t')
+choir_b = Choirist(a_m, harmonics=1/50, name='choir_b')
 
 mixer = dlal.subsystem.Mixer(
     [
