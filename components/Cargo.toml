@@ -13,6 +13,7 @@ members = [
     "delay",
     "digitar",
     "fir",
+    "flattener",
     "forman",
     "gain",
     "gate",
