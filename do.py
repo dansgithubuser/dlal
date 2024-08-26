@@ -424,9 +424,7 @@ if args.interact or args.run:
     for channel in channels:
         if channel:
             os.environ['DLAL_PAN_FLIP'] = channel
-        p = subprocess.Popen(invocation, shell=True)
-        signal.signal(signal.SIGINT, lambda *args: p.send_signal(signal.SIGINT))
-        p.wait()
+        subprocess.run(invocation, shell=True, check=True)
     if args.stereo:
         name = Path(args.run[0]).stem
         l = Path(name + 'l.flac')
@@ -434,13 +432,16 @@ if args.interact or args.run:
         if l.exists() and r.exists():
             o = name + '.flac'
             print(f'combining into {o}')
-            subprocess.run([
-                'python3',
-                'systems/lr_combine.py',
-                l,
-                r,
-                o,
-            ])
+            subprocess.run(
+                [
+                    'python3',
+                    'systems/lr_combine.py',
+                    l,
+                    r,
+                    o,
+                ],
+                check=True,
+            )
 
 # ===== deploy ===== #
 if args.deploy:

@@ -22,6 +22,18 @@ class Sound:
     def to_flac(self, file_path='out.flac'):
         sf.write(file_path, self.samples, self.sample_rate, format='FLAC')
 
+    def to_ogg(self, file_path='out.ogg'):
+        # soundfile crashes!
+        # https://github.com/bastibe/python-soundfile/issues/233
+        # https://github.com/bastibe/python-soundfile/issues/266
+        # https://github.com/bastibe/python-soundfile/issues/396
+        # https://github.com/bastibe/python-soundfile/issues/426
+        # sf.write(file_path, self.samples, self.sample_rate, format='OGG')
+        self.to_flac('tmp.flac')
+        p = _subprocess.run(f'ffmpeg -y -i tmp.flac {file_path}'.split(), stderr=_subprocess.PIPE)
+        if p.returncode:
+            raise Exception(f'ffmpeg returned non-zero exit status {p.returncode}\nstderr:\n{p.stderr.decode()}')
+
     def normalize(self):
         m = 1 / max(abs(i) for i in self.samples)
         self.samples = [i * m for i in self.samples]
