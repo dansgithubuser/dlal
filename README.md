@@ -18,7 +18,7 @@ dlal's goal is to enable experimentation with sound. Some example uses include
 	- apply an arbitrary effect chain to a recording
 	- replay the inputs of a jam session
 
-dlal is an audio system configurator Python module, that wrangles compiled audio processing components which abide a dead-simple C-linkage interface. This split is useful because Python is expressive, but compiled languages are fast. We want expressiveness for the human describing how sound should be procued, and speed for actually making the sound.
+dlal is an audio system configurator Python module, that wrangles compiled audio processing components which abide a dead-simple C-linkage interface. This split is useful because Python is expressive, but compiled languages are fast. We want expressiveness for the human describing how sound should be procured, and speed for actually making the sound.
 
 dlal's GUI is web-based.
 
@@ -28,14 +28,14 @@ dlal is cross-platform.
 ```
 git clone --recurse-submodules https://github.com/dansgithubuser/dlal #to clone
 cd dlal
-./do.py --vf; . venv-on #to create a venv (optional)
-./do.py --vi #to install Python dependencies
-./do.py -b #to build
-./do.py -r systems/sonic.py #to run a simple synthesizer system
-./do.py -w #in another terminal session to start web GUI
+./do.py --vf; . venv-on  # to create a venv (optional)
+./do.py --vi  # to install Python dependencies
+./do.py -b  # to build
+./do.py -r systems/sonic.py  # to run a simple synthesizer system interactively
 ```
 
-In the browser tab that opens, you can click on the `sonic` component, then on `webboard`.
+This will print out a URL like `http://192.168.1.38:8000/web/index.html`.
+Open that link in a browser, and you can click on the `sonic` component, then on `webboard`.
 In the webboard, you can click `connect` and play the keyboard.
 
 You can explore the interactive Python UI of dlal in the original terminal session as well.
@@ -56,13 +56,17 @@ You can explore the interactive Python UI of dlal in the original terminal sessi
 - assets: static, purpose-built files
 - components: audio processing components
 	- base: abstract Rust base component
+- deps: git submodules and 3rd party source files
+- notes: not-quite-as-formal-as-documentation words about topics that are deeper than the source code can explain
+- reference: 3rd party theory
 - skeleton: system configuration Python module, see below
 - systems: multi-purpose audio system configurations
+- tests: tests
 - web: GUI
 
 ## skeleton
 ### server
-Not to be confused with the simple HTTP file server run via `./do.py -w`, the skeleton server allows arbitrary dlal operation over the web.
+Not to be confused with the simple HTTP file server, the skeleton server allows arbitrary dlal operation over the web.
 
 The typical implementation is in `skeleton/dlal/_websocket_server.py`.
 
@@ -103,7 +107,7 @@ Components interact in 3 ways:
 - MIDI
 - audio (constant-size arrays)
 
-Audio is unique because it is exposed as a value, whereas the command and MIDI interfaces are functions. For this reason, audio is useful for conveying quantities other than actual audio. For example, components may share control voltage via the audio interface. Arguably, audio is one example of control voltage, but it is named for how it is usually, or at least necessarily, used.
+Audio is unique because it is exposed as a value, whereas the command and MIDI interfaces are functions. For this reason, audio is useful for conveying quantities other than actual audio. For example, components may share control voltage via the audio interface. Arguably, audio is one example of control voltage, but it is named for how it is usually used.
 
 Additionally, components have an `run` function called regularly when audio is being produced.
 
@@ -139,11 +143,6 @@ Driver components are responsible for calling `run` on other components. In part
 The `audio` component is the driver component for interactive audio.
 
 ## todo
-- audiobro
-	- review existing tracks
-	- bassindaface / funky funky bass
-	- stereo
-
 - be able to open audio callback in more situations for demonstrating on skype
 - change verbiage to connector/connectee instead of input/output
 	- pads and sinks like gstreamer?
