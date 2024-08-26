@@ -12,13 +12,10 @@ args = parser.parse_args()
 class Piano(dlal.subsystem.Voices):
     def init(self, name=None):
         super().init(
-            ('digitar', [], {'lowness': 0.1, 'feedback': 0.9999, 'release': 0.2}),
+            ('digitar', [], {'lowness': 0.2, 'feedback': 0.998, 'release': 0.2}),
             cents=0.3,
             vol=0.5,
             per_voice_init=lambda voice, i: voice.hammer(offset=1 + (3 + i) / 10),
-            effects={
-                'lim': ('lim', [0.9, 0.8, 0.2]),
-            },
             name=name,
         )
 
@@ -107,32 +104,34 @@ class TalkingBassoon(dlal.subsystem.Subsystem):
         dlal.subsystem.Subsystem.init(
             self,
             {
+                'midi': 'midi',
                 'bassoon': ('buf', ['bassoon']),
                 'talk': 'buf',
                 'vocoder': 'vocoder',
-                'gain': ('gain', [8]),
-                'lim': ('lim', [1.0, 0.8, 0.1]),
+                'compressor': ('compressor', [], {'volume': 1.0, 'gain_min': 10, 'gain_max': 400}),
+                'gain': ('gain', [0]),
                 'buf': 'buf',
             },
-            ['bassoon'],
+            ['midi'],
             ['buf'],
             name=name,
         )
         dlal.connect(
-            [self.bassoon, self.gain, self.lim],
-            self.buf,
-        )
-        dlal.connect(
-            self.talk,
-            self.vocoder,
-            self.buf,
+            [self.midi, '+>', self.gain],
+            self.bassoon,
+            [
+                self.buf,
+                '<+', self.vocoder, self.talk,
+                '<+', self.compressor,
+                '<+', self.gain,
+            ],
         )
         self.talk.load('assets/local/bassindaface1.flac', 46)
         self.talk.load('assets/local/bassindaface2.flac', 49)
         self.talk.load('assets/local/funkyfunkybass.flac', 43)
 
 class Choirist(dlal.subsystem.Subsystem):
-    def init(self, phonetic_samples, name=None):
+    def init(self, phonetic_samples, harmonics, name=None):
         self.phonetic_samples = phonetic_samples
         x = hashlib.sha256(name.encode()).digest()
         r1 = int.from_bytes(x[0:4], byteorder='big') / (1 << 32)
@@ -147,7 +146,7 @@ class Choirist(dlal.subsystem.Subsystem):
                 'oracle': 'oracle',
                 'sonic': 'sonic',
                 'vocoder': 'vocoder',
-                'lim': ('lim', [0.25, 0.15]),
+                'compressor': 'compressor',
                 'buf': 'buf',
             },
             ['rhymel'],
@@ -159,7 +158,7 @@ class Choirist(dlal.subsystem.Subsystem):
             [self.rhymel, '+>', self.sonic],
             [self.oracle, '<+', self.lpf, '<+', self.lfo],
             self.sonic,
-            [self.buf, '<+', self.lim],
+            [self.buf, '<+', self.compressor],
         )
         dlal.connect(self.vocoder, self.buf)
         self.midman.directive([{'nibble': 0x90}], 0, 'midi', [0x90, '%1', 0])
@@ -169,19 +168,19 @@ class Choirist(dlal.subsystem.Subsystem):
         self.sonic.from_json({
             "0": {
                 "a": 1e-4, "d": 0, "s": 1, "r": 1e-4, "m": 1,
-                "i0": 0, "i1": 0.3, "i2": 0.2, "i3": 0.1, "o": 0.125,
+                "i0": 0, "i1": 2 * harmonics, "i2": 1 * harmonics, "i3": 1 * harmonics, "o": 0.125,
             },
             "1": {
-                "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 1,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+                "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 2,
+                "i0": 0, "i1": 0.3, "i2": 0.3, "i3": 0.3, "o": 0,
             },
             "2": {
                 "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 3,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+                "i0": 0, "i1": 0, "i2": 0.2, "i3": 0.1, "o": 0,
             },
             "3": {
                 "a": 1, "d": 0, "s": 1, "r": 1e-5, "m": 5,
-                "i0": 0, "i1": 0, "i2": 0, "i3": 0, "o": 0,
+                "i0": 0, "i1": 0, "i2": 0.2, "i3": 0.1, "o": 0,
             },
         })
         self.sonic.midi(midi.Msg.pitch_bend_range(64))
@@ -190,8 +189,8 @@ class Choirist(dlal.subsystem.Subsystem):
         self.vocoder.freeze_with(self.phonetic_samples)
 
 #===== init =====#
-a_m = dlal.sound.read('assets/phonetics/a.flac').samples[44100:44100+64*1024]
-a_f = dlal.sound.read('assets/phonetics/a.flac').samples[44100:44100+64*1024]
+a_m = dlal.sound.read('assets/phonetics/a.flac').normalize().samples[3*44100:3*44100+64*1024]
+a_f = dlal.sound.read('assets/phonetics/alto/a.flac').normalize().samples[2*44100:2*44100+64*1024]
 
 audio = dlal.Audio(driver=True, run_size=args.run_size)
 liner = dlal.Liner('assets/midis/audiobro5.mid')
@@ -204,29 +203,33 @@ crow = dlal.Buf(name='crow')
 drums = Drums()
 talking_bassoon = TalkingBassoon()
 bell = dlal.Addsyn().tubular_bells()
-choir_s = Choirist(a_f, name='choir_s')
-choir_a = Choirist(a_f, name='choir_a')
-choir_t = Choirist(a_m, name='choir_t')
-choir_b = Choirist(a_m, name='choir_b')
+choir_s = Choirist(a_f, harmonics=1/200, name='choir_s')
+choir_a = Choirist(a_f, harmonics=1/200, name='choir_a')
+choir_t = Choirist(a_m, harmonics=1/100, name='choir_t')
+choir_b = Choirist(a_m, harmonics=1/50, name='choir_b')
 
 mixer = dlal.subsystem.Mixer(
     [
-        {'gain':  1.4, 'pan': [   0, 10]},  # ghost1
-        {'gain':  1.4, 'pan': [   0, 10]},  # ghost2
-        {'gain':  1.4, 'pan': [   0, 10]},  # drums
-        {'gain':  1.4, 'pan': [  45, 10]},  # crow
-        {'gain':  1.4, 'pan': [   0, 10]},  # piano
-        {'gain':  1.4, 'pan': [   0, 10]},  # bass
-        {'gain': 11.2, 'pan': [   0, 10]},  # talking bassoon
-        {'gain':  1.4, 'pan': [  45, 10]},  # bell
-        {'gain':  1.4, 'pan': [   0, 10]},  # s
-        {'gain':  1.4, 'pan': [  10, 10]},  # a
-        {'gain':  1.4, 'pan': [ -20, 10]},  # t
-        {'gain':  1.4, 'pan': [ -10, 10]},  # b
+        {'gain':  1.0, 'pan': [   0, 10]},  # ghost1
+        {'gain':  1.0, 'pan': [   0, 10]},  # ghost2
+        {'gain':  1.0, 'pan': [   0, 10]},  # drums
+        {'gain':  1.0, 'pan': [  45, 10]},  # crow
+        {'gain':  1.0, 'pan': [   0, 10]},  # piano
+        {'gain':  1.0, 'pan': [   0, 10]},  # bass
+        {'gain':  0.8, 'pan': [   0, 10]},  # talking bassoon
+        {'gain':  0.5, 'pan': [  45, 10]},  # bell
+        {'gain':  0.2, 'pan': [   0, 10]},  # s
+        {'gain':  0.2, 'pan': [  10, 10]},  # a
+        {'gain':  0.2, 'pan': [ -20, 10]},  # t
+        {'gain':  0.2, 'pan': [ -10, 10]},  # b
     ],
+    post_mix_extra={
+        'flattener': 'flattener',
+    },
     reverb=0.3,
-    lim=[1, 0.95, 0.1],
 )
+flattener_osc = dlal.Osc('saw', 1/319.1)
+flattener_oracle = dlal.Oracle(m=50, b=50, format=('cents', ['%']))
 tape = dlal.Tape()
 
 #===== commands =====#
@@ -325,8 +328,14 @@ dlal.connect(
     mixer,
     [audio, tape],
 )
+dlal.connect(
+    flattener_osc,
+    flattener_oracle,
+    mixer.flattener,
+    mixer.buf,
+)
 ghost1.pan_oracle.connect(mixer.channels[0].pan)
 ghost2.pan_oracle.connect(mixer.channels[1].pan)
 
 #===== start =====#
-dlal.typical_setup(duration=240)
+dlal.typical_setup(duration=319)

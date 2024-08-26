@@ -96,7 +96,6 @@ mixer = dlal.subsystem.Mixer(
         'delay2': ('delay', [21000], {'gain_y': 0.1}),
     },
     reverb=0.6,
-    lim=[1, 0.9, 0.3],
 )
 tape = dlal.Tape(1 << 17)
 

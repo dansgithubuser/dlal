@@ -211,7 +211,7 @@ class Mixer(Subsystem):
         *,
         post_mix_extra={},
         reverb=0,
-        lim=[1, 0.99, 0.01],
+        lim=[10**(-0.5/20), 10**(-0.7/20), 0.02],
         sample_rate=None,
         name='mixer',
     ):

@@ -1,7 +1,7 @@
 use dlal_component_base::{component, json, serde_json, Body, CmdResult};
 
 component!(
-    {"in": [], "out": ["audio"]},
+    {"in": ["midi"], "out": ["audio"]},
     [
         "run_size",
         "uni",
@@ -35,6 +35,18 @@ impl ComponentTrait for Component {
                 *i *= self.amount;
             }
         }
+    }
+
+    fn midi(&mut self, msg: &[u8]) {
+        if msg.len() < 3 {
+            return;
+        }
+        match msg[0] & 0xf0 {
+            0x90 | 0xa0 => {
+                self.amount_dst = 10.0_f32.powf(msg[2] as f32 / 127.0 - 0.5);
+            }
+            _ => (),
+        };
     }
 }
 

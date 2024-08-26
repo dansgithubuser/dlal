@@ -3,7 +3,7 @@ use dlal_component_base::{component, err, json, serde_json, Arg, Body, CmdResult
 use num_complex::Complex64;
 use polynomials::{poly, Polynomial};
 
-use std::collections::HashMap;
+use std::{collections::HashMap, f64};
 
 fn hysteresis(a: &mut f64, b: f64, smooth: f64) {
     *a = *a * smooth + b * (1.0 - smooth);
@@ -59,8 +59,8 @@ component!(
             "args": [
                 {
                     "name": "w",
-                    "desc": "angular frequency",
-                    "range": "[0, 2*pi)",
+                    "desc": "frequency, 1 means sample-rate",
+                    "range": "[0, 1)",
                 },
                 {
                     "name": "width",
@@ -79,6 +79,11 @@ component!(
                 {
                     "name": "pairs",
                     "default": 1,
+                },
+                {
+                    "name": "add",
+                    "desc": "add to existing poles & zeros",
+                    "default": false,
                 },
             ],
         },
@@ -299,20 +304,28 @@ impl Component {
     }
 
     fn pole_pairs_bandpass_cmd(&mut self, body: serde_json::Value) -> CmdResult {
-        let w = body.arg(0)?;
-        let width = body.arg::<f64>(1)?;
-        let peak = body.arg(2).unwrap_or(1.0);
-        let smooth = body.arg(3).unwrap_or(0.0);
-        let pairs = body.arg(4).unwrap_or(1);
+        let w = body.flarg::<f64>(0, "w")? * f64::consts::TAU;
+        let width = body.flarg::<f64>(1, "width")?;
+        let peak = body.flarg(2, "peak").unwrap_or(1.0);
+        let smooth = body.flarg(3, "smooth").unwrap_or(0.0);
+        let pairs = body.flarg(4, "pairs").unwrap_or(1);
+        let add = body.flarg(5, "add").unwrap_or(false);
         let pole = Complex64::from_polar(1.0 - width, w);
-        let z = Complex64::from_polar(1.0, w);
-        let gain = peak * ((z - pole) * (z - pole.conj())).norm().powf(pairs as f64);
-        let mut poles = vec![];
+        let mut poles = if add {
+            self.poles.clone()
+        } else {
+            vec![]
+        };
         for _ in 0..pairs {
             poles.push(pole);
             poles.push(pole.conj());
         }
-        self.smooth_pole_zero(&poles, &[], gain, smooth);
+        let mut gain = peak * Complex64::ONE;
+        let z = Complex64::from_polar(1.0, w);
+        for pole in &poles {
+            gain *= z - pole;
+        }
+        self.smooth_pole_zero(&poles, &[], gain.norm(), smooth);
         Ok(None)
     }
 

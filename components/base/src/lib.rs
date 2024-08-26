@@ -181,6 +181,8 @@ pub trait Body {
     fn arg<T: Arg>(&self, index: usize) -> Result<T, Error>;
     fn has_kwarg(&self, key: &str) -> bool;
     fn kwarg<T: Arg>(&self, key: &str) -> Result<T, Error>;
+    fn has_flarg(&self, index: usize, key: &str) -> bool;
+    fn flarg<T: Arg>(&self, index: usize, key: &str) -> Result<T, Error>;
     fn at<T: Arg>(&self, key: &str) -> Result<T, Error>;
     fn to<T: Arg>(&self) -> Result<T, Error>;
 }
@@ -220,6 +222,22 @@ impl Body for serde_json::Value {
             .ok_or_else(|| err!("missing kwarg {}", key))?;
         T::from_value(value)
             .ok_or_else(|| err!("kwarg {}: {:?} isn't a {}", key, value, type_name::<T>()))
+    }
+
+    fn has_flarg(&self, index: usize, key: &str) -> bool {
+        self.has_arg(index) || (self.has_kwarg(key))
+    }
+
+    fn flarg<T: Arg>(&self, index: usize, key: &str) -> Result<T, Error> {
+        let arg_err = match self.arg(index) {
+            Ok(v) => return Ok(v),
+            Err(e) => e,
+        };
+        let kwarg_err = match self.kwarg(key) {
+            Ok(v) => return Ok(v),
+            Err(e) => e,
+        };
+        Err(err!("No valid arg or kwarg: {}; {}", arg_err, kwarg_err))
     }
 
     fn at<T: Arg>(&self, key: &str) -> Result<T, Error> {

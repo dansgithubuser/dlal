@@ -291,7 +291,13 @@ def disconnect(*args):
     Useful for agnostic disconnection more than for disconnecting complex structures.'''
     connect(*args, _dis=True)
 
-def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
+def typical_setup(
+    *,
+    duration=None,
+    out_path='out.i16le',
+    flac_path=True,
+    callback=None,
+):
     import atexit
     import os
     from pathlib import Path
@@ -311,12 +317,17 @@ def typical_setup(*, duration=None, out_path='out.i16le', flac_path=True):
         assert tape, 'No tape. For live audio, run Python interactively.'
         assert audio
         assert duration, 'No duration specified. For live audio, run Python interactively.'
-        runs = int(duration * audio.sample_rate() / audio.run_size())
+        sample_rate = audio.sample_rate()
+        run_size = audio.run_size()
+        runs = int(duration * sample_rate / run_size)
         n = tape.size() // audio.run_size()
         with open(out_path, 'wb') as file:
             print(f'running, outputting to {out_path}')
             for i in range(runs):
                 audio.run()
+                if callback:
+                    t = i * run_size / sample_rate
+                    callback(t)
                 if i % n == n - 1 or i == runs - 1: tape.to_file_i16le(file)
                 print(f'{100*(i+1)/runs:5.1f} %', end='\r')
             print()

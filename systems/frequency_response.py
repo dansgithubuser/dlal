@@ -2,16 +2,23 @@ import dlal
 
 import dansplotcore
 
-from numpy.fft import fft
-
-fr = [1, 0, 0, 0, 0.5, 0, 0, 0, 0.25, 0, 0, 0.5, 0, 0, 0]
-ir = [float(abs(i)) for i in fft(fr)]
-
-audio = dlal.Audio(True)
-fir = dlal.Fir(ir)
+audio = dlal.Audio(driver=True)
+iir = dlal.Iir()
 buf = dlal.Buf()
 
-fir.connect(buf)
+iir.pole_pairs_bandpass(1000 / audio.sample_rate(), 0.02, pairs=1, add=True)
+iir.pole_pairs_bandpass(1500 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(2500 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(3000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(3500 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(4000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(5000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(6000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(7000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(8000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+iir.pole_pairs_bandpass(2000 / audio.sample_rate(), 0.03, pairs=1, add=True)
+
+iir.connect(buf)
 
 fr = dlal.frequency_response(buf, buf, n=4096)
 dansplotcore.plot(fr)

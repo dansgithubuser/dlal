@@ -123,6 +123,8 @@ class Component:
             if spec.varargs: result['varargs'] = spec.varargs
             if spec.varkw: result['varkw'] = spec.varkw
             if spec.defaults: result['defaults'] = spec.defaults
+            if spec.kwonlyargs: result['kwonlyargs'] = spec.kwonlyargs
+            if spec.kwonlydefaults: result['kwonlydefaults'] = spec.kwonlydefaults
             if doc: result['doc'] = doc
             return result
         result = self.command_immediate('list')
