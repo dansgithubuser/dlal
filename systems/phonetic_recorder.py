@@ -20,6 +20,8 @@ tape = dlal.Tape(1 << 17)
 audio.connect(tape)
 
 #===== main =====#
+if not os.path.exists(f'assets/phonetics/{args.speaker}'):
+    os.mkdir(f'assets/phonetics/{args.speaker}')
 dlal.typical_setup()
 
 dur_2 = dlal.speech.RECORD_DURATION_UNSTRESSED_VOWEL
