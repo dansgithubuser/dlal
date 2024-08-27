@@ -4,34 +4,17 @@ import dlal
 
 # add
 audio = dlal.Audio(driver=True, mic=True)
+gain_mod = dlal.Gain(1)
 comm = dlal.Comm()
-
-carrier = dlal.Sonic('big_bass_1')
-modulator = dlal.Buf()
+carrier = dlal.Sonic('big_bass_1', name='carrier')
 vocoder = dlal.Vocoder()
-voc_gain = dlal.Gain()
-voc_buf = dlal.Buf()
-
-pass_gain = dlal.Gain(0.2)
-pass_buf = dlal.Buf()
-
-reverb = dlal.Reverb()
 buf = dlal.Buf()
 
 # connect
+gain_mod.connect(vocoder)
 dlal.connect(
     carrier,
-    [voc_buf, '<+', vocoder, modulator, audio],
-    [buf, '<+', voc_gain],
-)
-dlal.connect(
-    carrier,
-    [pass_buf, '<+', pass_gain],
-    buf,
-)
-dlal.connect(
-    reverb,
-    buf,
+    [buf, '<+', vocoder, audio],
     audio,
 )
 
