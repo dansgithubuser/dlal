@@ -24,7 +24,7 @@ function controlChange(control) {
   const ctrl = control.target.id.slice(0, -1);
   const op = Number(control.target.id.slice(-1));
   const value = control.target.value !== '' ? Number(control.target.value) : null;
-  command(ctrl, [op, value]).then(r => control.target.value = r.result);
+  command(ctrl, [op, value]).then(r => control.target.value = Math.round(r.result * 1e8) / 1e8);
 }
 
 function setupControls() {

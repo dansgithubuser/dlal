@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 
 levels = {
@@ -11,6 +12,12 @@ levels = {
 
 logging.addLevelName(levels['verbose'], 'VERBOSE')
 
+class Formatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        return datetime.fromtimestamp(record.created).isoformat(' ')
+
+formatter = Formatter('%(asctime)s %(message)s')
+
 def get_logger_names():
     return [
         i
@@ -23,7 +30,9 @@ def set_logger_level(name, level):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     if not logger.handlers:
-        logger.addHandler(logging.StreamHandler())
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
     logger.handlers[0].setLevel(level)
 
 def get_log(name):
