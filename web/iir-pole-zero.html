@@ -198,8 +198,7 @@ listenToTouches(CANVAS, {
     const { xi, yi, xf, yf } = touches[0];
     gSelected.re += (xf - xi) / UNIT_R;
     gSelected.im -= (yf - yi) / UNIT_R;
-    render();
-    commandPoleZero();
+    window.onGainChange();
   },
   onEnd(id, x, y) {
     gSelected = null;
@@ -219,13 +218,11 @@ function commandPoleZero() {
   const z = [];
   for (const i of gPoles) {
     p.push(i);
-    p.push(i.conjugate());
   }
   for (const i of gZeros) {
     z.push(i);
-    z.push(i.conjugate());
   }
-  command('command_detach', ['pole_zero', [p, z, String(gGain)]]);
+  command('command_detach', ['pole_zero', [p, z, gGain]]);
 }
 
 //===== setup =====//
@@ -245,7 +242,9 @@ window.onload = function () {
       }
       gGain = gain;
       e('gain-min').value = 0;
-      e('gain-max').value = gGain * 10;
+      if (gGain != 0) {
+        e('gain-max').value = gGain * 10;
+      }
       e('gain').value = 0.1;
       render();
     },
@@ -262,9 +261,9 @@ window.onload = function () {
     <input type='button' value='remove zero' style='background: rgb(255, 0, 0)' onclick='window.remZero()'>
     &emsp;&emsp;
     gain
-    <input type='number' id='gain-min' value='0' onchange='window.onGainChange()'>
-    <input type='range' id='gain' min='0' max='1' value='0.1' step='any' oninput='window.onGainChange()'>
-    <input type='number' id='gain-max' value='10' onchange='window.onGainChange()'>
+    <input type='number' id='gain-min' title='gain min' value='0' onchange='window.onGainChange()'>
+    <input type='range' id='gain' title='gain' min='0' max='1' value='0.1' step='any' oninput='window.onGainChange()'>
+    <input type='number' id='gain-max' title='gain max' value='10' onchange='window.onGainChange()'>
   </div>
   <canvas id='canvas' style='width: 90vw; height: 90vh'></canvas>
   <br>
