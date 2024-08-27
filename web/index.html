@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <link rel='stylesheet' type='text/css' href='style.css'>
 <style>
 
@@ -148,14 +149,13 @@ async function componentContext(name) {
     dropdown,
     optionName,
     openPage,
-    { url: optionUrl, component: await getComponent(name) },
+    { url: optionUrl, component: name },
   );
   let space = true;
   switch (gSystemInfo['components'][name].kind) {
     case 'audio':
       contextOption(dropdown, 'start', async function(name) {
-        const audio = await getComponent('audio');
-        await socketSend(`${audio}.start`);
+        await socketSend(`components.${name}.start`);
         updateDiagram();
       }, name);
       break;
@@ -192,14 +192,13 @@ async function componentContext(name) {
   }
   if (space) contextSpace(dropdown);
   contextOption(dropdown, 'list', async function(name) {
-    const component = await getComponent(name);
-    const response = await socketSend(`${component}.command_immediate`, { args: ['list'] });
+    const response = await socketSend(`components.${name}.command_immediate`, { args: ['list'] });
     let list = '';
     for (const i of response.result) {
       list += (
         `<span
           class='wire'
-          onclick='e("invokePath").value = "${component}.${i.name}"'
+          onclick='e("invokePath").value = "components.${name}.${i.name}"'
         >`
         +
         `${i.name} ${JSON.stringify(i.info, null, 2)}</span>\n\n`
@@ -237,17 +236,13 @@ function showResponse(response, extra) {
 
 async function add() {
   const component = await socketSend(v('addKind'), { op: 'store' });
-  if(v('addKind') != 'Audio') {
-    const audio = await getComponent('audio');
-    await socketSend(`${audio}.add`, { args: [component.uuid] });
-  }
   updateDiagram();
 }
 
 //----- connect -----//
 async function connect(connector, connectee) {
-  const a = await getComponent(connector), b = await getComponent(connectee);
-  await socketSend(`${a}.connect`, { args: [b], kwargs: { toggle: true } });
+  const b = await getComponent(connectee);
+  await socketSend(`components.${connector}.connect`, { args: [b], kwargs: { toggle: true } });
   updateDiagram();
 }
 
@@ -346,7 +341,7 @@ window.wire = wire;
   <div id='socketConnect'>
     <input type='text' id='ws-url' placeholder='WebSocket URL' size=80/><br>
     <input type='button' value="dan's forwarder" onclick='e("ws-url").value = `wss://websocket-forwarder.herokuapp.com/ws/${uuidv4()}`'/><br>
-    <button onclick='socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
+    <button onclick='window.location.search = "connect=1"; socketConnect({ url: v("ws-url"), onOpen: onSocketConnect })'>connect</button>
   </div>
   <div id='main' style='display: none'>
     <div id='diagram'>

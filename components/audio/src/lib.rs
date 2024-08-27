@@ -90,6 +90,16 @@ component!(
         "run": {},
         "run_explain": {},
         "addee_order": {},
+        "addee_move": {
+            "args": [
+                {
+                    "desc": "name of component to move",
+                },
+                {
+                    "desc": "name of component to take the place of",
+                },
+            ],
+        },
         "version": {},
         "list_devices": {},
         "profile": {},
@@ -385,6 +395,40 @@ impl Component {
             }
         }
         Ok(Some(json!(result)))
+    }
+
+    fn addee_move_cmd(&mut self, body: serde_json::Value) -> CmdResult {
+        let name1: String = body.arg(0)?;
+        let name2: String = body.arg(1)?;
+        if name1 == name2 {
+            return Ok(None);
+        }
+        let mut spot1: Option<(usize, usize)> = None;
+        let mut spot2: Option<(usize, usize)> = None;
+        for (i_slot, slot) in self.addees.iter().enumerate() {
+            for (i_component, component) in slot.iter().enumerate() {
+                if component.name() == name1 {
+                    spot1 = Some((i_slot, i_component));
+                }
+                if component.name() == name2 {
+                    spot2 = Some((i_slot, i_component));
+                }
+            }
+        }
+        let spot1 = spot1.ok_or(err!("no component named {}", name1))?;
+        spot2.ok_or(err!("no component named {}", name2))?;
+        let component1 = self.addees[spot1.0].remove(spot1.1);
+        let mut spot2: Option<(usize, usize)> = None;
+        for (i_slot, slot) in self.addees.iter().enumerate() {
+            for (i_component, component) in slot.iter().enumerate() {
+                if component.name() == name2 {
+                    spot2 = Some((i_slot, i_component));
+                }
+            }
+        }
+        let spot2 = spot2.unwrap();
+        self.addees[spot2.0].insert(spot2.1, component1);
+        Ok(None)
     }
 
     fn version_cmd(&mut self, _body: serde_json::Value) -> CmdResult {

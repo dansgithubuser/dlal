@@ -41,4 +41,5 @@ sonic.connect(buf)
 buf.connect(audio)
 buf.connect(tape)
 
+dlal.driver_set(audio)
 dlal.typical_setup()

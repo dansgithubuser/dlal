@@ -8,6 +8,7 @@ import socketserver
 import threading
 import time
 import traceback
+from uuid import UUID
 import weakref
 
 log = _logging.get_log(__name__)
@@ -39,6 +40,8 @@ class Server:
                 for i, v in enumerate(request['path']):
                     if i == 0 and v in self.store:
                         value = self.store[v]
+                    elif type(value) == dict:
+                        value = value[v]
                     else:
                         value = getattr(value, v)
             args = [self.sub(i) for i in request.get('args', [])]
@@ -67,8 +70,11 @@ class Server:
             return json.dumps(request)
 
     def sub(self, arg):
-        if type(arg) != str: return arg
-        return self.store.get(arg, arg)
+        try:
+            UUID(str(arg))
+            return self.store[arg]
+        except:
+            return arg
 
     server = None
     audio_broadcast = None
@@ -101,6 +107,8 @@ def serve(
         class_name = snake_to_upper_camel_case(kind)
         exec(f'from . import {class_name}')
         exec(f'setattr(root, "{class_name}", {class_name})')
+    setattr(root, 'components', _skeleton._Component._components)
+    setattr(root, 'driver', _skeleton._Component._driver)
     # server
     if url:
         from ._websocket_client import WsClient
@@ -119,6 +127,9 @@ def serve(
         thread.daemon = True
         print(f'starting HTTP server at http://{network_ip()}:{http_port}/{home_page}')
         thread.start()
+
+def store():
+    return Server.server.server.store
 
 class AudioBroadcast:
     def __init__(self, tape, size, thread):
