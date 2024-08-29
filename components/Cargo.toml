@@ -39,7 +39,7 @@ members = [
     "reverb",
     "rhymel",
     "sinbank",
-    "sonic",
+    "sonic", "soundfont",
     "stft",
     "strummer",
     "tape",

@@ -45,6 +45,7 @@ see `do.py --component-matrix` for coloring guidance
 
 .component-sinbank,
 .component-sonic,
+.component-soundfont,
 .component-train,
 .component-osc
 {
@@ -179,6 +180,9 @@ async function componentContext(name) {
       break;
     case 'sonic':
       await contextOptionPage('sonic', 'sonic.html');
+      await contextOptionPage('webboard', 'webboard.html');
+      break;
+    case 'soundfont':
       await contextOptionPage('webboard', 'webboard.html');
       break;
     case 'tape':

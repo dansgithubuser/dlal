@@ -192,6 +192,30 @@ impl Line {
         }
         json!(notes)
     }
+
+    fn duration(&self, sample_rate: u32, run_size: usize) -> f32 {
+        let mut line = Line {
+            deltamsgs: self.deltamsgs.clone(),
+            ticks_per_quarter: self.ticks_per_quarter,
+            ..Default::default()
+        };
+        line.reset();
+        let mut samples: u32 = 0;
+        loop {
+            if line.index >= line.deltamsgs.len() {
+                break;
+            }
+            samples += run_size as u32;
+            line.advance(
+                samples,
+                run_size,
+                sample_rate,
+                None,
+                None,
+            );
+        }
+        samples as f32 / sample_rate as f32
+    }
 }
 
 struct Queue {
@@ -261,6 +285,7 @@ component!(
         "advance": {"args": ["seconds"]},
         "skip_line": {"args": [{"desc": "number of lines", "default": 1}]},
         "multiply_deltas": {"args": ["multiplier"]},
+        "duration": {},
     },
 );
 
@@ -296,6 +321,9 @@ impl ComponentTrait for Component {
         while let Ok(mut line) = self.queue.recv.try_recv() {
             let line_index = (*line).index;
             (*line).index = (*self.lines[line_index]).index;
+            while line_index >= self.lines.len() {
+                self.lines.push(Box::new(Line::default()));
+            }
             self.lines[line_index] = line;
         }
         self.samples += self.run_size as u32;
@@ -368,11 +396,11 @@ impl Component {
         let line_index: usize = body.arg(0)?;
         let ticks_per_quarter: u32 = body.arg(1)?;
         let deltamsgs = body.arg(2)?;
-        while line_index >= self.lines.len() {
-            self.lines.push(Box::new(Line::default()));
-        }
         if let Ok(immediate) = body.kwarg("immediate") {
             if immediate {
+                while line_index >= self.lines.len() {
+                    self.lines.push(Box::new(Line::default()));
+                }
                 self.lines[line_index] = Box::new(Line::new(
                     &deltamsgs,
                     ticks_per_quarter,
@@ -440,5 +468,19 @@ impl Component {
             }
         }
         Ok(None)
+    }
+
+    fn duration_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        if self.run_size == 0 {
+            return Err(err!("run size is 0").into());
+        }
+        if self.sample_rate == 0 {
+            return Err(err!("sample rate is 0").into());
+        }
+        let mut duration: f32 = 0.0;
+        for line in &self.lines {
+            duration = line.duration(self.sample_rate, self.run_size).max(duration);
+        }
+        Ok(Some(json!(duration)))
     }
 }

@@ -1,5 +1,5 @@
 from . import _logging
-from ._utils import DIR
+from ._utils import DIR, JsonEncoder
 
 import obvious
 
@@ -104,11 +104,15 @@ class Component:
 
     def command_immediate(self, name, args=[], kwargs={}):
         log('debug', f'{self.name} {name} {args} {kwargs}')
-        result = self._lib.command(self._raw, json.dumps({
-            'name': name,
-            'args': args,
-            'kwargs': kwargs,
-        }).encode('utf-8'))
+        body = json.dumps(
+            {
+                'name': name,
+                'args': args,
+                'kwargs': kwargs,
+            },
+            cls=JsonEncoder,
+        )
+        result = self._lib.command(self._raw, body.encode('utf-8'))
         if not result: return
         result = json.loads(result.decode('utf-8'))
         if type(result) == dict and 'error' in result:

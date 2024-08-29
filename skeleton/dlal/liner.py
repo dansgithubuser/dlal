@@ -18,12 +18,7 @@ class Liner(Component):
                     'msg': i.bytes,
                 }
                 for i in midi.interleave(
-                    song.tracks[i].filter(lambda i: i.type() in [
-                        'note_on',
-                        'note_off',
-                        'control_change',
-                        'pitch_wheel_change',
-                    ]),
+                    song.tracks[i].filter(lambda i: i.type() != 'tempo'),
                     tempos,
                 )
             ]
