@@ -15,6 +15,14 @@ fn wave_tri(phase: f32) -> f32 {
     }
 }
 
+fn wave_sqr(phase: f32) -> f32 {
+    if phase < 0.5 {
+        -1.0
+    } else {
+        1.0
+    }
+}
+
 fn wave_saw(phase: f32) -> f32 {
     -1.0 + 2.0 * phase
 }
@@ -76,7 +84,7 @@ component!(
         "wave": {
             "args": [{
                 "name": "wave",
-                "choices": ["sin", "tri", "saw", "noise"],
+                "choices": ["sin", "tri", "sqr", "saw", "noise"],
             }],
         },
         "bend": {
@@ -100,6 +108,7 @@ impl Component {
         match wave {
             "sin" => self.wave.f = wave_sin,
             "tri" => self.wave.f = wave_tri,
+            "sqr" => self.wave.f = wave_sqr,
             "saw" => self.wave.f = wave_saw,
             "noise" => self.wave.f = wave_noise,
             _ => return Err(err!("unknown wave").into()),
