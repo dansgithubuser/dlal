@@ -240,12 +240,14 @@ component!(
         "sample_rate",
         {"name": "connect_info", "args": "view", "flavor": "multi"},
         {"name": "disconnect_info", "args": "view", "flavor": "multi"},
+        {"name": "field_helpers", "fields": ["repeat"], "kinds": ["rw"]},
     ],
     {
         queue: Queue,
         lines: Vec<Box<Line>>,
         samples: u32,
         outputs: Vec<Option<View>>,
+        repeat: bool,
     },
     {
         "get_midi": {
@@ -286,6 +288,7 @@ component!(
         "skip_line": {"args": [{"desc": "number of lines", "default": 1}]},
         "multiply_deltas": {"args": ["multiplier"]},
         "duration": {},
+        "line_count": {},
     },
 );
 
@@ -297,6 +300,7 @@ impl ComponentTrait for Component {
         for _ in 0..16 {
             self.lines.push(Box::new(Line::default()));
         }
+        self.repeat = true;
     }
 
     fn connect(&mut self, body: serde_json::Value) -> CmdResult {
@@ -341,7 +345,7 @@ impl ComponentTrait for Component {
                 None,
             );
         }
-        if done {
+        if done && self.repeat {
             self.samples = 0;
             for line in &mut self.lines {
                 line.reset();
@@ -482,5 +486,9 @@ impl Component {
             duration = line.duration(self.sample_rate, self.run_size).max(duration);
         }
         Ok(Some(json!(duration)))
+    }
+
+    fn line_count_cmd(&mut self, _body: serde_json::Value) -> CmdResult {
+        Ok(Some(json!(self.lines.len())))
     }
 }
