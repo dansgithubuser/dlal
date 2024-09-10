@@ -71,6 +71,20 @@ class Hpf:
         self.x = x
         return self.y
 
+class Delay:
+    def __init__(self):
+        self.buf = []
+
+    def __call__(self, x, amt, decay):
+        y = x
+        a = int(amt)
+        b = a + 1
+        if b < len(self.buf):
+            t = amt - a
+            y += decay * ((1 - t) * self.buf[a] + t * self.buf[b])
+        self.buf.insert(0, y)
+        return y
+
 #===== instruments =====#
 #----- drums -----#
 def drum(
@@ -220,3 +234,52 @@ def high_tom(
         bodies=[(body_freq_i, body_freq_f, body_amp, duration)],
         tail_amp=tail_amp,
     )
+
+def hat(
+    *,
+    sample_rate=44100,
+    duration=0.1,
+    amp=5,
+    highness_i=0.4,
+    highness_f=0.6,
+    delay1_freq_i=7200,
+    delay1_freq_f=7000,
+    delay1_decay=0.5,
+    delay2_freq_i=13500,
+    delay2_freq_f=13000,
+    delay2_decay=0.5,
+    lowness=0.2,
+):
+    class Hat(Generator):
+        def init(self):
+            self.duration = duration
+            self.hpf1 = Hpf()
+            self.hpf2 = Hpf()
+            self.hpf3 = Hpf()
+            self.hpf4 = Hpf()
+            self.delay = Delay()
+            self.delay2 = Delay()
+            self.lpf1 = Lpf()
+            self.lpf2 = Lpf()
+            self.lpf3 = Lpf()
+            self.lpf4 = Lpf()
+
+        def amp(self, t):
+            envelope = 0.005 ** self.ramp(0, 1, t / duration)
+            delay1_freq = self.ramp(delay1_freq_i, delay1_freq_f, t / duration)
+            delay2_freq = self.ramp(delay2_freq_i, delay2_freq_f, t / duration)
+            highness = self.ramp(highness_i, highness_f, t / duration)
+            x = amp * self.rand() * envelope
+            x = self.delay(x, sample_rate // delay1_freq, delay1_decay)
+            x = self.delay2(x, sample_rate // delay2_freq, delay2_decay)
+            x = self.lpf1(x, lowness)
+            x = self.lpf2(x, lowness)
+            x = self.lpf3(x, lowness)
+            x = self.lpf4(x, lowness)
+            x = self.hpf1(x, highness)
+            x = self.hpf2(x, highness)
+            x = self.hpf3(x, highness)
+            x = self.hpf4(x, highness)
+            return self.clamp(x)
+
+    return Hat(sample_rate).generate()

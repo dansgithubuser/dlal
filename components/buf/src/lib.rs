@@ -243,6 +243,7 @@ impl Component {
         let samples = body.arg::<Vec<_>>(0)?;
         let note: Option<usize> = body.arg(1).ok();
         if let Some(note) = note {
+            self.ensure_sounds();
             self.sounds[note].samples = samples;
             self.sounds[note].sample_rate = self.sample_rate;
         } else {
